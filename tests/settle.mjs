@@ -44,13 +44,31 @@ try {
   assert.equal(await frames(p), 0, "after Recall: no frames");
   await p.close();
 
+  // The series: its screen (a track map, the table) is still; a round races, then its result settles.
+  {
+    const r = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await r.goto(server.url + "/");
+    await until(r, () => window.game, null, "series: mounts");
+    await r.evaluate(() => (game.setup({ starter: "sparkhound" }), game.show("series")));
+    await r.evaluate(() => document.querySelector("[data-fizlet-host]").shadowRoot.querySelector("[data-series-enter=rookie]").click());
+    await until(r, () => game.getSnapshot().series && game.engine.paused.includes("settled"), null, "the series screen settles");
+    assert.equal(await frames(r), 0, "series screen: no frames");
+    await r.evaluate(() => game.start("series", { auto: true }));
+    await until(r, () => game.getSnapshot().run.phase === "run", null, "series: the gate drops");
+    assert.ok((await frames(r)) > 0, "a round never sleeps");
+    await until(r, () => game.getSnapshot().screen === "result", null, "series: the round ends", 150000);
+    await until(r, () => game.run.engine.paused.includes("settled") && game.engine.paused.includes("settled"), null, "series: the result settles", 30000);
+    assert.equal(await frames(r), 0, "series result: no frames");
+    await r.close();
+  }
+
   const q = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await q.goto(server.url + "/hero");
   await until(q, () => window.game?.run && game.run.state.speed > 3, null, "the hero races");
   await until(q, () => game.run.engine.paused.includes("settled"), null, "after its race the hero settles", 150000);
   assert.equal(await frames(q), 0, "the hero sleeps");
   await q.close();
-  console.log("Dirt Hop: settle guard green (the menus and the hero sleep, a race never does, off screen pauses, the result settles, quiet after Recall).");
+  console.log("Dirt Hop: settle guard green (the menus, the series screen and the hero sleep, a race or a series round never does, off screen pauses, the result settles, quiet after Recall).");
 } finally {
   await browser.close();
   await server.close();

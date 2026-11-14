@@ -8,7 +8,7 @@ import type { Engine } from "@fzlt/core/kernel";
 import type { RigColors, RigHelmet } from "../bike/rig.ts";
 import type { Tuned } from "../model/tune.ts";
 
-export type ModeId = "race" | "freeride" | "bigair" | "wheelie";
+export type ModeId = "race" | "freeride" | "bigair" | "wheelie" | "series";
 
 /** What a ride did, for the payout and the wear. Every mode fills the common part. */
 export interface RunStats {
@@ -37,6 +37,10 @@ export interface RunStats {
   summary?: string;
   /** The map or track ridden (its id). */
   where?: string;
+  /** Race: every rider's finishing place, rider 0 the player (a series scores the rivals too). */
+  order?: number[];
+  /** Series: the round it was (filled by the shell from the profile's series, for the payout). */
+  series?: { tier: string; round: number; rounds: number; champ?: number };
 }
 
 /** What the shell hands a mode. */

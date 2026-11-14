@@ -5,7 +5,9 @@ import { readdirSync, readFileSync } from "node:fs";
 // 0.1.0: the first build measured 90,466 B (dirt-hop.mjs: the shell, the garage, four modes on three
 // scenes, the kernel, diorama,
 // terrain, drive, input, pad, sound, ui), plus about 5.5 KB of room.
-const BUDGET = 96_000;
+// Phase 2, the Race Series: 100,281 B measured (+9.8 KB: the track generator 8.4 KB minified, the
+// series' rules, its screen and sheet, turns of any angle in the course), so 106,000.
+const BUDGET = 106_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

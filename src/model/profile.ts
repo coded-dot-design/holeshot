@@ -7,8 +7,9 @@
 import { model, STARTERS } from "../data/roster.ts";
 import { PARTS, START_CREDITS, GARAGE_SLOTS, MODS, type PartId, type ModId } from "../data/economy.ts";
 import { PAINTS, SWATCHES, HELMETS, VISORS, PATTERNS } from "../data/looks.ts";
+import { freshSeries, normSeries, type SeriesSave } from "./series.ts";
 
-export const VERSION = 1;
+export const VERSION = 2;
 export const STORE_KEY = "dirt-hop:profile";
 
 /** One bike in the garage: its model, each part's condition, its mod levels, its look. */
@@ -49,6 +50,8 @@ export interface Profile {
   /** Events since the pit crew last helped. */
   pit: number;
   settings: { sound: boolean; view: "chase" | "table" };
+  /** The Race Series (./series.ts): best place per tier, titles, the championship under way. */
+  series: SeriesSave;
 }
 
 const clamp01 = (v: unknown, d: number) => (typeof v === "number" && isFinite(v) ? Math.max(0, Math.min(1, v)) : d);
@@ -64,7 +67,7 @@ export function newBike(modelId: string, uid: string, paint = "gridline", number
 }
 /** A profile before the first-run setup: no name, no bike yet. */
 export function fresh(): Profile {
-  return { v: VERSION, name: "", credits: START_CREDITS, ride: 0, bikes: [], kit: { ...STARTER_KIT }, owned: [], stats: { events: 0, wins: 0, earned: 0, best: {} }, pit: 0, settings: { sound: true, view: "chase" } };
+  return { v: VERSION, name: "", credits: START_CREDITS, ride: 0, bikes: [], kit: { ...STARTER_KIT }, owned: [], stats: { events: 0, wins: 0, earned: 0, best: {} }, pit: 0, settings: { sound: true, view: "chase" }, series: freshSeries() };
 }
 /** The first-run setup: your one starter bike, its paint and number, your name and kit colours. */
 export function setup(p: Profile, o: { starter: string; paint: string; number: number; name: string; kit?: Partial<RiderKit> }): Profile {
@@ -118,15 +121,22 @@ export function normalize(raw: unknown): Profile {
     stats: { events: int(st.events, 0, 0, 1e9), wins: int(st.wins, 0, 0, 1e9), earned: int(st.earned, 0, 0, 1e12), best },
     pit: int(o.pit, 0, 0, 1e6),
     settings: { sound: set.sound !== false, view: set.view === "table" ? "table" : "chase" },
+    series: normSeries(o.series),
   };
 }
 
 /** A version step: takes a profile of version `from` and returns one of `from + 1`. */
 export type Migration = (old: Record<string, unknown>) => Record<string, unknown>;
-/** Steps by the version they upgrade from. Version 1 is the first released schema: none yet. A
- *  change that renames or reshapes a field adds a step here (and bumps VERSION); a new field with a
- *  default needs no step (normalize fills it). */
-export const MIGRATIONS: Record<number, Migration> = {};
+/** Steps by the version they upgrade from. A change that renames or reshapes a field adds a step
+ *  here (and bumps VERSION); a new field with a default needs no step (normalize fills it).
+ *  1 → 2: the Race Series. A v1 save gets an empty series record; a rider who already won races on
+ *  the fixed track has proved the Rookie Cup's level, so three wins or more open the Pro Circuit. */
+export const MIGRATIONS: Record<number, Migration> = {
+  1: (o) => {
+    const wins = typeof (o.stats as { wins?: unknown } | undefined)?.wins === "number" ? ((o.stats as { wins: number }).wins) : 0;
+    return { ...o, series: { best: wins >= 3 ? { rookie: 1 } : {}, titles: 0, run: null, last: null } };
+  },
+};
 
 /** Anything ever saved → a current profile, or null when it is not a profile at all or comes from a
  *  newer version of the game (which must not be overwritten: the caller keeps it and plays fresh). */

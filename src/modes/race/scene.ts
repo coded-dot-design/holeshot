@@ -19,7 +19,7 @@ import { sound } from "@fzlt/core/sound";
 import { LOOP, ENDO, CASE, BAIL, type Power } from "../../bike/bike.ts";
 import { rig, type Rig, type RigColors } from "../../bike/rig.ts";
 import { pool, voice, gamepad, type Pool } from "../../bike/kit.ts";
-import { DONE, E_CRASH, E_FINISH, E_GATE, E_LAND, E_LAP, E_PLACE, E_RESPAWN, E_WHEELIE, E_COUNT, GRID, LAPS, RACE, TRACK_W, motoRace, type Track } from "./course.ts";
+import { DONE, E_CRASH, E_FINISH, E_GATE, E_LAND, E_LAP, E_PLACE, E_RESPAWN, E_WHEELIE, E_COUNT, GRID, LAPS, RACE, TRACK_W, motoRace, type RaceOpts, type Track } from "./course.ts";
 import { freeRun } from "../freeride/session.ts";
 import { meter } from "../meter.ts";
 import type { ModeCtx, ModeRun } from "../mode.ts";
@@ -78,14 +78,14 @@ export function modeStage(host: HTMLElement, cls: string) {
 }
 
 /** Race (`free` false: the gate, three laps, three rivals) or Free Ride (`free`: the table to yourself). */
-export function mountTrack(ctx: ModeCtx, track: Track, free: boolean, rivals: Power[]): ModeRun {
+export function mountTrack(ctx: ModeCtx, track: Track, free: boolean, rivals: Power[], opts: RaceOpts = {}): ModeRun {
   const stage = modeStage(ctx.host, "mt");
   const engine = createEngine({ root: stage, settle: 0.5, seed: ctx.seed });
   const L = engine.ledger, sig = { signal: engine.signal };
   let P: Pal = document.documentElement.dataset.theme === "light" ? LIGHT : DARK;
   const { HX, HZ, NT, TRACK, YAW, TURN, LAP, GATE_S, LINE_S } = track;
   const me0 = { power: ctx.bike.power, shape: ctx.bike.shape };
-  const race = free ? null : motoRace(ctx.seed, track, me0, rivals);
+  const race = free ? null : motoRace(ctx.seed, track, me0, rivals, opts);
   const fr = free ? freeRun(track, me0) : null;
   const sim = (race ?? fr)!, t = sim.t, me = sim.riders[0]!, RIDERS = sim.riders.length;
   const m = meter(free ? "freeride" : "race");
@@ -158,7 +158,7 @@ export function mountTrack(ctx: ModeCtx, track: Track, free: boolean, rivals: Po
     // Tuff blocks round the outside of each turn, glowing at night.
     for (let i = 0; i < NT; i += 3) {
       if (!TURN[i]) continue;
-      const yaw = YAW[i]!, nx = Math.sin(yaw), nz = Math.cos(yaw), d = TRACK_W / 2 + 1.5, x = TRACK[i * 2]! + nx * d, z = TRACK[i * 2 + 1]! + nz * d, id = "tf" + i;
+      const yaw = YAW[i]!, nx = Math.sin(yaw), nz = Math.cos(yaw), d = (TRACK_W / 2 + 1.5) * TURN[i]!, x = TRACK[i * 2]! + nx * d, z = TRACK[i * 2 + 1]! + nz * d, id = "tf" + i;
       dio.add({ id, size: [0.55, 0.32, 0.36], pos: [x, t.height(x, z) - 0.05, z], rot: [0, yaw, 0], color: P.tuff, pick: false });
       dio.add({ size: [0.57, 0.07, 0.38], on: id, color: P.tuffTop, emissive: P.night, pick: false });
     }
@@ -343,7 +343,7 @@ export function mountTrack(ctx: ModeCtx, track: Track, free: boolean, rivals: Po
     if (hintEl.textContent !== hint) hintEl.textContent = hint;
   }
   function stats() {
-    if (race) return m.stats({ place: race.place(0), time: race.finishTime(0), bestLap: race.bestLap(0), led: led && race.place(0) === 0, finished: race.finished(0), where: track.id, summary: `${ORD[race.place(0)]} · ${clock(race.finishTime(0) || race.clock)} · best lap ${clock(race.bestLap(0))}` });
+    if (race) return m.stats({ place: race.place(0), time: race.finishTime(0), bestLap: race.bestLap(0), led: led && race.place(0) === 0, finished: race.finished(0), where: track.id, order: [0, 1, 2, 3].map((r) => race.place(r)), summary: `${ORD[race.place(0)]} · ${clock(race.finishTime(0) || race.clock)} · best lap ${clock(race.bestLap(0))}` });
     return m.stats({ finished: true, where: track.id, summary: `${clock(sim.clock)} ridden · ${m.M[3]!.toFixed(1)}s in the air · ${m.M[4]!.toFixed(1)}s on one wheel` });
   }
   function end() {

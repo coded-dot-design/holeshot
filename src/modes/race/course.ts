@@ -15,9 +15,24 @@ export const PICK = 0, GRID = 1, RACE = 2, DONE = 3;
 export const E_GATE = 1, E_LAP = 2, E_FINISH = 3, E_CRASH = 4, E_RESPAWN = 5, E_LAND = 6, E_WHEELIE = 7, E_PLACE = 8, E_COUNT = 9;
 const COUNT = 3, RESPAWN = 1.45;
 
-/** A track as data: a closed loop of straights (their length) and 90° left turns (-1) of radius RAD,
- *  the features placed on it, the gate and the lap line, the table's size and the dirt's seed. A
- *  generated track (a seeded generator) is just another TrackPlan: makeTrack builds the rest. */
+/** A turn: `turn` radians (+ left, − right; a hairpin is about ±π), of radius `r` (the plan's RAD if
+ *  absent), its berm's height (0.75 if absent). */
+export interface Turn { turn: number; r?: number; berm?: number }
+/** A section of the loop: a straight's length, −1 (a 90° left turn of radius RAD), or a Turn. */
+export type Section = number | Turn;
+/** A section's length along the lap, its turn (radians, + left) and its radius. */
+export const secLen = (v: Section, RAD: number) => (typeof v === "number" ? (v < 0 ? (Math.PI / 2) * RAD : v) : Math.abs(v.turn) * (v.r ?? RAD));
+export const secTurn = (v: Section) => (typeof v === "number" ? (v < 0 ? Math.PI / 2 : 0) : v.turn);
+export const secRad = (v: Section, RAD: number) => (typeof v === "number" ? RAD : v.r ?? RAD);
+/** Feature kinds: 1 double, 2 whoops, 3 triple, 4 tabletop, 5 step-up, 6 step-down, 7 the finish jump. */
+export const F_DOUBLE = 1, F_WHOOPS = 2, F_TRIPLE = 3, F_TABLE = 4, F_STEPUP = 5, F_STEPDOWN = 6, F_FINISH = 7;
+/** Each feature kind's length along the lap (where its profile ends). */
+export const FEATURE_LEN = [0, 6.8, 9.5, 12.6, 8, 9.4, 9.5, 8.2];
+
+/** A track as data: a closed loop of straights (their length) and turns (90° lefts of radius RAD, or
+ *  Turns of any angle, either way, any radius), the features placed on it, the gate and the lap line,
+ *  the table's size and the dirt's seed. A generated track (./generate.ts) is just another TrackPlan:
+ *  makeTrack builds the rest. */
 export interface TrackPlan {
   id: string;
   name: string;
@@ -25,9 +40,11 @@ export interface TrackPlan {
   A: number;
   B: number;
   RAD: number;
-  /** Sections in order: a straight's length, or -1 for a 90° left turn of radius RAD. They must close. */
-  plan: number[];
-  /** Features: [kind (1 double, 2 whoops, 3 triple, 4 tabletop), section index, offset into it, …]. */
+  /** Sections in order: a straight's length, -1 for a 90° left turn of radius RAD, or a Turn. They must close. */
+  plan: Section[];
+  /** Where the loop starts (x, z) and its first heading (0 is +x, + turns left); default (-A + RAD, B, 0), the fixed track's. */
+  start?: [number, number, number];
+  /** Features: [kind (F_DOUBLE … F_FINISH), section index, offset into it, …]. */
   features: number[];
   /** The start gate and the lap line, along the lap. */
   gate: number;
@@ -41,7 +58,9 @@ export interface TrackPlan {
 export const MOTO_TRACK: TrackPlan = {
   id: "moto-track", name: "NEON LOOP", A: 19.2, B: 10.7, RAD: 5.2,
   plan: [2 * (19.2 - 5.2), -1, 2 * (10.7 - 5.2), -1, 2 * (19.2 - 5.2), -1, 2 * (10.7 - 5.2), -1],
-  features: [1, 0, 7.5, 1, 0, 15.5, 2, 2, 0.6, 3, 4, 9.5, 4, 6, 1.4],
+  // (A second double at 0, 15.5 was never there: the first one's profile hid it until features gave
+  // the lap back past their own end. Left out, the loop rides as it always has.)
+  features: [1, 0, 7.5, 2, 2, 0.6, 3, 4, 9.5, 4, 6, 1.4],
   gate: 1.2, line: 1.6, cols: 104, rows: 68, seed: 20261118,
 };
 
@@ -49,44 +68,44 @@ export const MOTO_TRACK: TrackPlan = {
 export function makeTrack(def: TrackPlan) {
   // ---- the track: a closed centre line, integrated from straights and left turns, resampled ----
   const { A, B, RAD } = def, DS = 0.5, COLS = def.cols, ROWS = def.rows, HX = (COLS * CELL) / 2, HZ = (ROWS * CELL) / 2;
-  /** The lap's sections in order: straight length, or a 90° left turn of radius RAD. */
+  /** The lap's sections in order: straight length, or a turn. */
   const PLAN = def.plan;
-  const LAP = PLAN.reduce((s, v) => s + (v < 0 ? (Math.PI / 2) * RAD : v), 0);
+  const LAP = PLAN.reduce<number>((s, v) => s + secLen(v, RAD), 0);
   const NT = Math.round(LAP / DS);
   /** The centre line, x and z per point (DS apart), and its heading (bike yaw) per point. */
   const TRACK = new Float64Array(NT * 2), YAW = new Float64Array(NT);
-  /** Where the turns are: 1 per point inside a turn. */
-  const TURN = new Uint8Array(NT);
+  /** Where the turns are: per point, 1 inside a left turn, -1 inside a right (the outside is +TURN
+   *  along the normal [sin yaw, cos yaw]); its radius (0 on a straight) and its section. */
+  const TURN = new Int8Array(NT), RADIUS = new Float64Array(NT), SECTION = new Uint16Array(NT);
   {
     const fine = 0.01;
-    let x = -A + RAD, z = B, psi = 0, s = 0, k = 0, next = 0;
+    let x = def.start ? def.start[0] : -A + RAD, z = def.start ? def.start[1] : B, psi = def.start ? def.start[2] : 0, s = 0, k = 0, next = 0;
     for (let sec = 0; sec < PLAN.length; sec++) {
-      const v = PLAN[sec]!, len = v < 0 ? (Math.PI / 2) * RAD : v, n = Math.round(len / fine);
+      const v = PLAN[sec]!, len = secLen(v, RAD), turn = secTurn(v), rad = secRad(v, RAD), n = Math.round(len / fine);
       for (let i = 0; i < n; i++) {
-        if (s >= next - 1e-9 && k < NT) (TRACK[k * 2] = x), (TRACK[k * 2 + 1] = z), (YAW[k] = psi), (TURN[k] = v < 0 ? 1 : 0), k++, (next = k * (LAP / NT));
+        if (s >= next - 1e-9 && k < NT) (TRACK[k * 2] = x), (TRACK[k * 2 + 1] = z), (YAW[k] = psi), (TURN[k] = turn > 0 ? 1 : turn < 0 ? -1 : 0), (RADIUS[k] = turn ? rad : 0), (SECTION[k] = sec), k++, (next = k * (LAP / NT));
         const d = len / n;
-        if (v < 0) psi += d / RAD;
+        if (turn) psi += (turn > 0 ? d : -d) / rad;
         x += Math.cos(psi) * d;
         z -= Math.sin(psi) * d;
         s += d;
       }
     }
-    for (; k < NT; k++) (TRACK[k * 2] = TRACK[(k - 1) * 2]!), (TRACK[k * 2 + 1] = TRACK[(k - 1) * 2 + 1]!), (YAW[k] = YAW[k - 1]!);
+    for (; k < NT; k++) (TRACK[k * 2] = TRACK[(k - 1) * 2]!), (TRACK[k * 2 + 1] = TRACK[(k - 1) * 2 + 1]!), (YAW[k] = YAW[k - 1]!), (SECTION[k] = SECTION[k - 1]!);
   }
   /** Distance along the lap of point i. */
   const sAt = (i: number) => (i * LAP) / NT;
   /** Where each section starts along the lap (the features are placed by section). */
   const SEC: number[] = [];
-  PLAN.reduce((s, v) => (SEC.push(s), s + (v < 0 ? (Math.PI / 2) * RAD : v)), 0);
+  PLAN.reduce<number>((s, v) => (SEC.push(s), s + secLen(v, RAD)), 0);
 
   /** The features: [kind, start s, …]. The profile is their heights over the lap. */
   const GATE_S = def.gate, LINE_S = def.line;
-  const F_DOUBLE = 1, F_WHOOPS = 2, F_TRIPLE = 3, F_TABLE = 4;
   /** The features: [kind, start s, …], from the plan's [kind, section, offset, …]. */
   const FEATURES: number[] = [];
   for (let k = 0; k < def.features.length; k += 3) FEATURES.push(def.features[k]!, SEC[def.features[k + 1]!]! + def.features[k + 2]!);
   /** Feature names for the HUD, by kind. */
-  const FEATURE_NAMES = ["", "RHYTHM", "WHOOPS", "TRIPLE", "TABLETOP"];
+  const FEATURE_NAMES = ["", "RHYTHM", "WHOOPS", "TRIPLE", "TABLETOP", "STEP-UP", "STEP-DOWN", "FINISH JUMP"];
   /** Which feature is under a lap distance (FK) and its height (PF), from prof(s): no double crosses a call (one returned would be boxed). */
   const FK = new Int32Array(1), PF = new Float64Array(1);
   const sm = (t: number) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
@@ -114,7 +133,8 @@ export function makeTrack(def: TrackPlan) {
     FK[0] = 0;
     for (let k = 0; k < FEATURES.length; k += 2) {
       const kind = FEATURES[k]!, d = s - FEATURES[k + 1]!;
-      if (d < 0 || d > 14) continue;
+      // Past its own end a feature gives the lap back to the next (a rhythm section is doubles in a row).
+      if (d < 0 || d > FEATURE_LEN[kind]!) continue;
       FK[0] = kind;
       if (kind === F_DOUBLE) return jump(d, 1.8, 0.8, 0.5, 1.6, 0.8, 0.5, 2.4);
       if (kind === F_WHOOPS) {
@@ -137,6 +157,25 @@ export function makeTrack(def: TrackPlan) {
         if (d < 8) return void (PF[0] = 0.95 * (1 - sm((d - 5.3) / 2.7)));
         continue;
       }
+      if (kind === F_STEPUP) {
+        // A kicker, a short gap, then the face of a higher table: land on its top, roll off its back.
+        if (d < 1.8) return void (PF[0] = 0.75 * (d / 1.8) ** 1.25);
+        if (d < 2.2) return void (PF[0] = 0.75 - 0.55 * sm((d - 1.8) / 0.4));
+        if (d < 3.2) return void (PF[0] = 0.2);
+        if (d < 3.8) return void (PF[0] = 0.2 + 0.95 * sm((d - 3.2) / 0.6));
+        if (d < 6.4) return void (PF[0] = 1.15);
+        if (d < 9.4) return void (PF[0] = 1.15 * (1 - sm((d - 6.4) / 3)));
+        continue;
+      }
+      if (kind === F_STEPDOWN) {
+        // A long ramp up to a high deck, its lip, then a drop onto a long down slope.
+        if (d < 3.4) return void (PF[0] = 1.05 * sm(d / 3.4));
+        if (d < 4.8) return void (PF[0] = 1.05);
+        if (d < 5.2) return void (PF[0] = 1.05 - 0.45 * sm((d - 4.8) / 0.4));
+        if (d < 9.5) return void (PF[0] = 0.6 * (1 - sm((d - 5.2) / 4.3)));
+        continue;
+      }
+      if (kind === F_FINISH) return jump(d, 2, 1.05, 0.5, 2.2, 1, 0.5, 3);
     }
     return void (PF[0] = 0);
   }
@@ -155,8 +194,44 @@ export function makeTrack(def: TrackPlan) {
     }
   }
 
+  /** near() for the course's build: the same answer wherever the centre line is within NEAR_R (beyond
+   *  it, Infinity), from a grid of buckets of the segments round each cell (built once, on the first
+   *  build), so building a course costs the cells × a few segments, not the cells × the lap. */
+  const NEAR_R = 4.25, BG = 2;
+  let BK: Int32Array | null = null, BS: Int32Array | null = null;
+  const BW = Math.ceil((HX * 2) / BG) + 2, BH = Math.ceil((HZ * 2) / BG) + 2;
+  function buckets() {
+    const lists: number[][] = [];
+    for (let k = 0; k < BW * BH; k++) lists.push([]);
+    for (let s = 0; s < NT; s++) {
+      const a = s * 2, b = ((s + 1) % NT) * 2;
+      const x0 = Math.min(TRACK[a]!, TRACK[b]!) - NEAR_R, x1 = Math.max(TRACK[a]!, TRACK[b]!) + NEAR_R, z0 = Math.min(TRACK[a + 1]!, TRACK[b + 1]!) - NEAR_R, z1 = Math.max(TRACK[a + 1]!, TRACK[b + 1]!) + NEAR_R;
+      for (let j = Math.max(0, Math.floor((z0 + HZ) / BG) + 1); j <= Math.min(BH - 1, Math.floor((z1 + HZ) / BG) + 1); j++)
+        for (let i = Math.max(0, Math.floor((x0 + HX) / BG) + 1); i <= Math.min(BW - 1, Math.floor((x1 + HX) / BG) + 1); i++) lists[j * BW + i]!.push(s);
+    }
+    BS = new Int32Array(BW * BH + 1);
+    let n = 0;
+    for (let k = 0; k < lists.length; k++) (BS[k] = n), (n += lists[k]!.length);
+    BS[lists.length] = n;
+    BK = new Int32Array(n);
+    for (let k = 0, o = 0; k < lists.length; k++) for (const v of lists[k]!) BK[o++] = v;
+  }
+  function nearCourse(x: number, z: number) {
+    NR[0] = Infinity;
+    const i = Math.floor((x + HX) / BG) + 1, j = Math.floor((z + HZ) / BG) + 1;
+    if (i < 0 || j < 0 || i >= BW || j >= BH) return;
+    const c = j * BW + i;
+    for (let k = BS![c]!; k < BS![c + 1]!; k++) {
+      const s = BK![k]!, a = s * 2, b = ((s + 1) % NT) * 2, ax = TRACK[a]!, az = TRACK[a + 1]!, dx = TRACK[b]! - ax, dz = TRACK[b + 1]! - az, l2 = dx * dx + dz * dz || 1;
+      const u = Math.min(1, Math.max(0, ((x - ax) * dx + (z - az) * dz) / l2)), px = x - ax - dx * u, pz = z - az - dz * u, d = Math.sqrt(px * px + pz * pz);
+      if (d < NR[0]!) (NR[0] = d), (NR[1] = s), (NR[2] = u), (NR[3] = dx * pz - dz * px >= 0 ? 1 : -1);
+    }
+    if (NR[0]! > NEAR_R) NR[0] = Infinity;
+  }
+
   /** The course: terrain with the track carved and the features stamped. Pure: the same every time. */
   function course(): Terrain {
+    if (!BK) buckets();
     const t = terrain({ cols: COLS, rows: ROWS, cell: CELL });
     // Rolling dirt round the track, down to the plinth at the edges.
     t.noise({ seed: def.seed, amp: 1.6, scale: 9, octaves: 3, ridge: 0.2 });
@@ -166,7 +241,7 @@ export function makeTrack(def: TrackPlan) {
     });
     const half = TRACK_W / 2, edge = 1.8;
     t.shape((x, z, h) => {
-      near(x, z);
+      nearCourse(x, z);
       const d = NR[0]!;
       if (d >= half + edge + 0.6) return h;
       const s = sAt(NR[1]! + NR[2]!), y = FLOOR + profile(s), u = d <= half + 0.3 ? 0 : (d - half - 0.3) / edge, w = 1 - sm(u);
@@ -174,24 +249,25 @@ export function makeTrack(def: TrackPlan) {
       const lip = d > half + 0.3 && d < half + edge ? 0.22 * Math.sin(((d - half - 0.3) / edge) * Math.PI) : 0;
       return h + (y - h) * w + lip * (1 - w * 0.5);
     });
-    // The berms: the outside (right) of each left turn banked up.
-    for (let k = 0, i = 0; k < 4; k++) {
+    // The berms: the outside of each turn banked up (the right of a left turn, the left of a right).
+    for (let i = 0; i < NT; ) {
       while (i < NT && !TURN[i]) i++;
-      const i0 = i;
-      while (i < NT && TURN[i]) i++;
-      const n = i - i0 + 2, P = new Float64Array(n * 2);
+      if (i >= NT) break;
+      const i0 = i, dir = TURN[i]!, sec = SECTION[i]!;
+      while (i < NT && TURN[i] === dir && SECTION[i] === sec) i++;
+      const n = i - i0 + 2, P = new Float64Array(n * 2), v = PLAN[sec]!;
       for (let j = 0; j < n; j++) {
         const q = ((i0 - 1 + j) % NT) * 2;
         P[j * 2] = TRACK[q]!;
         P[j * 2 + 1] = TRACK[q + 1]!;
       }
-      t.berm(P, { width: TRACK_W + 1.2, height: 0.75, side: 1, edge: 1.2 });
+      t.berm(P, { width: TRACK_W + 1.2, height: typeof v === "number" ? 0.75 : v.berm ?? 0.75, side: dir, edge: 1.2 });
     }
     // Paint: the track's faces, and the features' faces.
     for (let j = 0; j < ROWS; j++)
       for (let i = 0; i < COLS * 2; i++) {
         const x = t.x0 + ((i >> 1) + (i & 1 ? 1 : 2) / 3) * CELL, z = t.z0 + (j + (i & 1 ? 2 : 1) / 3) * CELL;
-        near(x, z);
+        nearCourse(x, z);
         if (NR[0]! > half) continue;
         const s = sAt(NR[1]! + NR[2]!), p = profile(s);
         t.kind[j * COLS * 2 + i] = p > 0.05 && FK[0] !== F_WHOOPS ? KIND_FACE : KIND_TRACK;
@@ -214,37 +290,49 @@ export function makeTrack(def: TrackPlan) {
 
   /** The speed a rival wants at each point (turns slow, the triple's run-up fast, the whoops skimmed). */
   const WANT = new Float64Array(NT);
+  /** 1 where the speed wanted is a turn's: the autopilot brakes to it sooner. */
+  const INTO = new Uint8Array(NT);
   {
     for (let i = 0; i < NT; i++) {
       const s = sAt(i);
-      let w = 14.5;
+      let w = 14.5, wt = 99;
       // Ahead: the turn (brake into it), a feature (its speed).
       for (let a = 0; a <= 16; a++) {
         const j = (i + a) % NT, sj = sAt(j);
-        if (TURN[j]) w = Math.min(w, 8.6 + a * 0.55);
+        // A turn's speed by its radius (8.6 on the fixed track's 5.2).
+        // (Tighter than that, slower still: a hairpin is taken at walking pace next to a sweeper.)
+        if (TURN[j]) wt = Math.min(wt, 8.6 * (RADIUS[j]! >= 5.2 ? Math.sqrt(RADIUS[j]! / 5.2) : (RADIUS[j]! / 5.2) ** 0.8) + a * 0.5);
         profile(sj);
         const f = FK[0]!;
-        if (f === 1) w = Math.min(w, 10.2 + a * 0.4);
+        if (f === 1) w = Math.min(w, 11.2 + a * 0.4);
         if (f === 2) w = Math.min(w, 12.5);
         if (f === 3 && a > 3) w = Math.min(w, 12.8);
         if (f === 4) w = Math.min(w, 11.4 + a * 0.3);
+        if (f === F_STEPUP) w = Math.min(w, 11.6 + a * 0.3);
+        if (f === F_STEPDOWN) w = Math.min(w, 9.6 + a * 0.4);
+        if (f === F_FINISH) w = Math.min(w, 12 + a * 0.3);
       }
+      if (wt < w) (w = wt), (INTO[i] = 1);
       profile(s);
-      if (FK[0] === 3) w = 12.8;
+      if (FK[0] === 3) (w = 12.8), (INTO[i] = 0);
       WANT[i] = w;
     }
   }
 
   return {
-    def, id: def.id, name: def.name, COLS, ROWS, HX, HZ, LAP, NT, TRACK, YAW, TURN, GATE_S, LINE_S, FEATURES, FEATURE_NAMES, FK, PF, NR, FLOOR, WANT,
+    def, id: def.id, name: def.name, COLS, ROWS, HX, HZ, LAP, NT, TRACK, YAW, TURN, RADIUS, SECTION, GATE_S, LINE_S, FEATURES, FEATURE_NAMES, FK, PF, NR, FLOOR, WANT, INTO,
     sAt, profile, prof, near, course, trackEdges,
   };
 }
 export type Track = ReturnType<typeof makeTrack>;
 
+/** Race options: the rivals' nerve (their share of the speed the line wants, a range: 0.9..0.98 by
+ *  default; a series' higher tiers raise it). */
+export interface RaceOpts { nerve?: [number, number] }
 /** A race: four riders, the gate, laps and places. The player is rider 0. */
-export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), me: { power: Power; shape?: BikeShape } = { power: TWO_STROKE }, rivals: Power[] = [FOUR_STROKE, TWO_STROKE, FOUR_STROKE]) {
-  const { HX, HZ, LAP, NT, TRACK, YAW, GATE_S, LINE_S, FK, PF, NR, WANT, sAt, prof, near } = track;
+export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), me: { power: Power; shape?: BikeShape } = { power: TWO_STROKE }, rivals: Power[] = [FOUR_STROKE, TWO_STROKE, FOUR_STROKE], opts: RaceOpts = {}) {
+  const NV0 = opts.nerve?.[0] ?? 0.9, NV1 = opts.nerve?.[1] ?? 0.98;
+  const { HX, HZ, LAP, NT, TRACK, YAW, GATE_S, LINE_S, FK, PF, NR, WANT, INTO, sAt, prof, near } = track;
   const t = track.course();
   const riders: Bike[] = [];
   const POWERS: Power[] = [me.power, rivals[0] ?? FOUR_STROKE, rivals[1] ?? TWO_STROKE, rivals[2] ?? FOUR_STROKE];
@@ -276,7 +364,7 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
       // Lanes across the gate, the player second from the inside.
       const lane = [-0.35, -1.15, 0.45, 1.25][r]!;
       R[r * 16 + LN] = lane;
-      R[r * 16 + NV] = r ? 0.9 + rand() * 0.08 : 1;
+      R[r * 16 + NV] = r ? NV0 + rand() * (NV1 - NV0) : 1;
       place(r, gi, lane, 0.35);
       R[r * 16 + PG] = sAt(gi) - 0.35;
       R[r * 16 + PL] = r;
@@ -323,7 +411,7 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
   function autopilot(r: number, out: Float64Array) {
     const b = riders[r]!, i = R[r * 16 + NI]!, sp = b.speed, look = 4 + Math.max(0, sp) * 0.22 | 0, k = (i + look) % NT;
     prof(sAt(i + 3));
-    const onJump = FK[0] === 1 || FK[0] === 3 || FK[0] === 4, lane = onJump ? R[r * 16 + LN]! * 0.25 : R[r * 16 + LN]! * 0.7;
+    const onJump = FK[0] === 1 || FK[0]! >= 3, lane = onJump ? R[r * 16 + LN]! * 0.25 : R[r * 16 + LN]! * 0.7;
     const tx = TRACK[k * 2]! + Math.sin(YAW[k]!) * lane, tz = TRACK[k * 2 + 1]! + Math.cos(YAW[k]!) * lane;
     const fx = b.cy, fz = -b.sy, ux = tx - b.pos[0]!, uz = tz - b.pos[2]!, ul = Math.sqrt(ux * ux + uz * uz) || 1;
     const cross = (fx * uz - fz * ux) / ul;
@@ -344,8 +432,12 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
       out[0] = 0;
       out[1] = 0;
     } else {
-      out[0] = sp < want ? 1 : sp < want + 0.8 ? 0.35 : 0;
-      out[1] = sp > want + 2 ? 0.8 : 0;
+      // Up a jump's face the gas stays on (rolling up it shut loses the speed the gap needs); into
+      // one, brake down to its speed sooner than into a turn.
+      prof(sAt(i));
+      const face = onJump && PF[0]! > 0.03;
+      out[0] = sp < want ? 1 : sp < want + (face ? 2.5 : 0.8) ? (face ? 0.8 : 0.35) : 0;
+      out[1] = !face && sp > want + (onJump || INTO[i] ? 1 : 2) ? 0.8 : 0;
       // Keep the front down (a wheelie out of a turn costs the line).
       const rel = b.rel;
       out[2] = rel > 0.12 ? -1 : rel > 0.05 ? -0.4 : 0;
