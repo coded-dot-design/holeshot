@@ -15,6 +15,7 @@ import { hypot } from "@fzlt/core/steer";
 import { ride, RIDES, type RideSpec } from "./ride.ts";
 import { B_CRASH, B_STOPPIE } from "../../bike/bike.ts";
 import { tricks, ON, F_CROSS, F_SPRINK, F_GRUMP, BANKED } from "./tricks.ts";
+import { atan2, cos, sin } from "../../math.ts";
 
 export const HX = 49, HZ = 14, CURB = 0.12, SESSION = 60;
 export const READY = 0, RUN = 1, CRASH = 2, DONE = 3;
@@ -147,7 +148,7 @@ for (let h = 0; h < NH; h++) {
   SOLID.push(x - w, z - d, x + w, z + d);
 }
 for (let c = 0; c < NCARS; c++) {
-  const o = c * 4, x = CARS[o]!, z = CARS[o + 1]!, along = Math.abs(Math.cos(CARS[o + 2]!)) > 0.5, a = (along ? CAR_L : CAR_W) / 2, b = (along ? CAR_W : CAR_L) / 2;
+  const o = c * 4, x = CARS[o]!, z = CARS[o + 1]!, along = Math.abs(cos(CARS[o + 2]!)) > 0.5, a = (along ? CAR_L : CAR_W) / 2, b = (along ? CAR_W : CAR_L) / 2;
   SOLID.push(x - a, z - b, x + a, z + b);
 }
 SOLID.push(FENCE[0]!, FENCE[3]! - 0.1, FENCE[2]!, FENCE[3]! + 0.1, FENCE[0]! - 0.1, FENCE[1]!, FENCE[0]! + 0.1, FENCE[3]!, FENCE[2]! - 0.1, FENCE[1]!, FENCE[2]! + 0.1, FENCE[3]!);
@@ -278,7 +279,7 @@ export function cityRun(specs: RideSpec[] = RIDES) {
       const o = i * 4, dx = x - SPRINK[o]!, dz = z - SPRINK[o + 1]!, dd = hypot(dx, dz);
       if (SPC[i]! > 0) SPC[i] = SPC[i]! - dt;
       if (dd > SP_REACH || dd < 0.2 || SPC[i]! > 0) continue;
-      let da = Math.atan2(-dz, dx) - sprinklerAim(i);
+      let da = atan2(-dz, dx) - sprinklerAim(i);
       da -= TAU * Math.floor(da / TAU + 0.5);
       if (Math.abs(da) < 0.45) {
         SPC[i] = 1.2;
@@ -299,7 +300,7 @@ export function cityRun(specs: RideSpec[] = RIDES) {
   /** Where sprinkler i points now (radians, 0 is +x, anticlockwise from above). */
   function sprinklerAim(i: number) {
     const o = i * 4;
-    return SPRINK[o + 2]! + 1.15 * Math.sin(S[11]! * 1.3 + SPRINK[o + 3]!);
+    return SPRINK[o + 2]! + 1.15 * sin(S[11]! * 1.3 + SPRINK[o + 3]!);
   }
   // ---- the autopilot: round the ring, a wheelie down each straight, the front down for the corners ----
   function autopilot(I: Float64Array) {
@@ -309,7 +310,7 @@ export function cityRun(specs: RideSpec[] = RIDES) {
     let dist = hypot(tx - x, tz - z);
     if (dist < 2.6) (leg = S[7] = (leg + 1) % 4), (dist = hypot(ROUTE[leg * 2]! - x, ROUTE[leg * 2 + 1]! - z));
     const ax = ROUTE[leg * 2]!, az = ROUTE[leg * 2 + 1]!;
-    let err = Math.atan2(-(az - z), ax - x) - b.yaw;
+    let err = atan2(-(az - z), ax - x) - b.yaw;
     err -= TAU * Math.floor(err / TAU + 0.5);
     const v = b.speed, th = bike.nose, up = th > 0.06, ahead = dist - v * AP[6]!;
     // In a wheelie the bike steers by leaning: aim early, and drop the front well before a corner.

@@ -101,11 +101,13 @@ npm ci
 npm run check         # typecheck, build dist/ (committed), size
 npm test              # headless: the bike, tune(), the profile (save, load, migrate, the code),
                       # every mode on every starter class, the economy (payouts, wear, the pit
-                      # crew, the online bonus and its cap), allocation, online sync and rollback
+                      # crew, the online bonus and its cap), allocation, online sync and rollback, the determinism guard
+                      # and the golden hashes (tracks, maps and rides, bit for bit)
 npm run test:settle   # the menus and the hero sleep, a race never does, off screen pauses, Recall
 npm run test:browser  # Chromium at 1440 and 390: setup, garage, every mode on your bike, pause,
                       # leaving, reload, the export code, the camera through URL-bar resizes;
                       # online: four pages in one room (a stand-in room server), race, jam, Big Air
+node tests/golden.browser.mjs --serve  # the golden hashes on a phone: open the URL it prints (MATCH)
 npm run test:net      # online on phone links (60–150 ms round trips, jitter, spikes): key → screen,
                       # stalls, frame rate, every screen byte for byte (--net lockstep: the before)
 npm run site:build    # the site (landing + /play/) into artifacts/pages

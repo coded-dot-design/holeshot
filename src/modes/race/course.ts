@@ -7,6 +7,7 @@
 // (or the player, for the poster and the tests). Zero allocation per step.
 import { terrain, type Terrain } from "@fzlt/core/terrain";
 import { bike, nudge, type Bike, type BikeShape, type Power, TWO_STROKE, FOUR_STROKE, B_CRASH, B_LAND, B_WHEELIE, STRIKE } from "../../bike/bike.ts";
+import { atan, cos, pow, sin } from "../../math.ts";
 
 export const CELL = 0.45;
 export const TRACK_W = 3.4, KIND_TRACK = 1, KIND_FACE = 2, RIDERS = 4, LAPS = 3;
@@ -86,8 +87,8 @@ export function makeTrack(def: TrackPlan) {
         if (s >= next - 1e-9 && k < NT) (TRACK[k * 2] = x), (TRACK[k * 2 + 1] = z), (YAW[k] = psi), (TURN[k] = turn > 0 ? 1 : turn < 0 ? -1 : 0), (RADIUS[k] = turn ? rad : 0), (SECTION[k] = sec), k++, (next = k * (LAP / NT));
         const d = len / n;
         if (turn) psi += (turn > 0 ? d : -d) / rad;
-        x += Math.cos(psi) * d;
-        z -= Math.sin(psi) * d;
+        x += cos(psi) * d;
+        z -= sin(psi) * d;
         s += d;
       }
     }
@@ -112,7 +113,7 @@ export function makeTrack(def: TrackPlan) {
   /** A jump: up a face of `up` to `h`, a short back side, a gap, then a landing: a steep face back up to `lh` and a long down ramp `down`. */
   function jump(d: number, up: number, h: number, back: number, gap: number, lh: number, face: number, down: number) {
     if (d < 0) return void (PF[0] = 0);
-    if (d < up) return void (PF[0] = h * (d / up) ** 1.25);
+    if (d < up) return void (PF[0] = h * pow(d / up, 1.25));
     d -= up;
     if (d < back) return void (PF[0] = h * (1 - sm(d / back)));
     d -= back;
@@ -140,26 +141,26 @@ export function makeTrack(def: TrackPlan) {
       if (kind === F_WHOOPS) {
         if (d > 9.5) continue;
         // Five rollers, round (no face steeper than about 22°).
-        return void (PF[0] = 0.25 * (0.5 - 0.5 * Math.cos((d / 1.9) * Math.PI * 2)));
+        return void (PF[0] = 0.25 * (0.5 - 0.5 * cos((d / 1.9) * Math.PI * 2)));
       }
       if (kind === F_TRIPLE) {
         // Up a tall face, a hump in the gap (the middle jump of the three), then the landing face and its long down ramp.
-        if (d < 3.2) return void (PF[0] = 1.45 * (d / 3.2) ** 1.25);
+        if (d < 3.2) return void (PF[0] = 1.45 * pow(d / 3.2, 1.25));
         if (d < 3.8) return void (PF[0] = 1.45 - 1.05 * sm((d - 3.2) / 0.6));
-        if (d < 6.9) return void (PF[0] = 0.4 + 0.35 * Math.sin(((d - 3.8) / 3.1) * Math.PI));
+        if (d < 6.9) return void (PF[0] = 0.4 + 0.35 * sin(((d - 3.8) / 3.1) * Math.PI));
         if (d < 8) return void (PF[0] = 0.4 + sm((d - 6.9) / 1.1));
         if (d < 12.6) return void (PF[0] = 1.4 * (1 - sm((d - 8) / 4.6)));
         continue;
       }
       if (kind === F_TABLE) {
-        if (d < 2.1) return void (PF[0] = 0.95 * (d / 2.1) ** 1.2);
+        if (d < 2.1) return void (PF[0] = 0.95 * pow(d / 2.1, 1.2));
         if (d < 5.3) return void (PF[0] = 0.95);
         if (d < 8) return void (PF[0] = 0.95 * (1 - sm((d - 5.3) / 2.7)));
         continue;
       }
       if (kind === F_STEPUP) {
         // A kicker, a short gap, then the face of a higher table: land on its top, roll off its back.
-        if (d < 1.8) return void (PF[0] = 0.75 * (d / 1.8) ** 1.25);
+        if (d < 1.8) return void (PF[0] = 0.75 * pow(d / 1.8, 1.25));
         if (d < 2.2) return void (PF[0] = 0.75 - 0.55 * sm((d - 1.8) / 0.4));
         if (d < 3.2) return void (PF[0] = 0.2);
         if (d < 3.8) return void (PF[0] = 0.2 + 0.95 * sm((d - 3.2) / 0.6));
@@ -246,7 +247,7 @@ export function makeTrack(def: TrackPlan) {
       if (d >= half + edge + 0.6) return h;
       const s = sAt(NR[1]! + NR[2]!), y = FLOOR + profile(s), u = d <= half + 0.3 ? 0 : (d - half - 0.3) / edge, w = 1 - sm(u);
       // A low bank of dirt along each side (the track sits in it).
-      const lip = d > half + 0.3 && d < half + edge ? 0.22 * Math.sin(((d - half - 0.3) / edge) * Math.PI) : 0;
+      const lip = d > half + 0.3 && d < half + edge ? 0.22 * sin(((d - half - 0.3) / edge) * Math.PI) : 0;
       return h + (y - h) * w + lip * (1 - w * 0.5);
     });
     // The berms: the outside of each turn banked up (the right of a left turn, the left of a right).
@@ -279,7 +280,7 @@ export function makeTrack(def: TrackPlan) {
   function trackEdges(t: Terrain) {
     const E = new Float64Array(NT * 6), half = TRACK_W / 2 + 0.05;
     for (let i = 0; i < NT; i++) {
-      const nx = Math.sin(YAW[i]!), nz = Math.cos(YAW[i]!);
+      const nx = sin(YAW[i]!), nz = cos(YAW[i]!);
       for (let k = 0; k < 2; k++) {
         const s = k ? 1 : -1, x = TRACK[i * 2]! + nx * half * s, z = TRACK[i * 2 + 1]! + nz * half * s;
         E[k * NT * 3 + i * 3] = x; E[k * NT * 3 + i * 3 + 1] = t.height(x, z) + 0.04; E[k * NT * 3 + i * 3 + 2] = z;
@@ -301,7 +302,7 @@ export function makeTrack(def: TrackPlan) {
         const j = (i + a) % NT, sj = sAt(j);
         // A turn's speed by its radius (8.6 on the fixed track's 5.2).
         // (Tighter than that, slower still: a hairpin is taken at walking pace next to a sweeper.)
-        if (TURN[j]) wt = Math.min(wt, 8.6 * (RADIUS[j]! >= 5.2 ? Math.sqrt(RADIUS[j]! / 5.2) : (RADIUS[j]! / 5.2) ** 0.8) + a * 0.5);
+        if (TURN[j]) wt = Math.min(wt, 8.6 * (RADIUS[j]! >= 5.2 ? Math.sqrt(RADIUS[j]! / 5.2) : pow(RADIUS[j]! / 5.2, 0.8)) + a * 0.5);
         profile(sj);
         const f = FK[0]!;
         if (f === 1) w = Math.min(w, 11.2 + a * 0.4);
@@ -365,8 +366,8 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
   const PIN = new Float64Array(RIDERS * 5), AUTO = new Uint8Array(RIDERS);
 
   function place(r: number, i: number, lane: number, back = 0) {
-    const b = riders[r]!, yaw = YAW[i]!, nx = Math.sin(yaw), nz = Math.cos(yaw);
-    b.reset(TRACK[i * 2]! + nx * lane - Math.cos(yaw) * back, TRACK[i * 2 + 1]! + nz * lane + Math.sin(yaw) * back, yaw);
+    const b = riders[r]!, yaw = YAW[i]!, nx = sin(yaw), nz = cos(yaw);
+    b.reset(TRACK[i * 2]! + nx * lane - cos(yaw) * back, TRACK[i * 2 + 1]! + nz * lane + sin(yaw) * back, yaw);
     R[r * 16 + NI] = i;
   }
   function reset(power?: Power) {
@@ -428,7 +429,7 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
     const b = riders[r]!, i = R[r * 16 + NI]!, sp = b.speed, look = 4 + Math.max(0, sp) * 0.22 | 0, k = (i + look) % NT;
     prof(sAt(i + 3));
     const onJump = FK[0] === 1 || FK[0]! >= 3, lane = onJump ? R[r * 16 + LN]! * 0.25 : R[r * 16 + LN]! * 0.7;
-    const tx = TRACK[k * 2]! + Math.sin(YAW[k]!) * lane, tz = TRACK[k * 2 + 1]! + Math.cos(YAW[k]!) * lane;
+    const tx = TRACK[k * 2]! + sin(YAW[k]!) * lane, tz = TRACK[k * 2 + 1]! + cos(YAW[k]!) * lane;
     const fx = b.cy, fz = -b.sy, ux = tx - b.pos[0]!, uz = tz - b.pos[2]!, ul = Math.sqrt(ux * ux + uz * uz) || 1;
     const cross = (fx * uz - fz * ux) / ul;
     out[3] = Math.max(-1, Math.min(1, cross * 2.6));
@@ -442,7 +443,7 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
       prof(LD[0]! + 0.3);
       const hi = PF[0]!;
       prof(LD[0]! - 0.3);
-      const slope = Math.atan((hi - PF[0]!) / 0.6);
+      const slope = atan((hi - PF[0]!) / 0.6);
       const e = slope - (p + rate * 0.25);
       out[2] = Math.max(-1, Math.min(1, e * 3.2));
       out[0] = 0;
@@ -504,7 +505,7 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
       if (Math.ceil(S[2]!) !== before && S[2]! > 0) emit(E_COUNT, 0, Math.ceil(S[2]!));
       for (let r = 0; r < RIDERS; r++) {
         const b = riders[r]!;
-        if (r >= H || AUTO[r]) b.set(0.4 + 0.4 * (Math.sin(S[2]! * 7 + r) > 0 ? 1 : 0), 1, 0, 0);
+        if (r >= H || AUTO[r]) b.set(0.4 + 0.4 * (sin(S[2]! * 7 + r) > 0 ? 1 : 0), 1, 0, 0);
         else b.set(PIN[r * 5]!, 1, PIN[r * 5 + 2]!, 0);
         // The gate holds the front wheel: it revs and squats, it does not roll.
         HOLD[0] = b.pos[0]!; HOLD[2] = b.pos[2]!;

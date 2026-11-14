@@ -9,6 +9,7 @@ import type { BikeShape, Power } from "../../bike/bike.ts";
 import { DONE, E_COUNT, E_FINISH, E_GATE, E_WHEELIE, GRID, RACE, type Track } from "../race/course.ts";
 import type { RideMap } from "./maps.ts";
 import { freeRun, E_TRICK } from "./session.ts";
+import { cos, sin } from "../../math.ts";
 
 /** A jam's length (seconds) and its count-in. */
 export const JAM = 180, COUNT = 3;
@@ -38,7 +39,7 @@ export function freeJam(track: Track | RideMap, bikes: { power: Power; shape?: B
       const fr = runs[r]!, b = riders[r]!;
       fr.reset();
       const yaw = b.yaw, l = LANES[r]!;
-      b.reset(b.pos[0]! + Math.sin(yaw) * l, b.pos[2]! + Math.cos(yaw) * l, yaw);
+      b.reset(b.pos[0]! + sin(yaw) * l, b.pos[2]! + cos(yaw) * l, yaw);
     }
     emit(E_COUNT, 0, COUNT);
   }

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.1
+
+- **The same bits on every engine** (an iPhone in a room with desktop Chrome): every track and map
+  builder and every sim now uses `src/math.ts` (fdlibm's sin, cos, tan, atan, atan2 and pow, V8's
+  hypot) instead of the builtins, which may differ between engines in the last bit (V8's
+  `Math.pow` is the platform's libm). sin, cos, tan, atan, atan2 and hypot match V8 bit for bit; pow
+  was the platform's, so jump faces move by a last bit, and 2 of 540 seeds measured now generate a
+  different track (a championship under way may see a different track in a later round on such a
+  seed). `tests/math.test.mjs` guards the sim and generator modules against builtin transcendental
+  maths (render code allow-listed); `tests/golden.test.mjs` hashes 24 generated tracks, the race
+  loop, the four open maps and fixed rides against `tests/golden.json`, and
+  `tests/golden.browser.mjs` runs them in Chromium (`--serve` to check a phone). Size budget
+  145,000 B gzip (141,265 B measured).
+
 ## 0.2.0
 
 - **Online for up to four.** RIDE → ONLINE: YOUR NAME and the INVITE CODE, then HOST (pick the

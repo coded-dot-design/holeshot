@@ -21,6 +21,7 @@ import { CELL, DONE, F_DOUBLE, F_FINISH, F_STEPDOWN, F_STEPUP, F_TABLE, F_TRIPLE
 import { STARTERS } from "../../data/roster.ts";
 import { tune, type Tuned } from "../../model/tune.ts";
 import { newBike } from "../../model/profile.ts";
+import { atan2, cos, hypot, sin, tan } from "../../math.ts";
 
 /** Limits: the table's largest size (cells), the margin round the track, the spacing between stretches. */
 export const GEN = { maxCols: 140, maxRows: 100, minCols: 84, minRows: 58, margin: 4.6, sep: 7, tries: 400 };
@@ -76,13 +77,13 @@ export function draft(seed: number, difficulty: number): TrackPlan | null {
   for (let grow = 0; grow < 8; grow++) {
     const sc = 1 + grow * 0.08;
     // The corners: first every vertex on the ellipse, then the hairpins' spikes and the dents.
-    const at = vs.map((v) => [RX * sc * v.rho * Math.cos(v.a), RZ * sc * v.rho * Math.sin(v.a)] as [number, number]);
+    const at = vs.map((v) => [RX * sc * v.rho * cos(v.a), RZ * sc * v.rho * sin(v.a)] as [number, number]);
     const P: number[] = [], tip: boolean[] = [];
     vs.forEach((v, k) => {
       const [x, z] = at[k]!;
       if (v.kind === 1) {
         // The tip pair across the U; the feet (the neighbours, kind 2) are set here too, a leg back.
-        const l = Math.hypot(x, z), ex = x / l, ez = z / l, px = ez, pz = -ex, w = rh + link / 2, L = leg * Math.min(1.25, sc);
+        const l = hypot(x, z), ex = x / l, ez = z / l, px = ez, pz = -ex, w = rh + link / 2, L = leg * Math.min(1.25, sc);
         at[(k + n0 - 1) % n0] = [x - ex * L + px * w, z - ez * L + pz * w];
         at[(k + 1) % n0] = [x - ex * L - px * w, z - ez * L - pz * w];
       }
@@ -95,7 +96,7 @@ export function draft(seed: number, difficulty: number): TrackPlan | null {
     vs.forEach((v, k) => {
       const [x, z] = at[k]!;
       if (v.kind === 1) {
-        const l = Math.hypot(x, z), ex = x / l, ez = z / l, px = ez, pz = -ex, w = rh + link / 2;
+        const l = hypot(x, z), ex = x / l, ez = z / l, px = ez, pz = -ex, w = rh + link / 2;
         P.push(x + px * w, z + pz * w, x - px * w, z - pz * w), tip.push(true, true);
       } else P.push(x, z), tip.push(false);
     });
@@ -105,7 +106,7 @@ export function draft(seed: number, difficulty: number): TrackPlan | null {
       const m2 = P.length / 2;
       for (let i = 0; i < m2; i++) {
         const a = (i + m2 - 1) % m2, b = (i + 1) % m2;
-        const h1 = Math.atan2(-(P[i * 2 + 1]! - P[a * 2 + 1]!), P[i * 2]! - P[a * 2]!), h2 = Math.atan2(-(P[b * 2 + 1]! - P[i * 2 + 1]!), P[b * 2]! - P[i * 2]!);
+        const h1 = atan2(-(P[i * 2 + 1]! - P[a * 2 + 1]!), P[i * 2]! - P[a * 2]!), h2 = atan2(-(P[b * 2 + 1]! - P[i * 2 + 1]!), P[b * 2]! - P[i * 2]!);
         let t = h2 - h1;
         t -= 2 * PI * Math.floor(t / (2 * PI) + 0.5);
         if (Math.abs(t) < 16 * DEG && !tip[i]) {
@@ -117,7 +118,7 @@ export function draft(seed: number, difficulty: number): TrackPlan | null {
     }
     let n = P.length / 2;
     // Headings of each edge (i → i+1) and the turn at each corner (+ left).
-    const head = (i: number) => Math.atan2(-(P[((i + 1) % n) * 2 + 1]! - P[i * 2 + 1]!), P[((i + 1) % n) * 2]! - P[i * 2]!);
+    const head = (i: number) => atan2(-(P[((i + 1) % n) * 2 + 1]! - P[i * 2 + 1]!), P[((i + 1) % n) * 2]! - P[i * 2]!);
     const wrap = (a: number) => a - 2 * PI * Math.floor(a / (2 * PI) + 0.5);
     let th = [...Array(n).keys()].map((i) => wrap(head(i) - head((i + n - 1) % n)));
     let total = th.reduce((a, b) => a + b, 0);
@@ -134,8 +135,8 @@ export function draft(seed: number, difficulty: number): TrackPlan | null {
     if (th.some((a) => Math.abs(a) > 150 * DEG)) return null;
     // Each corner's arc: its radius and how far it reaches along both edges.
     const R = th.map((a, i) => (tip[i] ? rh : radius(Math.abs(a) / DEG) * (0.97 + radii[i % radii.length]! * 0.06)));
-    const T = th.map((a, i) => R[i]! * Math.tan(Math.abs(a) / 2));
-    const E = [...Array(n).keys()].map((i) => Math.hypot(P[((i + 1) % n) * 2]! - P[i * 2]!, P[((i + 1) % n) * 2 + 1]! - P[i * 2 + 1]!) - T[i]! - T[(i + 1) % n]!);
+    const T = th.map((a, i) => R[i]! * tan(Math.abs(a) / 2));
+    const E = [...Array(n).keys()].map((i) => hypot(P[((i + 1) % n) * 2]! - P[i * 2]!, P[((i + 1) % n) * 2 + 1]! - P[i * 2 + 1]!) - T[i]! - T[(i + 1) % n]!);
     // A link: the short straight across a hairpin's tip, or between a right and a left (an S); no features on it.
     const isLink = E.map((e, i) => (tip[i] && tip[(i + 1) % n]) || (e < 8 && th[i]! * th[(i + 1) % n]! < 0));
     if (E.some((e, i) => e < (isLink[i] ? 1.8 : 4))) continue;
@@ -158,8 +159,8 @@ export function draft(seed: number, difficulty: number): TrackPlan | null {
       ts.reduce((a, t) => (Math.abs(t.turn) > Math.abs(a.turn) ? t : a)).turn += 2 * PI - sum;
     }
     n = L.length;
-    const ux = P[((k0 + 1) % n) * 2]! - P[k0 * 2]!, uz = P[((k0 + 1) % n) * 2 + 1]! - P[k0 * 2 + 1]!, ul = Math.hypot(ux, uz);
-    const sx = P[k0 * 2]! + (ux / ul) * T[k0]!, sz = P[k0 * 2 + 1]! + (uz / ul) * T[k0]!, yaw = Math.atan2(-uz, ux);
+    const ux = P[((k0 + 1) % n) * 2]! - P[k0 * 2]!, uz = P[((k0 + 1) % n) * 2 + 1]! - P[k0 * 2 + 1]!, ul = hypot(ux, uz);
+    const sx = P[k0 * 2]! + (ux / ul) * T[k0]!, sz = P[k0 * 2 + 1]! + (uz / ul) * T[k0]!, yaw = atan2(-uz, ux);
 
     // ---- the features, onto the straights (the finish jump last on the last; none on a link) ----
     const r2 = rng(seed ^ 0xa5a5a5a5);
@@ -219,7 +220,7 @@ export function draft(seed: number, difficulty: number): TrackPlan | null {
     const pts = polyline(plan, 0, 0, 0.5, 5.2, 0), m = GEN.margin;
     let bestCells = Infinity, bx = 0, bz = 0, bc = 0, br = 0, ba = 0;
     for (let q = 0; q < 36; q++) {
-      const a = (q / 36) * PI, c = Math.cos(a), sn = Math.sin(a);
+      const a = (q / 36) * PI, c = cos(a), sn = sin(a);
       let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
       for (let i = 0; i < pts.length; i += 2) {
         const x = pts[i]! * c + pts[i + 1]! * sn, z = -pts[i]! * sn + pts[i + 1]! * c;
@@ -248,10 +249,10 @@ export function polyline(plan: Section[], sx: number, sz: number, ds: number, RA
       if (turn) {
         // Exact arc step.
         const sg = turn > 0 ? 1 : -1, dpsi = (sg * step) / rad;
-        x += sg * rad * (Math.sin(psi + dpsi) - Math.sin(psi));
-        z += sg * rad * (Math.cos(psi + dpsi) - Math.cos(psi));
+        x += sg * rad * (sin(psi + dpsi) - sin(psi));
+        z += sg * rad * (cos(psi + dpsi) - cos(psi));
         psi += dpsi;
-      } else (x += Math.cos(psi) * step), (z -= Math.sin(psi) * step);
+      } else (x += cos(psi) * step), (z -= sin(psi) * step);
     }
   }
   out.push(x, z);
@@ -262,7 +263,7 @@ export function polyline(plan: Section[], sx: number, sz: number, ds: number, RA
 export function checkShape(p: TrackPlan): string | null {
   const t = makeTrack(p), { TRACK, NT, HX, HZ, LAP } = t;
   // The loop closes: the last point meets the first (and the heading comes round).
-  const gap = Math.hypot(TRACK[0]! - TRACK[(NT - 1) * 2]!, TRACK[1]! - TRACK[(NT - 1) * 2 + 1]!);
+  const gap = hypot(TRACK[0]! - TRACK[(NT - 1) * 2]!, TRACK[1]! - TRACK[(NT - 1) * 2 + 1]!);
   if (gap > LAP / NT + 0.1) return `open loop (${gap.toFixed(2)})`;
   const turn = p.plan.reduce<number>((s, v) => s + secTurn(v), 0);
   if (Math.abs(turn - 2 * PI) > 1e-6) return "heading does not close";

@@ -20,7 +20,9 @@ import { readdirSync, readFileSync } from "node:fs";
 // hello 3.2 KB, the Free Ride jam 1.7 KB, the room card, the lobby and the online result 5.4 KB, the
 // shell's online flow about 13 KB, the race scene's online view, the economy's online bonus and cap),
 // plus about 4 KB of room.
-const BUDGET = 142_000;
+// 0.2.1, the same bits on every engine: 141,265 B measured (+3,377 B: src/math.ts, fdlibm's sin, cos,
+// tan, atan, atan2 and pow written out for the sims and the generators), plus about 3.7 KB of room.
+const BUDGET = 145_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

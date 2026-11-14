@@ -10,6 +10,7 @@
 import { terrain, type Terrain } from "@fzlt/core/terrain";
 import { bike, type Bike, type BikeShape, type Power, TWO_STROKE, B_CRASH, B_LAND } from "../../bike/bike.ts";
 import { tricks, TRICKS, HOP } from "./tricks.ts";
+import { atan, cos, pow, sin } from "../../math.ts";
 
 export const COLS = 116, ROWS = 56, CELL = 0.45, HX = (COLS * CELL) / 2, HZ = (ROWS * CELL) / 2;
 export const TRACK_W = 4.2, KIND_TRACK = 1, KIND_STEEL = 2, KIND_LAND = 3;
@@ -38,8 +39,8 @@ export const TURN = new Uint8Array(NT);
       if (s >= next - 1e-9 && k < NT) (TRACK[k * 2] = x), (TRACK[k * 2 + 1] = z), (YAW[k] = psi), (TURN[k] = v < 0 ? 1 : 0), k++, (next = k * (LAP / NT));
       const d = len / n;
       if (v < 0) psi += d / B;
-      x += Math.cos(psi) * d;
-      z -= Math.sin(psi) * d;
+      x += cos(psi) * d;
+      z -= sin(psi) * d;
       s += d;
     }
   }
@@ -60,7 +61,7 @@ export function prof(s: number) {
   for (let k = 0; k < 2; k++) {
     const d = s - KICK[k]!;
     if (d < 0 || d > KICK_L + GAP + LAND_F + LAND_D) continue;
-    if (d < KICK_L) return void ((FK[0] = 1), (PF[0] = KICK_H * (d / KICK_L) ** 1.35), (PF[1] = (KICK_H * 1.35 * (d / KICK_L) ** 0.35) / KICK_L));
+    if (d < KICK_L) return void ((FK[0] = 1), (PF[0] = KICK_H * pow(d / KICK_L, 1.35)), (PF[1] = (KICK_H * 1.35 * pow(d / KICK_L, 0.35)) / KICK_L));
     if (d < KICK_L + 0.35) return void ((FK[0] = 1), (PF[0] = KICK_H * (1 - (d - KICK_L) / 0.35)), (PF[1] = -KICK_H / 0.35));
     const e = d - KICK_L - GAP;
     if (e < 0) return;
@@ -115,7 +116,7 @@ export function arena(): Terrain {
 export function trackEdges(t: Terrain) {
   const E = new Float64Array(NT * 6), half = TRACK_W / 2 + 0.05;
   for (let i = 0; i < NT; i++) {
-    const nx = Math.sin(YAW[i]!), nz = Math.cos(YAW[i]!);
+    const nx = sin(YAW[i]!), nz = cos(YAW[i]!);
     for (let k = 0; k < 2; k++) {
       const s = k ? 1 : -1, x = TRACK[i * 2]! + nx * half * s, z = TRACK[i * 2 + 1]! + nz * half * s;
       E[k * NT * 3 + i * 3] = x; E[k * NT * 3 + i * 3 + 1] = t.height(x, z) + 0.04; E[k * NT * 3 + i * 3 + 2] = z;
@@ -195,7 +196,7 @@ export function airShow(seed = 20261120, me: { power: Power; shape?: BikeShape }
       // through the top and put away in time for the landing.
       landing();
       prof(LD[0]! + 0.4);
-      const slope = FK[0] === 3 || FK[0] === 0 ? Math.atan(PF[1]!) : -0.3;
+      const slope = FK[0] === 3 || FK[0] === 0 ? atan(PF[1]!) : -0.3;
       if (b.air < 0.02) S[FL] = (S[AJ]! & 1) === 1 && LD[1]! > (b.power.gyr < 0.6 ? 1.1 : 1.4) ? 1 : 0;
       const flip = S[FL] === 1;
       out[0] = 0;

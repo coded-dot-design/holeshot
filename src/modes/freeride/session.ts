@@ -12,6 +12,7 @@ import { bike, type Bike, type BikeShape, type Power, B_CRASH, B_LAND, B_WHEELIE
 import { F_GAP, F_KICKER, F_STEP, type RideMap } from "./maps.ts";
 import type { Terrain } from "@fzlt/core/terrain";
 import { E_CRASH, E_LAND, E_RESPAWN, E_WHEELIE, E_FINISH, GRID, RACE, DONE, type Track } from "../race/course.ts";
+import { atan, cos, sin } from "../../math.ts";
 
 /** The free-ride maps: each a track plan to roam (the loop is there to follow, never required). */
 export interface FreeMap { id: string; name: string; blurb: string; track: () => Track }
@@ -172,11 +173,11 @@ export function freeRun(track: Track | RideMap, me: { power: Power; shape?: Bike
       if (!PP[1] && ahead && !here && b.air === 0 && sp < (ahead === F_STEP ? 8.8 : ahead === F_GAP ? 10.6 : 11.6)) PP[1] = 1;
       if (PP[1] && !ahead && !here) PP[1] = 0;
       if (PP[1]) {
-        const nx = Math.sin(YAW[k]!), nz = Math.cos(YAW[k]!), x = TRACK[k * 2]!, z = TRACK[k * 2 + 1]!;
+        const nx = sin(YAW[k]!), nz = cos(YAW[k]!), x = TRACK[k * 2]!, z = TRACK[k * 2 + 1]!;
         lane = (x + nx) * (x + nx) + (z + nz) * (z + nz) < (x - nx) * (x - nx) + (z - nz) * (z - nz) ? HALF + 2.2 : -HALF - 2.2;
       }
     }
-    const tx = TRACK[k * 2]! + Math.sin(YAW[k]!) * lane, tz = TRACK[k * 2 + 1]! + Math.cos(YAW[k]!) * lane;
+    const tx = TRACK[k * 2]! + sin(YAW[k]!) * lane, tz = TRACK[k * 2 + 1]! + cos(YAW[k]!) * lane;
     const fx = b.cy, fz = -b.sy, ux = tx - b.pos[0]!, uz = tz - b.pos[2]!, ul = Math.sqrt(ux * ux + uz * uz) || 1;
     out[3] = Math.max(-1, Math.min(1, ((fx * uz - fz * ux) / ul) * 2.6));
     out[4] = 0;
@@ -196,14 +197,14 @@ export function freeRun(track: Track | RideMap, me: { power: Power; shape?: Bike
         // An open map: the line's surface (its floor and the feature) where it comes down.
         near(x, z, i, 30);
         const s = sAt(NR[1]! + NR[2]!);
-        slope = Math.atan((map.heightAt(s + 0.3) - map.heightAt(s - 0.3)) / 0.6);
+        slope = atan((map.heightAt(s + 0.3) - map.heightAt(s - 0.3)) / 0.6);
       } else {
         near(x, z, i, 30);
         const s = sAt(NR[1]! + NR[2]!);
         prof(s + 0.3);
         const hi = PF[0]!;
         prof(s - 0.3);
-        slope = Math.atan((hi - PF[0]!) / 0.6);
+        slope = atan((hi - PF[0]!) / 0.6);
       }
       out[2] = Math.max(-1, Math.min(1, (slope - (p + rate * 0.25)) * 3.2));
       out[0] = out[1] = 0;

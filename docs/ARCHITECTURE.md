@@ -51,6 +51,7 @@ src/
     wheelie/city.ts     the block and the session; wheelie/ride.ts the ride adapter; wheelie/tricks.ts the scorer
     wheelie/scene.ts    the town scene (mountCity)
     freeride/jam.ts     freeJam(): the online Free Ride jam (2–4 freeRuns on one map, trick points, one clock)
+  math.ts               deterministic sin, cos, tan, atan, atan2, pow, hypot (fdlibm's algorithms): every sim and generator uses them
   net.ts                online's wire: input bits, the host's pick (a byte), the hello (name, garage bike, look)
   online/
     rollback.ts         the rollback link (Dune Hop's): own input at once, predicted remote inputs, a snapshot ring, resim, hashes
@@ -274,6 +275,18 @@ after a correction; every 30 final frames each screen's state hash is compared (
 never drifts). A seat that leaves is ridden by the autopilot from the frame after its last input,
 the same on every screen.
 
+**The same bits on every engine.** An iPhone (WebKit) and desktop Chrome (V8) in one room run one
+sim, and the builtins (`Math.sin`, `Math.pow`, …) may differ between engines in the last bit (V8's
+`Math.pow` is the platform libm's). So nothing that builds a track or a map, steps a sim or lands in
+the snapshot calls a builtin transcendental: they use `src/math.ts` (fdlibm 5.3's sin, cos, tan,
+atan, atan2 and pow, V8's two-argument hypot: + − × ÷, square roots and bit reads only; sin, cos,
+tan, atan, atan2 and hypot match V8's builtins bit for bit) and the bike's own polynomials. Drawing,
+FX, cameras, sound and cards may use the builtins. `tests/math.test.mjs` scans `src/` for builtin
+transcendentals outside an allow-list of render files; `tests/golden.test.mjs` hashes 24 generated
+tracks, the race loop, the four open maps and fixed rides (races, an online race of four, jams,
+Big Air, Wheelie City) against `tests/golden.json`; `tests/golden.browser.mjs` runs the same cases
+in a browser (`--serve`: open it on an iPhone; the page says MATCH).
+
 `online/match.ts` is what those frames run, one link for as long as the room lasts. The first 11
 frames carry every seat's **hello** (33 bytes: the name, the riding bike's model, parts, mods, tune
 choices, damage and look, and the rider's kit): every screen, this one too, tunes the bikes from the
@@ -294,7 +307,7 @@ ready (a seat that left always is).
 
 `npm test` (headless: bike, tune, profile, every mode on every starter, the economy, allocation in a
 process of its own, the generator over 1,500 seeds, the series; online: the wire and the hello, the
-bike's snapshot, sync and rollback for two and four screens in a race and a jam with a leaver, the
+bike's snapshot, the determinism guard and the golden hashes, sync and rollback for two and four screens in a race and a jam with a leaver, the
 online bonus and its cap), `npm run test:settle`, `npm run test:browser` (1440 and 390; the series in
 `tests/series.browser.mjs`; online with four pages against `tests/room-server.mjs` in
 `tests/online.browser.mjs`), `npm run test:net` (phone links, measured), `npm run

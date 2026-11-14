@@ -8,6 +8,7 @@
 // WANT, near, prof), plus `course()` (the terrain, pure: the same every time), `SPAWN` and `POSTS`.
 // The scenery and the colours live with the scene (./scenery.ts); nothing here touches the DOM.
 import { terrain, type Terrain } from "@fzlt/core/terrain";
+import { atan2, cos, hypot, pow, sin, tan } from "../../math.ts";
 
 export const MAP_CELL = 0.5, DS = 0.5;
 /** Painted kinds (the race's: terrainView colours kind 1 the trail, kind 2 a feature's faces). */
@@ -76,29 +77,29 @@ export function makeMap(def: RideMapDef) {
     const T = new Float64Array(NC * 9); // per corner: T1 x z, T2 x z, centre x z, r, start angle, sweep
     for (let k = 0; k < NC; k++) {
       const a = ((k - 1 + NC) % NC) * 3, p = k * 3, b = ((k + 1) % NC) * 3;
-      const lu = Math.hypot(C[p]! - C[a]!, C[p + 1]! - C[a + 1]!), lv = Math.hypot(C[b]! - C[p]!, C[b + 1]! - C[p + 1]!);
+      const lu = hypot(C[p]! - C[a]!, C[p + 1]! - C[a + 1]!), lv = hypot(C[b]! - C[p]!, C[b + 1]! - C[p + 1]!);
       const ux = (C[p]! - C[a]!) / lu, uz = (C[p + 1]! - C[a + 1]!) / lu, vx = (C[b]! - C[p]!) / lv, vz = (C[b + 1]! - C[p + 1]!) / lv;
-      const cr = ux * vz - uz * vx, th = Math.atan2(Math.abs(cr), ux * vx + uz * vz), o = k * 9;
-      let tl = th > 1e-3 ? (def.radii?.[k] ?? def.radius) * Math.tan(th / 2) : 0;
+      const cr = ux * vz - uz * vx, th = atan2(Math.abs(cr), ux * vx + uz * vz), o = k * 9;
+      let tl = th > 1e-3 ? (def.radii?.[k] ?? def.radius) * tan(th / 2) : 0;
       tl = Math.min(tl, 0.45 * Math.min(lu, lv));
-      const r = th > 1e-3 ? tl / Math.tan(th / 2) : 0, sg = cr >= 0 ? 1 : -1;
+      const r = th > 1e-3 ? tl / tan(th / 2) : 0, sg = cr >= 0 ? 1 : -1;
       T[o] = C[p]! - ux * tl, T[o + 1] = C[p + 1]! - uz * tl, T[o + 2] = C[p]! + vx * tl, T[o + 3] = C[p + 1]! + vz * tl;
       T[o + 4] = T[o]! - uz * sg * r, T[o + 5] = T[o + 1]! + ux * sg * r, T[o + 6] = r;
-      T[o + 7] = Math.atan2(T[o + 1]! - T[o + 5]!, T[o]! - T[o + 4]!), T[o + 8] = sg * th;
+      T[o + 7] = atan2(T[o + 1]! - T[o + 5]!, T[o]! - T[o + 4]!), T[o + 8] = sg * th;
     }
     let s = 0, px = T[2]!, pz = T[3]!;
-    const put = (x: number, z: number) => (s += Math.hypot(x - px, z - pz), FX.push(x), FZ.push(z), FS.push(s), (px = x), (pz = z));
+    const put = (x: number, z: number) => (s += hypot(x - px, z - pz), FX.push(x), FZ.push(z), FS.push(s), (px = x), (pz = z));
     put(px, pz);
     for (let k = 0; k < NC; k++) {
       const o = k * 9, q = ((k + 1) % NC) * 9;
       // The straight from corner k to corner k + 1, then corner k + 1's arc.
-      const x0 = T[o + 2]!, z0 = T[o + 3]!, x1 = T[q]!, z1 = T[q + 1]!, n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, z1 - z0) / 0.05));
+      const x0 = T[o + 2]!, z0 = T[o + 3]!, x1 = T[q]!, z1 = T[q + 1]!, n = Math.max(1, Math.ceil(hypot(x1 - x0, z1 - z0) / 0.05));
       for (let j = 1; j <= n; j++) put(x0 + ((x1 - x0) * j) / n, z0 + ((z1 - z0) * j) / n);
       const r = T[q + 6]!, sw = T[q + 8]!, m = Math.max(1, Math.ceil((Math.abs(sw) * r) / 0.05)), k1 = (k + 1) % NC;
       const sMid = s + (Math.abs(sw) * r) / 2;
       for (let j = 1; j <= m && r > 0; j++) {
         const an = T[q + 7]! + (sw * j) / m;
-        put(T[q + 4]! + Math.cos(an) * r, T[q + 5]! + Math.sin(an) * r);
+        put(T[q + 4]! + cos(an) * r, T[q + 5]! + sin(an) * r);
       }
       VS[k1] = sMid;
       if (k1) CS[k1] = s;
@@ -123,7 +124,7 @@ export function makeMap(def: RideMapDef) {
     }
     for (let i = 0; i < NT; i++) {
       const a = ((i - 1 + NT) % NT) * 2, b = ((i + 1) % NT) * 2;
-      YAW[i] = Math.atan2(-(TRACK[b + 1]! - TRACK[a + 1]!), TRACK[b]! - TRACK[a]!);
+      YAW[i] = atan2(-(TRACK[b + 1]! - TRACK[a + 1]!), TRACK[b]! - TRACK[a]!);
     }
   }
   const sAt = (i: number) => (i * LAP) / NT;
@@ -140,7 +141,7 @@ export function makeMap(def: RideMapDef) {
   // ---- the profile: the features' heights over the line's floor, by distance along it ----
   const FK = new Int32Array(1), PF = new Float64Array(1);
   function jump(d: number, up: number, h: number, back: number, gap: number, lh: number, face: number, down: number) {
-    if (d < up) return void (PF[0] = h * (d / up) ** 1.25);
+    if (d < up) return void (PF[0] = h * pow(d / up, 1.25));
     d -= up;
     if (d < back) return void (PF[0] = h * (1 - sm(d / back)));
     d -= back + gap;
@@ -160,30 +161,30 @@ export function makeMap(def: RideMapDef) {
       if (d > FEATURE_LEN[kind]!) continue;
       FK[0] = kind;
       if (kind === F_DOUBLE) return jump(d, 1.9, 0.85, 0.4, 0.8, 0.75, 0.8, 3.2);
-      if (kind === F_TABLE) return void (PF[0] = d < 2.1 ? 0.95 * (d / 2.1) ** 1.2 : d < 5.3 ? 0.95 : 0.95 * (1 - sm((d - 5.3) / 2.7)));
+      if (kind === F_TABLE) return void (PF[0] = d < 2.1 ? 0.95 * pow(d / 2.1, 1.2) : d < 5.3 ? 0.95 : 0.95 * (1 - sm((d - 5.3) / 2.7)));
       if (kind === F_KICKER || kind === F_GAP) {
         // Up a tall face; between it and the landing a saddle of sand (a kicker) or the sunken lot (the gap).
         const mid = kind === F_GAP ? -0.3 : 0.4;
-        if (d < 3.2) return void (PF[0] = 1.45 * (d / 3.2) ** 1.25);
+        if (d < 3.2) return void (PF[0] = 1.45 * pow(d / 3.2, 1.25));
         if (d < 3.8) return void (PF[0] = 1.45 + (mid - 1.45) * sm((d - 3.2) / 0.6));
         // The landing's face is short of where the slowest rider comes down: past 10 u/s, it's the down ramp.
-        if (d < 6.4) return void (PF[0] = mid + (kind === F_GAP ? 0 : 0.3 * Math.sin(((d - 3.8) / 2.6) * Math.PI)));
+        if (d < 6.4) return void (PF[0] = mid + (kind === F_GAP ? 0 : 0.3 * sin(((d - 3.8) / 2.6) * Math.PI)));
         if (d < 7.2) return void (PF[0] = mid + (1.4 - mid) * sm((d - 6.4) / 0.8));
         return void (PF[0] = 1.4 * (1 - sm((d - 7.2) / 5.4)));
       }
-      if (kind === F_WHOOPS) return void (PF[0] = 0.25 * (0.5 - 0.5 * Math.cos((d / 1.9) * Math.PI * 2)));
-      if (kind === F_ROOTS) return void (PF[0] = 0.09 * (0.5 - 0.5 * Math.cos((d / 0.7) * Math.PI * 2)));
-      if (kind === F_LOG) return void (PF[0] = 0.28 * Math.sin((d / 1.2) * Math.PI));
-      if (kind === F_ROCKS) return void (PF[0] = 0.15 * (0.5 - 0.5 * Math.cos((d / 0.9) * Math.PI * 2)) * (0.55 + 0.45 * Math.sin(d * 2.3 + 1)));
+      if (kind === F_WHOOPS) return void (PF[0] = 0.25 * (0.5 - 0.5 * cos((d / 1.9) * Math.PI * 2)));
+      if (kind === F_ROOTS) return void (PF[0] = 0.09 * (0.5 - 0.5 * cos((d / 0.7) * Math.PI * 2)));
+      if (kind === F_LOG) return void (PF[0] = 0.28 * sin((d / 1.2) * Math.PI));
+      if (kind === F_ROCKS) return void (PF[0] = 0.15 * (0.5 - 0.5 * cos((d / 0.9) * Math.PI * 2)) * (0.55 + 0.45 * sin(d * 2.3 + 1)));
       if (kind === F_STEP) {
         // Up onto a deck, a kicker at its end, and the landing far below the lip.
         if (d < 5) return void (PF[0] = 1.6 * sm(d / 5) * 0.5 + 1.6 * (d / 5) * 0.5);
         if (d < 8) return void (PF[0] = 1.6);
-        if (d < 9.2) return void (PF[0] = 1.6 + 0.45 * ((d - 8) / 1.2) ** 1.25);
+        if (d < 9.2) return void (PF[0] = 1.6 + 0.45 * pow((d - 8) / 1.2, 1.25));
         if (d < 9.6) return void (PF[0] = 2.05 * (1 - sm((d - 9.2) / 0.4)));
         return jump(d - 9.6, 0, 0, 0, 2.2, 0.9, 0.8, 5.5);
       }
-      if (kind === F_ROLLERS) return void (PF[0] = 0.55 * (0.5 - 0.5 * Math.cos((d / 5) * Math.PI * 2)));
+      if (kind === F_ROLLERS) return void (PF[0] = 0.55 * (0.5 - 0.5 * cos((d / 5) * Math.PI * 2)));
     }
   }
   function profile(s: number) {
@@ -274,8 +275,8 @@ export function makeMap(def: RideMapDef) {
       if (NR[0]! < n0 || NR[0]! > n1) continue;
       // Clear of the corners (a rider runs wide there).
       let ok = true;
-      for (let k = 0; k < NC && ok; k++) ok = Math.hypot(C[k * 3]! - x, C[k * 3 + 1]! - z) > n0 + 2;
-      for (let p = 0; p < NP && ok; p++) ok = Math.hypot(POSTS[p * 3]! - x, POSTS[p * 3 + 1]! - z) > 1.7;
+      for (let k = 0; k < NC && ok; k++) ok = hypot(C[k * 3]! - x, C[k * 3 + 1]! - z) > n0 + 2;
+      for (let p = 0; p < NP && ok; p++) ok = hypot(POSTS[p * 3]! - x, POSTS[p * 3 + 1]! - z) > 1.7;
       if (!ok) continue;
       POSTS[NP * 3] = x, POSTS[NP * 3 + 1] = z, POSTS[NP * 3 + 2] = r * (0.8 + hash(q, def.seed + 7) * 0.4);
       NP++;
@@ -348,7 +349,7 @@ export function makeMap(def: RideMapDef) {
   function trackEdges(t: Terrain) {
     const E = new Float64Array(NT * 6), half = def.width / 2 + 0.05;
     for (let i = 0; i < NT; i++) {
-      const nx = Math.sin(YAW[i]!), nz = Math.cos(YAW[i]!);
+      const nx = sin(YAW[i]!), nz = cos(YAW[i]!);
       for (let k = 0; k < 2; k++) {
         const sd = k ? 1 : -1, x = TRACK[i * 2]! + nx * half * sd, z = TRACK[i * 2 + 1]! + nz * half * sd;
         E[k * NT * 3 + i * 3] = x; E[k * NT * 3 + i * 3 + 1] = t.height(x, z) + 0.04; E[k * NT * 3 + i * 3 + 2] = z;
