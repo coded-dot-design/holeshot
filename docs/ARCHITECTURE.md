@@ -11,6 +11,11 @@ src/
   index.ts              the public entry: createDirtHop, MODES, the roster
   game.ts               the shell: profile, menus, garage UI, pause and result cards, event lifecycle
   game.css              the shell's Board UI styles (each mode scene has its own sheet)
+  html.ts               the cards' small HTML helpers (numbers, escaping, a condition bar)
+  garage/
+    view.ts             the garage card (parts & mods, paint & kit with try-on, showroom) and its clicks; "before you ride"
+    look.ts             lookOf(profile): the rig's colours (paint, plastics, graphics, plate decal, number, damage)
+    garage.css          the garage's sheet
   series-ui.ts          the SERIES screen, the standings on a round's result, starting a round
   series.css            its sheet
   bike/
@@ -18,14 +23,15 @@ src/
     rig.ts              the bike and rider drawn with @fzlt/core/diorama (helmet shapes, colours)
     kit.ts              particle pools, the engine's voice, the gamepad read
   data/
-    roster.ts           4 classes × 4 models: makers, names, blurbs, Power curves, suspension, prices, upkeep
+    roster.ts           4 classes × 4 models from 6 makers: names, blurbs, Power curves, suspension, prices, upkeep
     economy.ts          every number of the economy: start credits, payouts, wear rates, prices, the pit crew
     series.ts           the Race Series: tiers, rounds, points, prizes, bonuses, rivals' names and level
     looks.ts            paint schemes, the rider kit (helmets, visors, colours, patterns)
   model/
     profile.ts          the save: schema, normalize, migrate, load/save (localStorage), export/import code
     tune.ts             tune(bike) → what the sim rides (power, shape) and the garage's feel bars
-    garage.ts           garage actions: service, upgrade, dress, buy a bike, choose the riding bike
+    garage.ts           garage actions: service (tyre compounds), upgrade, tune choices, repair, try on / dress, buy, sell, trade in
+    upkeep.ts           part states and warnings, the seeded failure roll, a ride's extra wear and damage, the service log
     economy.ts          settle(stats) → credits + wear; apply(profile, result); the pit crew
     series.ts           the championship: unlocks, enter/retire, round tracks, rivals, scoring, prize lines
   modes/
@@ -94,7 +100,9 @@ air pitch, grip, brakes, voice) and its chassis is `BikeShape` (axles, wheel rad
 allocation per step.
 
 A garage bike (`BikeSave`) is a model id, parts `{ tyres, chain, motor, susp, brakes }` (condition
-0..1), mod levels `{ power, gearing, susp }` and a look. `tune(bike)` is pure and is the only bridge
+0..1), mod levels `{ power, brakes, weight, travel, cells }`, tune choices (`tyre` compound,
+`gearing`, `spring`, `map`, and the ones bought in `setups`), crash damage `dmg { bars, plastics }`,
+a failed part `fail`, a service `log` and a look (paint, plastics, graphics, plate decal, number). `tune(bike)` is pure and is the only bridge
 between the garage and the physics:
 
 | Input | Effect |
@@ -104,22 +112,40 @@ between the garage and the physics:
 | motor (top end, engine or battery) | drive force × (0.72 → 1); a battery also sags the top speed |
 | susp (seals) | `damp` × (0.55 → 1), `caseDrop` × (0.85 → 1); the hop |
 | brakes | `brake` × (0.65 → 1) |
-| mod power (exhaust / controller) | force +4.5 %/level, more in the upper revs |
-| mod gearing | gears −4.5 %/level, force +6 %/level |
-| mod susp | travel +7 %, damping +4 %, case line +5 % per level |
+| motor, also | top speed × (0.94 → 1) (`TIRED.top`); a battery × (0.86 → 1), raised by cells |
+| susp, also | travel × (0.78 → 1): cooked seals bottom out (`TIRED.travel`) |
+| mod power (exhaust / controller, stages 1–3) | force +4.5 %/level, the curve +3.5 %/level toward the limiter |
+| mod brakes (1–2) | brake +12 %/level |
+| mod weight (1–2) | mass −4 %, pitch inertia −3 % per level |
+| mod travel (long travel kit) | travel ×1.18, case line ×1.1, pitch inertia ×1.03, hop ×0.95 |
+| mod cells (electric, 1–2) | the top speed's sag floor +4.5 %/level, mass +0.025/level; motor heat −15 %/level |
+| gearing short / stock / tall | gears ×0.94 / 1 / 1.06, force ×1.08 / 1 / 0.93 |
+| spring soft / stock / stiff | damping ×0.82 / 1 / 1.18, case line ×0.94 / 1 / 1.07, grip ×1.03 / 1 / 0.97 |
+| motor map eco / std / race (electric) | force ×0.9 / 1 / 1.1 (race: gears ×1.03); battery wear ×0.7 / 1 / 1.6 |
+| tyre compound soft / med / hard | grip ×1.08 / 1 / 0.92; tyre wear ×1.7 / 1 / 0.55 |
+| damage: bent bars | air pitch × (1 − 0.1·bars), Wheelie City's window × (1 − 0.2·bars) |
+| damage: cracked plastics | top speed × (1 − 0.02·plastics); the colours dull |
 
-The floors (`WORN_FLOOR` in `data/economy.ts`) keep a wrecked bike rideable. `tune()` also returns
+The floors (`WORN_FLOOR`, `TIRED` in `data/economy.ts`) keep a wrecked bike rideable. Every
+number in the table is in `data/economy.ts` (`MOD_FX`, `SETUP_FX`, `TYRES`, `DAMAGE_FX`).
+
+Upkeep (`model/upkeep.ts`): a part reads worn under `WARN` and may fail under `FAIL.at`; the garage
+shows both, and RIDE asks before every event while one is at risk. The shell runs a finished ride
+through `ride(settle(stats), bike, seed)` (the compound's and the map's wear, crash damage, a
+failure rolled from the event's seed: half that event's payout, the part dead until replaced) and
+`after(apply(profile, result), result)`. The pit crew helps at once after a failure you can't pay for. `tune()` also returns
 the garage's `feel` bars. A new effect (a weight mod, a tyre compound, a battery cell count) is a
 field in `BikeSave` (with a default in `normalize`), a line in `tune()`, a price in the economy, a
 row in the garage UI and a test in `tests/tune.test.mjs`.
 
 ## The roster, the garage, the rider kit
 
-`data/roster.ts` holds 16 models in 4 classes, each class from one original maker (CHROMEWASP
-2-strokes, IRONVAULT WORKS 4-strokes, LUMEN & LANE e-bikes, VOLTGRIT electric dirt bikes), with
-their Power, suspension, price, `upkeep` (wear and cost multipliers) and Wheelie City feel; e-bikes
-have a shorter `frame`. The cheapest of each class is a starter. `SHOP_MODELS` is what the v1
-showroom sells (tiers 1–2); the data holds them all. The garage holds `GARAGE_SLOTS` (3) bikes; each
+`data/roster.ts` holds 16 models in 4 classes from six original makers (`MAKERS`, each with factory
+colours: YAMADA and KAWAZAKURA 2-strokes, HONDO and KAWAZAKURA 4-strokes, MAKFOX e-bikes, SURGE-ON
+and STARKWOLF electric dirt bikes; `makerOf(model)`), with their Power, suspension, price, `upkeep`
+(wear and cost multipliers) and Wheelie City feel; e-bikes have a shorter `frame`. The cheapest of
+each class is a starter. The showroom sells all 16: tiers 1–2 always, tiers 3–4 once `UNLOCK`
+(events ridden or credits earned) says so; a new bike comes in its maker's factory paint. The garage holds `GARAGE_SLOTS` (3) bikes; each
 keeps its own parts, mods and paint; `profile.ride` is the one that rides next.
 
 The rider kit (`profile.kit`: helmet shape, helmet paint, visor, jersey, pants, pattern, boots,

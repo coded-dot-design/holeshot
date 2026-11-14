@@ -52,7 +52,7 @@ test("profile: normalize repairs a partial or broken save", () => {
   assert.equal(p.bikes.length, 3, "the garage holds three");
   assert.deepEqual(p.bikes[0].parts, { tyres: 0.4, chain: 1, motor: 1, susp: 1, brakes: 1 }, "missing parts come back new");
   assert.equal(p.bikes[0].mods.power, 3, "mods clamp to their max");
-  assert.deepEqual(p.bikes[0].look, { paint: "gridline", number: 99 });
+  assert.deepEqual(p.bikes[0].look, { paint: "gridline", number: 99, graphics: "none", plastics: "scheme", plate: "scheme" });
   assert.notEqual(p.bikes[0].uid, p.bikes[1].uid, "uids made unique");
   assert.equal(p.credits, 0);
   assert.equal(p.ride, 2);

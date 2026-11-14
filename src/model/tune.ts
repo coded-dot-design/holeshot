@@ -4,12 +4,15 @@
 // (`feel`, 0..1). Pure: the same bike gives the same numbers, so wear and mods change the feel and
 // nothing else does. Worn tyres lose grip, a worn motor or battery loses pull (a battery top speed
 // too), a stretched chain loses a little drive, worn brakes stop later, blown seals soften the
-// damping and case sooner. Every effect has a floor (../data/economy.ts WORN_FLOOR): a worn bike
-// always rides, just worse.
+// damping, case sooner and lose travel; a tired top end loses top speed. The garage's choices
+// (tyre compound, gearing, springs, motor map) and mods (exhaust or controller, brakes, weight, the
+// long travel kit, a battery pack) and crash damage (bent bars, cracked plastics) each are one line
+// here, their numbers in ../data/economy.ts. Every effect has a floor (WORN_FLOOR, TIRED): a worn
+// bike always rides, just worse.
 import type { BikeShape, Power } from "../bike/bike.ts";
 import type { RigKind } from "../bike/rig.ts";
 import { CLASSES, model, type ClassId, type Model } from "../data/roster.ts";
-import { WORN_FLOOR } from "../data/economy.ts";
+import { DAMAGE_FX, MOD_FX, SETUP_FX, TIRED, TYRES, WORN_FLOOR } from "../data/economy.ts";
 import type { BikeSave } from "./profile.ts";
 
 export interface Tuned {
@@ -30,35 +33,46 @@ const lerp = (floor: number, c: number) => floor + (1 - floor) * Math.max(0, Mat
 
 export function tune(b: BikeSave): Tuned {
   const m = model(b.model), cls = m.cls, p = m.power, P = b.parts, M = b.mods, e = cls === "ebike" || cls === "emoto";
-  // The motor: wear takes pull (and on a battery, top speed: the voltage sags); the power mod adds
-  // pull through the upper revs.
+  const D = b.dmg ?? { bars: 0, plastics: 0 }, gx = SETUP_FX.gearing[(b.gearing ?? "stock") as keyof typeof SETUP_FX.gearing] ?? SETUP_FX.gearing.stock;
+  const sx = SETUP_FX.spring[(b.spring ?? "stock") as keyof typeof SETUP_FX.spring] ?? SETUP_FX.spring.stock;
+  const mx = e ? SETUP_FX.map[(b.map ?? "std") as keyof typeof SETUP_FX.map] ?? SETUP_FX.map.std : SETUP_FX.map.std;
+  const tyre = TYRES[b.tyre ?? "med"] ?? TYRES.med, F = MOD_FX;
+  const pw = M.power ?? 0, cells = e ? M.cells ?? 0 : 0, light = M.weight ?? 0, travel = M.travel ?? 0;
+  // The motor: wear takes pull and top speed (a battery's voltage sags further; more cells hold it);
+  // the exhaust or controller adds pull through the upper revs; a motor map trades pull for heat.
   const motor = lerp(WORN_FLOOR.motor, P.motor), chain = lerp(WORN_FLOOR.chain, P.chain);
-  const topCut = e ? lerp(0.86, P.motor) : 1;
-  const pw = M.power, gear = M.gearing;
-  const curve = Array.from(p.curve, (v, i) => v * (1 + (pw * 0.035 * i) / (p.curve.length - 1)));
-  // Short gearing: more drive at the wheel, less top speed.
-  const short = 1 - 0.045 * gear;
-  const force = p.force * motor * chain * (1 + 0.045 * pw) * (1 + 0.06 * gear);
+  const topCut = e ? lerp(Math.min(0.98, 0.86 + F.cells.sag * cells), P.motor) : lerp(TIRED.top, P.motor);
+  const curve = Array.from(p.curve, (v, i) => v * (1 + (pw * F.power.curve * i) / (p.curve.length - 1)));
+  // Gearing (short: drive at the wheel, less top speed; tall: the other way); cracked plastics flap.
+  const gearCut = gx.gears * mx.gears * (1 - DAMAGE_FX.top * D.plastics);
+  const force = p.force * motor * chain * (1 + F.power.force * pw) * gx.force * mx.force;
+  const mass = p.mass * (1 - F.weight.mass * light) + F.cells.mass * cells;
   const power: Power = {
     ...p,
+    mass,
+    gyr: p.gyr * (1 - F.weight.gyr * light) * (travel ? F.travel.gyr : 1),
     curve,
     force,
-    gears: Array.from(p.gears, (g) => g * short * topCut),
-    grip: p.grip * lerp(WORN_FLOOR.grip, P.tyres),
-    brake: p.brake * lerp(WORN_FLOOR.brakes, P.brakes),
+    gears: Array.from(p.gears, (g) => g * gearCut * topCut),
+    // Worn tyres slide; the compound and the springs set the grip of a new set.
+    grip: p.grip * lerp(WORN_FLOOR.grip, P.tyres) * tyre.grip * sx.grip,
+    brake: p.brake * lerp(WORN_FLOOR.brakes, P.brakes) * (1 + F.brakes.brake * (M.brakes ?? 0)),
+    // Bent bars: the rider can't pitch it as well in the air.
+    airPitch: p.airPitch * (1 - DAMAGE_FX.airPitch * D.bars),
   };
-  const s = m.susp, sl = M.susp;
+  const s = m.susp;
+  // Suspension: cooked seals soften the damping, case sooner and lose travel (it bottoms out).
   const shape: BikeShape = {
     ...m.frame,
-    travel: s.travel * (1 + 0.07 * sl),
+    travel: s.travel * (travel ? F.travel.travel : 1) * sx.travel * lerp(TIRED.travel, P.susp),
     sag: s.sag,
-    damp: s.damp * lerp(WORN_FLOOR.damp, P.susp) * (1 + 0.04 * sl),
-    caseDrop: s.caseDrop * lerp(WORN_FLOOR.caseDrop, P.susp) * (1 + 0.05 * sl),
+    damp: s.damp * lerp(WORN_FLOOR.damp, P.susp) * sx.damp,
+    caseDrop: s.caseDrop * lerp(WORN_FLOOR.caseDrop, P.susp) * (travel ? F.travel.caseDrop : 1) * sx.caseDrop,
   };
   const top = power.gears[power.gears.length - 1]!;
   return {
     model: m, cls, power, shape,
-    sweet: m.sweet * (0.85 + 0.15 * P.tyres), hop: m.hop * lerp(0.85, P.susp),
+    sweet: m.sweet * (0.85 + 0.15 * P.tyres) * (1 - DAMAGE_FX.sweet * D.bars), hop: m.hop * lerp(0.85, P.susp) * (travel ? F.travel.hop : 1),
     rig: CLASSES[cls].rig,
     feel: {
       pull: Math.min(1, (force * curve[2]! * (e ? 1.6 : 1) + force * 0.6) / 40),
@@ -66,7 +80,7 @@ export function tune(b: BikeSave): Tuned {
       grip: Math.min(1, power.grip / 1.3),
       susp: Math.min(1, (shape.caseDrop! - 18) / 16),
       brakes: Math.min(1, power.brake / 24),
-      light: Math.min(1, Math.max(0, (1.3 - p.mass) / 0.8)),
+      light: Math.min(1, Math.max(0, (1.3 - mass) / 0.8)),
     },
   };
 }

@@ -9,8 +9,12 @@ import { readdirSync, readFileSync } from "node:fs";
 // series' rules, its screen and sheet, turns of any angle in the course).
 // Phase 2, Free Ride maps 2–5: 101,732 B measured on its own (+11,248 B: four open maps' builders and
 // data, their scenery and looks, the map picker with previews).
-// Series + maps merged: 111,610 B measured (dirt-hop.js), plus about 4 KB of room.
-const BUDGET = 116_000;
+// phase2/garage: 99,998 B on its own (+9,514: tune choices, tyre compounds, five mods, wear and
+// failures, crash damage, the service log, the 16-bike showroom with trade-ins, more cosmetics and
+// outfits with a try-on, the rig's graphics kits, side-plate numbers and helmet shapes, six makers
+// with factory paints).
+// Phase 2 merged (series + maps + garage): 120,967 B measured (dirt-hop.js), plus about 4 KB of room.
+const BUDGET = 125_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

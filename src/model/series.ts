@@ -120,7 +120,12 @@ export function rivals(run: Pick<SeriesRun, "tier" | "seed">, cls: ClassId, avoi
     while (used.has(number)) number = (number % 99) + 1;
     used.add(number);
     const m = same[Math.min(same.length, T.rivals.tiers[k]!) - 1]!, b = newBike(m.id, "r" + k);
-    b.mods.power = b.mods.gearing = b.mods.susp = T.rivals.mods;
+    // The tier's mod level, as the garage reads a 0.1.0 bike's mods (profile normalize): stage `mods`
+    // power, short gearing, the long travel kit, stiff springs from level 2.
+    const lv = T.rivals.mods;
+    b.mods.power = lv;
+    if (lv) (b.gearing = "short"), (b.mods.travel = 1);
+    if (lv >= 2) b.spring = "stiff";
     out.push({ name, number, bike: tune(b) });
   }
   return out;

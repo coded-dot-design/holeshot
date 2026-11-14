@@ -22,12 +22,20 @@ export interface RigColors {
   jersey: string; pants: string; helmet: string; stripe: string; visor: string; boots: string; gloves: string;
   /** A glow (an e-motor's battery, the tail light). */
   glow: string;
+  /** The garage's extras (all optional: a rival or a demo bike leaves them out). A graphics kit on
+   *  the plastics in `graphic`; the side plates (`side`, `sideInk`) with the rider's number `num`
+   *  drawn on them; crash damage: `bend` (bent bars, 0..1) and `cracks` (cracked plastics, 0..1). */
+  gfx?: string; graphic?: string; side?: string; sideInk?: string; num?: number; bend?: number; cracks?: number;
 }
 
 /** Which engine the bike shows. */
 export type RigKind = "2t" | "4t" | "e";
-/** The helmet's shape: a motocross peak, a round street dome (no peak), a peak with a fin on top. */
-export type RigHelmet = "peak" | "dome" | "fin";
+/** The helmet's shape: a motocross peak, a long duck-bill peak, a round street dome (no peak), an
+ *  open-face shell with goggles, a peak with a fin on top, a peak with a row of spikes. */
+export type RigHelmet = "peak" | "duck" | "dome" | "retro" | "fin" | "spike";
+
+/** Seven-segment digits (a, b, c, d, e, f, g as bits) for the side plates' numbers. */
+const SEG = [0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f];
 
 /** The trick pose (0 = riding), written by a game before `pose()`: [hands off 0..1, feet off 0..1
  *  (legs back), legs spread 0..1 (sideways), body out over the back 0..1, body up off the seat 0..1,
@@ -124,7 +132,40 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
   part([0.36, 0.2, 0.3], [-0.36, -0.14, 0], C.plastic2);
   const fender = part([0.44, 0.05, 0.17], [0.86, -0.1, 0], C.plastic, { shape: "wedge", rot: [0, PI, 0.1] });
   part([0.05, 0.26, 0.28], [0.62, 0.08, 0], C.plate, { rot: [0, 0, -0.35] });
-  part([0.06, 0.06, 0.64], [GRIP[0]!, GRIP[1]! - 0.03, 0], C.frame);
+  part([0.06, 0.06, 0.64], [GRIP[0]!, GRIP[1]! - 0.03, 0], C.frame, { rot: [0.22 * (C.bend ?? 0), 0.3 * (C.bend ?? 0), 0] });
+  // The garage's extras: a graphics kit, the side plates and their number, a crack.
+  const G2 = C.graphic ?? C.plastic2;
+  if (C.gfx === "bolt") {
+    part([0.2, 0.035, 0.44], [0.32, -0.02, 0], G2, { rot: [0, 0, 0.7], layer: 5 });
+    part([0.2, 0.035, 0.44], [0.2, 0.0, 0], G2, { rot: [0, 0, -0.5], layer: 5 });
+  } else if (C.gfx === "chevron") {
+    for (let i = 0; i < 3; i++) part([0.05, 0.12, 0.44], [0.08 + i * 0.1, -0.06, 0], G2, { shape: "wedge", rot: [0, PI, 0], layer: 5 });
+  } else if (C.gfx === "rally") {
+    part([1.2, 0.03, 0.07], [-0.12, 0.12, 0], G2, { layer: 6 });
+  } else if (C.gfx === "circuit") {
+    part([0.46, 0.02, 0.43], [0.22, -0.02, 0], G2, { layer: 5, emissive: true });
+    part([0.02, 0.12, 0.43], [0.4, -0.08, 0], G2, { layer: 5, emissive: true });
+    part([0.3, 0.02, 0.31], [-0.4, -0.02, 0], G2, { layer: 6, emissive: true });
+  }
+  if (C.cracks && C.cracks > 0.3) part([0.3, 0.015, 0.43], [0.26, -0.04, 0], "#0b0a14", { rot: [0, 0, 0.9], layer: 6 });
+  if (C.num) {
+    // Side plates with the rider's number, one per side, in seven-segment bars; each side is a group
+    // that drops under the bodywork when it faces away (`behind`), and reads the right way round.
+    const n = Math.max(1, Math.min(99, C.num | 0)), ds = n > 9 ? [(n / 10) | 0, n % 10] : [n], ink = C.sideInk ?? C.ink;
+    const W = 0.075, H = 0.12, T = 0.018;
+    for (let side = -1; side <= 1; side += 2) {
+      const gid = id + ":np" + side;
+      d.add({ id: gid, shape: "group", size: [0.2, 0, 0.2], pos: [-0.36, -0.13, side * 0.156], on: id, behind: 3, pick: false });
+      part([0.3, 0.17, 0.01], [0, 0, 0], C.side ?? C.plate, { on: gid, layer: 5 });
+      ds.forEach((dg, i) => {
+        const cx = ds.length > 1 ? (i ? 0.05 : -0.05) : 0, bits = SEG[dg]!, f = side;
+        const bar = (on: number, x: number, y: number, w: number, h: number) => bits & on && part([w, h, 0.012], [(cx + x) * f, 0.025 + y, 0], ink, { on: gid, layer: 6 });
+        bar(1, 0, H - T, W, T); bar(64, 0, H / 2 - T / 2, W, T); bar(8, 0, 0, W, T);
+        bar(2, W / 2 - T / 2, H / 2, T, H / 2); bar(4, W / 2 - T / 2, 0, T, H / 2);
+        bar(32, -W / 2 + T / 2, H / 2, T, H / 2); bar(16, -W / 2 + T / 2, 0, T, H / 2);
+      });
+    }
+  }
   part([0.05, 0.05, 0.05], [-0.9, 0.08, 0], C.glow, { emissive: true });
 
   // ---- the rider (on the bike, or thrown clear after a crash) ----
@@ -134,10 +175,13 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
   const head = group(id + ":h", rid);
   part([0.28, 0.27, 0.26], [0.02, -0.04, 0], C.helmet, { shape: "cyl", sides: 8, on: id + ":h" });
   part([0.05, 0.1, 0.19], [0.15, 0.06, 0], C.visor, { on: id + ":h", layer: 6 });
-  if (helmet !== "dome") part([0.2, 0.035, 0.2], [0.16, 0.2, 0], C.stripe, { on: id + ":h", rot: [0, 0, -0.3], layer: 6 });
+  const round = helmet === "dome" || helmet === "retro";
+  if (!round) part([helmet === "duck" ? 0.32 : 0.2, 0.035, 0.2], [helmet === "duck" ? 0.22 : 0.16, 0.2, 0], C.stripe, { on: id + ":h", rot: [0, 0, helmet === "duck" ? -0.18 : -0.3], layer: 6 });
   else part([0.3, 0.06, 0.24], [0.0, 0.1, 0], C.helmet, { shape: "cyl", sides: 8, on: id + ":h", layer: 5 });
   if (helmet === "fin") part([0.24, 0.1, 0.03], [-0.02, 0.15, 0], C.stripe, { on: id + ":h", rot: [0, 0, 0.1], layer: 7, emissive: true });
-  part([0.14, 0.11, 0.16], [0.17, -0.06, 0], C.helmet, { shape: "wedge", rot: [0, PI, 0], on: id + ":h" });
+  if (helmet === "spike") for (let i = 0; i < 3; i++) part([0.05, 0.08, 0.04], [-0.08 + i * 0.08, 0.2 - i * 0.01, 0], C.stripe, { shape: "cyl", sides: 4, top: 0, on: id + ":h", layer: 7 });
+  if (helmet === "retro") part([0.06, 0.05, 0.28], [0.02, 0.04, 0], C.stripe, { on: id + ":h", layer: 6 });
+  else part([0.14, 0.11, 0.16], [0.17, -0.06, 0], C.helmet, { shape: "wedge", rot: [0, PI, 0], on: id + ":h" });
   const thigh: DioramaObject[] = [], shin: DioramaObject[] = [], upper: DioramaObject[] = [], fore: DioramaObject[] = [];
   for (let s = 0; s < 2; s++) {
     const z = s ? 0.15 : -0.15, k = id + (s ? "R" : "L");
