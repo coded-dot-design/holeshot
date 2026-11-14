@@ -5,6 +5,7 @@ import { model } from "../data/roster.ts";
 import type { RunStats } from "../modes/mode.ts";
 import { normalize, riding, type BikeSave, type Profile } from "./profile.ts";
 import { partPrice } from "./garage.ts";
+import { seriesLines } from "./series.ts";
 
 export interface ModeResult {
   stats: RunStats;
@@ -27,6 +28,8 @@ export function payout(s: RunStats): [string, number][] {
     L.push([`FINISHED ${["1ST", "2ND", "3RD", "4TH"][pl] ?? "4TH"}`, P.place[pl] ?? P.place[P.place.length - 1]!]);
     if (!s.crashes) L.push(["CLEAN RACE", P.clean]);
     if (s.led && pl === 0) L.push(["LED EVERY LAP", P.led]);
+  } else if (s.mode === "series") {
+    L.push(...seriesLines(s));
   } else if (s.mode === "bigair") {
     const P = PAYOUT.bigair, j = Math.round((s.judges ?? 0) * P.perJudge), f = (s.flips ?? 0) * P.perFlip;
     L.push([`JUDGES ${(s.judges ?? 0).toFixed(1)}`, Math.max(P.min, j)]);

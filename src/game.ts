@@ -19,6 +19,9 @@ import { exportCode, importCode, load, local, ready, riding, save, setup, fresh,
 import { tune } from "./model/tune.ts";
 import { apply, pitFix, pitReady, settle, type ModeResult } from "./model/economy.ts";
 import { buyBike, choose, cosmeticPrice, dress, modPrice, partPrice, service, upgrade, type Buy } from "./model/garage.ts";
+import { enter as enterSeries, recordRound, retire as retireSeries, roundStats } from "./model/series.ts";
+import { seriesCard as seriesScreen, seriesKeys, seriesName, seriesResult, startRound } from "./series-ui.ts";
+import type { TierId } from "./data/series.ts";
 
 export interface DirtHopOptions {
   /** Mount inside this element (absolutely filled; give it a size). Default: a layer over the page. */
@@ -181,9 +184,9 @@ export function createDirtHop(o: DirtHopOptions = {}) {
   function rideCard() {
     return `<div class="dh-card dh-ridec" data-screen="ride">${head()}${tabs("ride")}<p class="dh-sub">On your ${bikeLine()}.</p><ul class="dh-modes">${MODES.map((md) => `<li><button type="button" class="bui-key dh-modek" data-mode="${md.id}"><b>${md.name}</b><small>${md.blurb}</small><em>${md.maps[0]!.name}</em></button></li>`).join("")}</ul></div>`;
   }
-  function seriesCard() {
-    return `<div class="dh-card" data-screen="series">${head()}${tabs("series")}<b class="dh-h">SERIES · COMING</b><p class="dh-sub">Championships of rounds, a new track every race, rivals and a points table. Not yet: ride RACE to get your bike ready.</p></div>`;
-  }
+  const seriesCard = () => seriesScreen(profile, head(), tabs("series"), note);
+  /** A mode's name for the cards (a series round is a race on the series' track). */
+  const modeName = (id: ModeId) => (id === "series" ? seriesName(profile) : modeOf(id).name);
   function settingsCard() {
     return `<div class="dh-card dh-set" data-screen="settings">${head()}${tabs("settings")}<p class="dh-row"><button type="button" class="bui-key dh-sound" aria-pressed="${profile.settings.sound}">SOUND ${profile.settings.sound ? "ON" : "OFF"}</button></p>
       <b class="dh-h2">MOVE YOUR PROFILE</b><p class="dh-sub">Your garage lives on this device. Copy the code to carry it to another one; nothing leaves the device unless you do.</p>
@@ -191,13 +194,13 @@ export function createDirtHop(o: DirtHopOptions = {}) {
       <label class="dh-field">IMPORT A CODE<textarea class="dh-codein" rows="3" spellcheck="false" placeholder="DH1-…"></textarea></label><p class="dh-row"><button type="button" class="bui-key dh-import">LOAD IT</button><button type="button" class="bui-key dh-reset">START OVER</button></p><p class="dh-sub dh-note" role="status">${esc(note)}</p></div>`;
   }
   function pauseCard() {
-    return `<div class="dh-card dh-pause" data-screen="pause" role="dialog" aria-label="Paused"><b class="dh-h">PAUSED</b><p class="dh-sub">${modeOf(runMode).name} on your ${bikeLine()}. Leaving now pays nothing; the wear so far still counts.</p><p class="dh-row"><button type="button" class="bui-key dh-go dh-resume">RESUME</button><button type="button" class="bui-key dh-leave">LEAVE</button></p></div>`;
+    return `<div class="dh-card dh-pause" data-screen="pause" role="dialog" aria-label="Paused"><b class="dh-h">PAUSED</b><p class="dh-sub">${modeName(runMode)} on your ${bikeLine()}. Leaving now pays nothing; the wear so far still counts.</p><p class="dh-row"><button type="button" class="bui-key dh-go dh-resume">RESUME</button><button type="button" class="bui-key dh-leave">LEAVE</button></p></div>`;
   }
   function resultCard() {
     const r = result!, b = riding(profile), m = modelOf(b.model);
     const lines = r.lines.map(([k, v]) => `<li><span>${k}</span><b>+${num(v)}</b></li>`).join("") || `<li><span>NO PAYOUT</span><b>0</b></li>`;
     const wear = PARTS.map((k) => `<li>${bar(b.parts[k], k === "motor" ? MOTOR_NAME[m.cls] : PART_NAME[k])}<small>−${(r.wear[k] * 100).toFixed(1)}%</small></li>`).join("");
-    return `<div class="dh-card dh-result" data-screen="result" role="dialog" aria-label="Result"><b class="dh-h">${r.stats.finished ? modeOf(r.stats.mode).name + " · DONE" : "LEFT EARLY"}</b><p class="dh-sub">${esc(r.stats.summary ?? "")}</p><div class="dh-cols"><section><b class="dh-h2">PAYOUT</b><ul class="dh-pay">${lines}<li class="dh-total"><span>TOTAL</span><b>◈ ${num(r.credits)}</b></li></ul></section><section><b class="dh-h2">WEAR</b><ul class="dh-list dh-wear">${wear}</ul></section></div>${pitReady(profile) ? `<p class="dh-row"><button type="button" class="bui-key dh-pit">PIT CREW: FREE BASIC FIX</button></p>` : ""}<p class="dh-row"><button type="button" class="bui-key dh-go dh-again">RIDE AGAIN</button><button type="button" class="bui-key" data-go="garage">GARAGE</button><button type="button" class="bui-key" data-go="ride">MENU</button></p></div>`;
+    return `<div class="dh-card dh-result" data-screen="result" role="dialog" aria-label="Result"><b class="dh-h">${r.stats.finished ? (r.stats.series ? `ROUND ${r.stats.series.round + 1}` : modeOf(r.stats.mode).name) + " · DONE" : "LEFT EARLY"}</b><p class="dh-sub">${esc(r.stats.summary ?? "")}</p><div class="dh-cols"><section><b class="dh-h2">PAYOUT</b><ul class="dh-pay">${lines}<li class="dh-total"><span>TOTAL</span><b>◈ ${num(r.credits)}</b></li></ul></section><section><b class="dh-h2">WEAR</b><ul class="dh-list dh-wear">${wear}</ul></section></div>${seriesResult(profile, r)}${pitReady(profile) ? `<p class="dh-row"><button type="button" class="bui-key dh-pit">PIT CREW: FREE BASIC FIX</button></p>` : ""}<p class="dh-row">${r.stats.mode === "series" ? seriesKeys(profile) : `<button type="button" class="bui-key dh-go dh-again">RIDE AGAIN</button><button type="button" class="bui-key" data-go="garage">GARAGE</button>`}<button type="button" class="bui-key" data-go="ride">MENU</button></p></div>`;
   }
 
   function show(s: Screen) {
@@ -227,6 +230,7 @@ export function createDirtHop(o: DirtHopOptions = {}) {
   // ---- an event ----
   function startEvent(id: ModeId, opt: { map?: string; seed?: number; auto?: boolean } = {}) {
     if (!ready(profile)) return show("setup");
+    if (id === "series" && !profile.series.run) return show("series");
     run?.destroy();
     paused = false;
     result = null;
@@ -251,13 +255,16 @@ export function createDirtHop(o: DirtHopOptions = {}) {
     cards.innerHTML = "";
     cards.hidden = true;
     stage.removeAttribute("data-menu");
-    run = modeOf(id).start(ctx);
-    say(`${modeOf(id).name} on your ${bikeLine()}`);
+    run = id === "series" ? startRound(ctx, profile) : modeOf(id).start(ctx);
+    say(`${modeName(id)} on your ${bikeLine()}`);
   }
   function finishEvent(s: RunStats) {
     if (!run || o.attract) return;
+    // A series round: its tier and round on the stats (the prize lines), then the points table.
+    if (runMode === "series") s = roundStats(profile, s);
     const r = settle(s, riding(profile));
     profile = apply(profile, r);
+    if (s.mode === "series") profile = recordRound(profile, s).profile;
     keep();
     result = r;
     paused = false;
@@ -291,6 +298,16 @@ export function createDirtHop(o: DirtHopOptions = {}) {
     if (d.number !== undefined) return did(dress(profile, "number", (cards.querySelector<HTMLInputElement>(".dh-numin")!).value), "Number set");
     if (d.bike) return did(buyBike(profile, d.bike), "Bought");
     if (d.mode) return startEvent(d.mode as ModeId);
+    if (d.seriesEnter) {
+      const p = enterSeries(profile, d.seriesEnter as TierId, ((o.seed ?? 20261114) ^ Math.imul(profile.stats.events + 1, 0x9e3779b1) ^ Math.imul(profile.series.titles + 7, 0x85ebca6b)) >>> 0);
+      if (p) (profile = p), keep();
+      return show("series");
+    }
+    if (d.seriesGo !== undefined) return startEvent("series");
+    if (d.seriesRetire !== undefined) {
+      if (t.dataset.sure === undefined) return (t.dataset.sure = ""), (t.textContent = "SURE? TAP AGAIN");
+      return (profile = retireSeries(profile)), keep(), show("series");
+    }
     if (t.classList.contains("dh-resume")) return setPaused(false);
     if (t.classList.contains("dh-leave")) return leave();
     if (t.classList.contains("dh-again")) return startEvent(runMode, { map: runMap });
@@ -386,6 +403,8 @@ export function createDirtHop(o: DirtHopOptions = {}) {
         credits: profile.credits,
         bike: b ? { model: b.model, parts: { ...b.parts }, mods: { ...b.mods }, number: b.look.number } : null,
         bikes: profile.bikes.length,
+        series: profile.series.run ? { tier: profile.series.run.tier, round: profile.series.run.round, points: [...profile.series.run.points] } : null,
+        seriesBest: { ...profile.series.best }, titles: profile.series.titles,
         result: result ? { credits: result.credits, lines: result.lines, wear: result.wear, finished: result.stats.finished } : null,
       };
     },

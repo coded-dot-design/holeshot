@@ -94,7 +94,7 @@ test("profile: the export code goes round; a typo is caught", () => {
   p = buyBike(p, "razorhive").profile;
   p = choose(p, 0);
   const code = P.exportCode(p);
-  assert.match(code, /^DH1-[A-Za-z0-9_-]+-[0-9A-Z]{6}$/);
+  assert.match(code, /^DH2-[A-Za-z0-9_-]+-[0-9A-Z]{6}$/);
   assert.deepEqual(P.importCode(code).profile, p);
   assert.deepEqual(P.importCode(" " + code.slice(0, 20) + "\n" + code.slice(20) + " ").profile, p, "spaces and line breaks are fine");
   const typo = code.slice(0, 10) + (code[10] === "A" ? "B" : "A") + code.slice(11);

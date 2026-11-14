@@ -11,6 +11,8 @@ src/
   index.ts              the public entry: createDirtHop, MODES, the roster
   game.ts               the shell: profile, menus, garage UI, pause and result cards, event lifecycle
   game.css              the shell's Board UI styles (each mode scene has its own sheet)
+  series-ui.ts          the SERIES screen, the standings on a round's result, starting a round
+  series.css            its sheet
   bike/
     bike.ts             the bike sim: a pure, fixed-step, deterministic dirt bike on a heightfield
     rig.ts              the bike and rider drawn with @fzlt/core/diorama (helmet shapes, colours)
@@ -18,17 +20,21 @@ src/
   data/
     roster.ts           4 classes × 4 models: makers, names, blurbs, Power curves, suspension, prices, upkeep
     economy.ts          every number of the economy: start credits, payouts, wear rates, prices, the pit crew
+    series.ts           the Race Series: tiers, rounds, points, prizes, bonuses, rivals' names and level
     looks.ts            paint schemes, the rider kit (helmets, visors, colours, patterns)
   model/
     profile.ts          the save: schema, normalize, migrate, load/save (localStorage), export/import code
     tune.ts             tune(bike) → what the sim rides (power, shape) and the garage's feel bars
     garage.ts           garage actions: service, upgrade, dress, buy a bike, choose the riding bike
     economy.ts          settle(stats) → credits + wear; apply(profile, result); the pit crew
+    series.ts           the championship: unlocks, enter/retire, round tracks, rivals, scoring, prize lines
   modes/
     mode.ts             the Mode interface, ModeCtx, ModeRun, RunStats
     meter.ts            the ride meter every mode ticks (seconds, distance, gas, air, wheelie, crashes, hard landings)
     index.ts            MODES (the RIDE menu), TRACKS (race tracks), FREE_MAPS (free-ride maps)
     race/course.ts      TrackPlan → makeTrack(): centre line, profile, terrain, rival speeds; motoRace()
+    race/generate.ts    the seeded track generator: draft → validate (shape + an autopilot race) → TrackPlan
+    race/preview.ts     a track from above as an SVG string (the series screen)
     race/scene.ts       the track scene, shared by Race and Free Ride (mountTrack)
     freeride/session.ts freeRun(): one rider on a track's table, no laps
     bigair/show.ts      airShow(): the arena and the run; bigair/tricks.ts the air-trick scorer
@@ -152,14 +158,23 @@ and BRAKE (and TRICK or HOP) under the right thumb; a gamepad; hold-and-drag on 
 
 ## Add a map
 
-- **A race track** is a `TrackPlan` (`modes/race/course.ts`): a closed loop of straights and 90°
-  left turns (`plan`), features placed by section and offset (`features`: 1 double, 2 whoops,
-  3 triple, 4 tabletop), the gate and the lap line, the table size and the dirt's seed.
+- **A race track** is a `TrackPlan` (`modes/race/course.ts`): a closed loop of straights and turns
+  (`plan`: a length, `-1` for a 90° left of radius `RAD`, or a `Turn` `{ turn, r, berm }` of any
+  angle, + left or − right), an optional `start` (x, z, heading), features placed by section and
+  offset (`features`: 1 double, 2 whoops, 3 triple, 4 tabletop, 5 step-up, 6 step-down, 7 finish
+  jump; each gives the lap back past its own length, so doubles in a row are a rhythm section), the
+  gate and the lap line, the table size and the dirt's seed.
   `makeTrack(plan)` builds the centre line, the profile, the terrain (`course()`), the edges and the
-  rivals' target speeds. Add it to `TRACKS` in `modes/index.ts`. A **track generator** is a seeded
-  function returning a `TrackPlan`; validate it before racing: the loop closes (`makeTrack(p).TRACK`
-  first and last points meet), every feature sits on a straight and inside the table, and the
-  autopilot finishes three laps without a crash (the same check `tests/modes.test.mjs` runs).
+  rivals' target speeds. Add it to `TRACKS` in `modes/index.ts`. **The track generator**
+  (`modes/race/generate.ts`) is `generateTrack(seed, difficulty)`: corners round an ellipse (a
+  hairpin is a spike of two parallel legs to a tight U; a dent is a right between two lefts, an
+  S), arcs filleted into the corners, the straights given the features with room to run in and
+  roll out (the finish jump last before the line), the loop turned and centred on the smallest
+  table that holds it. `validate()` = `checkShape()` (closes, no self-overlap within `GEN.sep`, on
+  the table with a margin, features inside their straights) + `checkRide()` (the 2-stroke starter
+  rides three laps clean on the autopilot against the other three starters, who each get two laps
+  in). A draft that fails is thrown away and the next one tries; `tests/generate.test.mjs` checks
+  500 seeds at each of three difficulties on its own terms (worker threads, about 2 minutes).
 - **A free-ride map** is an entry in `FREE_MAPS`: today a `TrackPlan` (the loop is there to follow;
   respawns go to the nearest point on it). A map with no loop needs its own terrain builder and a
   respawn rule: give `freeRun` (`modes/freeride/session.ts`) a map object with `course()`, `near()`
@@ -177,8 +192,22 @@ and BRAKE (and TRICK or HOP) under the right thumb; a gamepad; hold-and-drag on 
 4. Tests: the sim ends and pays on each starter class (`tests/modes.test.mjs`), allocation
    (`tests/alloc.test.mjs`), and the browser test starts and ends it on the player's bike.
 
+## The Race Series
+
+Tiers in `data/series.ts` (ROOKIE CUP 4 rounds, PRO CIRCUIT 5, NEON MASTERS 6): each round's track
+is `generateTrack(roundSeed(run, round), difficulty(run, round))` (the difficulty climbs through the
+tier's range round by round; the same championship always rides the same tracks), the rivals ride
+models of the player's class at the tier's level with its mods and nerve (`RaceOpts.nerve` in
+`motoRace`). The shell starts a round with `startRound` (the race scene on the generated track),
+and on its end adds the series fields to the stats (`roundStats`: mode `series`, the order of all
+four, on the last round the final place), then `settle` → `apply` as every event (the prize lines
+come from `seriesLines`, called by `payout`), then `recordRound` (points `POINTS`, the round count;
+at the end the best place, a title, `last`). Leaving a round scores nothing and pays nothing (the
+wear counts). A tier opens when the one before it ends in the top two. Saved as `profile.series`
+(schema v2; v1 saves migrate: an empty record, three race wins open the Pro Circuit).
+
 ## Tests
 
 `npm test` (headless: bike, tune, profile, every mode on every starter, the economy, allocation in a
-process of its own), `npm run test:settle`, `npm run test:browser` (1440 and 390), `npm run
+process of its own, the generator over 1,500 seeds, the series), `npm run test:settle`, `npm run test:browser` (1440 and 390; the series in `tests/series.browser.mjs`), `npm run
 site:build && npm run test:site`. CHROMIUM_PATH points them at a Chromium of your own.
