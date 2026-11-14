@@ -13,7 +13,7 @@ export const KINDS = [
   { k: K_RACE, name: "RACE", blurb: "A new generated track; AI rivals fill the empty places." },
   { k: K_JAM, name: "FREE RIDE JAM", blurb: "Three minutes on one map: the most trick points wins." },
   { k: K_AIR, name: "BIG AIR", blurb: "A minute each in the arena; the judges' total wins." },
-  { k: K_CITY, name: "WHEELIE CITY", blurb: "A minute each on the block; the most points wins." },
+  { k: K_CITY, name: "WHEELIE CITY", blurb: "Ninety seconds each across the four hoods; the most points wins." },
 ];
 const ORD = ["1ST", "2ND", "3RD", "4TH"];
 

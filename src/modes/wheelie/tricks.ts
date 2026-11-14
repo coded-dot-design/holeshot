@@ -10,7 +10,7 @@
 /** S: score, combo, trick on (0 none, 1 up), distance, time, sweet time, gas time, flags, gap since
  *  the last bank, last points, last kind, best wheelie m, best wheelie s, best manual m, hops, tricks,
  *  last bonus share, best combo. */
-export const SC = 0, CB = 1, ON = 2, DIST = 3, TIME = 4, SWEET = 5, GAS = 6, FLAGS = 7, GAP = 8, PTS = 9, KIND = 10, BEST_W = 11, BEST_WS = 12, BEST_M = 13, HOPS = 14, COUNT = 15, BONUS = 16, TOP = 17;
+export const SC = 0, CB = 1, ON = 2, DIST = 3, TIME = 4, SWEET = 5, GAS = 6, FLAGS = 7, GAP = 8, PTS = 9, KIND = 10, BEST_W = 11, BEST_WS = 12, BEST_M = 13, HOPS = 14, COUNT = 15, BONUS = 16, TOP = 17, UPT = 18;
 /** Kinds. */
 export const WHEELIE = 1, MANUAL = 2, HOP = 3, STOPPIE = 4;
 /** Bonus flags. */
@@ -20,16 +20,16 @@ export const NONE = 0, BANKED = 1;
 const UP = 0.14, HOLD = 0.25, COMBO_GAP = 2.5, MAXCB = 5;
 
 export function tricks() {
-  const S = new Float64Array(18);
-  let upT = 0;
+  // (S[UPT]: seconds the nose has been up: every number in S, a snapshot.)
+  const S = new Float64Array(19);
   /** One step. Returns BANKED on the step a trick is banked (read S[PTS], S[KIND]). */
   function step(dt: number, nose: number, balance: number, sweet: number, speed: number, gas: number, air: boolean) {
     S[GAP] = S[GAP]! + dt;
     if (S[GAP]! > COMBO_GAP && !S[ON] && S[CB]! > 0) S[CB] = 0;
     if (air) return NONE;
     if (nose > UP) {
-      upT += dt;
-      if (!S[ON] && upT >= HOLD) (S[ON] = 1), (S[DIST] = S[TIME] = S[SWEET] = S[GAS] = 0);
+      S[UPT] = S[UPT]! + dt;
+      if (!S[ON] && S[UPT]! >= HOLD) (S[ON] = 1), (S[DIST] = S[TIME] = S[SWEET] = S[GAS] = 0);
       if (S[ON]) {
         S[DIST] = S[DIST]! + Math.abs(speed) * dt;
         S[TIME] = S[TIME]! + dt;
@@ -38,7 +38,7 @@ export function tricks() {
       }
       return NONE;
     }
-    upT = 0;
+    S[UPT] = 0;
     return S[ON] ? bank() : NONE;
   }
   function bank() {
@@ -97,11 +97,10 @@ export function tricks() {
   }
   /** A crash: the trick in progress and the combo are gone. */
   function drop() {
-    S[ON] = 0; S[FLAGS] = 0; S[CB] = 0; upT = 0;
+    S[ON] = 0; S[FLAGS] = 0; S[CB] = 0; S[UPT] = 0;
   }
   function reset() {
     S.fill(0);
-    upT = 0;
   }
   return { S, step, hop, stoppie, bonus, drop, reset };
 }

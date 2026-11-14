@@ -48,7 +48,8 @@ src/
     freeride/picker.ts  RIDE → FREE RIDE: the map picker with previews (picker.css)
     bigair/show.ts      airShow(): the arena and the run; bigair/tricks.ts the air-trick scorer
     bigair/scene.ts     the arena scene (mountAir)
-    wheelie/city.ts     the block and the session; wheelie/ride.ts the ride adapter; wheelie/tricks.ts the scorer
+    wheelie/hoods.ts    the four neighbourhoods as data (layouts, humps, street graphs); wheelie/cops.ts the heat and the patrol
+    wheelie/city.ts     the town's ground and the session; wheelie/ride.ts the ride adapter; wheelie/tricks.ts the scorer
     wheelie/scene.ts    the town scene (mountCity)
     freeride/jam.ts     freeJam(): the online Free Ride jam (2–4 freeRuns on one map, trick points, one clock)
   math.ts               deterministic sin, cos, tan, atan, atan2, pow, hypot (fdlibm's algorithms): every sim and generator uses them
@@ -167,7 +168,7 @@ gloves) and bike paint come from `data/looks.ts`; prices by tier are `COSMETIC` 
 `MOTOR_PRICE` (× the model's `upkeep.cost`), `WEAR` (per 100 units ridden, per second of gas, per
 second of wheelie, of air, per hard landing, per crash; the motor's per-class rate; all × the
 model's `upkeep.wear`), `PAYOUT` (race places and bonuses, Big Air per judge point and flip, Wheelie
-City per point with a cap, Free Ride per second, of air and wheelie and per trick landed, with a cap, the share paid on leaving), `MODS`,
+City per point with a cap, per escape and less per ticket, never under a floor, Free Ride per second, of air and wheelie and per trick landed, with a cap, the share paid on leaving), `MODS`,
 `COSMETIC`, `PIT_CREW` and `WORN_FLOOR`. Balancing is a diff to this file; the tests read the same
 numbers. Nobody is ever stuck: every finished event pays something, a worn bike still rides, and the
 pit crew fixes the riding bike to `PIT_CREW.to` for free once `PIT_CREW.every` events have passed
@@ -247,6 +248,37 @@ and BRAKE (and TRICK or HOP) under the right thumb; a gamepad; hold-and-drag on 
 3. An entry in `MODES`; its payout in `PAYOUT` and `payout()` (`model/economy.ts`); its `ModeId`.
 4. Tests: the sim ends and pays on each starter class (`tests/modes.test.mjs`), allocation
    (`tests/alloc.test.mjs`), and the browser test starts and ends it on the player's bike.
+
+## Wheelie City: the hoods, the humps, the patrol
+
+`modes/wheelie/hoods.ts` holds four neighbourhoods on one footprint (98 × 28, local coordinates),
+laid out 2 × 2 on the table (`CX`, `CZ`) with canals between: THE BLOCK (the gallery piece's
+suburb), HILLCREST (cul-de-sacs, turning circles `rings`, terraces), DOWNTOWN (towers, the plaza)
+and NEON MARINA (the boardwalk and the sand as `surf` kinds, the sea as water `terr`). A hood is a
+short list of streets (`roads`, `rings`); its houses, driveways, sprinklers, trees and lamps are
+placed by rule (`frontage`, `scatter`), dropped wherever they would sit on a street or another
+building. Each hood has the autopilot's loop (`route`) and a street graph (`nodes`, `edges`; all-pairs
+next hops in `GRAPH`). `HUMPS` pairs eight ramps across the canals (hump `i`'s partner is `i ^ 1`);
+`ENTRY` says where the autopilot picks up the loop after landing, `BRANCH` where an escaping one turns
+off for the hump.
+
+`modes/wheelie/city.ts` is the ground over all four (each hood's own rects; the bank and the canal
+off them; the hump ramps), the session (ninety seconds) and the flight: on a hump's deck at
+`FLY_V` or more along it, the heading is squared to the hump and the speed set so the jump lands
+`LAND_AT` past the far lip in `FLY_T`; in the air the bike is held level for the far ramp, so it
+lands upright; the fence (the hood's edge) is skipped until it lands. Too slow, it bumps the fence.
+`modes/wheelie/cops.ts`: the heat (0..100, five stars) from neighbours shouting, sprinklers, lawns
+and banked tricks (`HEAT_FROM` in city.ts); it cools `COOL` a second after `COOL_AFTER` clean and
+out of a unit's sight. Units by stars (`UNITS`: bike, cart, drone, bike) spawn on a junction away from
+the rider, picked by a seeded roll, path on the graph to the rider's street, then straight at the
+rider (a drone flies straight). Within `CATCH`: a ticket (the combo, `TICKET_SHARE` of the points
+banked while the heat was on). Landing in another hood is an escape (`ESCAPE_PTS` × stars into the
+score; the units peel off; the heat drops). All of it is plain numbers in typed arrays and a seeded
+xorshift (`cops(seed)`, `cityRun(specs, seed)`), the bike's own polynomial trig (no builtin sine or
+arctangent in the sim), stepped at the engine's fixed step; `cityRun().bytes` is the whole session as
+byte views (the session, neighbours, sprinklers, dog, scorer, patrol, ride adapter, bike), so it can
+join a rollback (tests/cops.test.mjs restores one mid-chase and rides on the same). Online, each
+screen rides its own session (a score run). The stats carry `escapes` and `tickets`; `PAYOUT.wheelie` pays them.
 
 ## The Race Series
 

@@ -98,14 +98,14 @@ test("big air: a minute on the player's bike, the judges score it", () => {
   }
 });
 
-test("wheelie city: a minute on the player's bike, wheelies score", () => {
+test("wheelie city: a session on the player's bike, wheelies score", () => {
   for (const id of ["glidewire", "sparkhound", "buzzline"]) {
     const t = tune(newBike(id, "b1"));
     const spec = { id, name: id, kind: "", blurb: "", bars: [3, 3, 3], power: t.power, shape: t.shape, sweet: t.sweet, hop: t.hop };
     const run = W.cityRun([spec]), I = new Float64Array(5), m = meter("wheelie");
     run.reset(0);
     assert.equal(run.bike.b.power, t.power);
-    for (let i = 0; i < 60 * 80 && run.S[0] !== W.DONE; i++) {
+    for (let i = 0; i < 60 * (W.SESSION + 10) && run.S[0] !== W.DONE; i++) {
       run.autopilot(I);
       run.step(1 / 60, I[0], I[1], I[2], I[3], I[4]);
       if (run.S[0] === W.RUN || run.S[0] === W.CRASH) m.tick(run.bike.b, 1 / 60);

@@ -22,7 +22,12 @@ import { readdirSync, readFileSync } from "node:fs";
 // plus about 4 KB of room.
 // 0.2.1, the same bits on every engine: 141,265 B measured (+3,377 B: src/math.ts, fdlibm's sin, cos,
 // tan, atan, atan2 and pow written out for the sims and the generators), plus about 3.7 KB of room.
-const BUDGET = 145_000;
+// 0.3.0, Wheelie City's four neighbourhoods and the neon patrol: 155,843 B measured (holeshot.js; +14,578 B over
+// 141,265: the three new
+// hoods' layouts and their placing rules, the humps and the flight, the heat and the patrol's pathing
+// on the street graphs, towers, shops, shacks, palms and the patrol units in the scene, the heat chip
+// and the ticket card), plus about 4 KB of room.
+const BUDGET = 160_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

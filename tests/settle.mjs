@@ -1,7 +1,7 @@
 // Holeshot's settle guard (Chromium, dist/holeshot.mjs): on the menus nothing runs (no frames, no
 // audio before a gesture); mid-race, with nobody touching anything, the event never sleeps (the
 // rivals race, the clock keeps pace with the wall clock); scrolled off screen it pauses; the result
-// card over a finished event settles; after Recall no frame runs; the landing hero's race ends and
+// card over a finished event settles; Wheelie City sleeps on its start line and settles when it ends; after Recall no frame runs; the landing hero's race ends and
 // the hero sleeps. Waits on state.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -54,6 +54,21 @@ try {
     await p.evaluate(() => game.finish());
     await until(p, () => game.getSnapshot().screen === "result" && game.run.engine.paused.includes("settled") && game.engine.paused.includes("settled"), null, `${id}: banked, it settles`);
     assert.equal(await frames(p), 0, `${id}: result: no frames`);
+  }
+  // Wheelie City (two of its hoods): on the start line it sleeps; riding, the patrol out or not, it never does; finished, it settles.
+  for (const id of ["block", "marina"]) {
+    await p.evaluate((id) => game.start("wheelie", { map: id }), id);
+    await until(p, () => game.getSnapshot().run.phase === "ready" && game.run.engine.paused.includes("settled"), null, `wheelie ${id}: on the start line it settles`);
+    assert.equal(await frames(p), 0, `wheelie ${id}: waiting: no frames`);
+    await p.evaluate(() => (game.run.auto = true));
+    await until(p, () => game.getSnapshot().run.phase === "run" && game.run.state.clock < 88, null, `wheelie ${id}: rides`);
+    const w0 = await p.evaluate(() => ({ t: game.run.state.clock, w: performance.now() }));
+    await until(p, (a) => performance.now() - a.w > 1500, w0, "a second and a half");
+    const w1 = await p.evaluate(() => ({ t: game.run.state.clock, w: performance.now(), paused: game.run.engine.paused.slice() }));
+    assert.ok((w0.t - w1.t) / ((w1.w - w0.w) / 1000) > 0.3 && !w1.paused.length, `wheelie ${id}: riding never sleeps`);
+    await p.evaluate(() => game.finish());
+    await until(p, () => game.getSnapshot().screen === "result" && game.run.engine.paused.includes("settled") && game.engine.paused.includes("settled"), null, `wheelie ${id}: finished, it settles`);
+    assert.equal(await frames(p), 0, `wheelie ${id}: result: no frames`);
   }
   await p.evaluate(() => game.destroy());
   assert.equal(await frames(p), 0, "after Recall: no frames");

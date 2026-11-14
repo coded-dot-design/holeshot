@@ -30,8 +30,12 @@ pick your jersey and a name. That bike rides every event.
   tricks).
 - **Big Air**: a minute in the arena, two steel kickers. Hold TRICK in the air and the stick picks
   one of four tricks; weight all the way back flips it. Five judges score the run and pay.
-- **Wheelie City**: a minute on the block: wheelies, manuals, hops and stoppies, bonuses across
-  crosswalks, through sprinklers and past a neighbour shaking a fist. Points pay.
+- **Wheelie City**: ninety seconds across four neighbourhoods (the suburb block, a hillside of
+  cul-de-sacs, a downtown grid round a plaza, a boardwalk marina) linked by humps over the canals:
+  wheelies, manuals, hops and stoppies, bonuses across crosswalks, through sprinklers and past a
+  neighbour shaking a fist. Too loud and the heat rises: the neon patrol comes after you (comic, no
+  weapons); a catch is a ticket (the combo and half the points at risk), a hump into the next hood
+  loses them. Points and escapes pay; tickets cost a little.
 - **Series**: three championship tiers (ROOKIE CUP, PRO CIRCUIT, NEON MASTERS) of four to six
   rounds; every round is a new generated track, harder round by round, against named rivals on
   modded bikes; points, prizes and a title bonus.

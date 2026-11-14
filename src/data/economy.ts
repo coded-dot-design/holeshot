@@ -47,8 +47,9 @@ export const PAYOUT = {
   race: { place: [450, 300, 200, 130], clean: 80, led: 60 },
   /** Big Air: per point of the judges' total (out of 100), per flip, at least `min`. */
   bigair: { perJudge: 4, perFlip: 20, min: 60 },
-  /** Wheelie City: a base, per score point, capped. */
-  wheelie: { base: 40, perPoint: 1 / 20, cap: 700 },
+  /** Wheelie City: a base, per score point, capped; per chase escaped over a hump, less per ticket
+   *  from the neon patrol (never below `floor`: a session always pays). */
+  wheelie: { base: 40, perPoint: 1 / 20, cap: 700, escape: 45, ticket: 15, floor: 20 },
   /** Free Ride: per second ridden, per second of air and of wheelie, per trick landed (big air or a flip, a flip pays more), capped per session. */
   freeride: { perSecond: 0.5, perAir: 6, perWheelie: 4, perTrick: 5, perFlip: 15, cap: 250 },
   /** Quitting an event: this share of what it would have paid so far (0: nothing). */

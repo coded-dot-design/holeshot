@@ -30,7 +30,18 @@
 .wc~[data-fizlet-slot] .wc-toast.wc-go{background:var(--k-go);color:var(--rim)}
 .wc~[data-fizlet-slot] .wc-toast.wc-meh{background:#ffd166;color:#0b0a14}
 .wc~[data-fizlet-slot] .wc-toast.wc-bad{background:#ff4f5e;color:#0b0a14;rotate:2deg}
-.wc~[data-fizlet-slot] .wc-toast[hidden],.wc~[data-fizlet-slot] .wc-card[hidden],.wc~[data-fizlet-slot] .wc-garage[hidden],.wc~[data-fizlet-slot] .wc-trick[hidden]{display:none}
+.wc~[data-fizlet-slot] .wc-toast[hidden],.wc~[data-fizlet-slot] .wc-ticket[hidden],.wc~[data-fizlet-slot] .wc-heat[hidden],.wc-heat i[hidden],.wc~[data-fizlet-slot] .wc-card[hidden],.wc~[data-fizlet-slot] .wc-garage[hidden],.wc~[data-fizlet-slot] .wc-trick[hidden]{display:none}
+/* The heat: five stars (a patrol out: the chip flashes magenta and cyan) and the points at risk. The
+   ticket: a comic stub stamped over the town for two seconds. */
+.wc~[data-fizlet-slot] .wc-heat{rotate:-1deg;background:#ffd166;color:#0b0a14;letter-spacing:.08em}
+.wc-heat i{font-style:normal;font-size:.82em;letter-spacing:.03em;padding:.05em .4em;border:2px solid var(--rim);border-radius:6px;background:var(--surface);color:var(--ink)}
+.wc~[data-fizlet-slot] .wc-heat.wc-hot{animation:wc-lights .5s steps(1) infinite}
+@keyframes wc-lights{0%{background:#ff3fd0}50%{background:#22e6ff}}
+@media (prefers-reduced-motion:reduce){.wc~[data-fizlet-slot] .wc-heat.wc-hot{animation:none;background:#ff3fd0}}
+.wc~[data-fizlet-slot] .wc-ticket{position:absolute;left:50%;top:34%;translate:-50% -50%;rotate:-4deg;display:grid;justify-items:center;gap:.2em;margin:0;padding:.55em 1.2em .7em;background:#fff6cc;color:#0b0a14;border:3px dashed #0b0a14;border-radius:6px;box-shadow:calc(5px * var(--bui-sx)) calc(5px * var(--bui-sy)) 0 var(--bui-shadow);text-align:center;pointer-events:none}
+.wc-ticket b{font-size:2.2em;letter-spacing:.08em;color:#e6177a}
+.wc-ticket p{margin:0;font-size:.85em;letter-spacing:.06em}
+.wc-ticket .wc-tline{font-size:1.05em}
 .wc-live{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);margin:0}
 .wc-keys{position:absolute;right:8px;top:8px;display:flex;gap:6px;margin:0}
 .wc~[data-fizlet-slot] .wc-key{min-width:44px;height:44px;padding:0 .7em;font:inherit;cursor:pointer;pointer-events:auto;background:var(--surface);color:var(--ink);border:2px solid var(--rim);border-radius:22px;box-shadow:calc(3px * var(--bui-sx)) calc(3px * var(--bui-sy)) 0 var(--bui-shadow)}
@@ -59,6 +70,7 @@
 .wc~[data-fizlet-slot] .wc-ride span,.wc~[data-fizlet-slot] .wc-ride em{display:none}
 .wc~[data-fizlet-slot] .wc-ride i{align-self:center}
 .wc~[data-fizlet-slot] .wc-toast{top:calc((100cqh - var(--padh)) * .42)}
+.wc~[data-fizlet-slot] .wc-ticket{top:calc((100cqh - var(--padh)) * .3);font-size:.9em}
 }
 .wc~[data-fizlet-slot] .wc-garage{position:absolute;left:50%;top:50%;translate:-50% -50%;display:grid;justify-items:center;gap:.55em;width:min(94%,40em);padding:.8em .9em .9em;background:var(--surface);color:var(--ink);border:2.5px solid var(--rim);border-radius:12px;box-shadow:calc(6px * var(--bui-sx)) calc(6px * var(--bui-sy)) 0 var(--bui-shadow);pointer-events:auto;text-align:center}
 .wc-garage>b{font-size:1.5em;letter-spacing:.08em;rotate:-1deg}

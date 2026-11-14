@@ -44,22 +44,23 @@ export const RIDES: RideSpec[] = [
 /** The rides on `ground` (one bike each, made once); `use` picks one, `step` drives it. */
 export function ride(ground: BikeGround, specs: RideSpec[] = RIDES) {
   const all: Bike[] = specs.map((r) => bike(ground, r.power, r.shape));
-  let k = all[0]!, sp = specs[0]!, hopT = 0, bonk = 0, stillT = 0;
-  const vel = new Float64Array(3);
+  let k = all[0]!, sp = specs[0]!;
+  // R: hop timer, the speed into the last wall, seconds sat still (in a typed array: a snapshot).
+  const vel = new Float64Array(3), R = new Float64Array(3);
   /** One step: gas, brake 0..1, lean −1 (back) .. 1 (forward), steer −1..1 (+ right), hop (a press). */
   function step(dt: number, gas: number, brake: number, lean: number, steer: number, hop: number) {
     // Parked: once the shared bike has come to rest (or has sat all but still for a moment: against a
     // curb or a wall its springs can creep for ever), it stays parked, not stepped, until the gas, a
     // lean or a hop, so the page can settle.
     const idle = !k.crashed && gas === 0 && hop === 0 && lean === 0;
-    stillT = idle && Math.abs(k.speed) < 0.05 && Math.abs(k.vy) < 0.05 && Math.abs(k.S[3]!) < 0.05 ? stillT + dt : 0;
-    if (idle && (k.resting || stillT > 0.8)) return false;
-    if (hop > 0 && hopT <= 0 && !k.crashed && k.contact[0] && k.contact[1]) (k.S[6] = k.S[6]! + sp.hop), (hopT = 0.4);
-    hopT -= dt;
+    R[2] = idle && Math.abs(k.speed) < 0.05 && Math.abs(k.vy) < 0.05 && Math.abs(k.S[3]!) < 0.05 ? R[2]! + dt : 0;
+    if (idle && (k.resting || R[2]! > 0.8)) return false;
+    if (hop > 0 && R[0]! <= 0 && !k.crashed && k.contact[0] && k.contact[1]) (k.S[6] = k.S[6]! + sp.hop), (R[0] = 0.4);
+    R[0] = R[0]! - dt;
     k.set(gas, brake, -lean, steer, 0);
     const moving = k.step(dt);
     vel[0] = k.cy * k.speed; vel[1] = 0; vel[2] = -k.sy * k.speed;
-    return moving || hopT > 0;
+    return moving || R[0]! > 0;
   }
   /** Bump off a wall with outward normal (nx, nz): the speed into it turned back. Returns the speed it hit at. */
   function wall(nx: number, nz: number, hard: number) {
@@ -69,21 +70,21 @@ export function ride(ground: BikeGround, specs: RideSpec[] = RIDES) {
     // has no bump of its own, so the speed along the heading, S[5], turns back).
     if (into > hard && !k.crashed) k.knock(STRIKE);
     else k.S[5] = -k.S[5]! * 0.25;
-    bonk = into;
+    R[1] = into;
     return into;
   }
   return {
-    step, wall, vel,
+    step, wall, vel, R, all,
     /** Pick ride i, put down at (x, z) facing yaw. */
     use(i: number, x: number, z: number, yaw: number) {
       sp = specs[i]!;
       k = all[i]!;
       k.reset(x, z, yaw);
-      hopT = stillT = 0;
+      R[0] = R[2] = 0;
     },
     reset(x: number, z: number, yaw: number) {
       k.reset(x, z, yaw);
-      hopT = stillT = 0;
+      R[0] = R[2] = 0;
     },
     /** The shared bike being ridden. */
     get b() { return k; },
@@ -92,7 +93,7 @@ export function ride(ground: BikeGround, specs: RideSpec[] = RIDES) {
     get nose() { return k.crashed ? 0 : k.rel; },
     get balance() { return k.bp; },
     /** Speed into the last wall. */
-    get bonk() { return bonk; },
+    get bonk() { return R[1]!; },
     get air() { return !k.crashed && !k.contact[0] && !k.contact[1]; },
   };
 }

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.3.0
+
+- **Wheelie City: four neighbourhoods and the neon patrol.** THE BLOCK (the suburb strip),
+  HILLCREST (cul-de-sacs with turning circles, houses perched on retaining walls under a ridge),
+  DOWNTOWN (a grid of neon towers round a plaza with a fountain) and NEON MARINA (a beach road, a
+  boardwalk over the sand, shacks, palms, showers, the sea), islands on the table with canals
+  between them, linked by eight humps: hit one at speed and you fly into the next hood (the flight
+  lands on the far ramp, upright); too slow and you bump the fence. A session is ninety seconds.
+  Stunt too loud near the neighbours, ride through a sprinkler or across a lawn and the heat rises
+  (five stars): patrol bikes, a cart and a drone come after you with lights and a two-tone whoop,
+  pathing on each hood's street graph. Caught is a TICKET (the combo and half the points banked
+  while the heat was on); a hump into another hood loses them (an escape: points, and credits).
+  Heat cools when you ride clean. Payout: +45 an escape, −15 a ticket, never under 20. Deterministic
+  and seeded on `src/math.ts` (no builtin transcendentals in the town, the patrol or the layouts);
+  the whole session is byte views (`cityRun().bytes`) for a snapshot. Online, Wheelie City is
+  ninety seconds each across the four hoods. The golden file: the Wheelie City session's hash
+  changes (the new town) and three sessions are added (one per new hood); the other 36 hashes are
+  unchanged. Size budget 160,000 B gzip (155,843 B measured).
+
 ## 0.2.1
 
 - **The same bits on every engine** (an iPhone in a room with desktop Chrome): every track and map

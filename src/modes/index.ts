@@ -47,8 +47,8 @@ export const MODES: Mode[] = [
     start: (ctx) => mountAir(ctx),
   },
   {
-    id: "wheelie", name: "WHEELIE CITY", blurb: "A minute on the block: wheelies, manuals, hops. Points pay; neighbours complain.",
-    maps: [{ id: "city", name: "THE BLOCK" }],
+    id: "wheelie", name: "WHEELIE CITY", blurb: "Four hoods, ninety seconds: wheelies, manuals, hops. Too loud and the neon patrol comes; jump a hump to lose them.",
+    maps: [{ id: "city", name: "FOUR HOODS" }],
     start: (ctx) => mountCity(ctx),
   },
 ];

@@ -40,6 +40,12 @@ export function payout(s: RunStats): [string, number][] {
     L.push(["SESSION", P.base]);
     const pts = Math.min(P.cap - P.base, Math.round((s.score ?? 0) * P.perPoint));
     if (pts > 0) L.push([`${Math.round(s.score ?? 0).toLocaleString("en-US")} PTS`, pts]);
+    const esc = s.escapes ?? 0, tix = s.tickets ?? 0;
+    if (esc > 0) L.push([`${esc} ${esc === 1 ? "ESCAPE" : "ESCAPES"}`, esc * P.escape]);
+    if (tix > 0) {
+      const sum = L.reduce((a, l) => a + l[1], 0);
+      L.push([`${tix} ${tix === 1 ? "TICKET" : "TICKETS"}`, -Math.min(tix * P.ticket, Math.max(0, sum - P.floor))]);
+    }
   } else {
     const P = PAYOUT.freeride;
     const t = Math.round(s.seconds * P.perSecond), a = Math.round(s.air * P.perAir), w = Math.round(s.wheelie * P.perWheelie);

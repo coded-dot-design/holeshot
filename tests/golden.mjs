@@ -72,9 +72,12 @@ export function compute() {
   }
   {
     const t = bikes[2], run = W.cityRun([{ id: "x", name: "x", kind: "", blurb: "", bars: [3, 3, 3], power: t.power, shape: t.shape, sweet: t.sweet, hop: t.hop }]), I = new Float64Array(5);
-    run.reset(0);
-    for (let f = 0; f < 60 * 62 && run.S[0] !== W.DONE; f++) (run.autopilot(I), run.step(1 / 60, I[0], I[1], I[2], I[3], I[4]), run.clear());
-    out["wheelie city session"] = h(run.S, run.bike.b.state, run.sc);
+    // A whole session in each hood (the heat, the patrol, its tickets and the humps included): every byte the session keeps.
+    for (let hood = 0; hood < 4; hood++) {
+      run.reset(0, hood);
+      for (let f = 0; f < 60 * (W.SESSION + 2) && run.S[0] !== W.DONE; f++) (run.autopilot(I), run.step(1 / 60, I[0], I[1], I[2], I[3], I[4]), run.clear());
+      out[hood ? `wheelie city session, hood ${hood}` : "wheelie city session"] = h(...run.bytes);
+    }
   }
   return out;
 }
