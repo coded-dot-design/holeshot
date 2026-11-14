@@ -13,7 +13,7 @@
     "check": "npm run build && npm run size",
     "test": "node --expose-gc --test --test-concurrency=1 tests/*.test.mjs",
     "test:settle": "node tests/settle.mjs",
-    "test:browser": "node tests/browser.mjs",
+    "test:browser": "node tests/browser.mjs && node tests/garage.browser.mjs",
     "site:dev": "astro dev --config site/astro.config.mjs",
     "site:build": "astro build --config site/astro.config.mjs && node scripts/pages.mjs",
     "test:site": "node tests/site.mjs"

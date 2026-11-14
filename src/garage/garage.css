@@ -1,0 +1,37 @@
+/* The garage's sheet (src/garage/view.ts): part states (worn amber, may-fail red, failed struck),
+   tyre compound and tune chips, the try-on bar, the service log, the showroom by class. Board UI
+   tokens and the shell's palette (--hot, --cy, --lime) only. */
+.dh{--amber:#ffb23d}
+.dh[data-day]{--amber:#b86a00}
+.dh-bar[data-state=worn] i{background:linear-gradient(90deg,var(--amber) calc(var(--v) * 100%),color-mix(in srgb,var(--rim) 12%,transparent) 0)}
+.dh-bar[data-state=risk] i,.dh-bar[data-state=failed] i{background:linear-gradient(90deg,var(--hot) calc(var(--v) * 100%),color-mix(in srgb,var(--hot) 18%,transparent) 0)}
+.dh-bar[data-state=failed] b{text-decoration:line-through}
+.dh-pcol{display:grid;gap:4px;min-width:0}
+.dh-tag{justify-self:start;padding:1px 7px;border:2px solid var(--rim);border-radius:6px;font-size:10px;letter-spacing:.08em;background:var(--amber);color:var(--rim)}
+.dh-tag[data-state=risk],.dh-tag[data-state=failed]{background:var(--hot);color:#fff}
+.dh-tag[data-state=risk]{animation:dh-blink 1.2s steps(2,jump-none) infinite}
+@keyframes dh-blink{50%{opacity:.55}}
+@media (prefers-reduced-motion:reduce){.dh-tag[data-state=risk]{animation:none}}
+.dh-alert{padding:8px 12px;border:2.5px solid var(--rim);border-radius:10px;background:color-mix(in srgb,var(--hot) 20%,var(--surface));font-weight:800;font-size:13px}
+.dh-chips{display:flex;flex-wrap:wrap;gap:6px}
+.dh .dh-mini{min-height:44px;min-width:44px;padding:2px 10px;display:grid;justify-items:center;align-content:center;font-size:12px;letter-spacing:.04em}
+.dh-mini small{font-size:10px;opacity:.85}
+.dh-mini small[data-short]{color:var(--hot)}
+.dh-list>li.dh-setup{grid-template-columns:1fr;gap:4px}
+.dh-blurb{color:var(--muted);font-weight:700;font-size:12px}
+.dh-try{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:8px 10px;border:2.5px dashed var(--rim);border-radius:12px;background:color-mix(in srgb,var(--cy) 16%,var(--surface))}
+.dh-try>span{flex:1 1 12em;font-size:13px}
+.dh-swk[data-try]{outline:3px dashed var(--hot);outline-offset:2px}
+.dh-log{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:12px}
+.dh-log li{display:grid;grid-template-columns:5.5em minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:3px 0;border-bottom:1.5px dashed color-mix(in srgb,var(--rim) 30%,transparent)}
+.dh-log small{color:var(--muted);letter-spacing:.06em}
+.dh-classes{gap:4px}
+.dh-classes>li.dh-class{display:block}
+.dh-show>li[data-locked]{opacity:.7}
+.dh-mini-bars{display:grid;gap:2px;margin-top:2px}
+.dh-mini-bars .dh-bar{grid-template-columns:4.5em minmax(3em,1fr) 3em;font-size:10px}
+.dh-mini-bars .dh-bar i{height:8px}
+.dh-pay li[data-loss]{color:var(--hot)}
+.dh-risk{width:min(100%,560px)}
+@media (max-width:620px){.dh-log li{grid-template-columns:4.5em minmax(0,1fr) auto}}
+.dh-maker{display:inline-block;width:14px;height:14px;margin-right:6px;vertical-align:-1px;border:2px solid var(--rim);border-radius:4px;background:linear-gradient(135deg,var(--a) 55%,var(--b) 0)}

@@ -5,8 +5,8 @@
 // each version step in MIGRATIONS runs in order, then `normalize` fills what is missing and clamps
 // what is out of range, so a save from before a part or a field existed still loads.
 import { model, STARTERS } from "../data/roster.ts";
-import { PARTS, START_CREDITS, GARAGE_SLOTS, MODS, type PartId, type ModId } from "../data/economy.ts";
-import { PAINTS, SWATCHES, HELMETS, VISORS, PATTERNS } from "../data/looks.ts";
+import { PARTS, START_CREDITS, GARAGE_SLOTS, MODS, SETUPS, TYRES, LOG_MAX, type PartId, type ModId, type TyreId } from "../data/economy.ts";
+import { PAINTS, SWATCHES, HELMETS, VISORS, PATTERNS, GRAPHICS, PLASTICS, PLATES } from "../data/looks.ts";
 
 export const VERSION = 1;
 export const STORE_KEY = "dirt-hop:profile";
@@ -18,10 +18,23 @@ export interface BikeSave {
   model: string;
   parts: Record<PartId, number>;
   mods: Record<ModId, number>;
-  look: { paint: string; number: number };
+  look: { paint: string; number: number; graphics: string; plastics: string; plate: string };
   /** Odometer (world units) and events ridden. */
   odo: number;
   events: number;
+  /** The garage (all filled by normalize when missing, no schema step): the tyres' compound, the tune
+   *  choices (gearing, springs, an electric's motor map) and the ones bought (`setups`, "gearing:tall"),
+   *  crash damage (0 new .. 1), the part that failed in an event (until replaced; "" none), and the
+   *  service log, newest first: [the bike's event count, what ("svc:tyres:soft", "mod:power:2",
+   *  "fail:chain", "fix:bars", "crew", "setup:gearing:tall", "new"), credits]. */
+  tyre: TyreId;
+  gearing: string;
+  spring: string;
+  map: string;
+  setups: string[];
+  dmg: { bars: number; plastics: number };
+  fail: PartId | "";
+  log: [number, string, number][];
 }
 /** The rider's kit. */
 export interface RiderKit {
@@ -60,7 +73,11 @@ export const STARTER_KIT: RiderKit = { helmet: "peak", helmetPaint: "white", vis
 
 /** A new bike of `modelId`: every part new, no mods. */
 export function newBike(modelId: string, uid: string, paint = "gridline", number = 7): BikeSave {
-  return { uid, model: model(modelId).id, parts: { tyres: 1, chain: 1, motor: 1, susp: 1, brakes: 1 }, mods: { power: 0, gearing: 0, susp: 0 }, look: { paint, number }, odo: 0, events: 0 };
+  return {
+    uid, model: model(modelId).id, parts: { tyres: 1, chain: 1, motor: 1, susp: 1, brakes: 1 }, mods: { power: 0, brakes: 0, weight: 0, travel: 0, cells: 0 },
+    look: { paint, number, graphics: "none", plastics: "scheme", plate: "scheme" }, odo: 0, events: 0,
+    tyre: "med", gearing: "stock", spring: "stock", map: "std", setups: [], dmg: { bars: 0, plastics: 0 }, fail: "", log: [],
+  };
 }
 /** A profile before the first-run setup: no name, no bike yet. */
 export function fresh(): Profile {
@@ -85,8 +102,30 @@ function normBike(b: unknown, i: number): BikeSave | null {
   for (const k of Object.keys(MODS) as ModId[]) out.mods[k] = int(mods[k], 0, 0, MODS[k].max);
   out.look.paint = oneOf(look.paint, PAINTS.map((p) => p.id), "gridline");
   out.look.number = int(look.number, 7, 1, 99);
+  out.look.graphics = oneOf(look.graphics, GRAPHICS.map((g) => g.id), "none");
+  out.look.plastics = oneOf(look.plastics, PLASTICS.map((g) => g.id), "scheme");
+  out.look.plate = oneOf(look.plate, PLATES.map((g) => g.id), "scheme");
   out.odo = int(o.odo, 0, 0, 1e9);
   out.events = int(o.events, 0, 0, 1e7);
+  // The garage's fields. A 0.1.0 bike had mods { power, gearing 0..2 (short), susp 0..3 }: short
+  // gearing becomes the SHORT choice, a suspension mod the long travel kit (stiff springs from 2).
+  const ids = (k: keyof typeof SETUPS) => SETUPS[k].opts.map((x) => x.id);
+  const oldGear = int(mods.gearing, 0, 0, 9), oldSusp = int(mods.susp, 0, 0, 9);
+  if (oldSusp && mods.travel === undefined) out.mods.travel = 1;
+  out.tyre = oneOf(o.tyre, Object.keys(TYRES), "med") as TyreId;
+  out.gearing = oneOf(o.gearing, ids("gearing"), oldGear ? "short" : "stock");
+  out.spring = oneOf(o.spring, ids("spring"), oldSusp >= 2 ? "stiff" : "stock");
+  out.map = oneOf(o.map, ids("map"), "std");
+  const valid = (Object.keys(SETUPS) as (keyof typeof SETUPS)[]).flatMap((k) => ids(k).map((v) => k + ":" + v));
+  out.setups = Array.isArray(o.setups) ? [...new Set(o.setups.filter((x): x is string => typeof x === "string" && valid.includes(x)))] : [];
+  for (const k of ["gearing", "spring", "map"] as const) if (out[k] !== SETUPS[k].opts[1]!.id && !out.setups.includes(k + ":" + out[k])) out.setups.push(k + ":" + out[k]);
+  const dmg = obj(o.dmg);
+  out.dmg = { bars: clamp01(dmg.bars, 0), plastics: clamp01(dmg.plastics, 0) };
+  out.fail = oneOf(o.fail, PARTS, "") as PartId | "";
+  out.log = (Array.isArray(o.log) ? o.log : [])
+    .filter((e): e is [number, string, number] => Array.isArray(e) && typeof e[1] === "string")
+    .slice(0, LOG_MAX)
+    .map((e) => [int(e[0], 0, 0, 1e7), e[1].slice(0, 32), int(e[2], 0, 0, 1e7)]);
   return out;
 }
 /** Fill what is missing and clamp what is out of range (a current-version profile, possibly partial). */

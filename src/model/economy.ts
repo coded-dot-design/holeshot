@@ -5,6 +5,7 @@ import { model } from "../data/roster.ts";
 import type { RunStats } from "../modes/mode.ts";
 import { normalize, riding, type BikeSave, type Profile } from "./profile.ts";
 import { partPrice } from "./garage.ts";
+import { logIt } from "./upkeep.ts";
 
 export interface ModeResult {
   stats: RunStats;
@@ -96,10 +97,10 @@ function needed(p: Profile) {
   for (const k of PARTS) if (b.parts[k] < PIT_CREW.below) lo = lo ? Math.min(lo, partPrice(b, k)) : partPrice(b, k);
   return lo;
 }
-/** The pit crew will help: enough events since last time, something worn under the line, and you
- *  can't pay for it. */
+/** The pit crew will help: enough events since last time (or at once after a part failed), something
+ *  worn under the line, and you can't pay for it. */
 export function pitReady(p: Profile) {
-  if (!p.bikes.length || p.pit < PIT_CREW.every) return false;
+  if (!p.bikes.length || (p.pit < PIT_CREW.every && !riding(p).fail)) return false;
   const need = needed(p);
   return need > 0 && p.credits < need;
 }
@@ -108,6 +109,8 @@ export function pitFix(p: Profile): Profile {
   if (!pitReady(p)) return p;
   const n = normalize(p), b = riding(n);
   for (const k of PARTS) b.parts[k] = Math.max(b.parts[k], PIT_CREW.to);
+  b.fail = "";
+  logIt(b, "crew");
   n.pit = 0;
   return n;
 }

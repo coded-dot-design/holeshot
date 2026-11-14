@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
 import { serve, launchOptions } from "./serve.mjs";
+import { START_CREDITS } from "../src/data/economy.ts";
 
 const fixture = readFileSync("tests/fixtures/page.html", "utf8");
 const full = `<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dirt Hop</title></head><body style="margin:0"><div id="game" style="position:fixed;inset:0"></div><script type="module">import { createDirtHop } from "/dist/dirt-hop.mjs"; window.game = createDirtHop({ host: document.getElementById("game"), seed: 5, sound: false });</script></body></html>`;
@@ -48,7 +49,7 @@ try {
     });
     await until(p, () => game.getSnapshot().screen === "garage", null, `${name}: to the garage`);
     let s = await snap(p);
-    assert.deepEqual([s.bike.model, s.bike.number, s.credits, s.bikes], ["sparkhound", 23, 400, 1], `${name}: one starter, its number, the start credits`);
+    assert.deepEqual([s.bike.model, s.bike.number, s.credits, s.bikes], ["sparkhound", 23, START_CREDITS, 1], `${name}: one starter, its number, the start credits`);
     await until(p, () => { const c = document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".dh-preview"), d = c.getContext("2d").getImageData(c.width >> 1, c.height >> 1, 1, 1).data; return c.width > 50 && d[3] === 255; }, null, `${name}: the garage draws the bike`);
     // ---- a race, by hand then on the autopilot ----
     await click(p, "[data-go=ride]");
@@ -79,7 +80,7 @@ try {
     await p.evaluate(() => (game.run.auto = true));
     await until(p, () => game.getSnapshot().screen === "result", null, `${name}: the autopilot finishes the race`, 120000);
     s = await snap(p);
-    assert.ok(s.result.finished && s.result.credits >= 130 && s.credits === 400 + s.result.credits, `${name}: the race pays (${s.result.credits})`);
+    assert.ok(s.result.finished && s.result.credits >= 130 && s.credits === START_CREDITS + s.result.credits, `${name}: the race pays (${s.result.credits})`);
     assert.ok(Object.values(s.bike.parts).every((v) => v < 1), `${name}: and wears every part`);
     // ---- the garage: new tyres ----
     await click(p, ".dh-result [data-go=garage]");
