@@ -44,7 +44,7 @@ const DARK = {
   robes: ["#9d7bff", "#ff8fb8", "#6fd3ff", "#ffd166", "#7ee0a8", "#ff9e6b", "#c0c6ff"], hair: ["#e7e7ef", "#3a2a22", "#8a8a96", "#c06a3a"],
   dog: "#c98e5a", dog2: "#6b4a2e", water: "#8fe8ff", dust: "#8a84b8", spark: "#ffd166", smoke: "#c9c4e8", shadow: "#000000",
   ink: "#0b0a14", paper: "#f6f3ff", good: "#22e6ff", warn: "#ffd166", bad: "#ff4f5e", line: "#22e6ff",
-  // The rig's parts that are not the ride's own colours (../bikes/rig.ts).
+  // The rig's parts that are not the ride's own colours (../../bike/rig.ts).
   kit: { seat: "#14121f", frame: "#2b2a3d", tyre: "#0f0f16", rim: "#9aa0c8", metal: "#c9cde6", pipe: "#7e86a8", visor: "#0a0c16", boots: "#e9ecff", gloves: "#14121f", glow: "#22e6ff" },
 };
 type Pal = typeof DARK;
@@ -114,7 +114,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   });
   thePad.el.classList.add("wc-pad");
   if (ctx.attract) thePad.el.hidden = true;
-  // The motor's whine (../bikes/kit.ts): nothing is made until a gesture.
+  // The motor's whine (../../bike/kit.ts): nothing is made until a gesture.
   const vox = voice();
   vox.on = snd.on;
   engine.signal.addEventListener("abort", () => vox.close(), { once: true });
@@ -691,7 +691,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   }
 
   // ---- the loop ----
-  // The gamepad (../bikes/kit.ts): [stick x, stick y, gas, brake, trick (our hop), start].
+  // The gamepad (../../bike/kit.ts): [stick x, stick y, gas, brake, trick (our hop), start].
   const GP = new Float64Array(6);
   engine.add({
     read() {

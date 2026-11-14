@@ -1,4 +1,4 @@
-// Moto Track's course and race, headless (tests/moto-track.test.mjs races it with no browser). One
+// The race's course (Moto Track's, from Fizlet's gallery) and the race, headless (tests/modes.test.mjs races it with no browser). One
 // fixed tabletop motocross track on @fzlt/core/terrain: a loop of four straights and four bermed
 // left-handers, its floor carved level into rolling dirt, and the features stamped along it from one
 // height profile over the lap: the start gate, a rhythm section of doubles, the whoops, the big triple

@@ -1,11 +1,11 @@
-// Wheelie City's block and session, headless (tests/wheelie-city.test.mjs plays it with no browser).
+// Wheelie City's block and session, headless (tests/modes.test.mjs plays it with no browser).
 // The table: two long boulevards (north and south, 94 units end to end: room for a wheelie of eight
 // seconds and more without a turn) joined by four avenues and a cross street, round four blocks. The
 // middle two are the old town: four houses with lawns and driveways in the west, an apartment building
 // and a corner store over two more houses in the east (one with a dog in a fenced front yard); the
 // outer two are rows of houses along the boulevards, with their own crosswalks and sprinklers. Curbs, two crosswalks, a speed bump, a
 // plywood kicker someone left on the west avenue, parked cars, trees and streetlights. The bike is
-// the Bikes series' shared bike (../bikes/bike.ts) through ./ride.ts on this ground; ./tricks.ts scores it. A session is one
+// the shared bike (../../bike/bike.ts) through ./ride.ts on this ground; ./tricks.ts scores it. A session is one
 // minute from the first touch of the gas: wheelies, manuals and hops score, with bonuses for a
 // trick across a crosswalk, through a sprinkler or past a neighbour who has come out to shake a
 // fist. Loop it out, nose it in or land off balance and it is a crash: the trick and the combo are

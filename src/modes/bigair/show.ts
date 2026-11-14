@@ -1,4 +1,4 @@
-// Big Air's arena and run, headless (tests/big-air.test.mjs rides it with no browser). One fixed
+// Big Air's arena and run, headless (tests/modes.test.mjs rides it with no browser). One fixed
 // tabletop freestyle arena on @fzlt/core/terrain: an oval of dirt with two big steel kickers and two
 // dirt landings, one pair on each straight, so a rider loops round hitting one, then the other. The
 // bike is ./bike.ts with the freestyle feel (a lighter gravity for hang time, more pitch in the air),
