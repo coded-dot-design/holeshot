@@ -1,0 +1,16 @@
+{
+  "id": "dirt-hop",
+  "author": "Chris Cooley",
+  "license": "MIT",
+  "name": "Dirt Hop",
+  "kind": "DOM RIDE + WRENCH",
+  "tagline": "One bike. Every kind of dirt.",
+  "description": "A dirt bike game on a tabletop: one bike and a garage, races against rivals, a free-ride park, a Big Air show and Wheelie City. Earn credits, wear out tyres and top ends, rebuild, mod and paint. Neon at night, pastel by day.",
+  "accent": "cyan",
+  "icon": "bike",
+  "controls": [
+    "Space — gas · K — brake",
+    "W/S or ↑/↓ — lean (back lifts the front) · A/D — steer",
+    "L — trick (Big Air) or hop (Wheelie City) · P — pause · V — camera"
+  ]
+}

@@ -1,0 +1,79 @@
+
+/* Wheelie City (site/gallery/pieces/wheelie/wheelie-city.ts): the tabletop block, the sky behind it
+   and the bike draw on the scene's canvas; over it a transparent key takes the pointer (hold for gas)
+   and the keyboard's focus. Board UI stickers: the clock, the score and combo, the trick in progress
+   on top, a line of help under them, the trick calls in the middle, the ride, view and mute keys in
+   the corner, the garage (three rides) and the time-up card. The touch controls are @fzlt/core/pad
+   (a stick for lean and steer, GAS, BRAKE and HOP keys): on touch screens only when wide; square or
+   tall (a phone held upright), the block on top and the pad under it. Dark: neon curbs at night.
+   Light: a pastel suburb by day. */
+.wc{position:absolute;inset:0;background:#0c0b1a}
+.bui[data-theme="light"] .wc{background:#9c5f45}
+.wc-poster,.wc~[data-fizlet-slot]>canvas,.wc~[data-fizlet-slot]>.wc-play{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
+.wc-poster{object-fit:cover}
+.wc~[data-fizlet-slot]>.wc-play{pointer-events:auto;border:0;margin:0;padding:0;background:transparent;box-shadow:none;transition:none;cursor:pointer;touch-action:none;-webkit-tap-highlight-color:transparent;outline-offset:-4px}
+.wc~[data-fizlet-slot] .wc-hud{position:absolute;inset:0;pointer-events:none;font:900 clamp(10px,1.7cqw,14px)/1.15 ui-rounded,"SF Pro Rounded",Nunito,system-ui,sans-serif;color:var(--ink)}
+.wc-head{position:absolute;left:8px;top:8px;right:200px;display:grid;gap:6px}
+.wc-top{display:flex;flex-wrap:wrap;gap:6px 8px;margin:0}
+.wc~[data-fizlet-slot] .wc-chip{display:inline-flex;align-items:center;gap:.4em;padding:.4em .7em;background:var(--surface);color:var(--ink);border:2px solid var(--rim);border-radius:8px;box-shadow:calc(3px * var(--bui-sx)) calc(3px * var(--bui-sy)) 0 var(--bui-shadow);white-space:nowrap;font-variant-numeric:tabular-nums}
+.wc~[data-fizlet-slot] .wc-time{rotate:-1.5deg}
+.wc~[data-fizlet-slot] .wc-time.wc-hot{background:#ff4f5e;color:#0b0a14}
+.wc~[data-fizlet-slot] .wc-trick{rotate:-1deg;background:#22e6ff;color:#0b0a14}
+.wc~[data-fizlet-slot] .wc-time span{min-width:3.6ch}
+.wc~[data-fizlet-slot] .wc-score{rotate:1deg}
+.wc-score i{font-style:normal;padding:.05em .4em;border:2px solid var(--rim);border-radius:6px;background:var(--surface)}
+.wc~[data-fizlet-slot] .wc-score i.wc-hot{background:#ff4fa8;color:#0b0a14}
+.wc-hint{min-height:1.2em;margin:0;padding:0 2px;font-size:.92em;color:#f4efff;text-shadow:0 1px 0 #0d0b1c,0 0 4px #0d0b1c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bui[data-theme="light"] .wc-hint{color:#1b1420;text-shadow:0 1px 0 #fff3dc,0 0 4px #fff3dc}
+.wc~[data-fizlet-slot] .wc-toast{position:absolute;left:50%;top:30%;translate:-50% 0;rotate:-2deg;margin:0;padding:.45em .8em;max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--rim);color:#f6f3ff;border:2px solid var(--rim);border-radius:8px;box-shadow:calc(4px * var(--bui-sx)) calc(4px * var(--bui-sy)) 0 var(--bui-shadow);font-size:1.1em;letter-spacing:.03em}
+.wc~[data-fizlet-slot] .wc-toast.wc-clean{background:#22e6ff;color:#0b0a14}
+.wc~[data-fizlet-slot] .wc-toast.wc-go{background:var(--k-go);color:var(--rim)}
+.wc~[data-fizlet-slot] .wc-toast.wc-meh{background:#ffd166;color:#0b0a14}
+.wc~[data-fizlet-slot] .wc-toast.wc-bad{background:#ff4f5e;color:#0b0a14;rotate:2deg}
+.wc~[data-fizlet-slot] .wc-toast[hidden],.wc~[data-fizlet-slot] .wc-card[hidden],.wc~[data-fizlet-slot] .wc-garage[hidden],.wc~[data-fizlet-slot] .wc-trick[hidden]{display:none}
+.wc-live{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);margin:0}
+.wc-keys{position:absolute;right:8px;top:8px;display:flex;gap:6px;margin:0}
+.wc~[data-fizlet-slot] .wc-key{min-width:44px;height:44px;padding:0 .7em;font:inherit;cursor:pointer;pointer-events:auto;background:var(--surface);color:var(--ink);border:2px solid var(--rim);border-radius:22px;box-shadow:calc(3px * var(--bui-sx)) calc(3px * var(--bui-sy)) 0 var(--bui-shadow)}
+.wc~[data-fizlet-slot] .wc-card{position:absolute;left:50%;top:46%;translate:-50% -50%;rotate:-1.5deg;display:grid;justify-items:center;gap:.4em;width:min(84%,24em);padding:.9em 1.1em 1em;background:var(--surface);color:var(--ink);border:2.5px solid var(--rim);border-radius:12px;box-shadow:calc(6px * var(--bui-sx)) calc(6px * var(--bui-sy)) 0 var(--bui-shadow);text-align:center;pointer-events:auto}
+.wc-card>b{font-size:2em;letter-spacing:.06em}
+.wc-card p{margin:0}
+.wc-card .wc-t{font-size:1.5em;font-variant-numeric:tabular-nums}
+.wc-card .wc-stats{color:var(--muted);line-height:1.35}
+.wc-again-row{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.wc~[data-fizlet-slot] .wc-again,.wc~[data-fizlet-slot] .wc-change{min-height:44px;padding:0 1.2em;font:inherit;background:var(--k-go);color:var(--rim)}
+.wc~[data-fizlet-slot] .wc-change{background:var(--surface);color:var(--ink)}
+.wc~[data-fizlet-slot] .wc-pad{--u:.62px;display:none}
+.wc~[data-fizlet-slot] .wc-pad .bui-pad-keys{max-width:none;flex-wrap:nowrap}
+@media (pointer:coarse){.wc~[data-fizlet-slot] .wc-pad{display:flex}}
+@container stage (aspect-ratio<7/5){
+.wc,.wc~[data-fizlet-slot]{--padh:clamp(96px,22cqh,120px)}
+.wc-poster,.wc~[data-fizlet-slot]>canvas,.wc~[data-fizlet-slot]>.wc-play{height:calc(100cqh - var(--padh))}
+.wc~[data-fizlet-slot] .wc-hud{font-size:clamp(11px,3.3cqw,14px)}
+.wc-head{right:8px;top:60px}
+.wc-hint{white-space:normal}
+.wc~[data-fizlet-slot] .wc-pad{display:flex;--u:.72px;gap:calc(8 * var(--u));padding-inline:calc(8 * var(--u))}
+.wc~[data-fizlet-slot] .wc-card{top:calc((100cqh - var(--padh)) / 2);font-size:.85em}
+.wc~[data-fizlet-slot] .wc-garage{top:calc((100cqh - var(--padh)) / 2 + 24px);font-size:.82em;gap:.4em;padding:.6em}
+.wc~[data-fizlet-slot] .wc-rides{grid-template-columns:1fr;gap:6px}
+.wc~[data-fizlet-slot] .wc-ride{grid-template-columns:auto 1fr;column-gap:.6em;padding:.45em .6em}
+.wc~[data-fizlet-slot] .wc-ride span,.wc~[data-fizlet-slot] .wc-ride em{display:none}
+.wc~[data-fizlet-slot] .wc-ride i{align-self:center}
+.wc~[data-fizlet-slot] .wc-toast{top:calc((100cqh - var(--padh)) * .42)}
+}
+.wc~[data-fizlet-slot] .wc-garage{position:absolute;left:50%;top:50%;translate:-50% -50%;display:grid;justify-items:center;gap:.55em;width:min(94%,40em);padding:.8em .9em .9em;background:var(--surface);color:var(--ink);border:2.5px solid var(--rim);border-radius:12px;box-shadow:calc(6px * var(--bui-sx)) calc(6px * var(--bui-sy)) 0 var(--bui-shadow);pointer-events:auto;text-align:center}
+.wc-garage>b{font-size:1.5em;letter-spacing:.08em;rotate:-1deg}
+.wc-garage>p{margin:0;color:var(--muted);font-size:.92em}
+.wc-rides{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%}
+.wc~[data-fizlet-slot] .wc-ride{position:relative;display:grid;align-content:start;gap:.3em;min-height:44px;padding:.6em .6em .7em;font:inherit;text-align:left;cursor:pointer;background:var(--surface);color:var(--ink);border:2px solid var(--rim);border-radius:10px;box-shadow:calc(3px * var(--bui-sx)) calc(3px * var(--bui-sy)) 0 var(--bui-shadow)}
+.wc~[data-fizlet-slot] .wc-ride:nth-child(1){rotate:-1deg}.wc~[data-fizlet-slot] .wc-ride:nth-child(3){rotate:1deg}
+.wc~[data-fizlet-slot] .wc-ride[aria-pressed="true"]{background:#22e6ff;color:#0b0a14}
+.wc~[data-fizlet-slot] .wc-ride:hover,.wc~[data-fizlet-slot] .wc-ride:focus-visible{translate:0 -2px;outline:3px solid #ff4fa8;outline-offset:2px}
+.wc-ride b{font-size:1.25em;letter-spacing:.06em}
+.wc-ride i{font-style:normal;font-size:.78em;letter-spacing:.06em;color:#ff4fa8}
+.bui[data-theme="light"] .wc-ride i{color:#c0265e}
+.wc-ride span{font-weight:700;font-size:.82em;line-height:1.25;color:var(--muted)}
+.wc-ride[aria-pressed="true"] span,.wc-ride[aria-pressed="true"] i{color:#0b0a14}
+.wc-ride em{display:grid;grid-template-columns:5.2em 1fr;align-items:center;font-style:normal;font-size:.68em;letter-spacing:.05em}
+.wc-ride u{height:.62em;border:1.5px solid var(--rim);border-radius:3px;background:linear-gradient(90deg,#ff4fa8 calc(var(--n) * 20%),transparent 0)}
+.wc-ride kbd{position:absolute;right:.45em;top:.4em;font:inherit;font-size:.72em;padding:0 .35em;border:1.5px solid var(--rim);border-radius:4px}
+[data-fizlet-slot]:focus-within .wc-play:focus-visible{outline:3px solid #22e6ff}

@@ -1,0 +1,81 @@
+
+/* Big Air (site/gallery/pieces/bikes/big-air.ts): the tabletop freestyle arena, the sky behind it and
+   the rider draw on the scene's canvas (the jump sticker too: air, the trick and its hold, the flip
+   dial); over it a transparent key takes the pointer (hold for gas, drag to steer and lean) and the
+   keyboard's focus. Board UI stickers: score and combo, the clock and the bike on top, a line of help
+   under them, the calls in the middle, the view and mute keys in the corner, the bike pick and the
+   judges' card. The touch controls are @fzlt/core/pad (a stick for weight and steering, GAS, TRICK,
+   BRAKE): on touch screens only when wide; square or tall, the arena on top and the pad under it.
+   Dark: a neon night show. Light: a pastel day. */
+.ba{position:absolute;inset:0;background:#0a0918}
+.bui[data-theme="light"] .ba{background:#f0d2b4}
+.ba-scoreter,.ba~[data-fizlet-slot]>canvas,.ba~[data-fizlet-slot]>.ba-play{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
+.ba-scoreter{object-fit:cover}
+.ba~[data-fizlet-slot]>.ba-play{pointer-events:auto;border:0;margin:0;padding:0;background:transparent;box-shadow:none;transition:none;cursor:pointer;touch-action:none;-webkit-tap-highlight-color:transparent;outline-offset:-4px}
+.ba~[data-fizlet-slot] .ba-hud{position:absolute;inset:0;pointer-events:none;font:900 clamp(10px,1.7cqw,14px)/1.15 ui-rounded,"SF Pro Rounded",Nunito,system-ui,sans-serif;color:var(--ink)}
+.ba-head{position:absolute;left:8px;top:8px;right:150px;display:grid;gap:6px}
+.ba-top{display:flex;flex-wrap:wrap;gap:6px 8px;margin:0}
+.ba~[data-fizlet-slot] .ba-chip{display:inline-flex;align-items:center;gap:.4em;padding:.4em .7em;background:var(--surface);color:var(--ink);border:2px solid var(--rim);border-radius:8px;box-shadow:calc(3px * var(--bui-sx)) calc(3px * var(--bui-sy)) 0 var(--bui-shadow);white-space:nowrap;font-variant-numeric:tabular-nums}
+.ba~[data-fizlet-slot] .ba-score{rotate:-1.5deg}
+.ba~[data-fizlet-slot] .ba-ride{rotate:1deg;background:var(--k-go);color:var(--rim)}
+.ba~[data-fizlet-slot] .ba-time span{min-width:5.2ch}
+.ba-hint{min-height:1.2em;margin:0;padding:0 2px;font-size:.92em;color:#f4efff;text-shadow:0 1px 0 #0d0b1c,0 0 4px #0d0b1c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bui[data-theme="light"] .ba-hint{color:#1b1420;text-shadow:0 1px 0 #ffd29a,0 0 4px #ffd29a}
+.ba~[data-fizlet-slot] .ba-toast{position:absolute;left:50%;top:30%;translate:-50% 0;rotate:-2deg;margin:0;padding:.45em .8em;max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--rim);color:#f6f3ff;border:2px solid var(--rim);border-radius:8px;box-shadow:calc(4px * var(--bui-sx)) calc(4px * var(--bui-sy)) 0 var(--bui-shadow);font-size:1.1em;letter-spacing:.03em}
+.ba~[data-fizlet-slot] .ba-toast.ba-clean{background:#22e6ff;color:#0b0a14}
+.ba~[data-fizlet-slot] .ba-toast.ba-go{background:var(--k-go);color:var(--rim)}
+.ba~[data-fizlet-slot] .ba-toast.ba-meh{background:#ffd166;color:#0b0a14}
+.ba~[data-fizlet-slot] .ba-toast.ba-bad{background:#ff4f5e;color:#0b0a14;rotate:2deg}
+.ba~[data-fizlet-slot] .ba-toast[hidden],.ba~[data-fizlet-slot] .ba-card[hidden]{display:none}
+.ba-live{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);margin:0}
+.ba-keys{position:absolute;right:8px;top:8px;display:flex;gap:6px;margin:0}
+.ba~[data-fizlet-slot] .ba-key{min-width:44px;height:44px;padding:0 .7em;font:inherit;cursor:pointer;pointer-events:auto;background:var(--surface);color:var(--ink);border:2px solid var(--rim);border-radius:22px;box-shadow:calc(3px * var(--bui-sx)) calc(3px * var(--bui-sy)) 0 var(--bui-shadow)}
+.ba~[data-fizlet-slot] .ba-card{position:absolute;left:50%;top:46%;translate:-50% -50%;rotate:-1.5deg;display:grid;justify-items:center;gap:.4em;width:min(84%,24em);padding:.9em 1.1em 1em;background:var(--surface);color:var(--ink);border:2.5px solid var(--rim);border-radius:12px;box-shadow:calc(6px * var(--bui-sx)) calc(6px * var(--bui-sy)) 0 var(--bui-shadow);text-align:center;pointer-events:auto}
+.ba-card>b{font-size:2em;letter-spacing:.06em}
+.ba-card p{margin:0}
+.ba-card .ba-t{font-size:1.9em;font-variant-numeric:tabular-nums}
+.ba-card .ba-stats{color:var(--muted);line-height:1.35}
+.ba-again{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:.2em 0 0}
+.ba~[data-fizlet-slot] .ba-again button{min-height:44px;padding:0 1.1em;font:inherit;background:var(--k-go);color:var(--rim)}
+.ba~[data-fizlet-slot] .ba-again .ba-swap{background:var(--surface);color:var(--ink)}
+.ba~[data-fizlet-slot] .ba-pick{position:absolute;left:50%;top:50%;translate:-50% -50%;display:grid;justify-items:center;gap:.55em;width:min(92%,36em);padding:.8em .9em .9em;background:var(--surface);color:var(--ink);border:2.5px solid var(--rim);border-radius:12px;box-shadow:calc(6px * var(--bui-sx)) calc(6px * var(--bui-sy)) 0 var(--bui-shadow);pointer-events:auto;text-align:center}
+.ba~[data-fizlet-slot] .ba-pick[hidden]{display:none}
+.ba-pick>b{font-size:1.5em;letter-spacing:.06em;rotate:-1deg}
+.ba-bikes{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
+.ba~[data-fizlet-slot] .ba-bike{position:relative;display:grid;gap:.35em;align-content:start;min-height:44px;padding:.6em .7em .7em;font:inherit;text-align:left;cursor:pointer;background:var(--surface);color:var(--ink);border:2.5px solid var(--rim);border-radius:10px;box-shadow:calc(4px * var(--bui-sx)) calc(4px * var(--bui-sy)) 0 var(--bui-shadow)}
+.ba~[data-fizlet-slot] .ba-bike:first-child{background:#ff4fa8;color:#0b0a14;rotate:-1deg}
+.ba~[data-fizlet-slot] .ba-bike:last-child{background:#22e6ff;color:#0b0a14;rotate:1deg}
+.ba~[data-fizlet-slot] .ba-bike:hover,.ba~[data-fizlet-slot] .ba-bike:focus-visible{translate:0 -2px}
+.ba-bike>b{font-size:1.25em;letter-spacing:.04em}
+.ba-bike small{font-weight:700;font-size:.82em;line-height:1.25}
+.ba-bike kbd{position:absolute;right:.5em;top:.45em;font:inherit;font-size:.75em;padding:.05em .45em;border:2px solid currentColor;border-radius:6px;opacity:.75}
+.ba-stats{display:grid;gap:3px}
+.ba-stats i{display:grid;grid-template-columns:8.5em 1fr;align-items:center;gap:.4em;font-style:normal;font-size:.72em}
+.ba-stats i em{font-style:normal;opacity:.8}
+.ba-stats i::after{content:"";height:10px;border:2px solid #0b0a14;border-radius:4px;background:linear-gradient(90deg,#0b0a14 calc(var(--v) * 20%),rgb(255 255 255 / .45) 0)}
+.ba-howto{margin:0;font-size:.8em;color:var(--muted)}
+.ba~[data-fizlet-slot] .ba-pad{--u:.62px;display:none}
+.ba~[data-fizlet-slot] .ba-pad .bui-pad-keys{max-width:none;flex-wrap:nowrap}
+@media (pointer:coarse){.ba~[data-fizlet-slot] .ba-pad{display:flex}}
+@container stage (aspect-ratio<7/5){
+.ba,.ba~[data-fizlet-slot]{--padh:clamp(96px,22cqh,120px)}
+.ba-scoreter,.ba~[data-fizlet-slot]>canvas,.ba~[data-fizlet-slot]>.ba-play{height:calc(100cqh - var(--padh))}
+.ba~[data-fizlet-slot] .ba-hud{font-size:clamp(11px,3.3cqw,14px)}
+.ba-head{right:8px;top:60px}
+.ba-hint{white-space:normal}
+.ba~[data-fizlet-slot] .ba-pad{display:flex;--u:.72px;gap:calc(8 * var(--u));padding-inline:calc(8 * var(--u))}
+.ba~[data-fizlet-slot] .ba-card,.ba~[data-fizlet-slot] .ba-pick{top:calc((100cqh - var(--padh)) / 2);font-size:.85em}
+.ba-bikes{grid-template-columns:1fr}
+.ba-bike small{display:none}
+.ba~[data-fizlet-slot] .ba-toast{top:calc((100cqh - var(--padh)) * .42)}
+}
+.ba-score i{font-style:normal;padding:.05em .4em;border:2px solid var(--rim);border-radius:6px;background:var(--surface)}
+.ba~[data-fizlet-slot] .ba-score i.ba-hot{background:#ff4fa8;color:#0b0a14}
+.ba~[data-fizlet-slot] .ba-low{background:#ff4f5e;color:#0b0a14}
+.ba~[data-fizlet-slot] .ba-toast.ba-trick{background:#ffd166;color:#0b0a14;rotate:1.5deg}
+.ba-judges{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.ba~[data-fizlet-slot] .ba-judges span{min-width:3.2em;padding:.35em .4em;border:2.5px solid var(--rim);border-radius:8px;background:var(--surface);box-shadow:calc(3px * var(--bui-sx)) calc(3px * var(--bui-sy)) 0 var(--bui-shadow);font-size:1.15em;font-variant-numeric:tabular-nums}
+.ba~[data-fizlet-slot] .ba-judges span:nth-child(odd){rotate:-2deg}
+.ba~[data-fizlet-slot] .ba-judges span:nth-child(even){rotate:2deg}
+.ba~[data-fizlet-slot] .ba-score{rotate:-1.5deg}
+[data-fizlet-slot]:focus-within .ba-play:focus-visible{outline:3px solid #22e6ff}
