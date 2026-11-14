@@ -15,7 +15,12 @@ import { readdirSync, readFileSync } from "node:fs";
 // with factory paints).
 // Phase 2 merged (series + maps + garage) and renamed HOLESHOT: 120,996 B measured (holeshot.js),
 // plus about 4 KB of room.
-const BUDGET = 125_000;
+// 0.2.0, online for up to four: 137,888 B measured (holeshot.js; +16,892 B over 120,996: the
+// presence brick's join, the rollback link 4.7 KB and the match 4.3 KB minified, the wire and the
+// hello 3.2 KB, the Free Ride jam 1.7 KB, the room card, the lobby and the online result 5.4 KB, the
+// shell's online flow about 13 KB, the race scene's online view, the economy's online bonus and cap),
+// plus about 4 KB of room.
+const BUDGET = 142_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

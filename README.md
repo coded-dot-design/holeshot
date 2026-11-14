@@ -36,6 +36,17 @@ pick your jersey and a name. That bike rides every event.
   rounds; every round is a new generated track, harder round by round, against named rivals on
   modded bikes; points, prizes and a title bonus.
 
+- **Online**: up to four riders, each on their own garage bike (its mods, its wear, its paint and
+  your kit travel to every screen). The host picks a **race** on a new generated track (ROOKIE, PRO
+  or MASTERS; AI rivals fill the empty places), a **Free Ride jam** on any of the five maps (most
+  trick points in three minutes wins), or a **Big Air** or **Wheelie City** head-to-head (everyone
+  rides their own minute; the best score wins). HOST, pick, 2 / 3 / 4, SEND LINK: the link drops a
+  friend straight into the room. Your bike answers your keys at once on a phone's network (each
+  screen runs ahead on a guess of the others' inputs and quietly corrects). RIDE AGAIN starts the next
+  ride for the whole room; a rider who leaves is ridden by the AI. Online pays more: your own
+  profile gets the payout and the wear for your own result, ×1.5, plus 75 for each rider you beat;
+  the extra halves after six online rides in an hour (no farming).
+
 **The garage.** Every event wears the bike: tyres lose grip, the chain stretches, a 2-stroke's top
 end (or a 4-stroke's engine, or a battery) loses pull, seals blow and it cases sooner, brakes fade.
 Condition bars show it; you feel it on the track. Buy new tyres, rebuild the motor, service the rest;
@@ -70,9 +81,15 @@ createHoleshot({ host, attract: true });     // the landing hero: a race on the 
 createHoleshot();                            // a layer over the whole page; Escape gives it back
 ```
 
+**Online play** needs a fizlet-rooms server (the same one Dune Hop uses): the play page passes
+`ROOMS_URL` (a repo variable, built in as `PUBLIC_ROOMS_URL`; default
+`wss://fizlet-rooms.fizlet.workers.dev`), and `?rooms=wss://…` on the page overrides it. The server
+must list the site's origin (https://holeshot.domvirus.com) in its `ALLOWED_ORIGINS`. An invite code
+gets you in. `createHoleshot({ rooms })` takes the URL when you mount the game yourself.
+
 ## Size
 
-The whole game, its Fizlet bricks (kernel, diorama, terrain, drive, input, pad, sound, ui) and the
+The whole game, its Fizlet bricks (kernel, diorama, terrain, drive, input, pad, sound, ui, presence) and the
 Board UI styles: `dist/build.json` holds the measured gzip size of each build (`npm run size`
 checks it against the budget). No runtime dependencies: `@fzlt/core` is a dev dependency, bundled at
 build.
@@ -84,10 +101,13 @@ npm ci
 npm run check         # typecheck, build dist/ (committed), size
 npm test              # headless: the bike, tune(), the profile (save, load, migrate, the code),
                       # every mode on every starter class, the economy (payouts, wear, the pit
-                      # crew), allocation
+                      # crew, the online bonus and its cap), allocation, online sync and rollback
 npm run test:settle   # the menus and the hero sleep, a race never does, off screen pauses, Recall
 npm run test:browser  # Chromium at 1440 and 390: setup, garage, every mode on your bike, pause,
-                      # leaving, reload, the export code, the camera through URL-bar resizes
+                      # leaving, reload, the export code, the camera through URL-bar resizes;
+                      # online: four pages in one room (a stand-in room server), race, jam, Big Air
+npm run test:net      # online on phone links (60–150 ms round trips, jitter, spikes): key → screen,
+                      # stalls, frame rate, every screen byte for byte (--net lockstep: the before)
 npm run site:build    # the site (landing + /play/) into artifacts/pages
 npm run test:site     # the site at 1440 and 390, light and dark
 node scripts/shots.mjs  # the hero's still poster and the share image, from the game

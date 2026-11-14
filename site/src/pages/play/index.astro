@@ -1,20 +1,35 @@
 ---
 // Holeshot, the game: the stage fills the screen under the header. ?mode=<id> starts that event at
-// once (once the first-run setup is done).
+// once (once the first-run setup is done); ?mode=online&room=N&code=… opens the online room card and
+// joins that room (the code is taken out of the address bar first).
 import Base from '../../layouts/Base.astro';
-const description = 'Play Holeshot: pick your one starter bike, then race, free ride, fly in Big Air and wheelie through the city. Earn credits, wear parts, rebuild and mod in the garage.';
+import { ROOMS } from '../../site';
+const description = 'Play Holeshot: pick your one starter bike, then race, free ride, fly in Big Air and wheelie through the city, alone or online with up to four. Earn credits, wear parts, rebuild and mod in the garage.';
 ---
 <Base title="Play Holeshot" description={description} page="play" app>
+  <Fragment slot="head">
+    <!-- An invite code in a link (?code=) is taken out of the address bar before anything else loads. -->
+    <meta name="referrer" content="no-referrer" />
+    <script is:inline>
+      (function () {
+        var u = new URL(location.href), p = u.searchParams, c = p.get("code");
+        if (!p.has("code")) return;
+        p.delete("code");
+        history.replaceState(history.state, "", u.pathname + u.search + u.hash);
+        if (c) window.__holeshotInvite = c;
+      })();
+    </script>
+  </Fragment>
   <section class="play-stage" aria-labelledby="play-title">
     <h1 id="play-title" class="sr">Play Holeshot</h1>
-    <div id="game" class="play-host"></div>
+    <div id="game" class="play-host" data-rooms={ROOMS}></div>
   </section>
 </Base>
 
 <script>
   import { createHoleshot, MODES } from "../../../../dist/holeshot.mjs";
   const host = document.getElementById("game")!;
-  const game = createHoleshot({ host });
+  const game = createHoleshot({ host, rooms: host.dataset.rooms });
   const want = new URLSearchParams(location.search).get("mode");
   if (want && MODES.some((m: { id: string }) => m.id === want) && game.profile.bikes.length) game.start(want);
   (window as unknown as { game: unknown }).game = game;

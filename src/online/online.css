@@ -1,0 +1,55 @@
+/* Online: the room card (big HOST / JOIN keys, the host's pick, the ticket read across a table, the
+   seats two by two), the connection chip over the ride, the live score board of a score run, and the
+   standings on the result. Phone first: every key 44 px or more, nothing scrolls sideways. */
+.dh .ol-room{width:min(100%,620px);justify-items:center;text-align:center}
+.dh .ol-room form,.dh .ol-room [data-for]{display:grid;gap:10px;justify-items:center;width:100%}
+.dh .ol-room [data-for][hidden],.dh .ol-room [hidden]{display:none!important}
+.dh .ol-room .dh-field{width:min(100%,22em);text-align:left}
+.dh .ol-room .dh-field input{text-transform:uppercase;letter-spacing:.06em}
+.dh .ol-say{min-height:1.2em;color:var(--hot)}
+.dh .ol-hostjoin{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin:0}
+.dh .ol-hostjoin .bui-key{display:grid;gap:.3em;align-content:center;min-height:104px;padding:.7em .6em;white-space:normal}
+.dh .ol-hostjoin b{font-size:1.9em;letter-spacing:.06em;line-height:1}
+.dh .ol-hostjoin small{font-size:.72em;letter-spacing:.06em;line-height:1.3;font-weight:700;opacity:.85}
+.dh .ol-seg{display:flex;flex-wrap:wrap;gap:8px;width:100%;margin:0;justify-content:center}
+.dh .ol-seg .bui-key{flex:1 1 8em;min-width:0;padding:0 .6em;font-size:14px}
+.dh .ol-seg .bui-key[aria-pressed=true]{background:var(--k-sys);color:var(--rim)}
+.dh .ol-sizes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;margin:0}
+.dh .ol-sizes .bui-key{min-height:84px;font-size:2.2em;font-variant-numeric:tabular-nums}
+.dh .ol-rooms{display:flex;gap:14px;justify-content:center;align-items:center;margin:0}
+.dh .ol-rooms .bui-key{min-width:64px;min-height:64px;padding:0;font-size:1.6em}
+.dh .ol-rooms output{min-width:2em;font-size:2.6em;font-variant-numeric:tabular-nums}
+.dh .ol-ticket{display:grid;grid-template-columns:auto 1fr;gap:10px;width:100%;margin:0}
+.dh .ol-ticket span{display:grid;gap:.15em;padding:.45em .7em;background:var(--raised);border:2px solid var(--rim);border-radius:10px;text-align:left;min-width:0}
+.dh .ol-ticket small{font-size:.75em;letter-spacing:.1em;color:var(--muted);font-weight:700}
+.dh .ol-ticket b{font-size:max(1.5em,20px);letter-spacing:.05em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;line-height:1.1}
+.dh .ol-ticket .ol-t-room{font-size:max(2.3em,38px);text-align:center}
+.dh .ol-seats{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;margin:0;padding:0;list-style:none}
+.dh .ol-seats li{display:grid;grid-template-columns:1.1em 1fr;grid-template-rows:auto auto;column-gap:.55em;align-items:center;padding:.5em .7em;border:2px dashed var(--rim);border-radius:10px;color:var(--muted);text-align:left;min-width:0}
+.dh .ol-seats li i{grid-row:1/3;width:1.1em;height:1.1em;border-radius:4px;border:2px solid var(--rim);opacity:.45}
+.dh .ol-seats li b{font-size:1.1em;letter-spacing:.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dh .ol-seats li small{font-size:.75em;letter-spacing:.08em;font-weight:700}
+.dh .ol-seats li.ol-me,.dh .ol-seats li.ol-in{border-style:solid;color:var(--ink);background:var(--raised)}
+.dh .ol-seats li.ol-me{background:var(--k-sys);color:var(--rim)}
+.dh .ol-seats li.ol-me i,.dh .ol-seats li.ol-in i{opacity:1}
+.dh .ol-chip{position:absolute;left:50%;bottom:12px;translate:-50% 0;z-index:4;display:flex;align-items:center;gap:.5em;margin:0;padding:.35em .75em;background:var(--surface);color:var(--ink);border:2px solid var(--rim);border-radius:20px;box-shadow:calc(3px * var(--bui-sx)) calc(3px * var(--bui-sy)) 0 var(--bui-shadow);font-size:12px;letter-spacing:.05em;white-space:nowrap;max-width:calc(100% - 24px);overflow:hidden;pointer-events:none}
+.dh .ol-chip[hidden],.dh .ol-board[hidden]{display:none}
+.dh .ol-chip i{width:.7em;height:.7em;border-radius:50%;background:var(--k-go)}
+.dh .ol-chip[data-conn=wait] i{background:#ffd166}
+.dh[data-menu] .ol-chip{display:none}
+/* A phone: the chip only when there is news (someone reconnecting); your name is on your HUD. */
+@media (max-width:760px){.dh .ol-chip[data-quiet]{display:none}}
+@media (pointer:coarse){.dh .ol-chip{bottom:auto;top:112px}}
+.dh .ol-board{position:absolute;right:10px;top:64px;z-index:4;display:grid;gap:4px;margin:0;padding:6px 8px;list-style:none;background:var(--surface);border:2px solid var(--rim);border-radius:10px;font-size:12px;font-variant-numeric:tabular-nums;pointer-events:none}
+.dh .ol-board li{display:grid;grid-template-columns:.8em 6.5em auto;gap:6px;align-items:center}
+.dh .ol-board li i{width:.8em;height:.8em;border-radius:3px;border:2px solid var(--rim)}
+.dh .ol-board li[data-me]{color:var(--hot)}
+.dh[data-menu] .ol-board{display:none}
+.dh .ol-stand{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.dh .ol-stand li{display:grid;grid-template-columns:2.6em minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 10px;border:2px solid var(--rim);border-radius:10px;background:var(--raised);font-variant-numeric:tabular-nums}
+.dh .ol-stand li[data-me]{background:var(--k-go);color:var(--rim)}
+.dh .ol-stand li[data-ai]{opacity:.7}
+.dh .ol-stand span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dh .ol-stand em{font-style:normal}
+.dh .dh-modes .ol-tile .dh-modek{background:color-mix(in srgb,#b18cff 32%,var(--surface))}
+@media (max-width:620px){.dh .ol-board{top:auto;bottom:150px;right:8px}}

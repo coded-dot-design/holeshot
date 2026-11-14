@@ -10,6 +10,7 @@
 // of big air and flips count as tricks (Free Ride pays a little for them).
 import { bike, type Bike, type BikeShape, type Power, B_CRASH, B_LAND, B_WHEELIE, STRIKE } from "../../bike/bike.ts";
 import { F_GAP, F_KICKER, F_STEP, type RideMap } from "./maps.ts";
+import type { Terrain } from "@fzlt/core/terrain";
 import { E_CRASH, E_LAND, E_RESPAWN, E_WHEELIE, E_FINISH, GRID, RACE, DONE, type Track } from "../race/course.ts";
 
 /** The free-ride maps: each a track plan to roam (the loop is there to follow, never required). */
@@ -20,10 +21,10 @@ export const TRICK_AIR = 0.6, FLIP_SPIN = 5.2;
 /** A trick landed (value: 1 big air, 2 a flip). */
 export const E_TRICK = 10;
 
-export function freeRun(track: Track | RideMap, me: { power: Power; shape?: BikeShape }, limit = 600) {
+export function freeRun(track: Track | RideMap, me: { power: Power; shape?: BikeShape }, limit = 600, ground?: Terrain) {
   const { HX, HZ, NT, TRACK, YAW, NR, near, WANT, FK, PF, prof, sAt } = track;
   const map = "isMap" in track ? track : null;
-  const t = map ? map.terrain : track.course();
+  const t = ground ?? (map ? map.terrain : track.course());
   const SP = map ? map.SPAWN : null, POSTS = map ? map.POSTS : null, NP = map ? map.NP : 0, HALF = map ? map.def.width / 2 : 0;
   const b: Bike = bike(t, me.power, me.shape);
   const riders = [b];
@@ -31,14 +32,15 @@ export function freeRun(track: Track | RideMap, me: { power: Power; shape?: Bike
   // seconds still since the end.
   const S = new Float64Array(11);
   const ev = new Float64Array(48);
-  let nev = 0;
-  const emit = (type: number, r: number, v: number) => void (nev < 16 && ((ev[nev * 3] = type), (ev[nev * 3 + 1] = r), (ev[nev * 3 + 2] = v), nev++));
+  // NE: the event count (in a typed array: it is state, and the state is bytes).
+  const NE = new Uint32Array(1);
+  const emit = (type: number, r: number, v: number) => void (NE[0]! < 16 && ((ev[NE[0]! * 3] = type), (ev[NE[0]! * 3 + 1] = r), (ev[NE[0]! * 3 + 2] = v), (NE[0] = NE[0]! + 1)));
   const RESPAWN = 1.4, STILL = 0.6, G4 = new Float64Array(4);
 
   function reset() {
     S.fill(0);
     PP.fill(0);
-    nev = 0;
+    NE[0] = 0;
     if (SP) {
       b.reset(SP[0]!, SP[1]!, SP[2]!);
       near(SP[0]!, SP[1]!);
@@ -217,8 +219,10 @@ export function freeRun(track: Track | RideMap, me: { power: Power; shape?: Bike
   reset();
   return {
     t, track, riders, S, ev,
-    get n() { return nev; },
-    clear: () => void (nev = 0),
+    /** The whole state as bytes (rollback, the desync hash). */
+    bytes: [S, PP, NE, b.state].map((a) => new Uint8Array(a.buffer, a.byteOffset, a.byteLength)),
+    get n() { return NE[0]!; },
+    clear: () => void (NE[0] = 0),
     get phase() { return S[0]!; },
     get clock() { return S[1]!; },
     /** Tricks landed (big air and flips), and the flips among them. */

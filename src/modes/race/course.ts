@@ -328,25 +328,41 @@ export type Track = ReturnType<typeof makeTrack>;
 
 /** Race options: the rivals' nerve (their share of the speed the line wants, a range: 0.9..0.98 by
  *  default; a series' higher tiers raise it). */
-export interface RaceOpts { nerve?: [number, number] }
-/** A race: four riders, the gate, laps and places. The player is rider 0. */
+export interface RaceOpts {
+  nerve?: [number, number];
+  /** Online: riders 0..humans-1 are people (rider 0 rides `me`, the others `bikes[r]`); the rest of
+   *  the four are rivals (`rivals` in order). Each step reads every person's inputs from `IN` (five a
+   *  rider: gas, brake, lean, steer, trick) and `AUTO` (1: the autopilot rides them: a seat that left). */
+  humans?: number;
+  bikes?: { power: Power; shape?: BikeShape }[];
+}
+/** Online: once the first person is past the flag, the rest have this long (seconds) to finish. */
+export const GRACE = 30;
+/** A race: four riders, the gate, laps and places. The player is rider 0 (online: riders 0..humans-1). */
 export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), me: { power: Power; shape?: BikeShape } = { power: TWO_STROKE }, rivals: Power[] = [FOUR_STROKE, TWO_STROKE, FOUR_STROKE], opts: RaceOpts = {}) {
   const NV0 = opts.nerve?.[0] ?? 0.9, NV1 = opts.nerve?.[1] ?? 0.98;
   const { HX, HZ, LAP, NT, TRACK, YAW, GATE_S, LINE_S, FK, PF, NR, WANT, INTO, sAt, prof, near } = track;
   const t = track.course();
   const riders: Bike[] = [];
-  const POWERS: Power[] = [me.power, rivals[0] ?? FOUR_STROKE, rivals[1] ?? TWO_STROKE, rivals[2] ?? FOUR_STROKE];
-  for (let r = 0; r < RIDERS; r++) riders.push(bike(t, POWERS[r]!, r ? {} : me.shape));
+  const H = Math.max(1, Math.min(RIDERS, opts.humans ?? 1)), DEF = [FOUR_STROKE, TWO_STROKE, FOUR_STROKE];
+  const mine = (r: number) => (r ? opts.bikes?.[r] : me) ?? me;
+  const POWERS: Power[] = [];
+  for (let r = 0; r < RIDERS; r++) POWERS.push(r < H ? mine(r).power : rivals[r - H] ?? DEF[(r - H) % 3]!);
+  for (let r = 0; r < RIDERS; r++) riders.push(bike(t, POWERS[r]!, r < H ? mine(r).shape : {}));
   // Per rider: near index, laps, progress (laps × LAP + s), lane, nerve (speed share), finish time,
   // crashes, place, last pitch (for the autopilot), respawn, best lap, lap start, finished.
   const R = new Float64Array(RIDERS * 16);
   const NI = 0, LP = 1, PG = 2, LN = 3, NV = 4, FT = 5, CR = 6, PL = 7, PP = 8, LS = 9, BL = 10, DN = 11, LT = 12, OFF = 13;
-  const S = new Float64Array(8); // phase, clock, countdown, gate down, started
+  const S = new Float64Array(8); // phase, clock, countdown, gate down, started, the first person's finish time
   const ev = new Float64Array(48);
-  let nev = 0, rnd = seed >>> 0;
-  const rand = () => ((rnd = (Math.imul(rnd ^ (rnd >>> 15), 0x2c1b3c6d) + 0x9e3779b9) >>> 0) / 4294967296);
-  const emit = (type: number, r: number, v: number) => void (nev < 16 && ((ev[nev * 3] = type), (ev[nev * 3 + 1] = r), (ev[nev * 3 + 2] = v), nev++));
+  // NE: the event count, the seeded draw.
+  const NE = new Uint32Array(2);
+  NE[1] = seed >>> 0;
+  const rand = () => ((NE[1] = (Math.imul(NE[1]! ^ (NE[1]! >>> 15), 0x2c1b3c6d) + 0x9e3779b9) >>> 0), NE[1]! / 4294967296);
+  const emit = (type: number, r: number, v: number) => void (NE[0]! < 16 && ((ev[NE[0]! * 3] = type), (ev[NE[0]! * 3 + 1] = r), (ev[NE[0]! * 3 + 2] = v), (NE[0] = NE[0]! + 1)));
   const IN = new Float64Array(5), LD = new Float64Array(1), G4 = new Float64Array(4), HOLD = new Float64Array(3);
+  // Every person's inputs (five a rider) and the autopilot flags, read by each step.
+  const PIN = new Float64Array(RIDERS * 5), AUTO = new Uint8Array(RIDERS);
 
   function place(r: number, i: number, lane: number, back = 0) {
     const b = riders[r]!, yaw = YAW[i]!, nx = Math.sin(yaw), nz = Math.cos(yaw);
@@ -356,8 +372,8 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
   function reset(power?: Power) {
     if (power) riders[0]!.use(power), (POWERS[0] = power);
     S.fill(0);
-    nev = 0;
-    rnd = seed >>> 0;
+    NE[0] = 0;
+    NE[1] = seed >>> 0;
     R.fill(0);
     const gi = Math.round(GATE_S / (LAP / NT)) - 1;
     for (let r = 0; r < RIDERS; r++) {
@@ -401,7 +417,7 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
         if (dq && dr ? R[q * 16 + FT]! < R[r * 16 + FT]! : dq ? 1 : dr ? 0 : R[q * 16 + PG]! > R[r * 16 + PG]! || (R[q * 16 + PG] === R[r * 16 + PG] && q < r)) p++;
       }
       if (p !== R[r * 16 + PL] && !R[r * 16 + DN]) {
-        if (r === 0 && S[0] === RACE) emit(E_PLACE, 0, p);
+        if (r < H && S[0] === RACE) emit(E_PLACE, r, p);
         R[r * 16 + PL] = p;
       }
     }
@@ -462,13 +478,19 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
     for (let k = 0; k < b.n; k++) {
       const type = b.ev[k * 2]!, v = b.ev[k * 2 + 1]!;
       if (type === B_CRASH) (R[r * 16 + CR] = R[r * 16 + CR]! + 1), emit(E_CRASH, r, v);
-      else if (type === B_LAND && !r) emit(E_LAND, 0, v);
-      else if (type === B_WHEELIE && !r) emit(E_WHEELIE, 0, v);
+      else if (type === B_LAND && r < H) emit(E_LAND, r, v);
+      else if (type === B_WHEELIE && r < H) emit(E_WHEELIE, r, v);
     }
     b.clear();
   }
   /** Advance dt with the player's inputs (gas, brake, lean, steer); `auto` rides the player too. */
   function step(dt: number, I: Float64Array, auto = false) {
+    for (let k = 0; k < 5; k++) PIN[k] = I[k] ?? 0;
+    AUTO[0] = auto ? 1 : 0;
+    return stepAll(dt);
+  }
+  /** Advance dt with every person's inputs as they are in `IN` and `AUTO` (online). */
+  function stepAll(dt: number) {
     const ph = S[0]!;
     let moving = false;
     if (ph === PICK) {
@@ -482,8 +504,8 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
       if (Math.ceil(S[2]!) !== before && S[2]! > 0) emit(E_COUNT, 0, Math.ceil(S[2]!));
       for (let r = 0; r < RIDERS; r++) {
         const b = riders[r]!;
-        if (r || auto) b.set(0.4 + 0.4 * (Math.sin(S[2]! * 7 + r) > 0 ? 1 : 0), 1, 0, 0);
-        else b.set(I[0]!, 1, I[2]!, 0);
+        if (r >= H || AUTO[r]) b.set(0.4 + 0.4 * (Math.sin(S[2]! * 7 + r) > 0 ? 1 : 0), 1, 0, 0);
+        else b.set(PIN[r * 5]!, 1, PIN[r * 5 + 2]!, 0);
         // The gate holds the front wheel: it revs and squats, it does not roll.
         HOLD[0] = b.pos[0]!; HOLD[2] = b.pos[2]!;
         b.step(dt);
@@ -518,8 +540,8 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
         follow(r);
         continue;
       }
-      if (r || auto) autopilot(r, IN), b.set(IN[0]!, IN[1]!, IN[2]!, IN[3]!, 0);
-      else b.set(I[0]!, I[1]!, I[2]!, I[3]!, 0);
+      if (r >= H || AUTO[r]) autopilot(r, IN), b.set(IN[0]!, IN[1]!, IN[2]!, IN[3]!, 0);
+      else b.set(PIN[r * 5]!, PIN[r * 5 + 1]!, PIN[r * 5 + 2]!, PIN[r * 5 + 3]!, 0);
       if (b.step(dt)) moving = true;
       bikeEvents(r);
       follow(r);
@@ -528,8 +550,16 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
     }
     for (let a = 0; a < RIDERS; a++) for (let c = a + 1; c < RIDERS; c++) nudge(riders[a]!, riders[c]!, 0.75);
     places();
-    if (S[0] === RACE && R[DN]) (S[0] = DONE), (moving = true);
+    if (S[0] === RACE && over()) (S[0] = DONE), (moving = true);
     return moving || S[0] === RACE;
+  }
+  /** The race is over: every person past the flag (alone: you), or GRACE seconds after the first. */
+  function over() {
+    let all = 1, any = 0;
+    for (let r = 0; r < H; r++) if (R[r * 16 + DN]) any = 1;
+    else all = 0;
+    if (any && !S[5]) S[5] = S[1]!;
+    return all === 1 || (any === 1 && S[1]! - S[5]! >= GRACE);
   }
   /** Line up and start the countdown, on `power`. */
   function go(power: Power) {
@@ -542,8 +572,12 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
   reset();
   return {
     t, track, riders, R, S, ev,
-    get n() { return nev; },
-    clear: () => void (nev = 0),
+    /** People in the race (riders 0..humans-1), their inputs (five a rider) and autopilot flags. */
+    humans: H, IN: PIN, AUTO,
+    /** The whole state as bytes (rollback, the desync hash). */
+    bytes: [R, S, NE, ...riders.map((b) => b.state)].map((a) => new Uint8Array(a.buffer, a.byteOffset, a.byteLength)),
+    get n() { return NE[0]!; },
+    clear: () => void (NE[0] = 0),
     get phase() { return S[0]!; },
     /** Seconds since the gate. */
     get clock() { return S[1]!; },
@@ -559,7 +593,7 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
     nearIndex: (r: number) => R[r * 16 + NI]!,
     offTrack: (r: number) => R[r * 16 + OFF]!,
     powers: POWERS,
-    step, reset, go, autopilot,
+    step, stepAll, reset, go, autopilot,
     /** Lap distance of the player's next feature (for the HUD): its kind, or 0. */
     feature(r: number) {
       prof(sAt(R[r * 16 + NI]! + 6));

@@ -23,6 +23,8 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:settle
       - run: npm run test:browser
+      # Online on phone links (the stand-in room server's latency shim): the rollback bars.
+      - run: npm run test:net
       # The site (landing, /play/), built for github.io; pages.yml deploys it.
       - run: npm run site:build
       - run: npm run test:site

@@ -25,7 +25,7 @@
 //   (value: the kind), B_WHEELIE (value: seconds held, on the way down), B_STOPPIE, B_SHIFT (gear).
 // Deterministic: only + − × ÷ and square roots, with its own polynomial sine and arctangent (the
 // builtins may differ in the last bit between browsers), so the same inputs give the same ride.
-// Zero allocation per step (typed arrays; locals). World units and seconds, angles in radians.
+// The whole state is one buffer (`state`, `save`, `load`: a snapshot for rollback). Zero allocation per step (typed arrays; locals). World units and seconds, angles in radians.
 
 /** The ground: height and normal under (x, z) into out = [h, nx, ny, nz]; returns a surface kind. */
 export interface BikeGround {
@@ -117,6 +117,9 @@ export interface BikeShape {
   /** Steps per `step()` (4 keeps the springs stiff at 60 Hz). */
   substeps?: number;
 }
+
+/** Bytes in a bike's `state`: 140 doubles, then 7 bytes (rounded up to 8). */
+export const STATE_BYTES = 140 * 8 + 8;
 
 /** Events. */
 export const B_AIR = 1, B_LAND = 2, B_CRASH = 3, B_WHEELIE = 4, B_STOPPIE = 5, B_SHIFT = 6;
@@ -223,13 +226,18 @@ export function bike(ground: BikeGround, power: Power, shape: BikeShape = {}) {
   // The chassis numbers the engine sets (mass, pitch inertia, spring rate, damping) and the engine's own (in a
   // typed array: doubles in closure variables that change are boxed).
   let pw = power;
-  const MK = new Float64Array(16);
-  const S = new Float64Array(32), input = new Float64Array(5), pos = new Float64Array(3), rot = new Float64Array(3);
-  const wheel = new Float64Array(6), comp = new Float64Array(2), spin = new Float64Array(2), contact = new Uint8Array(2), GH = new Float64Array(2), GS = new Float64Array(2), WF = new Float64Array(2);
-  const G = new Float64Array(4), F = new Uint8Array(4); // F: crashed, in the air, at rest, wheelie on
+  // Every number the bike keeps lives in one buffer (`state`): views carved from it in a fixed order,
+  // the doubles first, then the bytes. A copy of `state` is the whole bike (save / load: rollback).
+  const BUF = new ArrayBuffer(STATE_BYTES);
+  let at = 0;
+  const f64 = (n: number) => ((at += n * 8), new Float64Array(BUF, at - n * 8, n)), u8 = (n: number) => ((at += n), new Uint8Array(BUF, at - n, n));
+  const MK = f64(16);
+  const S = f64(32), input = f64(5), pos = f64(3), rot = f64(3);
+  const wheel = f64(6), comp = f64(2), spin = f64(2), GH = f64(2), GS = f64(2), WF = f64(2);
+  const G = f64(4);
   // The tumble: bike velocity (3), spin rates (3); the rider: pos (3), vel (3), rot (3).
-  const TV = new Float64Array(6), rider = new Float64Array(3), RV = new Float64Array(3), riderRot = new Float64Array(3);
-  const ev = new Float64Array(16), NV = new Uint8Array(1);
+  const TV = f64(6), rider = f64(3), RV = f64(3), riderRot = f64(3);
+  const ev = f64(16);
   const emit = (type: number, v: number) => void (NV[0]! < 8 && ((ev[NV[0]! * 2] = type), (ev[NV[0]! * 2 + 1] = v), NV[0] = NV[0]! + 1));
 
   /** Swap the engine (a new bike choice); keeps the place. */
@@ -249,7 +257,9 @@ export function bike(ground: BikeGround, power: Power, shape: BikeShape = {}) {
   // JIT does not inline is boxed: young GCs). [h, gas, brake, lean in, steer in, trick, sin yaw, cos yaw,
   // sin pitch, cos pitch, Ff, Fu, torque, contacts, slip, rear load, ground under the CoM, its normal
   // x, z, atan in ×3, atan out ×3].
-  const X = new Float64Array(30);
+  const X = f64(30);
+  const F = u8(4), contact = u8(2), NV = u8(1); // F: crashed, in the air, at rest, wheelie on
+  const state = new Uint8Array(BUF);
   const XH = 0, XG = 1, XB = 2, XL = 3, XS = 4, XT = 5, SYW = 6, CYW = 7, SP = 8, CP = 9, QX = 28, QZ = 29, FF = 10, FU = 11, TQX = 12, NC = 13, SL = 14, NR = 15, GY = 16, GNX = 17, GNZ = 18, AI = 19, AO = 22;
   /** The inputs (clamped), the throttle and the weight eased, the heading's and pitch's sines. */
   function inputs() {
@@ -570,6 +580,13 @@ export function bike(ground: BikeGround, power: Power, shape: BikeShape = {}) {
   return Object.assign(ride, {
     step,
     reset,
+    /** Every byte of the bike's state (one buffer: the model, the read-outs, the events, the scratch). */
+    state,
+    /** Copy the whole state into `dst` (at least `state.length` bytes); allocates nothing. */
+    save: (dst: Uint8Array) => void dst.set(state),
+    /** Put back a state `save` copied (exactly `state.length` bytes, from a bike on the same engine);
+     *  allocates nothing. The engine (`use`) and the ground are not state: they stay as they are. */
+    load: (src: Uint8Array) => void state.set(src),
     /** Swap the engine (a new bike choice); keeps the place. */
     use: (p: Power) => void (use(p), (ride._pw = p)),
     /** Knock it over (off the table, hit by something): a crash of `kind`. */

@@ -50,6 +50,13 @@ src/
     bigair/scene.ts     the arena scene (mountAir)
     wheelie/city.ts     the block and the session; wheelie/ride.ts the ride adapter; wheelie/tricks.ts the scorer
     wheelie/scene.ts    the town scene (mountCity)
+    freeride/jam.ts     freeJam(): the online Free Ride jam (2–4 freeRuns on one map, trick points, one clock)
+  net.ts                online's wire: input bits, the host's pick (a byte), the hello (name, garage bike, look)
+  online/
+    rollback.ts         the rollback link (Dune Hop's): own input at once, predicted remote inputs, a snapshot ring, resim, hashes
+    match.ts            the match every screen runs: hello → ride (race, jam, score run) → result → next ride, in one arena of bytes
+    room.ts             the room card, the lobby's seats, the online standings (HTML)
+    online.css          their sheet
 ```
 
 Headless pieces (`bike/bike.ts`, everything in `data/` and `model/`, `modes/*/course|session|show|city.ts`)
@@ -254,8 +261,41 @@ at the end the best place, a title, `last`). Leaving a round scores nothing and 
 wear counts). A tier opens when the one before it ends in the top two. Saved as `profile.series`
 (schema v2; v1 saves migrate: an empty record, three race wins open the Pro Circuit).
 
+## Online
+
+Two to four screens in one fizlet-rooms room (@fzlt/core/presence `join`: the room card's HOST /
+JOIN, the lobby, START NOW; the server relays 12-byte messages only). The sims are deterministic and
+only inputs travel, 32 bits a seat a frame (`net.ts`). `online/rollback.ts` runs each frame at once
+with this screen's own input (1–3 frames of delay, picked from the measured latency) and a guess for
+everyone else's (their last); a real input that differs takes the state back to that frame (a
+preallocated ring of snapshots) and runs the frames again. Sound, stickers and FX play only the
+first time a frame runs; remote riders are drawn easing from where they were to where they are
+after a correction; every 30 final frames each screen's state hash is compared (a desync shows, it
+never drifts). A seat that leaves is ridden by the autopilot from the frame after its last input,
+the same on every screen.
+
+`online/match.ts` is what those frames run, one link for as long as the room lasts. The first 11
+frames carry every seat's **hello** (33 bytes: the name, the riding bike's model, parts, mods, tune
+choices, damage and look, and the rider's kit): every screen, this one too, tunes the bikes from the
+hello's bytes, so each rides their own garage bike and every screen simulates the same numbers. On
+frame 11 (once every hello is final) the ride is built from the host's pick, the room's seed and the
+bikes: a race (`motoRace` with `humans`, each person's own bike; a track generated at the tier's
+difficulty; AI rivals in the empty places), a jam (`freeJam`) or a score run (each screen rides its
+own Big Air or Wheelie City minute; the input bits carry the score). The rollback saves one arena of
+bytes: a header (phase, round) and the ride's state (the sim's byte views: every bike is one buffer,
+`bike.state` / `save` / `load`; each person's ride meter), copied in and out around each frame. A
+ride is built only on a final frame, so no correction reaches back past it. When the ride is over
+(the same final frame everywhere) each screen settles its own rider: `settleOnline` (the solo payout
+× ONLINE.bonus, ONLINE.beat per person beaten, the hourly cap in `data/economy.ts`) and the wear, on
+its own profile. RIDE AGAIN sets READY; the next ride is built on the final frame where every seat is
+ready (a seat that left always is).
+
 ## Tests
 
 `npm test` (headless: bike, tune, profile, every mode on every starter, the economy, allocation in a
-process of its own, the generator over 1,500 seeds, the series), `npm run test:settle`, `npm run test:browser` (1440 and 390; the series in `tests/series.browser.mjs`), `npm run
+process of its own, the generator over 1,500 seeds, the series; online: the wire and the hello, the
+bike's snapshot, sync and rollback for two and four screens in a race and a jam with a leaver, the
+online bonus and its cap), `npm run test:settle`, `npm run test:browser` (1440 and 390; the series in
+`tests/series.browser.mjs`; online with four pages against `tests/room-server.mjs` in
+`tests/online.browser.mjs`), `npm run test:net` (phone links, measured), `npm run
 site:build && npm run test:site`. CHROMIUM_PATH points them at a Chromium of your own.

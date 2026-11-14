@@ -55,6 +55,20 @@ export const PAYOUT = {
   quit: 0,
 };
 
+/** Online (two to four people in one room: ../online/match.ts). Each person's own profile gets the
+ *  payout and the wear for their own result, as alone, and online pays MORE, to bring people
+ *  together: the solo payout × `bonus`, plus `beat` for each person you finished ahead of (people
+ *  still in the room at the end; AI rivals and seats that left don't count). A race won against
+ *  three people pays 450 × 1.5 + 3 × 75 = 900, twice the solo win (plus the clean and led bonuses,
+ *  × 1.5 too).
+ *  It can't be farmed: the extra (everything over the solo payout) pays in full for the first `full`
+ *  online rides in any rolling hour (`window`, ms), then halves with each ride after (× fade^k:
+ *  50 %, 25 %, 12.5 %, 6.25 %, then nothing: under `floor` it is 0, from the 11th ride in an hour); the solo part
+ *  always pays, so online never pays less than riding alone. A ride you left, or one under
+ *  `minSeconds`, pays no extra. The hour is counted on the device (the profile keeps the times of
+ *  the last `keep` online payouts), so leaving and rejoining a room changes nothing. */
+export const ONLINE = { bonus: 1.5, beat: 75, full: 6, fade: 0.5, floor: 0.05, window: 3_600_000, minSeconds: 30, keep: 24 };
+
 /** Mods: levels and the price of each level (index 1.. is level 1..). Stage 1 of every mod costs
  *  more than the start credits: the first real mod comes after about three or four events (the
  *  balance test in tests/garage.test.mjs rides the reference player to it). `only`: the class kind

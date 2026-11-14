@@ -1,6 +1,6 @@
 // The economy's logic: a finished ride's stats → credits (with the lines that make them up) and the
 // wear on each part; applying that to the profile; the pit crew. The numbers are ../data/economy.ts.
-import { PARTS, PAYOUT, WEAR, PIT_CREW, type PartId } from "../data/economy.ts";
+import { ONLINE, PARTS, PAYOUT, WEAR, PIT_CREW, type PartId } from "../data/economy.ts";
 import { model } from "../data/roster.ts";
 import type { RunStats } from "../modes/mode.ts";
 import { normalize, riding, type BikeSave, type Profile } from "./profile.ts";
@@ -118,5 +118,31 @@ export function pitFix(p: Profile): Profile {
   b.fail = "";
   logIt(b, "crew");
   n.pit = 0;
+  return n;
+}
+
+/** The online bonus's share now (1 full .. 0 none) for a profile that was paid online at `times`
+ *  (ms): full for the first ONLINE.full rides in the rolling hour, then halving; and how many came first. */
+export function onlineShare(times: readonly number[], now: number) {
+  const k = times.filter((t) => t > now - ONLINE.window && t <= now).length;
+  const f = k < ONLINE.full ? 1 : ONLINE.fade ** (k - ONLINE.full + 1);
+  return { share: f < ONLINE.floor ? 0 : f, before: k };
+}
+/** An online result: the ride's solo payout and wear (settle), then the online lines: the bonus on
+ *  the solo payout and `beat` per person beaten, both × the hourly share. `beat`: the people (still
+ *  in the room) this rider finished ahead of. */
+export function settleOnline(s: RunStats, bike: BikeSave, o: { beat: number; times: readonly number[]; now: number }): ModeResult & { share: number } {
+  const r = settle(s, bike), ok = s.finished && s.seconds >= ONLINE.minSeconds, { share, before } = onlineShare(o.times, o.now);
+  if (!ok) return { ...r, share: 0 };
+  const extra = Math.round(r.credits * (ONLINE.bonus - 1) * share), beat = Math.round(o.beat * ONLINE.beat * share);
+  const tag = share >= 1 ? "" : share > 0 ? ` (${Math.round(share * 100)}%: ONLINE RIDE ${before + 1} THIS HOUR)` : " (HOURLY CAP REACHED)";
+  const lines: [string, number][] = [...r.lines, [`ONLINE BONUS ×${ONLINE.bonus}${tag}`, extra]];
+  if (o.beat > 0) lines.push([`BEAT ${o.beat} ${o.beat === 1 ? "RIDER" : "RIDERS"}${share < 1 ? tag : ""}`, beat]);
+  return { ...r, lines, credits: r.credits + extra + beat, share };
+}
+/** The profile after an online result: as `apply`, and the payout's time kept for the hourly cap. */
+export function applyOnline(p: Profile, r: ModeResult, now: number): Profile {
+  const n = apply(p, r);
+  if (r.stats.finished) n.online = [...n.online.filter((t) => t > now - ONLINE.window), now].slice(-ONLINE.keep);
   return n;
 }

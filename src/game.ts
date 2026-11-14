@@ -27,6 +27,13 @@ import { bar, esc, num } from "./html.ts";
 import { enter as enterSeries, recordRound, retire as retireSeries, roundStats } from "./model/series.ts";
 import { seriesCard as seriesScreen, seriesKeys, seriesName, seriesResult, startRound } from "./series-ui.ts";
 import type { TierId } from "./data/series.ts";
+import type { Transport } from "@fzlt/core/presence";
+import { blankStats } from "./modes/mode.ts";
+import { mountTrack, type NetRun, type NetView } from "./modes/race/scene.ts";
+import { applyOnline, settleOnline } from "./model/economy.ts";
+import { match, OVER, type Match, type Ride, type SeatResult } from "./online/match.ts";
+import { joinRoom, cleanName, encode, scoreBits, packMode, unpackMode, B_AUTO, SEATS, K_RACE, K_JAM, K_AIR } from "./net.ts";
+import { KINDS, pickName, roomCard, seatsHTML, standingsHTML } from "./online/room.ts";
 export { lookOf };
 
 export interface HoleshotOptions {
@@ -41,9 +48,11 @@ export interface HoleshotOptions {
   /** Sound on (default: the profile's setting; silent until a gesture anyway). */
   sound?: boolean;
   theme?: "dark" | "light";
+  /** The fizlet-rooms server for online play (wss://…); `?rooms=` on the page overrides it. */
+  rooms?: string;
 }
 
-type Screen = "setup" | "menu" | "garage" | "ride" | "maps" | "series" | "settings" | "event" | "result";
+type Screen = "setup" | "menu" | "garage" | "ride" | "maps" | "series" | "settings" | "event" | "result" | "online";
 
 export function createHoleshot(o: HoleshotOptions = {}) {
   const dropIn = !o.host, store = o.store ?? local;
@@ -148,7 +157,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   }
   const garageCard = () => garageView(profile, gui, head(), tabs("garage"), note);
   function rideCard() {
-    return `<div class="dh-card dh-ridec" data-screen="ride">${head()}${tabs("ride")}<p class="dh-sub">On your ${bikeLine()}.</p><ul class="dh-modes">${MODES.map((md) => `<li><button type="button" class="bui-key dh-modek" data-mode="${md.id}"><b>${md.name}</b><small>${md.blurb}</small><em>${md.maps.length > 1 ? `${md.maps.length} MAPS` : md.maps[0]!.name}</em></button></li>`).join("")}</ul></div>`;
+    return `<div class="dh-card dh-ridec" data-screen="ride">${head()}${tabs("ride")}<p class="dh-sub">On your ${bikeLine()}.</p><ul class="dh-modes">${MODES.map((md) => `<li><button type="button" class="bui-key dh-modek" data-mode="${md.id}"><b>${md.name}</b><small>${md.blurb}</small><em>${md.maps.length > 1 ? `${md.maps.length} MAPS` : md.maps[0]!.name}</em></button></li>`).join("")}<li class="ol-tile"><button type="button" class="bui-key dh-modek ol-open"><b>ONLINE</b><small>Up to four riders, each on their own garage bike: race, a Free Ride jam, Big Air, Wheelie City. Online pays more.</small><em>ONLINE ×1.5 · BEAT A RIDER +75</em></button></li></ul>${note ? `<p class="dh-sub dh-note" role="status">${esc(note)}</p>` : ""}</div>`;
   }
   const seriesCard = () => seriesScreen(profile, head(), tabs("series"), note);
   /** A mode's name for the cards (a series round is a race on the series' track). */
@@ -160,10 +169,12 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       <label class="dh-field">IMPORT A CODE<textarea class="dh-codein" rows="3" spellcheck="false" placeholder="DH1-…"></textarea></label><p class="dh-row"><button type="button" class="bui-key dh-import">LOAD IT</button><button type="button" class="bui-key dh-reset">START OVER</button></p><p class="dh-sub dh-note" role="status">${esc(note)}</p></div>`;
   }
   function pauseCard() {
+    if (N.on) return `<div class="dh-card dh-pause" data-screen="pause" role="dialog" aria-label="Paused"><b class="dh-h">ONLINE · ${pickName(N.pick.kind, N.pick.sub)}</b><p class="dh-sub">The ride goes on for everyone (your bike rolls to a stop). Leaving the room now pays nothing; the wear so far still counts.</p><p class="dh-row"><button type="button" class="bui-key dh-go dh-resume">RESUME</button><button type="button" class="bui-key dh-leave">LEAVE ROOM</button></p></div>`;
     return `<div class="dh-card dh-pause" data-screen="pause" role="dialog" aria-label="Paused"><b class="dh-h">PAUSED</b><p class="dh-sub">${modeName(runMode)} on your ${bikeLine()}. Leaving now pays nothing; the wear so far still counts.</p><p class="dh-row"><button type="button" class="bui-key dh-go dh-resume">RESUME</button><button type="button" class="bui-key dh-leave">LEAVE</button></p></div>`;
   }
   function resultCard() {
     const r = result!, b = riding(profile), m = modelOf(b.model);
+    if (N.on && N.res) return netResultCard(r, b, m);
     const lines = r.lines.map(([k, v]) => `<li${v < 0 ? " data-loss" : ""}><span>${k}</span><b>${v < 0 ? "−" : "+"}${num(Math.abs(v))}</b></li>`).join("") || `<li><span>NO PAYOUT</span><b>0</b></li>`;
     const wear = PARTS.map((k) => `<li>${bar(b.parts[k], k === "motor" ? MOTOR_NAME[m.cls] : PART_NAME[k])}<small>−${(r.wear[k] * 100).toFixed(1)}%</small></li>`).join("");
     return `<div class="dh-card dh-result" data-screen="result" role="dialog" aria-label="Result"><b class="dh-h">${r.stats.finished ? (r.stats.series ? `ROUND ${r.stats.series.round + 1}` : modeOf(r.stats.mode).name) + " · DONE" : "LEFT EARLY"}</b><p class="dh-sub">${esc(r.stats.summary ?? "")}</p><div class="dh-cols"><section><b class="dh-h2">PAYOUT</b><ul class="dh-pay">${lines}<li class="dh-total"><span>TOTAL</span><b>◈ ${num(r.credits)}</b></li></ul></section><section><b class="dh-h2">WEAR</b><ul class="dh-list dh-wear">${wear}</ul></section></div>${seriesResult(profile, r)}${pitReady(profile) ? `<p class="dh-row"><button type="button" class="bui-key dh-pit">PIT CREW: FREE BASIC FIX</button></p>` : ""}<p class="dh-row">${r.stats.mode === "series" ? seriesKeys(profile) : `<button type="button" class="bui-key dh-go dh-again">RIDE AGAIN</button><button type="button" class="bui-key" data-go="garage">GARAGE</button>`}<button type="button" class="bui-key" data-go="ride">MENU</button></p></div>`;
@@ -172,6 +183,14 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   function show(s: Screen) {
     screen = s;
     if (s !== "event" && s !== "result" && run) run.destroy(), (run = null), (modeEl.textContent = "");
+    if (s === "online") {
+      stage.toggleAttribute("data-menu", true);
+      cards.textContent = "";
+      cards.append(roomC);
+      cards.hidden = false;
+      engine.wake();
+      return;
+    }
     const html = s === "setup" ? setupCard() : s === "menu" ? menuCard() : s === "garage" ? garageCard() : s === "ride" ? rideCard() : s === "maps" ? mapsCard(head(), tabs("ride")) : s === "series" ? seriesCard() : s === "settings" ? settingsCard() : s === "result" ? resultCard() : paused ? pauseCard() : "";
     cards.innerHTML = html;
     cards.hidden = !html;
@@ -246,10 +265,13 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   function setPaused(on: boolean) {
     if (!run || screen !== "event" || o.attract) return;
     paused = on;
-    run.pause(on);
+    // (Online the ride goes on under the card: a race or a jam lets go of the bike, a score run's
+    // own minute keeps running.)
+    if (!N.on || !N.ride?.score) run.pause(on);
     show("event");
   }
   function leave() {
+    if (N.on) return netLeave();
     if (!run) return;
     run.pause(false);
     const s = { ...run.stats(), finished: false };
@@ -265,6 +287,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     const g = screen === "garage" ? garageClick(profile, gui, t, cards) : null;
     if (g) return g.buy ? did(g.buy[0], g.buy[1]) : (g.profile && ((profile = g.profile), keep()), show("garage"));
     if (t.classList.contains("dh-risk-go") && pending) return (sure = true), startEvent(pending[0], pending[1]);
+    if (t.classList.contains("ol-open")) return openRoom();
     if (d.mode) return d.mode === "freeride" ? show("maps") : startEvent(d.mode as ModeId);
     if (d.map) return startEvent("freeride", { map: d.map });
     if (d.seriesEnter) {
@@ -304,12 +327,433 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   }, sig);
   cards.addEventListener("submit", (ev) => {
     ev.preventDefault();
+    if (!(ev.target as HTMLElement).classList.contains("dh-setup")) return;
     const f = ev.target as HTMLFormElement, v = (n: string) => (f.elements.namedItem(n) as RadioNodeList | HTMLInputElement | null)?.value ?? "";
     const kit: Partial<RiderKit> = { jersey: v("jersey") || "cyan" };
     profile = setup(profile, { starter: v("starter"), paint: v("paint"), number: Math.max(1, Math.min(99, Math.round(+v("number") || 7))), name: v("name"), kit });
     keep();
+    // A join link waits for the first-run setup: then straight into its room.
+    if (linkJoin) return openRoom();
     show("garage");
   }, sig);
+
+  // ---- online: the room, the match (./online/match.ts: one rollback link for as long as the room
+  // lasts), each ride on every screen, the result with the online bonus, the next ride, leaving ----
+  const qs = new URLSearchParams(typeof location === "object" ? location.search : "");
+  const ROOMS_URL = qs.get("rooms") ?? o.rooms ?? "", ROOM_N = 16;
+  const COLORS = ["#22e6ff", "#ff4fa8", "#b6ff3b", "#ff8a3d"];
+  const roomC = document.createElement("div");
+  roomC.className = "dh-card ol-room";
+  roomC.setAttribute("role", "dialog");
+  roomC.setAttribute("aria-label", "Online");
+  roomC.innerHTML = roomCard();
+  const netChip = document.createElement("p");
+  netChip.className = "ol-chip";
+  netChip.hidden = true;
+  netChip.innerHTML = "<i></i><span></span>";
+  const board = document.createElement("ol");
+  board.className = "ol-board";
+  board.hidden = true;
+  board.setAttribute("aria-label", "Scores");
+  stage.append(netChip, board);
+  const $r = <T extends Element = HTMLElement>(sel: string) => roomC.querySelector(sel) as T;
+  const N = {
+    on: false,
+    seat: 0,
+    players: 2,
+    room: Math.min(ROOM_N - 1, Math.max(0, Number(qs.get("room")) | 0)),
+    code: "",
+    /** Seats per room: what the room server allows (its /invite says), at most SEATS. */
+    size: SEATS,
+    pick: { kind: K_RACE, sub: 0 },
+    abort: null as AbortController | null,
+    go: null as (() => void) | null,
+    m: null as Match | null,
+    ride: null as Ride | null,
+    /** The ride's result (every seat's), once it is over; this screen's score run, once it ended. */
+    res: null as SeatResult[] | null,
+    mine: null as RunStats | null,
+    final: 0,
+    leftSeen: 0,
+    /** The chip's and the board's last text (repainted only on a change). */
+    chip: "",
+    boardKey: "",
+    readySeen: -1,
+  };
+  let myName = cleanName(profile.name || "");
+  const field = (n: string) => roomC.querySelector(`[name="${n}"]`) as HTMLInputElement;
+  const roomSay = (t: string) => roomC.querySelectorAll(".ol-say").forEach((el) => (el.textContent = t));
+  const showRoomN = () => (($r<HTMLOutputElement>("output[name=roomShow]")).value = String(N.room));
+  showRoomN();
+  type Step = "pick" | "host" | "join" | "wait" | "hello" | "gone";
+  function roomStep(st: Step) {
+    roomC.dataset.step = st;
+    for (const el of roomC.querySelectorAll<HTMLElement>("[data-for]")) el.hidden = el.dataset.for !== st;
+    roomC.querySelector<HTMLElement>(`[data-for="${st}"] :is(input, button:not([hidden]))`)?.focus({ preventScroll: true });
+  }
+  /** A link with a room and a code (the play page takes the code out of the address bar first and
+   *  hands it over as window.__holeshotInvite) drops the rider straight into that room, once. */
+  let linkJoin = false;
+  {
+    const w = (typeof window === "object" ? window : {}) as { __holeshotInvite?: string }, linked = qs.get("code") || w.__holeshotInvite || "";
+    field("code").value = linked || (() => { try { return sessionStorage.getItem("holeshot:code") || ""; } catch { return ""; } })();
+    delete w.__holeshotInvite;
+    linkJoin = qs.get("mode") === "online" && qs.has("room") && !!linked;
+  }
+  function openRoom() {
+    if (!ready(profile)) return show("setup");
+    show("online");
+    roomStep("pick");
+    if (!field("who").value) field("who").value = cleanName(profile.name);
+    $r(".ol-share").textContent = "SEND LINK";
+    roomSay(ROOMS_URL ? "" : "Online play needs a room server: this build has none set.");
+    if (linkJoin && ROOMS_URL) (linkJoin = false), void pickGo("link");
+  }
+  /** Is the code on the list? {ok, players} (the seats a room may have), "slow", or null (no server). */
+  async function checkCode(code: string) {
+    const r = await fetch(`${ROOMS_URL.replace(/^ws/, "http")}/invite`, { method: "POST", body: code, referrerPolicy: "no-referrer" }).catch(() => null);
+    if (!r) return null;
+    if (r.status === 429) return "slow" as const;
+    const j = (await r.json().catch(() => ({}))) as { players?: number };
+    return { ok: r.ok, players: Number(j.players) || 2 };
+  }
+  /** HOST, JOIN or a join link: the name and the code first. */
+  async function pickGo(how: "host" | "join" | "link") {
+    if (!ROOMS_URL) return roomSay("Online play needs a room server: this build has none set.");
+    myName = cleanName(field("who").value) || cleanName(profile.name);
+    field("who").value = myName;
+    const code = field("code").value.trim().toUpperCase();
+    if (code.length < 6) return roomSay("Enter the invite code you were sent."), field("code").focus();
+    roomSay("Checking the code…");
+    const ok = await checkCode(code);
+    if (ok === null) return roomSay("Can't reach the game server. Check your connection and try again.");
+    if (ok === "slow") return roomSay("Too many tries. Wait a minute, then try again.");
+    if (!ok.ok) return roomSay("That invite code isn't on the list.");
+    roomSay("");
+    N.code = code;
+    N.size = Math.max(2, Math.min(SEATS, ok.players));
+    try {
+      sessionStorage.setItem("holeshot:code", code);
+    } catch {}
+    if (how === "link") return enterRoom(false, N.size);
+    if (how === "join") return showRoomN(), roomStep("join");
+    for (const b of roomC.querySelectorAll<HTMLButtonElement>("[data-olsize]")) b.hidden = Number(b.dataset.olsize) > N.size;
+    roomStep("host");
+  }
+  const press = (sel: string, v: string, attr: string) => roomC.querySelectorAll<HTMLButtonElement>(sel).forEach((b) => b.setAttribute("aria-pressed", "" + (b.dataset[attr] === v)));
+  roomC.addEventListener("click", (ev) => {
+    const t = (ev.target as HTMLElement).closest<HTMLButtonElement>("button");
+    if (!t) return;
+    const d = t.dataset;
+    if (d.olkind !== undefined) {
+      N.pick.kind = Number(d.olkind);
+      press("[data-olkind]", d.olkind, "olkind");
+      $r(".ol-tiers").hidden = N.pick.kind !== K_RACE;
+      $r(".ol-maps").hidden = N.pick.kind !== K_JAM;
+      N.pick.sub = 0;
+      press("[data-oltier]", "0", "oltier");
+      press("[data-olmap]", "0", "olmap");
+      $r(".ol-kind-sub").textContent = KINDS[N.pick.kind]!.blurb;
+    } else if (d.oltier !== undefined) (N.pick.sub = Number(d.oltier)), press("[data-oltier]", d.oltier, "oltier");
+    else if (d.olmap !== undefined) (N.pick.sub = Number(d.olmap)), press("[data-olmap]", d.olmap, "olmap");
+    else if (d.olsize) (N.room = (Math.random() * ROOM_N) | 0), void enterRoom(true, Number(d.olsize));
+    else if (d.olroom) (N.room = (N.room + Number(d.olroom) + ROOM_N) % ROOM_N), showRoomN();
+    else if (t.classList.contains("ol-back")) netEnd(), show("ride");
+    else if (t.classList.contains("ol-topick")) roomStep("pick");
+    else if (t.classList.contains("ol-again")) roomStep("pick");
+    else if (t.classList.contains("ol-cancel")) N.abort?.abort(), (N.go = null), roomStep("pick");
+    else if (t.classList.contains("ol-gonow")) N.go?.();
+    else if (t.classList.contains("ol-share")) void share();
+  }, sig);
+  $r<HTMLFormElement>(".ol-pick").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    void pickGo((ev as SubmitEvent).submitter?.classList.contains("ol-joink") ? "join" : "host");
+  }, sig);
+  $r<HTMLFormElement>('form[data-for="join"]').addEventListener("submit", (ev) => (ev.preventDefault(), void enterRoom(false, N.size)), sig);
+  async function share() {
+    const url = `${location.origin}${location.pathname}?mode=online&room=${N.room}${qs.get("rooms") ? `&rooms=${encodeURIComponent(ROOMS_URL)}` : ""}${N.code ? `&code=${encodeURIComponent(N.code)}` : ""}`, k = $r(".ol-share");
+    try {
+      if (navigator.share) await navigator.share({ title: "HOLESHOT · online", text: `Ride me in HOLESHOT: room ${N.room}.`, url });
+      else await navigator.clipboard.writeText(url), (k.textContent = "LINK COPIED");
+    } catch (e) {
+      if ((e as Error)?.name === "AbortError") return;
+      try {
+        await navigator.clipboard.writeText(url);
+        k.textContent = "LINK COPIED";
+      } catch {
+        k.textContent = "COPY FAILED";
+      }
+    }
+  }
+  async function enterRoom(host: boolean, wantN: number) {
+    roomStep("wait");
+    $r(".ol-t-code").textContent = N.code;
+    $r(".ol-t-ride").textContent = host ? pickName(N.pick.kind, N.pick.sub) : "";
+    $r(".ol-room-sub").textContent = "CONNECTING";
+    $r(".ol-wait-say").textContent = host ? "Opening a room…" : `Joining room ${N.room}…`;
+    $r(".ol-gonow").hidden = true;
+    $r(".ol-seats").innerHTML = "";
+    N.abort = new AbortController();
+    const signal = N.abort.signal, mine = packMode(N.pick.kind, N.pick.sub);
+    for (let tries = 0; ; tries++) {
+      $r(".ol-t-room").textContent = "" + N.room;
+      const one = new AbortController(), stop = () => one.abort();
+      signal.addEventListener("abort", stop, { once: true });
+      let busy = false;
+      try {
+        const st = await joinRoom(ROOMS_URL, N.room, N.size, N.code, {
+          want: wantN, mode: mine, signal: one.signal,
+          lobby(seat, seated, n, go) {
+            // HOST wants a room of its own: someone is in this one, so try the next.
+            if (host && seat !== 0) return void ((busy = true), one.abort());
+            N.go = seat === 0 ? go : null;
+            const size = seat === 0 ? Math.min(n, wantN) : n, left = Math.max(0, size - seated);
+            $r(".ol-seats").innerHTML = seatsHTML(seat, seated, size, myName, COLORS);
+            $r(".ol-room-sub").textContent = `ROOM ${N.room} · ${seated} OF ${size} IN`;
+            $r(".ol-wait-say").textContent = seat === 0 ? (left ? `Waiting for ${left} more…` : "Starting…") : "You're in. The host starts the ride.";
+            $r(".ol-gonow").hidden = !(seat === 0 && seated > 1 && left > 0);
+          },
+        });
+        signal.removeEventListener("abort", stop);
+        if (signal.aborted || engine.signal.aborted) return st.transport.close();
+        N.abort = null;
+        return begin(st);
+      } catch {
+        signal.removeEventListener("abort", stop);
+        if (signal.aborted || engine.signal.aborted) return;
+        N.go = null;
+        if (host && tries < ROOM_N) {
+          N.room = (N.room + 1) % ROOM_N;
+          if (!busy) await new Promise((ok) => setTimeout(ok, 300));
+          continue;
+        }
+        if (tries >= 2) return roomStep("gone"), ($r(".ol-gone-say").textContent = host ? "Every room is busy right now. Try again in a minute." : `Room ${N.room} is full, mid-ride or closed. Check the number with the host.`);
+        await new Promise((ok) => setTimeout(ok, 1200));
+      }
+    }
+  }
+
+  /** The room started: the match on this seat (the same frames on every screen). */
+  function begin(st: { transport: Transport; slot: number; players: number; seed: number; mode: number }) {
+    N.on = true;
+    N.seat = st.slot;
+    N.players = Math.max(2, Math.min(SEATS, st.players));
+    N.pick = unpackMode(st.mode);
+    N.leftSeen = 0;
+    N.go = null;
+    N.res = N.mine = null;
+    N.chip = N.boardKey = "";
+    roomStep("hello");
+    $r(".ol-room-sub").textContent = `ROOM ${N.room} · ${pickName(N.pick.kind, N.pick.sub)}`;
+    N.m = match(engine, {
+      transport: st.transport, seat: st.slot, players: N.players, seed: st.seed, mode: st.mode, profile: { ...profile, name: myName || profile.name },
+      input: netInput,
+      hooks: {
+        built: netBuilt,
+        events: () => (run as NetRun | null)?.events?.(),
+        over: netOver,
+        rewind: (before) => (run as NetRun | null)?.rewind?.(before),
+      },
+    });
+    say(`Online, room ${N.room}: lining up`);
+    // (The shell's engine may have settled on the room card: the match keeps it awake from here.)
+    engine.wake();
+    engine.busy();
+  }
+  /** This screen's bits for frame f: its riding (the autopilot as a bit), or a score run's score. */
+  function netInput() {
+    const r = N.ride;
+    if (!r || !run || (screen !== "event" && screen !== "result")) return 0;
+    if (r.score) {
+      const done = !!N.mine;
+      return scoreBits(done ? N.final : Number(run.state.score) || 0, done);
+    }
+    const I = (run as NetRun).input();
+    return encode(I[0]!, I[1]!, I[2]!, I[3]!, run.auto ? B_AUTO : 0);
+  }
+  /** Each rider's tag: people's names ("· AI" once they left), the race's AI rivals'. */
+  function tags() {
+    const r = N.ride!, left = N.m?.link.left ?? 0, out = r.riders.map((x, p) => (p === N.seat ? "" : x.name + (left & (1 << p) ? " · AI" : "")));
+    for (const a of r.ai) out.push(a.name);
+    return out;
+  }
+  /** A ride was built (every screen on the same frame): mount it on this screen's seat. */
+  function netBuilt(r: Ride) {
+    N.ride = r;
+    N.res = N.mine = null;
+    N.boardKey = "";
+    run?.destroy();
+    modeEl.textContent = "";
+    const me = r.riders[N.seat]!, L2 = lookOf(me.profile), t = r.tuned[N.seat]!;
+    const ctx: ModeCtx = {
+      host: modeEl, bike: t, look: L2.look, helmet: L2.helmet, number: L2.number, name: me.name, seed: r.seed,
+      auto: false, attract: false, reduced, sound: o.sound ?? profile.settings.sound,
+      // (A score run ends on this screen first; the result waits for everyone.)
+      end: (st) => netScoreEnd(st), quit: (st) => netScoreEnd(st), menu: () => setPaused(true),
+    };
+    paused = false;
+    result = null;
+    if (r.race || r.jam) {
+      const view: NetView = { ride: r, seat: N.seat, names: tags(), looks: r.riders.map((x, i) => { const l = lookOf(x.profile); return { look: l.look, helmet: l.helmet, rig: r.tuned[i]!.rig, number: l.number }; }) };
+      runMode = r.race ? "race" : "freeride";
+      run = mountTrack(ctx, r.track!, !!r.jam, [], {}, view);
+    } else {
+      runMode = r.kind === K_AIR ? "bigair" : "wheelie";
+      run = modeOf(runMode).start(ctx);
+    }
+    runMap = undefined;
+    runSeed = r.seed;
+    screen = "event";
+    cards.textContent = "";
+    cards.hidden = true;
+    stage.removeAttribute("data-menu");
+    board.hidden = !r.score;
+    say(`${pickName(r.kind, r.sub)}, ride ${r.round + 1}, on your ${bikeLine()}`);
+  }
+  /** A score run ended on this screen: its stats wait for everyone's (the result needs them all). */
+  function netScoreEnd(st: RunStats) {
+    if (N.mine || !N.ride?.score) return;
+    N.mine = st;
+    N.final = N.ride.kind === K_AIR ? Math.round((st.judges ?? 0) * 10) : Math.round(st.score ?? 0);
+    cards.innerHTML = `<div class="dh-card dh-result" role="status"><b class="dh-h">${N.ride.kind === K_AIR ? `JUDGES ${(N.final / 10).toFixed(1)}` : `${N.final.toLocaleString("en-US")} PTS`}</b><p class="dh-sub">Waiting for the others to finish their run…</p></div>`;
+    cards.hidden = false;
+  }
+  /** The ride is over (the same final frame on every screen): this rider's own payout and wear. */
+  function netOver(r: Ride, res: SeatResult[], _f: number) {
+    if (!N.on) return;
+    const me = res[N.seat]!, left = N.m!.link.left, M = me.M, now = Date.now();
+    const beat = res.filter((x, p) => p !== N.seat && !(left & (1 << p)) && x.place > me.place).length;
+    const common = { seconds: M[0]!, distance: M[1]!, gas: M[2]!, air: M[3]!, wheelie: M[4]!, crashes: M[5]!, hard: M[6]! };
+    const ORD = ["1ST", "2ND", "3RD", "4TH"], clock = (v: number) => `${(v / 60) | 0}:${(v % 60).toFixed(1).padStart(4, "0")}`;
+    let st: RunStats;
+    // (A rider still out when the grace time ran out is placed by how far they got, and paid for it.)
+    if (r.race) st = { ...blankStats("race"), ...common, place: me.place, time: me.time, bestLap: me.bestLap, finished: true, led: false, where: "online", summary: `Online · ${ORD[me.place]} of ${r.race.riders.length}${me.finished ? ` · ${clock(me.time)}` : " · didn't finish"} · best lap ${clock(me.bestLap)}` };
+    else if (r.jam) st = { ...blankStats("freeride"), ...common, finished: true, tricks: me.tricks, flips: me.flips, score: me.points, where: "online-jam", summary: `Online jam · ${ORD[me.place]} of ${r.players} · ${me.points.toLocaleString("en-US")} trick points` };
+    else {
+      const s0 = N.mine ?? { ...(run?.stats() ?? blankStats(runMode)), finished: false };
+      st = { ...s0, summary: `Online · ${ORD[me.place]} of ${r.players} · ${s0.summary ?? ""}` };
+    }
+    const r0 = settleOnline(st, riding(profile), { beat, times: profile.online, now }), rr = garageRide(r0, riding(profile), r.seed);
+    profile = after(applyOnline(profile, rr, now), rr);
+    keep();
+    result = rr;
+    N.res = res;
+    N.readySeen = -1;
+    paused = false;
+    run?.pause(false);
+    board.hidden = true;
+    show("result");
+    say(`${ORD[me.place]}. ${rr.credits} credits`);
+  }
+  function netResultCard(r: NonNullable<typeof result>, b: ReturnType<typeof riding>, m: ReturnType<typeof modelOf>) {
+    const ride = N.ride!, names = ride.riders.map((x, p) => (p === N.seat ? `${x.name} (YOU)` : x.name));
+    const lines = r.lines.map(([k, v]) => `<li${v < 0 ? " data-loss" : ""}><span>${esc(k)}</span><b>${v < 0 ? "−" : "+"}${num(Math.abs(v))}</b></li>`).join("") || `<li><span>NO PAYOUT</span><b>0</b></li>`;
+    const wear = PARTS.map((k) => `<li>${bar(b.parts[k], k === "motor" ? MOTOR_NAME[m.cls] : PART_NAME[k])}<small>−${(r.wear[k] * 100).toFixed(1)}%</small></li>`).join("");
+    const others = ((1 << N.players) - 1) & ~(1 << N.seat), alone = (N.m!.link.left & others) === others;
+    return `<div class="dh-card dh-result ol-result" data-screen="result" role="dialog" aria-label="Result"><b class="dh-h">ONLINE · ${pickName(ride.kind, ride.sub)}</b><p class="dh-sub">${esc(r.stats.summary ?? "")}</p>${standingsHTML(ride, N.res!, N.seat, names)}<div class="dh-cols"><section><b class="dh-h2">PAYOUT</b><ul class="dh-pay">${lines}<li class="dh-total"><span>TOTAL</span><b>◈ ${num(r.credits)}</b></li></ul></section><section><b class="dh-h2">WEAR</b><ul class="dh-list dh-wear">${wear}</ul></section></div>${pitReady(profile) ? `<p class="dh-row"><button type="button" class="bui-key dh-pit">PIT CREW: FREE BASIC FIX</button></p>` : ""}<p class="dh-row">${alone ? "" : `<button type="button" class="bui-key dh-go ol-ready" aria-pressed="${N.m!.ready}">${N.m!.ready ? "WAITING…" : "RIDE AGAIN"}</button>`}<button type="button" class="bui-key dh-leave">LEAVE ROOM</button></p><p class="dh-sub ol-ready-say" aria-live="polite">${alone ? "Everyone else left the room." : ""}</p></div>`;
+  }
+  cards.addEventListener("click", (ev) => {
+    const t = (ev.target as HTMLElement).closest<HTMLElement>(".ol-ready");
+    if (!t || !N.m) return;
+    N.m.ready = !N.m.ready;
+    t.setAttribute("aria-pressed", "" + N.m.ready);
+    t.textContent = N.m.ready ? "WAITING…" : "RIDE AGAIN";
+    N.readySeen = -1;
+  }, sig);
+  /** Leave the room mid-ride or after it: no pay for a ride left, its wear still counts. */
+  function netLeave() {
+    if (run && screen === "event" && N.ride && !N.res) {
+      const st = N.ride.race || N.ride.jam ? { ...run.stats(), finished: false } : { ...(N.mine ?? run.stats()), finished: false };
+      const r = garageRide(settle(st, riding(profile)), riding(profile), N.ride.seed);
+      profile = after(apply(profile, r), r);
+      keep();
+      note = "Left the room. A ride left pays nothing; its wear counts.";
+    }
+    netEnd();
+    paused = false;
+    const n = note;
+    show("ride");
+    note = n;
+  }
+  /** The match is over for this screen (left, lost, out of sync). */
+  function netEnd() {
+    N.abort?.abort();
+    N.abort = null;
+    N.go = null;
+    const was = N.on;
+    N.on = false;
+    try {
+      N.m?.destroy();
+    } catch {}
+    N.m = null;
+    N.ride = null;
+    N.res = N.mine = null;
+    netChip.hidden = board.hidden = true;
+    if (was && run) run.destroy(), (run = null), (modeEl.textContent = "");
+  }
+  function netGone(text: string) {
+    if (N.ride && !N.res && run && screen === "event") {
+      // Mid-ride: the wear so far counts, no pay (as leaving).
+      const st = { ...run.stats(), finished: false }, r = garageRide(settle(st, riding(profile)), riding(profile), N.ride.seed);
+      profile = after(apply(profile, r), r);
+      keep();
+    }
+    netEnd();
+    show("online");
+    roomStep("gone");
+    $r(".ol-gone-say").textContent = text;
+    say(text);
+  }
+  const popcount = (b: number) => {
+    let n = 0;
+    for (; b; b &= b - 1) n++;
+    return n;
+  };
+  // Every frame while online: the link's news (a seat left, reconnecting, out of sync), the chip,
+  // the score board, the rematch count. Text is written only when it changes.
+  const SB = new Float64Array(SEATS);
+  engine.add({
+    step(e) {
+      if (!N.on || !N.m) return;
+      e.busy();
+      const L2 = N.m.link, others = ((1 << N.players) - 1) & ~(1 << N.seat);
+      if (L2.lost & (1 << N.seat)) return netGone("Lost the connection to the room.");
+      if (L2.desync >= 0) return netGone("The screens fell out of sync. Start a new room.");
+      if (L2.left !== N.leftSeen) {
+        for (let p = 0; p < N.players; p++) if (L2.left & ~N.leftSeen & (1 << p)) say(`${N.ride?.riders[p]?.name ?? "P" + (p + 1)} left; the AI rides their bike`);
+        N.leftSeen = L2.left;
+        if (N.ride && run && "tags" in run) (run as NetRun).tags(tags());
+        if (screen === "result" && N.res) show("result");
+        // Everyone else gone before the ride: nothing to ride for.
+        if ((L2.left & others) === others && !N.ride) return netGone(N.players > 2 ? "Everyone else left the room." : "The other rider left the room.");
+      }
+      const away = L2.away & ~(1 << N.seat);
+      let chip = `ONLINE · ROOM ${N.room} · ${myName || "YOU"}`;
+      for (let p = 0; p < N.players; p++) if (away & (1 << p)) chip += ` · ${N.ride?.riders[p]?.name ?? "P" + (p + 1)} RECONNECTING`;
+      if (L2.away & (1 << N.seat)) chip += " · RECONNECTING";
+      if (chip !== N.chip) (N.chip = chip), (netChip.lastElementChild!.textContent = chip), (netChip.dataset.conn = L2.away ? "wait" : "live"), netChip.toggleAttribute("data-quiet", !L2.away);
+      netChip.hidden = !N.ride || screen !== "event";
+      const sc = N.ride?.score;
+      if (sc && screen === "event") {
+        let changed = N.boardKey === "";
+        for (let p = 0; p < N.players; p++) if (SB[p] !== sc.SC[p]! + sc.DN[p]! * 0.5) (SB[p] = sc.SC[p]! + sc.DN[p]! * 0.5), (changed = true);
+        if (changed) {
+          N.boardKey = "x";
+          const air = N.ride!.kind === K_AIR;
+          board.innerHTML = N.ride!.riders.map((x, p) => `<li${p === N.seat ? " data-me" : ""}><i style="background:${lookOf(x.profile).look.plastic}"></i><span>${esc(x.name)}</span><b>${sc.DN[p] ? (air ? `J ${(sc.SC[p]! / 10).toFixed(1)}` : num(sc.SC[p]!)) + " ✓" : num(sc.SC[p]!)}</b></li>`).join("");
+        }
+      }
+      if (screen === "result" && N.res) {
+        const rb = L2.left | (N.m.ready ? 1 << N.seat : 0), key = rb * 16 + (N.m.ready ? 1 : 0);
+        if (key !== N.readySeen) {
+          N.readySeen = key;
+          const el = cards.querySelector(".ol-ready-say");
+          if (el && (L2.left & others) !== others) el.textContent = N.m.ready ? `Ready. The next ride starts when everyone is (${popcount(rb)} of ${N.players}).` : "RIDE AGAIN: a new ride for the whole room when everyone presses it.";
+        }
+      }
+    },
+  });
+  engine.signal.addEventListener("abort", () => netEnd(), { once: true });
 
   // ---- keys: P / Escape pause (Escape gives the page back when dropped onto a page) ----
   const src = (e: Event) => (e.composedPath?.()[0] ?? e.target) as Element | null;
@@ -326,6 +770,8 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   if (dropIn) L.style(document.documentElement, "overflow", "hidden");
 
   if (o.attract) startEvent("race", { auto: true, seed: o.seed ?? 20261114 });
+  // A join link (?mode=online&room=N&code=…) opens the room card and joins (after the setup, for a new rider).
+  else if (linkJoin && ready(profile)) openRoom();
   else show(ready(profile) ? "menu" : "setup");
   engine.start();
 
@@ -375,8 +821,22 @@ export function createHoleshot(o: HoleshotOptions = {}) {
         series: profile.series.run ? { tier: profile.series.run.tier, round: profile.series.run.round, points: [...profile.series.run.points] } : null,
         seriesBest: { ...profile.series.best }, titles: profile.series.titles,
         result: result ? { credits: result.credits, lines: result.lines, wear: result.wear, finished: result.stats.finished } : null,
+        online: N.on && N.m ? { seat: N.seat, players: N.players, room: N.room, phase: N.m.phase === OVER ? "over" : N.ride ? "ride" : "hello", round: N.m.round, kind: N.pick.kind, sub: N.pick.sub, names: N.m.riders.map((r) => r.name), models: N.m.riders.map((r) => r.bike.model), frame: N.m.link.frame, final: N.m.link.final, desync: N.m.link.desync, left: N.m.link.left, ready: N.m.ready, standings: N.res ? N.res.map((x) => x.place) : null } : null,
       };
     },
+    /** The online link (frames, corrections, stalls, delay, desync), or null. */
+    get net() {
+      return N.m?.link ?? null;
+    },
+    /** The autopilot rides this screen's bike (tests, harnesses; online too: it rides as an input bit). */
+    get auto() {
+      return !!run?.auto;
+    },
+    set auto(on: boolean) {
+      if (run) run.auto = on;
+    },
+    /** Open the online room card. */
+    online: () => openRoom(),
     destroy() {
       if (!engine.signal.aborted) engine.destroy();
     },

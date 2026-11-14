@@ -1,7 +1,26 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
 
+- **Online for up to four.** RIDE → ONLINE: YOUR NAME and the INVITE CODE, then HOST (pick the
+  ride, 2 / 3 / 4 riders, SEND LINK: the share sheet, or the link copied) or JOIN (the room number);
+  a link `/play/?mode=online&room=N&code=…` drops a friend straight in (the code is taken out of the
+  address bar first). Every rider rides their own garage bike: a hello in the first 11 frames
+  carries each rider's name, bike (model, parts, mods, tune choices, damage) and look to every
+  screen, so every screen simulates the same bikes. Rides: a race on a new generated track (the
+  host picks ROOKIE, PRO or MASTERS; AI rivals fill the empty places; 30 s after the first person
+  is past the flag the rest are placed where they are), a Free Ride jam on any of the five maps
+  (three minutes, trick points: big air, flips, long wheelies), and Big Air and Wheelie City
+  head-to-head (each screen rides its own minute; the score travels in the input bits). The
+  rollback link from Dune Hop (own input at once, predicted remote inputs, resim on a mismatch, FX
+  only on a frame's first run, remote riders eased after a correction, 1–3 frames of adaptive
+  delay, a desync hash); a rider who leaves is ridden by the AI; RIDE AGAIN starts the next ride for
+  the whole room. Online pays more: each profile gets the payout and the wear for its own result,
+  ×1.5, plus 75 a person beaten; the extra halves after six online rides in a rolling hour and stops
+  after ten (no farming; `data/economy.ts` ONLINE). The bike's state is one buffer
+  (`state`, `save`, `load`). The room server: `ROOMS_URL` (repo variable) → `PUBLIC_ROOMS_URL`,
+  default `wss://fizlet-rooms.fizlet.workers.dev`, `?rooms=` overrides. Size budget 142,000 B gzip
+  (137,888 B measured).
 - **Renamed: Dirt Hop is now HOLESHOT.** Package `@coded-design/holeshot`, the build
   `dist/holeshot.mjs` / `dist/holeshot.js` (`createHoleshot`, global `holeshot`), the site at
   holeshot.domvirus.com. A local save under the old key loads and is saved under
