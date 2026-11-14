@@ -36,7 +36,10 @@ src/
     race/generate.ts    the seeded track generator: draft → validate (shape + an autopilot race) → TrackPlan
     race/preview.ts     a track from above as an SVG string (the series screen)
     race/scene.ts       the track scene, shared by Race and Free Ride (mountTrack)
-    freeride/session.ts freeRun(): one rider on a track's table, no laps
+    freeride/session.ts freeRun(): one rider on a track's table or an open map, no laps; tricks
+    freeride/maps.ts    the open maps (Dune Sea, the Quarry, Forest Enduro, Night Park): makeMap(def)
+    freeride/scenery.ts each open map's look: palette, ground bands, neon lines, scenery, sky
+    freeride/picker.ts  RIDE → FREE RIDE: the map picker with previews (picker.css)
     bigair/show.ts      airShow(): the arena and the run; bigair/tricks.ts the air-trick scorer
     bigair/scene.ts     the arena scene (mountAir)
     wheelie/city.ts     the block and the session; wheelie/ride.ts the ride adapter; wheelie/tricks.ts the scorer
@@ -130,7 +133,7 @@ gloves) and bike paint come from `data/looks.ts`; prices by tier are `COSMETIC` 
 `MOTOR_PRICE` (× the model's `upkeep.cost`), `WEAR` (per 100 units ridden, per second of gas, per
 second of wheelie, of air, per hard landing, per crash; the motor's per-class rate; all × the
 model's `upkeep.wear`), `PAYOUT` (race places and bonuses, Big Air per judge point and flip, Wheelie
-City per point with a cap, Free Ride per second with a cap, the share paid on leaving), `MODS`,
+City per point with a cap, Free Ride per second, of air and wheelie and per trick landed, with a cap, the share paid on leaving), `MODS`,
 `COSMETIC`, `PIT_CREW` and `WORN_FLOOR`. Balancing is a diff to this file; the tests read the same
 numbers. Nobody is ever stuck: every finished event pays something, a worn bike still rides, and the
 pit crew fixes the riding bike to `PIT_CREW.to` for free once `PIT_CREW.every` events have passed
@@ -175,10 +178,27 @@ and BRAKE (and TRICK or HOP) under the right thumb; a gamepad; hold-and-drag on 
   rides three laps clean on the autopilot against the other three starters, who each get two laps
   in). A draft that fails is thrown away and the next one tries; `tests/generate.test.mjs` checks
   500 seeds at each of three difficulties on its own terms (worker threads, about 2 minutes).
-- **A free-ride map** is an entry in `FREE_MAPS`: today a `TrackPlan` (the loop is there to follow;
-  respawns go to the nearest point on it). A map with no loop needs its own terrain builder and a
-  respawn rule: give `freeRun` (`modes/freeride/session.ts`) a map object with `course()`, `near()`
-  and spawn points instead of a `Track`, and its scenery builder to `mountTrack`.
+- **A free-ride map** is an entry in `FREE_MAPS` (`modes/index.ts`): map 1 is the race loop (a
+  `TrackPlan`); maps 2–5 are open maps, a `RideMapDef` in `modes/freeride/maps.ts` that
+  `makeMap(def)` turns into the map object `freeRun` and `mountTrack` ride:
+  - `ground(t, HX, HZ)`: the terrain before the line (noise, benches, a lot);
+  - `line`: a closed polygon of control points `[x, z, y, …]` with rounded corners (`radius`,
+    `radii`), carved into the ground (`follow`: the floor follows the ground, smoothed; else the
+    points' heights, a drop of more than 0.45 between close points kept as a ledge). It is the
+    trail (`trail` paints it), the path the autopilot and the ghost ride, and where a crash puts
+    you back;
+  - `features`: `[kind, corner, offset into the straight after it, …]` (doubles, tables, kickers,
+    the gap, the step-down, whoops, rollers, roots, logs, rocks; jumps go on straights: the tests
+    check), `banks` round corners (berms, the wall ride), `posts` (trees: a crash), `spawns`;
+  - the result has `course()` (pure), `near()`, `SPAWN`, `POSTS`, `WANT` (the line's speeds: turns
+    by curvature, a speed into each feature, braking ahead) and the race Track's names for the line.
+  `freeRun` starts on the first spawn; a crash by the line puts you back on it with a run-up to the
+  feature, in the open where you fell, off the table on the nearest spawn. Its autopilot rides
+  round a big jump it is too slow for. The look (`modes/freeride/scenery.ts`, `mapLook`) is the
+  palette over the track scene's, the ground bands, the neon lines and the scenery builder that
+  `mountTrack` calls instead of the race track's. Then: a look, a `FREE_MAPS` entry (it is in the
+  picker), and `tests/maps.test.mjs` covers it (built the same, spawns on the ground, the ghost rides
+  every class round it without falling through, allocation, the browser rides it).
 
 ## Add a mode
 

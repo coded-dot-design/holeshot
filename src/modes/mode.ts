@@ -32,6 +32,8 @@ export interface RunStats {
   /** Big Air: the judges' total (out of 100), flips. Wheelie City and Big Air: the score. */
   judges?: number;
   flips?: number;
+  /** Free Ride: tricks landed (big airs and flips; `flips` counts the flips among them). */
+  tricks?: number;
   score?: number;
   /** A line for the result card (what happened, in words). */
   summary?: string;

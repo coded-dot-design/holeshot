@@ -49,8 +49,8 @@ export const PAYOUT = {
   bigair: { perJudge: 4, perFlip: 20, min: 60 },
   /** Wheelie City: a base, per score point, capped. */
   wheelie: { base: 40, perPoint: 1 / 20, cap: 700 },
-  /** Free Ride: per second ridden, per second of air and of wheelie, capped per session. */
-  freeride: { perSecond: 0.5, perAir: 6, perWheelie: 4, cap: 250 },
+  /** Free Ride: per second ridden, per second of air and of wheelie, per trick landed (big air or a flip, a flip pays more), capped per session. */
+  freeride: { perSecond: 0.5, perAir: 6, perWheelie: 4, perTrick: 5, perFlip: 15, cap: 250 },
   /** Quitting an event: this share of what it would have paid so far (0: nothing). */
   quit: 0,
 };

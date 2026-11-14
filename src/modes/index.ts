@@ -4,13 +4,25 @@ import { MODELS } from "../data/roster.ts";
 import type { Mode, ModeCtx } from "./mode.ts";
 import { makeTrack, MOTO_TRACK, type TrackPlan } from "./race/course.ts";
 import { mountTrack } from "./race/scene.ts";
+import { makeMap, RIDE_MAPS, type RideMap } from "./freeride/maps.ts";
 import { mountAir } from "./bigair/scene.ts";
 import { mountCity } from "./wheelie/scene.ts";
 
 /** Race tracks (id → plan). Phase 1: the one fixed loop; a generated track is another TrackPlan. */
 export const TRACKS: TrackPlan[] = [MOTO_TRACK];
-/** Free Ride maps (id → plan). */
-export const FREE_MAPS: { id: string; name: string; plan: TrackPlan }[] = [{ id: "neon-park", name: "NEON PARK", plan: MOTO_TRACK }];
+/** Free Ride maps: map 1 is the race loop (a plan); maps 2–5 are open maps (./freeride/maps.ts),
+ *  each built once on first ride and kept (their terrain is pure). */
+export const FREE_MAPS: { id: string; name: string; blurb: string; plan?: TrackPlan; open?: () => RideMap }[] = [
+  { id: "neon-park", name: "NEON LOOP", blurb: "The race loop to yourself: the double, whoops, the triple, the tabletop.", plan: MOTO_TRACK },
+  ...RIDE_MAPS.map((d) => {
+    let m: RideMap | null = null;
+    return { id: d.id, name: d.name, blurb: d.blurb, open: () => (m ??= makeMap(d)) };
+  }),
+];
+const freeMap = (id?: string) => {
+  const f = FREE_MAPS.find((m) => m.id === id) ?? FREE_MAPS[0]!;
+  return f.open ? f.open() : makeTrack(f.plan!);
+};
 
 /** Rivals ride stock bikes of the player's class: the first three models' new power. */
 const rivalsFor = (ctx: ModeCtx) => {
@@ -25,9 +37,9 @@ export const MODES: Mode[] = [
     start: (ctx) => mountTrack(ctx, makeTrack(TRACKS.find((t) => t.id === ctx.map) ?? TRACKS[0]!), false, rivalsFor(ctx)),
   },
   {
-    id: "freeride", name: "FREE RIDE", blurb: "The park to yourself. No laps, no clock. Saddle time, air and wheelies pay a little.",
+    id: "freeride", name: "FREE RIDE", blurb: "Five open maps to yourself. No laps, no clock. Saddle time, air, wheelies and tricks pay a little.",
     maps: FREE_MAPS.map((m) => ({ id: m.id, name: m.name })),
-    start: (ctx) => mountTrack(ctx, makeTrack((FREE_MAPS.find((m) => m.id === ctx.map) ?? FREE_MAPS[0]!).plan), true, []),
+    start: (ctx) => mountTrack(ctx, freeMap(ctx.map), true, []),
   },
   {
     id: "bigair", name: "BIG AIR", blurb: "A minute in the arena: two kickers, four tricks, flips. Five judges pay.",

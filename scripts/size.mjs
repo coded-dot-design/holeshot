@@ -6,8 +6,11 @@ import { readdirSync, readFileSync } from "node:fs";
 // scenes, the kernel, diorama,
 // terrain, drive, input, pad, sound, ui), plus about 5.5 KB of room.
 // Phase 2, the Race Series: 100,281 B measured (+9.8 KB: the track generator 8.4 KB minified, the
-// series' rules, its screen and sheet, turns of any angle in the course), so 106,000.
-const BUDGET = 106_000;
+// series' rules, its screen and sheet, turns of any angle in the course).
+// Phase 2, Free Ride maps 2–5: 101,732 B measured on its own (+11,248 B: four open maps' builders and
+// data, their scenery and looks, the map picker with previews).
+// Series + maps merged: 111,610 B measured (dirt-hop.js), plus about 4 KB of room.
+const BUDGET = 116_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

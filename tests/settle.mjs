@@ -40,6 +40,21 @@ try {
   await until(p, () => game.getSnapshot().screen === "result", null, "the race ends", 120000);
   await until(p, () => game.run.engine.paused.includes("settled") && game.engine.paused.includes("settled"), null, "the result settles", 30000);
   assert.equal(await frames(p), 0, "result: no frames");
+  // Free Ride on an open map: waiting at the spawn it sleeps; riding it never does; banked, it settles.
+  for (const id of ["dune-sea", "quarry", "forest", "night-park"]) {
+    await p.evaluate((id) => game.start("freeride", { map: id }), id);
+    await until(p, () => game.getSnapshot().run.phase === "ready" && game.run.engine.paused.includes("settled"), null, `${id}: at the spawn it settles`);
+    assert.equal(await frames(p), 0, `${id}: waiting: no frames`);
+    await p.evaluate(() => (game.run.auto = true));
+    await until(p, () => game.getSnapshot().run.phase === "run" && game.run.state.clock > 1, null, `${id}: rides`);
+    const f0 = await p.evaluate(() => ({ t: game.run.state.clock, w: performance.now() }));
+    await until(p, (a) => performance.now() - a.w > 1500, f0, "a second and a half");
+    const f1 = await p.evaluate(() => ({ t: game.run.state.clock, w: performance.now(), paused: game.run.engine.paused.slice() }));
+    assert.ok((f1.t - f0.t) / ((f1.w - f0.w) / 1000) > 0.3 && !f1.paused.length, `${id}: riding never sleeps`);
+    await p.evaluate(() => game.finish());
+    await until(p, () => game.getSnapshot().screen === "result" && game.run.engine.paused.includes("settled") && game.engine.paused.includes("settled"), null, `${id}: banked, it settles`);
+    assert.equal(await frames(p), 0, `${id}: result: no frames`);
+  }
   await p.evaluate(() => game.destroy());
   assert.equal(await frames(p), 0, "after Recall: no frames");
   await p.close();

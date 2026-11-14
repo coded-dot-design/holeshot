@@ -1,0 +1,17 @@
+/* RIDE → FREE RIDE: the map picker. One sticker key per map: its preview (the map from above, the
+   ride line in neon, the start), its name, a line, its features. Two columns wide, one on a phone. */
+.dh-mapc{width:min(100%,900px)}
+.dh-mapc .dh-row{align-items:center}
+.dh-maps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.dh .dh-mapk{display:grid;justify-items:start;align-content:start;gap:4px;width:100%;height:100%;padding:10px 10px 12px;text-align:left}
+.dh-mapv{display:block;width:100%;aspect-ratio:3/2;border:2px solid var(--rim);border-radius:8px;background:var(--raised)}
+.dh-mapk b{font-size:18px;letter-spacing:.04em;margin-top:4px}
+.dh-mapk b i{font-style:normal;color:var(--hot)}
+.dh-mapk small{font-weight:700;font-size:13px;opacity:.85}
+.dh-mapk em{font-style:normal;font-size:11px;letter-spacing:.08em;color:var(--hot)}
+.dh-maps li:nth-child(5n+1) .dh-mapk{background:color-mix(in srgb,var(--cy) 22%,var(--surface))}
+.dh-maps li:nth-child(5n+2) .dh-mapk{background:color-mix(in srgb,#ffd166 30%,var(--surface))}
+.dh-maps li:nth-child(5n+3) .dh-mapk{background:color-mix(in srgb,#8a9bb8 30%,var(--surface))}
+.dh-maps li:nth-child(5n+4) .dh-mapk{background:color-mix(in srgb,var(--lime) 24%,var(--surface))}
+.dh-maps li:nth-child(5n+5) .dh-mapk{background:color-mix(in srgb,var(--hot) 26%,var(--surface))}
+@media (max-width:620px){.dh-maps{grid-template-columns:1fr}.dh-mapv{aspect-ratio:2/1}}

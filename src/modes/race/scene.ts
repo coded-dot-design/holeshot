@@ -20,7 +20,9 @@ import { LOOP, ENDO, CASE, BAIL, type Power } from "../../bike/bike.ts";
 import { rig, type Rig, type RigColors } from "../../bike/rig.ts";
 import { pool, voice, gamepad, type Pool } from "../../bike/kit.ts";
 import { DONE, E_CRASH, E_FINISH, E_GATE, E_LAND, E_LAP, E_PLACE, E_RESPAWN, E_WHEELIE, E_COUNT, GRID, LAPS, RACE, TRACK_W, motoRace, type RaceOpts, type Track } from "./course.ts";
-import { freeRun } from "../freeride/session.ts";
+import { freeRun, E_TRICK } from "../freeride/session.ts";
+import type { RideMap } from "../freeride/maps.ts";
+import { mapLook, type MapLine } from "../freeride/scenery.ts";
 import { meter } from "../meter.ts";
 import type { ModeCtx, ModeRun } from "../mode.ts";
 
@@ -44,7 +46,7 @@ const DARK = {
     TEAM("#b18cff", "#1b1a2c", "#b18cff", "#1b1a2c", "#eef0ff", "#b18cff", "#ffd166", "#0b0a14"),
   ],
 };
-type Pal = typeof DARK;
+export type Pal = typeof DARK;
 const LIGHT: Pal = {
   ...DARK, night: false, light: [0.6, 1, 0.45], amb: 0.54,
   sky0: "#bfe6ff", sky1: "#d9f0ff", sky2: "#fff1dc", star: "#ffffff", grid: "#ffffff",
@@ -77,15 +79,19 @@ export function modeStage(host: HTMLElement, cls: string) {
   return stage;
 }
 
-/** Race (`free` false: the gate, three laps, three rivals) or Free Ride (`free`: the table to yourself). */
-export function mountTrack(ctx: ModeCtx, track: Track, free: boolean, rivals: Power[], opts: RaceOpts = {}): ModeRun {
+/** Race (`free` false: the gate, three laps, three rivals) or Free Ride (`free`: the table to yourself).
+ *  Free Ride also rides an open map (../freeride/maps.ts): its look and scenery from ../freeride/scenery.ts.
+ *  `opts` tunes a race (a series round's rivals' nerve). */
+export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, rivals: Power[], opts: RaceOpts = {}): ModeRun {
   const stage = modeStage(ctx.host, "mt");
   const engine = createEngine({ root: stage, settle: 0.5, seed: ctx.seed });
   const L = engine.ledger, sig = { signal: engine.signal };
-  let P: Pal = document.documentElement.dataset.theme === "light" ? LIGHT : DARK;
-  const { HX, HZ, NT, TRACK, YAW, TURN, LAP, GATE_S, LINE_S } = track;
+  const map = "isMap" in track ? track : null, look = map ? mapLook(map) : null;
+  const DK: Pal = look ? { ...DARK, ...look.dark } : DARK, LT: Pal = look ? { ...LIGHT, ...look.light } : LIGHT;
+  let P: Pal = document.documentElement.dataset.theme === "light" ? LT : DK;
+  const { HX, HZ, NT, TRACK, YAW } = track, { TURN, LAP, GATE_S, LINE_S } = track as Track;
   const me0 = { power: ctx.bike.power, shape: ctx.bike.shape };
-  const race = free ? null : motoRace(ctx.seed, track, me0, rivals, opts);
+  const race = free ? null : motoRace(ctx.seed, track as Track, me0, rivals, opts);
   const fr = free ? freeRun(track, me0) : null;
   const sim = (race ?? fr)!, t = sim.t, me = sim.riders[0]!, RIDERS = sim.riders.length;
   const m = meter(free ? "freeride" : "race");
@@ -100,7 +106,7 @@ export function mountTrack(ctx: ModeCtx, track: Track, free: boolean, rivals: Po
   play.setAttribute("aria-label", `${free ? "Free Ride" : "Race"}: Space or J for gas, K or Shift to brake, W and S (or up and down) shift your weight forward and back (back lifts the front; in the air it pitches the bike), A and D (or left and right) steer. V changes the view, M mutes, P or Escape pauses`);
   const hud = L.add(document.createElement("div"));
   hud.className = "mt-hud";
-  hud.innerHTML = `<div class="mt-head"><p class="mt-top">${free ? `<b class="mt-chip mt-pos"><span>FREE RIDE</span></b><b class="mt-chip mt-lap"><span>0.0s AIR</span></b>` : `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>LAP 1/${LAPS}</span></b>`}<b class="mt-chip mt-time"><span>0:00.0</span></b><b class="mt-chip mt-ride"><span>#${ctx.number} ${NAME}</span></b></p><p class="mt-hint"></p></div><p class="mt-toast" hidden></p><p class="mt-live" aria-live="polite"></p><p class="mt-keys">${free ? `<button type="button" class="mt-key mt-end" aria-label="End the ride and bank it (E)">END</button>` : ""}<button type="button" class="mt-key mt-view" aria-label="Camera view (V)">VIEW</button><button type="button" class="mt-key mt-mute" aria-label="Mute (M)" aria-pressed="true">♪</button><button type="button" class="mt-key mt-menu" aria-label="Pause (P)">❚❚</button></p>`;
+  hud.innerHTML = `<div class="mt-head"><p class="mt-top">${free ? `<b class="mt-chip mt-pos"><span>${map ? map.name : "FREE RIDE"}</span></b><b class="mt-chip mt-lap"><span>0.0s AIR</span></b>` : `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>LAP 1/${LAPS}</span></b>`}<b class="mt-chip mt-time"><span>0:00.0</span></b><b class="mt-chip mt-ride"><span>#${ctx.number} ${NAME}</span></b></p><p class="mt-hint"></p></div><p class="mt-toast" hidden></p><p class="mt-live" aria-live="polite"></p><p class="mt-keys">${free ? `<button type="button" class="mt-key mt-end" aria-label="End the ride and bank it (E)">END</button>` : ""}<button type="button" class="mt-key mt-view" aria-label="Camera view (V)">VIEW</button><button type="button" class="mt-key mt-mute" aria-label="Mute (M)" aria-pressed="true">♪</button><button type="button" class="mt-key mt-menu" aria-label="Pause (P)">❚❚</button></p>`;
   const head = hud.children[0] as HTMLElement, top = head.children[0] as HTMLElement, hintEl = head.children[1] as HTMLElement;
   const toastEl = hud.children[1] as HTMLElement, live = hud.children[2] as HTMLElement, keysEl = hud.children[3] as HTMLElement;
   const posEl = top.children[0]!.firstChild as HTMLElement, lapEl = top.children[1]!.firstChild as HTMLElement, timeEl = top.children[2]!.firstChild as HTMLElement;
@@ -134,6 +140,8 @@ export function mountTrack(ctx: ModeCtx, track: Track, free: boolean, rivals: Po
   let tv: TerrainView, dust: Pool, spark: Pool, roost: Pool;
   const rigs: Rig[] = [], gateBars: DioramaObject[] = [];
   const EDGE = track.trackEdges(t);
+  // The neon lines over the terrain: the track's edges, or the map's own.
+  const LINES: MapLine[] = look ? look.lines(t) : [{ p: EDGE.subarray(0, NT * 3), n: NT, closed: true, c: "edge2", a: 1 }, { p: EDGE.subarray(NT * 3), n: NT, closed: true, c: "edge", a: 1 }];
   const rnd = seeded(ctx.seed);
   let sky: CanvasGradient | null = null;
   const STARS = new Float32Array(120);
@@ -151,10 +159,26 @@ export function mountTrack(ctx: ModeCtx, track: Track, free: boolean, rivals: Po
     dio.add({ id: "plinth", size: [HX * 2 + 0.5, 1.05, HZ * 2 + 0.5], pos: [0, -1.05, 0], color: P.plinth, cluster: "table", layer: 1, pick: false });
     dio.add({ id: "rim", size: [HX * 2 + 0.7, 0.12, HZ * 2 + 0.7], pos: [0, -0.2, 0], color: P.rim, cluster: "table", layer: 2, emissive: true, pick: false });
     tv = terrainView(dio, t, {
-      bands: [[0.45, P.ground[0]!], [0.85, P.ground[1]!], [1.25, P.ground[2]!], [99, P.crest]], steep: 0.5, steepColor: P.steep, kinds: [P.track, P.face],
+      bands: look ? look.bands(P as Parameters<typeof look.bands>[0]) : [[0.45, P.ground[0]!], [0.85, P.ground[1]!], [1.25, P.ground[2]!], [99, P.crest]], steep: 0.5, steepColor: P.steep, kinds: look ? look.kinds(P as Parameters<typeof look.kinds>[0]) : [P.track, P.face],
       light: P.light, ambient: P.amb, lod: [24, 44], shadows: RIDERS + 1, shadowColor: P.shadow,
     });
     dio.decal("terrain", 1, paintLines);
+    if (look) look.build(dio, t, P as Parameters<typeof look.build>[2]);
+    else trackScenery();
+    // The riders: the player first, in the profile's colours and kit.
+    for (let r = 0; r < RIDERS; r++) {
+      const col = r ? { ...P.kit, ...P.teams[r]! } : { ...P.kit, ...ctx.look };
+      rigs.push(rig(dio, "rider" + r, col, r ? rigKind(sim.riders[r]!.power) : ctx.bike.rig, r ? "peak" : ctx.helmet));
+    }
+    dust = pool(dio, DUST, P.dust, 4);
+    roost = pool(dio, ROOST, P.dust, 5);
+    spark = pool(dio, SPARK, P.spark, 6);
+    sky = null;
+    pose();
+  }
+
+  /** The race track's scenery: tuff blocks, light towers, the start gate and the lap line's arch, pylons. */
+  function trackScenery() {
     // Tuff blocks round the outside of each turn, glowing at night.
     for (let i = 0; i < NT; i += 3) {
       if (!TURN[i]) continue;
@@ -197,16 +221,6 @@ export function mountTrack(ctx: ModeCtx, track: Track, free: boolean, rivals: Po
       dio.add({ id, shape: "cyl", sides: 6, size: [0.14, 0.8, 0.14], pos: [x, t.height(x, z), z], color: P.gatePost, pick: false });
       dio.add({ shape: "cyl", sides: 6, size: [0.22, 0.16, 0.22], pos: [0, 0, 0], on: id, color: side > 0 ? P.edge : P.edge2, emissive: true, pick: false });
     }
-    // The riders: the player first, in the profile's colours and kit.
-    for (let r = 0; r < RIDERS; r++) {
-      const col = r ? { ...P.kit, ...P.teams[r]! } : { ...P.kit, ...ctx.look };
-      rigs.push(rig(dio, "rider" + r, col, r ? rigKind(sim.riders[r]!.power) : ctx.bike.rig, r ? "peak" : ctx.helmet));
-    }
-    dust = pool(dio, DUST, P.dust, 4);
-    roost = pool(dio, ROOST, P.dust, 5);
-    spark = pool(dio, SPARK, P.spark, 6);
-    sky = null;
-    pose();
   }
 
   // ---- state ----
@@ -287,7 +301,8 @@ export function mountTrack(ctx: ModeCtx, track: Track, free: boolean, rivals: Po
         engine.events.emit("land");
         if (me.landAir > 0.45) toast(`${me.landAir.toFixed(2)}s AIR · ${clean ? "CLEAN" : "SKETCHY"}`, clean ? "clean" : "meh");
         if (!ctx.reduced) dust.ring(rnd, me.pos[0]!, me.pos[1]! - 0.6, me.pos[2]!, clean ? 8 : 14, 2.2, 1, 0.8, 0.2, 0.55);
-      } else if (type === E_WHEELIE && val > 0.6) toast(`WHEELIE ${val.toFixed(1)}s`, "clean"), engine.events.emit("wheelie");
+      } else if (type === E_TRICK) toast(val === 2 ? "FLIP! LANDED" : "BIG AIR!", "clean"), say(val === 2 ? "Flip" : "Big air");
+      else if (type === E_WHEELIE && val > 0.6) toast(`WHEELIE ${val.toFixed(1)}s`, "clean"), engine.events.emit("wheelie");
       else if (type === E_CRASH) {
         if (!r) (shake = ctx.reduced ? 0 : 0.5), toast(CRASH_NAME[val] || "WIPEOUT!", "bad"), say(CRASH_NAME[val] || "Wipeout");
         engine.events.emit("crash");
@@ -344,7 +359,7 @@ export function mountTrack(ctx: ModeCtx, track: Track, free: boolean, rivals: Po
   }
   function stats() {
     if (race) return m.stats({ place: race.place(0), time: race.finishTime(0), bestLap: race.bestLap(0), led: led && race.place(0) === 0, finished: race.finished(0), where: track.id, order: [0, 1, 2, 3].map((r) => race.place(r)), summary: `${ORD[race.place(0)]} · ${clock(race.finishTime(0) || race.clock)} · best lap ${clock(race.bestLap(0))}` });
-    return m.stats({ finished: true, where: track.id, summary: `${clock(sim.clock)} ridden · ${m.M[3]!.toFixed(1)}s in the air · ${m.M[4]!.toFixed(1)}s on one wheel` });
+    return m.stats({ finished: true, where: track.id, tricks: fr!.tricks, flips: fr!.flips, summary: `${map ? map.name + " · " : ""}${clock(sim.clock)} ridden · ${m.M[3]!.toFixed(1)}s in the air · ${m.M[4]!.toFixed(1)}s on one wheel${fr!.tricks ? ` · ${fr!.tricks} ${fr!.tricks === 1 ? "trick" : "tricks"}` : ""}` });
   }
   function end() {
     endAt = -1;
@@ -431,6 +446,7 @@ export function mountTrack(ctx: ModeCtx, track: Track, free: boolean, rivals: Po
       }
       ctx2.stroke();
       ctx2.globalAlpha = 1;
+      look?.sky?.(ctx2, W, H, P as Parameters<NonNullable<typeof look.sky>>[3]);
     } else {
       // Two soft clouds.
       ctx2.fillStyle = "#ffffff";
@@ -444,16 +460,33 @@ export function mountTrack(ctx: ModeCtx, track: Track, free: boolean, rivals: Po
         ctx2.fill();
       }
       ctx2.globalAlpha = 1;
+      look?.sky?.(ctx2, W, H, P as Parameters<NonNullable<typeof look.sky>>[3]);
     }
   }
   function paintLines(ctx2: CanvasRenderingContext2D) {
     ctx2.lineCap = "round";
     const f = dio.focal();
-    for (let side = 0; side < 2; side++) {
-      ctx2.strokeStyle = side ? P.edge : P.edge2;
-      for (let i = 0; i < NT; i++) {
-        const a = side * NT * 3 + i * 3, b = side * NT * 3 + ((i + 1) % NT) * 3;
-        if (!dio.project(EDGE[a]!, EDGE[a + 1]!, EDGE[a + 2]!, tmp) || tmp[2]! < 0.5 || !dio.project(EDGE[b]!, EDGE[b + 1]!, EDGE[b + 2]!, tmp2) || tmp2[2]! < 0.5) continue;
+    for (let q = 0; q < LINES.length; q++) {
+      const Ln = LINES[q]!, E = Ln.p, n = Ln.n, last = Ln.closed ? n : n - 1;
+      ctx2.strokeStyle = (P as Record<string, unknown>)[Ln.c] as string;
+      ctx2.globalAlpha = Ln.a;
+      if (Ln.a < 1) {
+        // A faint line: one thin path (overlapping round caps would bead), broken where y is NaN or behind the eye.
+        ctx2.lineWidth = Math.max(1, dio.width / 900);
+        ctx2.beginPath();
+        let pen = false;
+        for (let i = 0; i <= last; i++) {
+          const a = (i % n) * 3, y = E[a + 1]!;
+          if (y !== y || !dio.project(E[a]!, y, E[a + 2]!, tmp) || tmp[2]! < 0.5) pen = false;
+          else if (pen) ctx2.lineTo(tmp[0]!, tmp[1]!);
+          else ctx2.moveTo(tmp[0]!, tmp[1]!), (pen = true);
+        }
+        ctx2.stroke();
+        continue;
+      }
+      for (let i = 0; i < last; i++) {
+        const a = i * 3, b = ((i + 1) % n) * 3;
+        if (!dio.project(E[a]!, E[a + 1]!, E[a + 2]!, tmp) || tmp[2]! < 0.5 || !dio.project(E[b]!, E[b + 1]!, E[b + 2]!, tmp2) || tmp2[2]! < 0.5) continue;
         ctx2.lineWidth = Math.max(1, (f * 0.16) / tmp[2]!);
         ctx2.beginPath();
         ctx2.moveTo(tmp[0]!, tmp[1]!);
@@ -461,6 +494,7 @@ export function mountTrack(ctx: ModeCtx, track: Track, free: boolean, rivals: Po
         ctx2.stroke();
       }
     }
+    ctx2.globalAlpha = 1;
   }
   /** The tach (revs, the power band lit) and, up on the back wheel, the balance meter: a Board UI sticker. */
   function drawOverlay(ctx2: CanvasRenderingContext2D) {
@@ -511,7 +545,7 @@ export function mountTrack(ctx: ModeCtx, track: Track, free: boolean, rivals: Po
     read() {
       if (V[1]) {
         V[1] = 0;
-        const next = document.documentElement.dataset.theme === "light" ? LIGHT : DARK;
+        const next = document.documentElement.dataset.theme === "light" ? LT : DK;
         if (next !== P) (P = next), buildScene(), (dirty = true);
       }
       if (V[0]) {
@@ -624,7 +658,7 @@ export function mountTrack(ctx: ModeCtx, track: Track, free: boolean, rivals: Po
     engine,
     get state() {
       const ph = sim.phase;
-      return { phase: ph === GRID ? (free ? "ready" : "grid") : ph === RACE ? "run" : ph === DONE ? "done" : "idle", speed: me.speed, clock: sim.clock, lap: race ? race.lap(0) : 0, place: race ? race.place(0) : 0, crashes: m.M[5]!, air: me.air, wheelie: me.wheelie, view: view ? "chase" : "table", count: race ? race.count : 0, ended, riders: RIDERS };
+      return { phase: ph === GRID ? (free ? "ready" : "grid") : ph === RACE ? "run" : ph === DONE ? "done" : "idle", speed: me.speed, clock: sim.clock, lap: race ? race.lap(0) : 0, place: race ? race.place(0) : 0, crashes: m.M[5]!, air: me.air, wheelie: me.wheelie, view: view ? "chase" : "table", count: race ? race.count : 0, ended, riders: RIDERS, map: track.id, tricks: fr ? fr.tricks : 0 };
     },
     get auto() {
       return auto;
