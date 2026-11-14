@@ -149,5 +149,5 @@ test("save: v1 → v2 adds the series (three wins open the Pro Circuit); broken 
   let q = S.enter(rider(), "rookie", 5);
   q = round(q, 2).p;
   assert.deepEqual(P.importCode(P.exportCode(q)).profile.series, q.series);
-  assert.match(P.exportCode(q), /^DH2-/);
+  assert.match(P.exportCode(q), /^HS2-/);
 });

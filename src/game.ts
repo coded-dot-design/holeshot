@@ -1,4 +1,4 @@
-// Dirt Hop, the shell: one rider, one garage, every kind of riding. It owns the profile (load, save,
+// Holeshot, the shell: one rider, one garage, every kind of riding. It owns the profile (load, save,
 // export and import), the garage (your bikes, their parts and mods, the paint and the rider kit),
 // the menus (GARAGE · RIDE · SERIES · SETTINGS) and the cards round an event (pause, the result).
 // An event is a mode (./modes/index.ts) started on your tuned bike in the mode layer; when it ends
@@ -29,7 +29,7 @@ import { seriesCard as seriesScreen, seriesKeys, seriesName, seriesResult, start
 import type { TierId } from "./data/series.ts";
 export { lookOf };
 
-export interface DirtHopOptions {
+export interface HoleshotOptions {
   /** Mount inside this element (absolutely filled; give it a size). Default: a layer over the page. */
   host?: HTMLElement | null;
   /** The landing hero: a race on the autopilot, no menus, no saving. */
@@ -45,11 +45,11 @@ export interface DirtHopOptions {
 
 type Screen = "setup" | "menu" | "garage" | "ride" | "maps" | "series" | "settings" | "event" | "result";
 
-export function createDirtHop(o: DirtHopOptions = {}) {
+export function createHoleshot(o: HoleshotOptions = {}) {
   const dropIn = !o.host, store = o.store ?? local;
   const reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
   const wrap = document.createElement("div");
-  wrap.setAttribute("data-fizlet-host", "dirt-hop");
+  wrap.setAttribute("data-fizlet-host", "holeshot");
   wrap.style.cssText = dropIn ? "position:fixed;inset:0;z-index:2147483000" : "position:absolute;inset:0";
   const engine = createEngine({ root: wrap, settle: 0.5, seed: o.seed ?? 1 });
   const L = engine.ledger, sig = { signal: engine.signal };
@@ -119,7 +119,7 @@ export function createDirtHop(o: DirtHopOptions = {}) {
   engine.signal.addEventListener("abort", () => pro.disconnect(), { once: true });
 
   // ---- rendering the cards ----
-  const head = () => `<header class="dh-top"><b class="dh-logo">DIRT HOP</b><span class="dh-chip dh-cr" title="Credits">◈ ${num(profile.credits)}</span>${profile.name ? `<span class="dh-chip">${esc(profile.name)}</span>` : ""}</header>`;
+  const head = () => `<header class="dh-top"><b class="dh-logo">HOLESHOT</b><span class="dh-chip dh-cr" title="Credits">◈ ${num(profile.credits)}</span>${profile.name ? `<span class="dh-chip">${esc(profile.name)}</span>` : ""}</header>`;
   const tabs = (on: Screen) => `<nav class="dh-tabs" aria-label="Menu">${([["garage", "GARAGE"], ["ride", "RIDE"], ["series", "SERIES"], ["settings", "SETTINGS"]] as const).map(([s, t]) => `<button type="button" class="bui-key" data-go="${s}" aria-pressed="${s === on}">${t}</button>`).join("")}</nav>`;
   const bikeLine = () => {
     const b = riding(profile), m = modelOf(b.model);
@@ -139,7 +139,7 @@ export function createDirtHop(o: DirtHopOptions = {}) {
       <fieldset class="dh-sws"><legend>PAINT</legend>${paints}</fieldset>
       <fieldset class="dh-sws"><legend>JERSEY</legend>${jerseys}</fieldset>
       <p class="dh-row"><label class="dh-field">RIDER NAME<input name="name" maxlength="12" autocomplete="nickname" autocapitalize="characters" spellcheck="false" placeholder="RIDER" /></label><label class="dh-field dh-numf">NUMBER<input name="number" type="number" inputmode="numeric" min="1" max="99" value="7" /></label></p>
-      <p class="dh-row"><button type="submit" class="bui-key dh-go">TO THE GARAGE</button></p>${newer ? `<p class="dh-sub dh-warn">A save from a newer Dirt Hop is on this device. It is kept as it is; this profile won't be saved over it.</p>` : ""}</form>`;
+      <p class="dh-row"><button type="submit" class="bui-key dh-go">TO THE GARAGE</button></p>${newer ? `<p class="dh-sub dh-warn">A save from a newer Holeshot is on this device. It is kept as it is; this profile won't be saved over it.</p>` : ""}</form>`;
   }
   function menuCard() {
     const b = riding(profile), m = modelOf(b.model), t = tune(b);
@@ -383,4 +383,4 @@ export function createDirtHop(o: DirtHopOptions = {}) {
   };
   return api;
 }
-export type DirtHop = ReturnType<typeof createDirtHop>;
+export type Holeshot = ReturnType<typeof createHoleshot>;

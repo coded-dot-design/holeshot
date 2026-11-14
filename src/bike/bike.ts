@@ -1,4 +1,4 @@
-// Dirt Hop's bike: a pure, seeded, fixed-step dirt bike (or e-bike) on a heightfield, ridden in every
+// Holeshot's bike: a pure, seeded, fixed-step dirt bike (or e-bike) on a heightfield, ridden in every
 // mode (it began as the shared bike of Fizlet's Bikes gallery pieces; here the suspension's damping
 // and case tolerance are options, so ../model/tune.ts can wear them and mod them). Where
 // @fzlt/core/drive's bike leans and lands, this one also wheelies: it is a rigid body in its own

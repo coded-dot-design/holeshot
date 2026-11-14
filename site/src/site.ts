@@ -3,9 +3,9 @@ import pkg from "../../package.json";
 import build from "../../dist/build.json";
 export const VERSION: string = pkg.version;
 export const FIZLET: string = build.fizlet;
-/** The game's measured size (gzip bytes of dist/dirt-hop.mjs, written by scripts/build.mjs). */
-export const GZIP: number = build.gzip["dirt-hop.mjs"];
-export const REPO = "https://github.com/coded-dot-design/dirt-hop";
+/** The game's measured size (gzip bytes of dist/holeshot.mjs, written by scripts/build.mjs). */
+export const GZIP: number = build.gzip["holeshot.mjs"];
+export const REPO = "https://github.com/coded-dot-design/holeshot";
 export const FIZLET_URL = "https://fizlet.com/";
 export const HUB = "https://domvirus.com/";
 export const base = (path = "") => `${import.meta.env.BASE_URL.replace(/\/$/, "")}/${path}`;

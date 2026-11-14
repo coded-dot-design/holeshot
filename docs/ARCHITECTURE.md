@@ -1,4 +1,4 @@
-# Dirt Hop: architecture
+# Holeshot: architecture
 
 One rider, one garage, many ways to ride. This page is the map for anyone adding to the game: where
 each piece lives, the contract between the shell and a mode, how a garage bike turns into what the
@@ -8,7 +8,7 @@ physics rides, where the economy's numbers live, and how to add a map or a mode.
 
 ```
 src/
-  index.ts              the public entry: createDirtHop, MODES, the roster
+  index.ts              the public entry: createHoleshot, MODES, the roster
   game.ts               the shell: profile, menus, garage UI, pause and result cards, event lifecycle
   game.css              the shell's Board UI styles (each mode scene has its own sheet)
   html.ts               the cards' small HTML helpers (numbers, escaping, a condition bar)
@@ -168,11 +168,13 @@ and something is worn past `below` that the rider can't pay for.
 ## The profile and its schema
 
 `model/profile.ts`: `Profile` is a plain object with `v` (the schema version, `VERSION`). Saved as
-JSON under `dirt-hop:profile` in localStorage (every access in try/catch). `migrate(raw)` runs each
+JSON under `holeshot:profile` in localStorage (every access in try/catch); when that key is empty,
+`load` reads the key from before the rename (`OLD_STORE_KEYS`), so an old local save carries over. `migrate(raw)` runs each
 step in `MIGRATIONS[from]` up to `VERSION`, then `normalize` fills missing fields with defaults and
 clamps everything (a new field with a default needs no step; a rename or reshape bumps `VERSION`
 and adds a step). A save from a newer version is never overwritten. `exportCode` /
-`importCode`: `DH<version>-<base64url JSON>-<checksum>`.
+`importCode`: `HS<version>-<base64url JSON>-<checksum>` (codes from before the rename, `DH1-`/`DH2-`,
+still import).
 
 ## Scenes, the camera, input
 

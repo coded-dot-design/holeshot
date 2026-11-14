@@ -94,10 +94,32 @@ test("profile: the export code goes round; a typo is caught", () => {
   p = buyBike(p, "razorhive").profile;
   p = choose(p, 0);
   const code = P.exportCode(p);
-  assert.match(code, /^DH2-[A-Za-z0-9_-]+-[0-9A-Z]{6}$/);
+  assert.match(code, /^HS2-[A-Za-z0-9_-]+-[0-9A-Z]{6}$/);
   assert.deepEqual(P.importCode(code).profile, p);
+  assert.deepEqual(P.importCode("DH2" + code.slice(3)).profile, p, "a code from before the rename (DH2-) still imports");
+  assert.ok("error" in P.importCode("XX2" + code.slice(3)), "any other prefix does not");
   assert.deepEqual(P.importCode(" " + code.slice(0, 20) + "\n" + code.slice(20) + " ").profile, p, "spaces and line breaks are fine");
   const typo = code.slice(0, 10) + (code[10] === "A" ? "B" : "A") + code.slice(11);
   assert.ok("error" in P.importCode(typo));
   assert.ok("error" in P.importCode("hello"));
+});
+
+test("profile: a local save from before the rename (\"dirt-hop:profile\") carries over to the HOLESHOT key", () => {
+  const s = mem();
+  const old = P.setup(P.fresh(), { starter: "sparkhound", paint: "sodium", number: 5, name: "kip" });
+  s.set("dirt-hop:profile", JSON.stringify({ ...old, v: 1, series: undefined }));
+  assert.equal(P.STORE_KEY, "holeshot:profile");
+  const { profile, newer } = P.load(s);
+  assert.equal(newer, false);
+  assert.deepEqual([profile.name, profile.bikes[0].model, profile.bikes[0].look.number, profile.v], ["KIP", "sparkhound", 5, P.VERSION], "the old save loads (and migrates)");
+  P.save(profile, s);
+  assert.deepEqual(P.load(s).profile, profile, "the next save is under the new key");
+  assert.ok(s.m.has("holeshot:profile"));
+  // The new key wins over the old one once it exists.
+  s.set("dirt-hop:profile", JSON.stringify({ ...old, name: "STALE" }));
+  assert.equal(P.load(s).profile.name, "KIP");
+  // A newer save under the old key is kept and not overwritten.
+  const n = mem();
+  n.set("dirt-hop:profile", JSON.stringify({ v: 99, name: "FUTURE" }));
+  assert.equal(P.load(n).newer, true);
 });

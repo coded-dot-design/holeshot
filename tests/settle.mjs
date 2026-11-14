@@ -1,4 +1,4 @@
-// Dirt Hop's settle guard (Chromium, dist/dirt-hop.mjs): on the menus nothing runs (no frames, no
+// Holeshot's settle guard (Chromium, dist/holeshot.mjs): on the menus nothing runs (no frames, no
 // audio before a gesture); mid-race, with nobody touching anything, the event never sleeps (the
 // rivals race, the clock keeps pace with the wall clock); scrolled off screen it pauses; the result
 // card over a finished event settles; after Recall no frame runs; the landing hero's race ends and
@@ -9,7 +9,7 @@ import { chromium } from "playwright";
 import { serve, launchOptions } from "./serve.mjs";
 
 const fixture = readFileSync("tests/fixtures/page.html", "utf8").replace("<p>After it.</p>", '<p>After it.</p><div style="height:3000px"></div>');
-const withGame = (o) => fixture.replace("</body>", `<script>const A = window.AudioContext; window.AudioContext = class extends A { constructor(...a) { super(...a); window.audio = (window.audio || 0) + 1; } };</script><script type="module">import { createDirtHop } from "/dist/dirt-hop.mjs"; window.game = createDirtHop({ host: document.getElementById("board"), seed: 4, ...${JSON.stringify(o)} });</script></body>`);
+const withGame = (o) => fixture.replace("</body>", `<script>const A = window.AudioContext; window.AudioContext = class extends A { constructor(...a) { super(...a); window.audio = (window.audio || 0) + 1; } };</script><script type="module">import { createHoleshot } from "/dist/holeshot.mjs"; window.game = createHoleshot({ host: document.getElementById("board"), seed: 4, ...${JSON.stringify(o)} });</script></body>`);
 const server = await serve(".", { "/": withGame({}), "/hero": withGame({ attract: true }) });
 const browser = await chromium.launch(launchOptions());
 const until = (p, fn, arg, what, timeout = 30000) => p.waitForFunction(fn, arg, { timeout, polling: 50 }).catch(() => assert.fail(`${what}: timed out`));
@@ -83,7 +83,7 @@ try {
   await until(q, () => game.run.engine.paused.includes("settled"), null, "after its race the hero settles", 150000);
   assert.equal(await frames(q), 0, "the hero sleeps");
   await q.close();
-  console.log("Dirt Hop: settle guard green (the menus, the series screen and the hero sleep, a race or a series round never does, off screen pauses, the result settles, quiet after Recall).");
+  console.log("Holeshot: settle guard green (the menus, the series screen and the hero sleep, a race or a series round never does, off screen pauses, the result settles, quiet after Recall).");
 } finally {
   await browser.close();
   await server.close();

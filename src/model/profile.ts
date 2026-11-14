@@ -10,7 +10,10 @@ import { PAINTS, SWATCHES, HELMETS, VISORS, PATTERNS, GRAPHICS, PLASTICS, PLATES
 import { freshSeries, normSeries, type SeriesSave } from "./series.ts";
 
 export const VERSION = 2;
-export const STORE_KEY = "dirt-hop:profile";
+export const STORE_KEY = "holeshot:profile";
+/** Where the game saved before it was called HOLESHOT (it was "Dirt Hop"): read when STORE_KEY is
+ *  empty, so a local save carries over; the next save writes STORE_KEY and the old key is left alone. */
+export const OLD_STORE_KEYS = ["dirt-hop:profile"];
 
 /** One bike in the garage: its model, each part's condition, its mod levels, its look. */
 export interface BikeSave {
@@ -211,7 +214,8 @@ export const local: Store = {
 };
 /** Load from the store: the profile, and whether a newer save sits there untouched. */
 export function load(store: Store = local): { profile: Profile; newer: boolean } {
-  const s = store.get(STORE_KEY);
+  let s = store.get(STORE_KEY);
+  for (const k of OLD_STORE_KEYS) s ||= store.get(k);
   if (!s) return { profile: fresh(), newer: false };
   let raw: unknown = null;
   try {
@@ -227,7 +231,8 @@ export function save(p: Profile, store: Store = local, newer = false) {
   if (!newer) store.set(STORE_KEY, JSON.stringify(p));
 }
 
-// ---- the export code: DH1-<base64url of the JSON>-<checksum> ----
+// ---- the export code: HS<version>-<base64url of the JSON>-<checksum> ----
+// Codes from before the rename start DH (DH1-, DH2-) and still import.
 const b64 = (s: string) => {
   const bytes = new TextEncoder().encode(s);
   let bin = "";
@@ -249,12 +254,12 @@ const sum = (s: string) => {
 /** The profile as a code to copy to another device. */
 export function exportCode(p: Profile) {
   const body = b64(JSON.stringify(normalize(p)));
-  return `DH${VERSION}-${body}-${sum(body)}`;
+  return `HS${VERSION}-${body}-${sum(body)}`;
 }
 /** A code back into a profile, or an error to show. */
 export function importCode(code: string): { profile: Profile } | { error: string } {
-  const m = /^DH(\d+)-([A-Za-z0-9_-]+)-([0-9A-Z]{6})$/.exec(code.replace(/\s+/g, ""));
-  if (!m) return { error: "That doesn't look like a Dirt Hop code." };
+  const m = /^(?:HS|DH)(\d+)-([A-Za-z0-9_-]+)-([0-9A-Z]{6})$/.exec(code.replace(/\s+/g, ""));
+  if (!m) return { error: "That doesn't look like a Holeshot code." };
   if (sum(m[2]!) !== m[3]) return { error: "The code has a typo in it (the check doesn't match)." };
   let raw: unknown;
   try {
@@ -263,6 +268,6 @@ export function importCode(code: string): { profile: Profile } | { error: string
     return { error: "The code is damaged." };
   }
   const p = migrate(raw);
-  if (!p) return { error: "That code is from a newer Dirt Hop. Update the game first." };
+  if (!p) return { error: "That code is from a newer Holeshot. Update the game first." };
   return { profile: p };
 }

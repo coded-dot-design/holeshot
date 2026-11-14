@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- **Renamed: Dirt Hop is now HOLESHOT.** Package `@coded-design/holeshot`, the build
+  `dist/holeshot.mjs` / `dist/holeshot.js` (`createHoleshot`, global `holeshot`), the site at
+  holeshot.domvirus.com. A local save under the old key loads and is saved under
+  `holeshot:profile`; export codes now start `HS2-`, and old `DH1-`/`DH2-` codes still import.
+- Phase 2 merged: the Race Series (a seeded, validated track generator; three championship tiers;
+  profile schema v2), four open Free Ride maps (Dune Sea, the Quarry, Forest Enduro, Night Park;
+  map 1 is the Neon Loop) and the full garage (tune choices, tyre compounds, five mods, wear,
+  failures and crash damage, the service log, a 16-bike showroom with trade-ins, six makers,
+  graphics, plates and outfits). Size budget 125,000 B gzip.
+
 ## 0.1.0
 
 - First playable: one bike, one garage, four events. A first-run setup (one starter of four

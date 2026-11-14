@@ -1,9 +1,9 @@
-// The site's stills, from the game itself (dist/dirt-hop.mjs) in Chromium: the hero's reduced-motion
+// The site's stills, from the game itself (dist/holeshot.mjs) in Chromium: the hero's reduced-motion
 // poster (shots/hero.jpg, 1600×900) and the share image (shots/og.jpg, 1200×630), both a moment of the
 // attract race. Run after `npm run build`: node scripts/shots.mjs (CHROMIUM_PATH optional).
 import { chromium } from "playwright";
 import { serve, launchOptions } from "../tests/serve.mjs";
-const page = `<!doctype html><html data-theme="dark"><body style="margin:0;background:#0d0b1c"><div id=h style="position:fixed;inset:0"></div><script type=module>import { createDirtHop } from "/dist/dirt-hop.mjs"; window.g = createDirtHop({ host: document.getElementById("h"), attract: true, sound: false });</script>`;
+const page = `<!doctype html><html data-theme="dark"><body style="margin:0;background:#0d0b1c"><div id=h style="position:fixed;inset:0"></div><script type=module>import { createHoleshot } from "/dist/holeshot.mjs"; window.g = createHoleshot({ host: document.getElementById("h"), attract: true, sound: false });</script>`;
 const s = await serve(".", { "/": page });
 const b = await chromium.launch(launchOptions());
 try {

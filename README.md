@@ -1,4 +1,4 @@
-# Dirt Hop
+# Holeshot
 
 **One bike. Every kind of dirt.** A dirt bike game on a tabletop: pick one bike, race it, fly it,
 wheelie it through town, and keep it alive in the garage with what you win. Tyres, rebuilds, mods,
@@ -6,10 +6,10 @@ paint and a rider kit. Neon at night, pastel by day.
 
 By [Chris Cooley](https://coded.design/) · built on [Fizlet](https://github.com/coded-dot-design/fizlet) · MIT
 
-- **Play:** https://dirthop.domvirus.com/play/
-- **About:** https://dirthop.domvirus.com/
+- **Play:** https://holeshot.domvirus.com/play/
+- **About:** https://holeshot.domvirus.com/
 
-Dirt Hop grew out of three pieces in Fizlet's Daily (Moto Track, Big Air and Wheelie City), which
+Holeshot grew out of three pieces in Fizlet's Daily (Moto Track, Big Air and Wheelie City), which
 shared one bike. Now they share one garage.
 
 ## The game
@@ -25,13 +25,16 @@ pick your jersey and a name. That bike rides every event.
 
 - **Race**: the gate, three laps of the Neon Loop (bermed turns, a rhythm section, whoops, a triple,
   the finish tabletop) against three rivals on stock bikes of your class. Places pay.
-- **Free Ride**: the park to yourself, no laps, no clock; END banks the session (a little pay for
-  saddle time, air and wheelies).
+- **Free Ride**: five maps to yourself (the Neon Loop, Dune Sea, the Quarry, Forest Enduro, Night
+  Park), no laps, no clock; END banks the session (a little pay for saddle time, air, wheelies and
+  tricks).
 - **Big Air**: a minute in the arena, two steel kickers. Hold TRICK in the air and the stick picks
   one of four tricks; weight all the way back flips it. Five judges score the run and pay.
 - **Wheelie City**: a minute on the block: wheelies, manuals, hops and stoppies, bonuses across
   crosswalks, through sprinklers and past a neighbour shaking a fist. Points pay.
-- **Series**: championships with a new track every round. Coming.
+- **Series**: three championship tiers (ROOKIE CUP, PRO CIRCUIT, NEON MASTERS) of four to six
+  rounds; every round is a new generated track, harder round by round, against named rivals on
+  modded bikes; points, prizes and a title bonus.
 
 **The garage.** Every event wears the bike: tyres lose grip, the chain stretches, a 2-stroke's top
 end (or a 4-stroke's engine, or a battery) loses pull, seals blow and it cases sooner, brakes fade.
@@ -60,11 +63,11 @@ export code to carry it to another device (paste it into IMPORT there). No accou
 ## As a module
 
 ```js
-import { createDirtHop } from "./dist/dirt-hop.mjs";
-const game = createDirtHop({ host: document.querySelector("#stage") }); // setup or the menu
+import { createHoleshot } from "./dist/holeshot.mjs";
+const game = createHoleshot({ host: document.querySelector("#stage") }); // setup or the menu
 game.start("race");                         // or "freeride", "bigair", "wheelie"
-createDirtHop({ host, attract: true });     // the landing hero: a race on the autopilot
-createDirtHop();                            // a layer over the whole page; Escape gives it back
+createHoleshot({ host, attract: true });     // the landing hero: a race on the autopilot
+createHoleshot();                            // a layer over the whole page; Escape gives it back
 ```
 
 ## Size
@@ -94,7 +97,7 @@ How the pieces fit (the mode interface, the bike and `tune()`, the economy file,
 mode): [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). CHROMIUM_PATH points the tests at a Chromium of
 your own.
 
-Custom domain: `pages.yml` builds with `SITE_URL=https://dirthop.domvirus.com` and `SITE_BASE=/`
+Custom domain: `pages.yml` builds with `SITE_URL=https://holeshot.domvirus.com` and `SITE_BASE=/`
 (repo variables override) and writes the `CNAME` from it.
 
 ## Licence

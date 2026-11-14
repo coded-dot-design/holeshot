@@ -1,4 +1,4 @@
-// Dirt Hop in Chromium (the built dist/dirt-hop.mjs), at 1440 (keyboard and mouse) and 390 (touch):
+// Holeshot in Chromium (the built dist/holeshot.mjs), at 1440 (keyboard and mouse) and 390 (touch):
 // a new rider gets the first-run setup (a starter of each class, paint, jersey, name, number; every
 // key 44 px or more), picks a bike with clicks and lands in the garage with the bike drawn; RIDE →
 // RACE starts the gate on that bike; the keys (Space) or the pad's GAS ride it; P or ❚❚ pauses (the
@@ -16,8 +16,8 @@ import { serve, launchOptions } from "./serve.mjs";
 import { START_CREDITS } from "../src/data/economy.ts";
 
 const fixture = readFileSync("tests/fixtures/page.html", "utf8");
-const full = `<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dirt Hop</title></head><body style="margin:0"><div id="game" style="position:fixed;inset:0"></div><script type="module">import { createDirtHop } from "/dist/dirt-hop.mjs"; window.game = createDirtHop({ host: document.getElementById("game"), seed: 5, sound: false });</script></body></html>`;
-const dropIn = fixture.replace("</body>", `<script type="module">import { createDirtHop } from "/dist/dirt-hop.mjs"; window.game = createDirtHop({ seed: 2, sound: false });</script></body>`);
+const full = `<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Holeshot</title></head><body style="margin:0"><div id="game" style="position:fixed;inset:0"></div><script type="module">import { createHoleshot } from "/dist/holeshot.mjs"; window.game = createHoleshot({ host: document.getElementById("game"), seed: 5, sound: false });</script></body></html>`;
+const dropIn = fixture.replace("</body>", `<script type="module">import { createHoleshot } from "/dist/holeshot.mjs"; window.game = createHoleshot({ seed: 2, sound: false });</script></body>`);
 const server = await serve(".", { "/": full, "/drop": dropIn, "/plain": fixture });
 const browser = await chromium.launch(launchOptions());
 const snap = (p) => p.evaluate(() => game.getSnapshot());
@@ -212,7 +212,7 @@ try {
     assert.equal(after, html.replace(/<script type="module">[\s\S]*?<\/script>/g, ""), "the page comes back byte for byte");
     await p.close();
   }
-  console.log("Dirt Hop: setup, garage, a race by keys and touch, pause, the payout and the wear, tyres, Free Ride, Big Air, Wheelie City on the same bike, the map picker and each open map (rides, holds its camera, banks, pays), leaving, reload and the export code, a fixed camera through URL-bar resizes, no page zoom, reduced motion, Recall; 1440 and 390.");
+  console.log("Holeshot: setup, garage, a race by keys and touch, pause, the payout and the wear, tyres, Free Ride, Big Air, Wheelie City on the same bike, the map picker and each open map (rides, holds its camera, banks, pays), leaving, reload and the export code, a fixed camera through URL-bar resizes, no page zoom, reduced motion, Recall; 1440 and 390.");
 } finally {
   await browser.close();
   await server.close();

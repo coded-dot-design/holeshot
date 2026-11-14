@@ -1,4 +1,4 @@
-// Dirt Hop's bike and rider, drawn: a low-poly dirt bike (or e-bike) and a rider in kit, built
+// Holeshot's bike and rider, drawn: a low-poly dirt bike (or e-bike) and a rider in kit, built
 // from @fzlt/core/diorama parts and posed each frame from ./bike.ts (the same file in Moto Track, Big
 // Air and Wheelie City). The bike: wheels that spin and ride their springs, a swingarm that follows
 // the rear axle, telescoping forks, tank and shrouds, seat, fenders, number plate, the engine (a

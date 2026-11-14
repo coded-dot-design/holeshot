@@ -1,4 +1,4 @@
-// The Race Series in Chromium (the built dist/dirt-hop.mjs), at 1440 (keyboard and mouse) and 390
+// The Race Series in Chromium (the built dist/holeshot.mjs), at 1440 (keyboard and mouse) and 390
 // (touch): SERIES shows three tiers (the Rookie Cup open, the others locked; keys 44 px or more, no
 // sideways scroll); ENTER opens the championship: the next round's track from above and the
 // standings; RIDE ROUND 1 races it (Space or the pad's GAS, then the autopilot) against the tier's
@@ -11,7 +11,7 @@ import { mkdirSync } from "node:fs";
 import { chromium } from "playwright";
 import { serve, launchOptions } from "./serve.mjs";
 
-const page = (theme) => `<!doctype html><html lang="en" data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Series</title></head><body style="margin:0"><div id="game" style="position:fixed;inset:0"></div><script type="module">import { createDirtHop } from "/dist/dirt-hop.mjs"; window.game = createDirtHop({ host: document.getElementById("game"), seed: 9, sound: false });</script></body></html>`;
+const page = (theme) => `<!doctype html><html lang="en" data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Series</title></head><body style="margin:0"><div id="game" style="position:fixed;inset:0"></div><script type="module">import { createHoleshot } from "/dist/holeshot.mjs"; window.game = createHoleshot({ host: document.getElementById("game"), seed: 9, sound: false });</script></body></html>`;
 const server = await serve(".", { "/": page("dark"), "/light": page("light") });
 const browser = await chromium.launch(launchOptions());
 const SHOTS = process.env.SHOTS;
@@ -100,7 +100,7 @@ try {
     assert.deepEqual(errs, [], `${name}: no page errors`);
     await ctx.close();
   }
-  console.log("Dirt Hop series: three tiers (one open), a championship's map and table, a round by keys and touch then the autopilot, the prize and the wear, the table after the round, a new track for round 2, leaving scores nothing, a reload keeps it; 1440 and 390.");
+  console.log("Holeshot series: three tiers (one open), a championship's map and table, a round by keys and touch then the autopilot, the prize and the wear, the table after the round, a new track for round 2, leaving scores nothing, a reload keeps it; 1440 and 390.");
 } finally {
   await browser.close();
   await server.close();

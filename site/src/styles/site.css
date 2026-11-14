@@ -1,4 +1,4 @@
-/* The Dirt Hop site: Board UI tokens (the Fizlet kit), flat colours, bold outlines, hard shadows. */
+/* The Holeshot site: Board UI tokens (the Fizlet kit), flat colours, bold outlines, hard shadows. */
 html.bui{--hot:#ff4fa8;--cyan:#22e6ff;--sun:#ffd166;--mono:ui-monospace,"SF Mono",Menlo,monospace;--round:ui-rounded,"SF Pro Rounded",Nunito,system-ui,sans-serif;background:var(--bg);color:var(--ink);scroll-padding-top:80px}
 html.bui[data-theme="light"]{--hot:#d81b72;--cyan:#0b8fa3;--sun:#b26a00}
 .bui body{margin:0;font:17px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}

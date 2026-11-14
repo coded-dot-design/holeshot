@@ -1,4 +1,4 @@
-// Dirt Hop's small kit (from Fizlet's Bikes gallery pieces: Moto Track, Big Air and Wheelie City): a
+// Holeshot's small kit (from Fizlet's Bikes gallery pieces: Moto Track, Big Air and Wheelie City): a
 // particle pool for diorama points (dirt, sparks), the engine's voice (an oscillator pair that
 // follows the revs, silent until a gesture and when muted), and a gamepad read (left stick: lean
 // and steer; triggers or face buttons: gas, brake, trick). Each is a brick candidate.

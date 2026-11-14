@@ -1,9 +1,9 @@
 {
-  "name": "@coded-design/dirt-hop",
+  "name": "@coded-design/holeshot",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Dirt Hop: one dirt bike, one garage, every kind of riding, on a tabletop. Built on Fizlet, by Chris Cooley.",
+  "description": "Holeshot: one dirt bike, one garage, every kind of riding, on a tabletop. Built on Fizlet, by Chris Cooley.",
   "license": "MIT",
   "author": "Chris Cooley (https://coded.design/)",
   "scripts": {

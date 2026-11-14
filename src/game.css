@@ -1,4 +1,4 @@
-/* Dirt Hop's shell: Board UI stickers (the Fizlet kit's tokens), flat neon colours, bold outlines,
+/* Holeshot's shell: Board UI stickers (the Fizlet kit's tokens), flat neon colours, bold outlines,
    hard shadows. The mode layer fills the stage (each mode's own sheet styles its scene); the cards
    (menus, the garage, pause, the result) sit over it. Phone first: the cards scroll, every key is
    44 px or more. No browser zoom on the play surface (touch-action: none). */

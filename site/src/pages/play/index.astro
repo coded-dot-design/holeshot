@@ -1,20 +1,20 @@
 ---
-// Dirt Hop, the game: the stage fills the screen under the header. ?mode=<id> starts that event at
+// Holeshot, the game: the stage fills the screen under the header. ?mode=<id> starts that event at
 // once (once the first-run setup is done).
 import Base from '../../layouts/Base.astro';
-const description = 'Play Dirt Hop: pick your one starter bike, then race, free ride, fly in Big Air and wheelie through the city. Earn credits, wear parts, rebuild and mod in the garage.';
+const description = 'Play Holeshot: pick your one starter bike, then race, free ride, fly in Big Air and wheelie through the city. Earn credits, wear parts, rebuild and mod in the garage.';
 ---
-<Base title="Play Dirt Hop" description={description} page="play" app>
+<Base title="Play Holeshot" description={description} page="play" app>
   <section class="play-stage" aria-labelledby="play-title">
-    <h1 id="play-title" class="sr">Play Dirt Hop</h1>
+    <h1 id="play-title" class="sr">Play Holeshot</h1>
     <div id="game" class="play-host"></div>
   </section>
 </Base>
 
 <script>
-  import { createDirtHop, MODES } from "../../../../dist/dirt-hop.mjs";
+  import { createHoleshot, MODES } from "../../../../dist/holeshot.mjs";
   const host = document.getElementById("game")!;
-  const game = createDirtHop({ host });
+  const game = createHoleshot({ host });
   const want = new URLSearchParams(location.search).get("mode");
   if (want && MODES.some((m: { id: string }) => m.id === want) && game.profile.bikes.length) game.start(want);
   (window as unknown as { game: unknown }).game = game;

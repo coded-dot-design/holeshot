@@ -9,13 +9,13 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { chromium } from "playwright";
 import { serve, launchOptions } from "./serve.mjs";
 
-const BASE = (process.env.SITE_BASE || "/dirt-hop").replace(/\/$/, "");
+const BASE = (process.env.SITE_BASE || "/holeshot").replace(/\/$/, "");
 const server = await serve("artifacts/pages", {}, BASE);
 const browser = await chromium.launch(launchOptions());
 const SHOTS = process.env.SHOTS;
 if (SHOTS) mkdirSync(SHOTS, { recursive: true });
 const until = (p, fn, arg, what, timeout = 20000) => p.waitForFunction(fn, arg, { timeout, polling: 50 }).catch(() => assert.fail(`${what}: timed out`));
-const gz = JSON.parse(readFileSync("dist/build.json", "utf8")).gzip["dirt-hop.mjs"];
+const gz = JSON.parse(readFileSync("dist/build.json", "utf8")).gzip["holeshot.mjs"];
 
 try {
   for (const [w, h, touch] of [[1440, 900, false], [390, 844, true]])
@@ -46,7 +46,7 @@ try {
       });
       assert.equal(m.theme, theme, `${at}: the theme`);
       assert.ok(m.drawn && m.hud, `${at}: the hero draws the race, no HUD over the copy`);
-      assert.equal(m.h1, "Dirt Hop.One bike. Every kind of dirt.", `${at}: the title and hook`);
+      assert.equal(m.h1, "Holeshot.One bike. Every kind of dirt.", `${at}: the title and hook`);
       assert.match(m.play, /\/play\/$/, `${at}: PLAY links to /play/`);
       assert.ok(m.playSize && m.sections && m.modes === 4 && m.by, `${at}: PLAY ≥ 44 px, four sections, four events, by Chris Cooley`);
       assert.ok(m.size.includes(`${gz.toLocaleString("en-US")} bytes gzip`), `${at}: the measured size (${gz} B)`);
@@ -80,7 +80,7 @@ try {
   await until(p, () => document.querySelector(".dt-poster img")?.complete, null, "reduced motion: the poster");
   assert.deepEqual(await p.evaluate(() => ({ poster: !document.querySelector(".dt-poster").hidden, game: !!document.querySelector("[data-fizlet-host]") })), { poster: true, game: false }, "reduced motion: a still poster, no game");
   await ctx.close();
-  console.log("Dirt Hop site: the hero races, the title, PLAY to /play/, four sections, the measured size, no sideways scroll, /play/ setup and ?mode=, the reduced-motion poster; 1440 and 390, dark and light.");
+  console.log("Holeshot site: the hero races, the title, PLAY to /play/, four sections, the measured size, no sideways scroll, /play/ setup and ?mode=, the reduced-motion poster; 1440 and 390, dark and light.");
 } finally {
   await browser.close();
   await server.close();

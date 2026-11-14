@@ -1,4 +1,4 @@
-// dist/dirt-hop.mjs (module) and dist/dirt-hop.js (one script for any page, global dirtHop): the game,
+// dist/holeshot.mjs (module) and dist/holeshot.js (one script for any page, global holeshot): the game,
 // the Fizlet bricks it uses (@fzlt/core, bundled: no runtime dependencies) and the Board UI kit's CSS.
 import { build, transform } from "esbuild";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -17,10 +17,10 @@ const kit = await css(require.resolve("@fzlt/core/ui/board-ui.css"));
 const common = {
   define: { __KIT_CSS__: JSON.stringify(kit), __GAME_CSS__: JSON.stringify(game) },
   bundle: true, minify: true, target: "es2022", legalComments: "none", logLevel: "warning",
-  banner: { js: `/* Dirt Hop ${version} · MIT © Chris Cooley · built on Fizlet ${core} */` },
+  banner: { js: `/* Holeshot ${version} · MIT © Chris Cooley · built on Fizlet ${core} */` },
 };
-await build({ ...common, entryPoints: ["src/index.ts"], format: "esm", outfile: "dist/dirt-hop.mjs" });
-await build({ ...common, entryPoints: ["src/index.ts"], format: "iife", globalName: "dirtHop", outfile: "dist/dirt-hop.js" });
+await build({ ...common, entryPoints: ["src/index.ts"], format: "esm", outfile: "dist/holeshot.mjs" });
+await build({ ...common, entryPoints: ["src/index.ts"], format: "iife", globalName: "holeshot", outfile: "dist/holeshot.js" });
 const size = (f) => gzipSync(readFileSync(f)).length;
-writeFileSync("dist/build.json", JSON.stringify({ version, fizlet: core, gzip: { "dirt-hop.mjs": size("dist/dirt-hop.mjs"), "dirt-hop.js": size("dist/dirt-hop.js") } }, null, 2) + "\n");
-console.log(`Built Dirt Hop ${version} on @fzlt/core ${core}: dist/dirt-hop.mjs, dist/dirt-hop.js`);
+writeFileSync("dist/build.json", JSON.stringify({ version, fizlet: core, gzip: { "holeshot.mjs": size("dist/holeshot.mjs"), "holeshot.js": size("dist/holeshot.js") } }, null, 2) + "\n");
+console.log(`Built Holeshot ${version} on @fzlt/core ${core}: dist/holeshot.mjs, dist/holeshot.js`);

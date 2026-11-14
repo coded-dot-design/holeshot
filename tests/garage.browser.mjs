@@ -1,4 +1,4 @@
-// The garage in Chromium (the built dist/dirt-hop.mjs), at 1440 (mouse) and 390 (touch), from a
+// The garage in Chromium (the built dist/holeshot.mjs), at 1440 (mouse) and 390 (touch), from a
 // saved profile with a part past its limit, worn tyres and crash damage: the garage says so (MAY
 // FAIL, the alert); RIDE asks before the event ("before you ride") and TO THE GARAGE goes back;
 // service the chain, a new set of soft tyres, straighten the bars, tall gearing, stage 1; the
@@ -13,7 +13,7 @@ import { serve, launchOptions } from "./serve.mjs";
 
 const MEDIA = process.env.MEDIA;
 if (MEDIA) mkdirSync(MEDIA, { recursive: true });
-const page = (theme) => `<!doctype html><html lang="en" data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dirt Hop</title></head><body style="margin:0"><div id="game" style="position:fixed;inset:0"></div><script type="module">import { createDirtHop } from "/dist/dirt-hop.mjs"; window.game = createDirtHop({ host: document.getElementById("game"), seed: 5, sound: false });</script></body></html>`;
+const page = (theme) => `<!doctype html><html lang="en" data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Holeshot</title></head><body style="margin:0"><div id="game" style="position:fixed;inset:0"></div><script type="module">import { createHoleshot } from "/dist/holeshot.mjs"; window.game = createHoleshot({ host: document.getElementById("game"), seed: 5, sound: false });</script></body></html>`;
 const server = await serve(".", { "/": page("dark"), "/day": page("light") });
 const browser = await chromium.launch(launchOptions());
 const SAVE = {
@@ -37,7 +37,7 @@ const layout = (p) => $(p, "(() => { const keys = [...root.querySelectorAll('.dh
 try {
   for (const [name, viewport, touch, path] of [["desktop", { width: 1440, height: 900 }, false, "/"], ["phone", { width: 390, height: 844 }, true, "/day"]]) {
     const ctx = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch, recordVideo: MEDIA && name === "phone" ? { dir: MEDIA, size: viewport } : undefined });
-    await ctx.addInitScript((s) => { if (!sessionStorage.getItem("seeded")) localStorage.setItem("dirt-hop:profile", s), sessionStorage.setItem("seeded", "1"); }, JSON.stringify(SAVE));
+    await ctx.addInitScript((s) => { if (!sessionStorage.getItem("seeded")) localStorage.setItem("holeshot:profile", s), sessionStorage.setItem("seeded", "1"); }, JSON.stringify(SAVE));
     const p = await ctx.newPage(), errs = [];
     p.on("pageerror", (e) => errs.push(e.message));
     await p.goto(server.url + path);
@@ -133,7 +133,7 @@ try {
     assert.deepEqual(errs, [], `${name}: no page errors`);
     await ctx.close();
   }
-  console.log("Dirt Hop garage: warnings and the before-you-ride card, service, tyre compounds, damage, tune, mods, the service log, try-on then buy, graphics, plate, helmet, outfits, the showroom (locked tiers, buy, sell); 1440 and 390.");
+  console.log("Holeshot garage: warnings and the before-you-ride card, service, tyre compounds, damage, tune, mods, the service log, try-on then buy, graphics, plate, helmet, outfits, the showroom (locked tiers, buy, sell); 1440 and 390.");
 } finally {
   await browser.close();
   await server.close();
