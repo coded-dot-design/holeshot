@@ -106,6 +106,42 @@ try {
       assert.equal(s.bike.model, "sparkhound", `${name}: ${id} on the player's bike`);
       assert.ok(s.bike.parts.tyres < pre.bike.parts.tyres, `${name}: ${id} wears it`);
     }
+    // ---- Free Ride's maps: RIDE → FREE RIDE opens the picker; each open map rides, holds its camera, banks and pays ----
+    await click(p, ".dh-result [data-go=ride]");
+    await click(p, "[data-mode=freeride]");
+    const pick = await p.evaluate(() => {
+      const root = document.querySelector("[data-fizlet-host]").shadowRoot, keys = [...root.querySelectorAll(".dh-mapk")];
+      return { screen: game.getSnapshot().screen, maps: keys.map((k) => k.dataset.map), big: keys.every((k) => Math.min(k.getBoundingClientRect().width, k.getBoundingClientRect().height) >= 44), sideways: root.querySelector(".dh-cards").scrollWidth > innerWidth + 1 };
+    });
+    assert.deepEqual(pick, { screen: "maps", maps: ["neon-park", "dune-sea", "quarry", "forest", "night-park"], big: true, sideways: false }, `${name}: the map picker`);
+    await until(p, () => [...document.querySelector("[data-fizlet-host]").shadowRoot.querySelectorAll(".dh-mapv")].every((c) => c.width > 30 && c.getContext("2d").getImageData(c.width >> 1, c.height >> 1, 1, 1).data[3] === 255), null, `${name}: every map's preview is drawn`);
+    await click(p, "[data-map=forest]");
+    s = await snap(p);
+    assert.deepEqual([s.screen, s.mode, s.run.map, s.run.phase], ["event", "freeride", "forest", "ready"], `${name}: a map key starts it`);
+    assert.equal(await p.evaluate(() => document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".mt-pos span").textContent), "FOREST ENDURO", `${name}: the HUD names the map`);
+    await p.evaluate(() => game.leave());
+    for (const id of ["dune-sea", "quarry", "forest", "night-park"]) {
+      const pre = await snap(p);
+      await p.evaluate((id) => game.start("freeride", { map: id, auto: true }), id);
+      await until(p, () => game.getSnapshot().run.speed > 2, null, `${name}: ${id} rides`);
+      const d0 = (await snap(p)).camera.dist;
+      await until(p, () => game.run.state.clock > 5, null, `${name}: ${id}: five seconds`);
+      const d1 = (await snap(p)).camera.dist;
+      assert.ok(Math.abs(d1 - d0) <= d0 * 0.08, `${name}: ${id}: the chase distance holds (${d0.toFixed(2)} → ${d1.toFixed(2)})`);
+      if (touch && id === "night-park")
+        for (const h of [780, 844, 760, 844]) {
+          await p.setViewportSize({ width: 390, height: h });
+          await p.waitForTimeout(260);
+          const c = (await snap(p)).camera;
+          assert.ok(Math.abs(c.dist - d0) <= d0 * 0.08, `${name}: ${id}: height ${h}: the chase framing holds (${c.dist} vs ${d0})`);
+        }
+      if (touch) await p.setViewportSize(viewport);
+      await click(p, ".mt-end");
+      await until(p, () => game.getSnapshot().screen === "result", null, `${name}: ${id}: END banks it`);
+      s = await snap(p);
+      assert.ok(s.result.finished && s.result.credits > 0 && s.credits === pre.credits + s.result.credits, `${name}: ${id} pays (${s.result.credits})`);
+      assert.ok(s.bike.parts.tyres < pre.bike.parts.tyres, `${name}: ${id} wears the bike`);
+    }
     // ---- leaving mid-event ----
     const pre = await snap(p);
     await p.evaluate(() => game.start("race", { auto: true }));
@@ -175,7 +211,7 @@ try {
     assert.equal(after, html.replace(/<script type="module">[\s\S]*?<\/script>/g, ""), "the page comes back byte for byte");
     await p.close();
   }
-  console.log("Dirt Hop: setup, garage, a race by keys and touch, pause, the payout and the wear, tyres, Free Ride, Big Air, Wheelie City on the same bike, leaving, reload and the export code, a fixed camera through URL-bar resizes, no page zoom, reduced motion, Recall; 1440 and 390.");
+  console.log("Dirt Hop: setup, garage, a race by keys and touch, pause, the payout and the wear, tyres, Free Ride, Big Air, Wheelie City on the same bike, the map picker and each open map (rides, holds its camera, banks, pays), leaving, reload and the export code, a fixed camera through URL-bar resizes, no page zoom, reduced motion, Recall; 1440 and 390.");
 } finally {
   await browser.close();
   await server.close();

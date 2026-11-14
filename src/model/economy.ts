@@ -48,6 +48,9 @@ export function payout(s: RunStats): [string, number][] {
     add("SADDLE TIME", t);
     add(`${s.air.toFixed(1)}s AIR`, a);
     add(`${s.wheelie.toFixed(1)}s WHEELIE`, w);
+    const fl = s.flips ?? 0, tr = Math.max(0, (s.tricks ?? 0) - fl);
+    add(`${tr} BIG ${tr === 1 ? "AIR" : "AIRS"}`, tr * P.perTrick);
+    add(`${fl} ${fl === 1 ? "FLIP" : "FLIPS"}`, fl * P.perFlip);
   }
   return L;
 }

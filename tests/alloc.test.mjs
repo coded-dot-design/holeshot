@@ -37,6 +37,18 @@ test("alloc: Free Ride with the meter, 3,000 steps", async () => {
   assert.ok(n <= 1, `${n} young-generation GCs`);
 });
 
+test("alloc: Free Ride on each open map with the meter, 3,000 steps", async () => {
+  const M = await import("../src/modes/freeride/maps.ts");
+  for (const def of M.RIDE_MAPS) {
+    const f = freeRun(M.makeMap(def), { power: t.power, shape: t.shape }), I = new Float64Array(5), m = meter("freeride");
+    const n = await measure(() => {
+      f.reset();
+      for (let i = 0; i < 3000; i++) (f.step(1 / 60, I, true), m.tick(f.riders[0], 1 / 60), f.clear());
+    });
+    assert.ok(n <= 1, `${def.id}: ${n} young-generation GCs`);
+  }
+});
+
 test("alloc: Big Air, a whole run", async () => {
   const sh = A.airShow(3, { power: t.power, shape: t.shape }), I = new Float64Array(6), m = meter("bigair");
   const n = await measure(() => {

@@ -5,7 +5,10 @@ import { readdirSync, readFileSync } from "node:fs";
 // 0.1.0: the first build measured 90,466 B (dirt-hop.mjs: the shell, the garage, four modes on three
 // scenes, the kernel, diorama,
 // terrain, drive, input, pad, sound, ui), plus about 5.5 KB of room.
-const BUDGET = 96_000;
+// Phase 2, Free Ride maps 2–5: 101,732 B measured (+11,248 B: four open maps' builders and data,
+// their scenery and looks, the map picker with previews); the budget rises to that plus the same
+// room.
+const BUDGET = 108_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

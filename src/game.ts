@@ -15,6 +15,7 @@ import { GARAGE_SLOTS, MODS, MOTOR_NAME, PARTS, PART_NAME, SERVICE_BELOW, type M
 import { HELMETS, PAINTS, PATTERNS, SWATCHES, VISORS, paint as paintOf, swatch, visor as visorOf, type KitSlot } from "./data/looks.ts";
 import { MODES, mode as modeOf } from "./modes/index.ts";
 import type { ModeCtx, ModeId, ModeRun, RunStats } from "./modes/mode.ts";
+import { mapsCard, paintMaps } from "./modes/freeride/picker.ts";
 import { exportCode, importCode, load, local, ready, riding, save, setup, fresh, type Profile, type Store, type RiderKit } from "./model/profile.ts";
 import { tune } from "./model/tune.ts";
 import { apply, pitFix, pitReady, settle, type ModeResult } from "./model/economy.ts";
@@ -34,7 +35,7 @@ export interface DirtHopOptions {
   theme?: "dark" | "light";
 }
 
-type Screen = "setup" | "menu" | "garage" | "ride" | "series" | "settings" | "event" | "result";
+type Screen = "setup" | "menu" | "garage" | "ride" | "maps" | "series" | "settings" | "event" | "result";
 const num = (n: number) => Math.round(n).toLocaleString("en-US");
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 const bar = (v: number, label: string) => `<span class="dh-bar" style="--v:${Math.max(0, Math.min(1, v)).toFixed(3)}" ${v < 0.35 ? " data-low" : ""}><em>${label}</em><i></i><b>${Math.round(v * 100)}%</b></span>`;
@@ -179,7 +180,7 @@ export function createDirtHop(o: DirtHopOptions = {}) {
     return `<div class="dh-card dh-garage" data-screen="garage">${head()}${tabs("garage")}<div class="dh-bay"><canvas-slot></canvas-slot><div><small>${CLASSES[m.cls].name} · ${CLASSES[m.cls].maker}</small><b class="dh-big">${m.name} <i>#${b.look.number}</i></b><p class="dh-sub">${esc(m.blurb)}</p><div class="dh-slots" role="group" aria-label="Your bikes">${bikes}</div></div></div><nav class="dh-seg" aria-label="Garage">${([["bike", "PARTS & MODS"], ["look", "PAINT & KIT"], ["showroom", "SHOWROOM"]] as const).map(([v, tx]) => `<button type="button" class="bui-key" data-gtab="${v}" aria-pressed="${v === garageTab}">${tx}</button>`).join("")}</nav>${body}<p class="dh-sub dh-note" role="status">${esc(note)}</p></div>`;
   }
   function rideCard() {
-    return `<div class="dh-card dh-ridec" data-screen="ride">${head()}${tabs("ride")}<p class="dh-sub">On your ${bikeLine()}.</p><ul class="dh-modes">${MODES.map((md) => `<li><button type="button" class="bui-key dh-modek" data-mode="${md.id}"><b>${md.name}</b><small>${md.blurb}</small><em>${md.maps[0]!.name}</em></button></li>`).join("")}</ul></div>`;
+    return `<div class="dh-card dh-ridec" data-screen="ride">${head()}${tabs("ride")}<p class="dh-sub">On your ${bikeLine()}.</p><ul class="dh-modes">${MODES.map((md) => `<li><button type="button" class="bui-key dh-modek" data-mode="${md.id}"><b>${md.name}</b><small>${md.blurb}</small><em>${md.maps.length > 1 ? `${md.maps.length} MAPS` : md.maps[0]!.name}</em></button></li>`).join("")}</ul></div>`;
   }
   function seriesCard() {
     return `<div class="dh-card" data-screen="series">${head()}${tabs("series")}<b class="dh-h">SERIES · COMING</b><p class="dh-sub">Championships of rounds, a new track every race, rivals and a points table. Not yet: ride RACE to get your bike ready.</p></div>`;
@@ -203,12 +204,13 @@ export function createDirtHop(o: DirtHopOptions = {}) {
   function show(s: Screen) {
     screen = s;
     if (s !== "event" && s !== "result" && run) run.destroy(), (run = null), (modeEl.textContent = "");
-    const html = s === "setup" ? setupCard() : s === "menu" ? menuCard() : s === "garage" ? garageCard() : s === "ride" ? rideCard() : s === "series" ? seriesCard() : s === "settings" ? settingsCard() : s === "result" ? resultCard() : paused ? pauseCard() : "";
+    const html = s === "setup" ? setupCard() : s === "menu" ? menuCard() : s === "garage" ? garageCard() : s === "ride" ? rideCard() : s === "maps" ? mapsCard(head(), tabs("ride")) : s === "series" ? seriesCard() : s === "settings" ? settingsCard() : s === "result" ? resultCard() : paused ? pauseCard() : "";
     cards.innerHTML = html;
     cards.hidden = !html;
     stage.toggleAttribute("data-menu", s !== "event" && s !== "result");
     const slot = cards.querySelector("canvas-slot");
     if (slot) slot.replaceWith(pv), (pvKey = ""), requestAnimationFrame(preview);
+    if (s === "maps") paintMaps(cards, pageTheme() === "dark");
     note = "";
     const first = cards.querySelector<HTMLElement>(".dh-go, [aria-pressed=true], button, input");
     if (s !== "event") first?.focus({ preventScroll: true });
@@ -290,7 +292,8 @@ export function createDirtHop(o: DirtHopOptions = {}) {
     if (d.dress) return did(dress(profile, d.dress as KitSlot, d.id!), "Done");
     if (d.number !== undefined) return did(dress(profile, "number", (cards.querySelector<HTMLInputElement>(".dh-numin")!).value), "Number set");
     if (d.bike) return did(buyBike(profile, d.bike), "Bought");
-    if (d.mode) return startEvent(d.mode as ModeId);
+    if (d.mode) return d.mode === "freeride" ? show("maps") : startEvent(d.mode as ModeId);
+    if (d.map) return startEvent("freeride", { map: d.map });
     if (t.classList.contains("dh-resume")) return setPaused(false);
     if (t.classList.contains("dh-leave")) return leave();
     if (t.classList.contains("dh-again")) return startEvent(runMode, { map: runMap });
