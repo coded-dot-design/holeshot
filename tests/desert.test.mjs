@@ -144,3 +144,36 @@ test("profile: best distance (v2 → v3 → v4 → v5) and apply keeps the best"
   assert.equal(q.stats.far.desert, 3200, "a shorter ride keeps the best");
   assert.ok(settle(ride(3200), b).lines.some((l) => l[0] === "3.20 KM"), "the distance pays a line");
 });
+
+test("crests (adaptive split): the ground the bike rides is the face terrainView draws, flipped cells and all", async () => {
+  const { terrain } = await import("@fzlt/core/terrain");
+  const BI = (await import("../src/modes/desert/track.ts")).BIOMES;
+  for (const b of BI) {
+    const w = Wm.world(b.seed, undefined, undefined, undefined, b.bi), t = w.t;
+    w.follow(137.3, -88.1);
+    const ref = terrain({ cols: t.cols, rows: t.rows, cell: t.cell, x0: t.x0, z0: t.z0, heights: t.h, split: "adaptive" });
+    assert.equal(t.split, "adaptive", `${b.id}: the window says so (terrainView reads it)`);
+    let flipped = 0, n = 0, worst = 0;
+    const W1 = t.cols + 1;
+    for (let j = 0; j < t.rows; j++) for (let i = 0; i < t.cols; i++) {
+      const k = j * W1 + i, a = t.h[k], bb = t.h[k + 1], cc = t.h[k + W1 + 1], d = t.h[k + W1];
+      const flip = Math.abs(bb - d) < Math.abs(cc - a);
+      if (flip) flipped++;
+      // Both triangles of the cell (either side of either diagonal), and the corners.
+      for (const [fu, fv] of [[0.2, 0.3], [0.7, 0.6], [0.3, 0.2], [0.6, 0.7], [0.5, 0.49], [0.9, 0.05]]) {
+        const x = t.x0 + (i + fu) * t.cell, z = t.z0 + (j + fv) * t.cell;
+        worst = Math.max(worst, Math.abs(t.height(x, z) - ref.height(x, z)));
+        n++;
+      }
+    }
+    assert.ok(flipped > t.cols * t.rows * 0.1, `${b.id}: flipped cells (${flipped} of ${t.cols * t.rows})`);
+    assert.ok(worst < 1e-9, `${b.id}: the bike's ground = the drawn face at ${n} points (worst ${worst})`);
+    // The slope too: the normal the bike reads is the drawn face's.
+    const N1 = [0, 0, 0], N2 = [0, 0, 0];
+    for (let q = 0; q < 200; q++) {
+      const x = t.x0 + ((q * 7.31) % (t.cols * t.cell)), z = t.z0 + ((q * 3.77) % (t.rows * t.cell));
+      t.normal(x, z, N1); ref.normal(x, z, N2);
+      assert.ok(Math.abs(N1[0] - N2[0]) + Math.abs(N1[1] - N2[1]) + Math.abs(N1[2] - N2[2]) < 1e-9, `${b.id}: normal at ${x}, ${z}`);
+    }
+  }
+});

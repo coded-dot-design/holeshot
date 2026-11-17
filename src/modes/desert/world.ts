@@ -226,7 +226,7 @@ export function world(seed: number, WIN = WIN0, CELL = CELL0, STEP = STEP0, biom
   // OX, OZ: the window's first vertex, in cells (integers); stats: slides, vertices computed.
   const O = new Int32Array(2), N = new Float64Array(2);
   const t = {
-    cols: WIN, rows: WIN, cell: CELL, x0: 0, z0: 0, h, kind, version: 0,
+    cols: WIN, rows: WIN, cell: CELL, x0: 0, z0: 0, h, kind, version: 0, split: "adaptive" as const,
     height: (x: number, z: number) => (face(x, z), F[0]!),
     normal<O extends { [i: number]: number }>(x: number, z: number, out: O) {
       face(x, z);
@@ -247,11 +247,15 @@ export function world(seed: number, WIN = WIN0, CELL = CELL0, STEP = STEP0, biom
     const u = Math.min(WIN, Math.max(0, (x - x0) / c)), v = Math.min(WIN, Math.max(0, (z - z0) / c));
     const i = Math.min(WIN - 1, Math.floor(u)), j = Math.min(WIN - 1, Math.floor(v)), fu = u - i, fv = v - j, k = j * W1 + i;
     const a = h[k]!, b = h[k + 1]!, cc = h[k + W1 + 1]!, d = h[k + W1]!;
-    const sx = fu >= fv ? b - a : cc - d, sz = fu >= fv ? cc - b : d - a;
-    F[0] = a + sx * fu + sz * fv;
+    // The adaptive split (@fzlt/core/terrain's split: "adaptive", the rule the view draws): each cell
+    // along the diagonal whose two ends are closer in height (b–d when |b − d| < |cc − a|; a tie keeps
+    // the fixed a–cc), so a crest is one straight fold and the bike rides exactly the drawn face.
+    const fl = Math.abs(b - d) < Math.abs(cc - a), up = fl ? fu + fv > 1 : fu >= fv;
+    const sx = up !== fl ? b - a : cc - d, sz = up ? cc - b : d - a;
+    F[0] = a + sx * fu + sz * fv + (fl && up ? b - a - sx : 0);
     F[1] = sx / c;
     F[2] = sz / c;
-    return (j * WIN + i) * 2 + (fu >= fv ? 0 : 1);
+    return (j * WIN + i) * 2 + (up ? 0 : 1);
   }
   /** Fill rows j0..j1 and columns i0..i1 (vertex indices) from the pure ground. */
   function fill(i0: number, i1: number, j0: number, j1: number) {

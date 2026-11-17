@@ -18,7 +18,16 @@
   is built before it moves to its slot, and the headless patrol and unstuck tests ride it). Golden:
   the four fixed-session hashes go, one "endless wheelie city ride" comes; every other hash is as it
   was.
-- Size: 174,039 B gzip (holeshot.js, +3,851 B), budget 174,000 → 178,000 B (scripts/size.mjs has
+- **Smooth crests (ENDLESS grounds), on Fizlet 0.26.0.** `@fzlt/core` ^0.25.0 → ^0.26.0; the
+  endless grounds' `terrainView` draws with `split: "adaptive"` (each cell along the diagonal whose
+  ends are closer in height; a tie keeps the fixed one), and the window's own `height` / `normal` /
+  `sample` (`src/modes/desert/world.ts` `face()`) use the same rule, so the bike rides exactly the
+  drawn face: a dune's crest is one straight fold, not stair-steps. Test
+  (`tests/desert.test.mjs`): on every ground (45–61 % of the window's cells flipped), the
+  bike's height equals the brick's adaptive terrain at six points a cell and the normals match.
+  No golden hash changed (no golden case rides the endless window; the race, maps, jams, Big Air
+  and the city keep the fixed split).
+- Size: 174,328 B gzip (holeshot.js, +4,140 B), budget 174,000 → 178,000 B (scripts/size.mjs has
   the reasons).
 - **The throttle rocker (every mode, touch).** Gas and brake leave the round keys for one tall pill
   under the right thumb (`src/bike/rocker.ts`, at least 72 × 150 px, safe-area aware): the top is

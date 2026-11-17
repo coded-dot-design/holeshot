@@ -67,7 +67,7 @@ try {
     assert.ok(/ROUND 1 · /.test(s.result.lines[0][0]), `${name}: the prize line (${s.result.lines[0][0]})`);
     assert.ok(Object.values(s.bike.parts).every((v) => v < 1), `${name}: and wears the bike`);
     assert.equal(s.series.round, 1);
-    assert.equal(s.series.points.reduce((a, b) => a + b, 0), 25 + 18 + 15 + 12, `${name}: all four scored`);
+    assert.equal(s.series.points.reduce((a, b) => a + b, 0), 25 + 18 + 15 + 12, `${name}: all four scored (${JSON.stringify(s.series.points)} ${JSON.stringify(s.series)})`);
     const after = await q(p, `(root) => ({ rows: root.querySelectorAll(".ds-after tbody tr").length, cap: root.querySelector(".ds-after caption").textContent, next: root.querySelector(".dh-result [data-go=series]").textContent })`);
     assert.deepEqual(after, { rows: 4, cap: "AFTER ROUND 1 OF 4", next: "ROUND 2" }, `${name}: the table after round 1`);
     await shot(p, `${name}-result-dark`);

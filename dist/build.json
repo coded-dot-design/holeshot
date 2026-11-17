@@ -1,8 +1,8 @@
 {
   "version": "0.3.0",
-  "fizlet": "0.25.0",
+  "fizlet": "0.26.0",
   "gzip": {
-    "holeshot.mjs": 173819,
-    "holeshot.js": 174039
+    "holeshot.mjs": 174118,
+    "holeshot.js": 174328
   }
 }

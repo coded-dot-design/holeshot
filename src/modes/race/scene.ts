@@ -200,6 +200,9 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     tv = terrainView(dio, t, {
       bands: endless ? desertBands(P, endless.biome.bi) : look ? look.bands(P as Parameters<typeof look.bands>[0]) : [[0.45, P.ground[0]!], [0.85, P.ground[1]!], [1.25, P.ground[2]!], [99, P.crest]], steep: 0.5, steepColor: P.steep, kinds: look ? look.kinds(P as Parameters<typeof look.kinds>[0]) : [P.track, P.face],
       light: P.light, ambient: P.amb, lod: endless ? [14, 26] : [24, 44], shadows: RIDERS + 1, shadowColor: P.shadow,
+      // The endless grounds split each cell along its flatter diagonal (crests fold straight); the
+      // window's own height queries (../desert/world.ts) use the same rule, so the bike rides the drawn face.
+      split: endless ? "adaptive" : "fixed",
     });
     if (dv) {
       dv.build(P);
