@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+- **Wheelie City's ground no longer drops out.** At some headings the lawn, sidewalks and roads around
+  the bike vanished and the canal showed through (the owner, light mode). The diorama skips a face with
+  any corner behind the camera's near plane, and the island's lawn (98 × 28), its top and the long
+  roads and sidewalks were one face each, so with the chase camera over one the whole piece went.
+  Under every ground piece longer than 4 units the same top now lies in tiles of at most 4 (top faces
+  only, a hair lower in the sort): hidden under the piece while it draws (no seams), there when it is
+  skipped. Render only, built once with the scene (nothing per frame); about 1.5 to 2.1× the faces in
+  a frame (at most 6,252 measured, budget 16,384, none dropped). Test: `tests/ground.browser.mjs`
+  (2 hoods × 4 spots incl. the canal bank × 16 headings, 1440 and 390: no water or sky on the island
+  around and ahead of the bike; before the fix, 100+ cases failed); a `probe.spot` for it.
+
+- **The far leg goes behind the bike.** The rider's legs and arms drew over the whole bike (one layer
+  above every bike part), so at many camera angles the far leg and arm showed over the frame, tank and
+  seat, as if both legs were on the near side (a scooter look; plain when walking it). Each side's leg
+  and arm now hang from a side group at the hip's offset across the bike, which drops under every bike
+  part while it is on the far side (the diorama's `behind`, judged from the eye each draw): every yaw
+  and view (chase, garage turntable), every pose (seated, standing, wheelie, hand drag, walking,
+  crashed). Render only, no allocation per frame; physics and golden hashes unchanged. Test:
+  `tests/legs.browser.mjs` (16 yaws × 2 pitches × 6 poses: the far limbs 0 % drawn over the bike where
+  they overlap it, the near ones ≥ 83 % over it; before the fix, up to 100 %).
+
 - **Walk the bike.** Stopped (under 1.5 m/s), no gas, no brake, the weight held (W/S, ↑/↓, the pad's
   stick) for 0.15 s: the rider puts a foot down and pushes the bike at 1.25 m/s that way, backwards
   too, the steer turning the push; let go and the feet stop it, the gas rides on at once. Slower up a

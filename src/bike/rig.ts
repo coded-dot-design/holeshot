@@ -47,6 +47,9 @@ const PI = Math.PI;
 // Bike-frame points (x forward, y up, from the centre of mass): the swingarm pivot, the steering head,
 // the grips, the pegs, the seat.
 const PIVOT = [-0.08, -0.3], HEAD = [0.5, 0.14], GRIP = [0.42, 0.33], PEG = [-0.06, -0.33], SEAT = [-0.22, 0.12];
+/** Layers a side's leg and arm drop by on the far side of the bike: from 7 (over the bike's parts,
+ *  5 and 6) to 0.5 (under all of them, the wheels' rims at 1 included). */
+const SIDE_DROP = 6.5;
 const THIGH = 0.4, SHIN = 0.42, UPPER = 0.29, FORE = 0.29, TORSO = 0.46;
 
 /** Bones and the solved joints, reused (no allocation per pose). */
@@ -183,15 +186,20 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
   if (helmet === "spike") for (let i = 0; i < 3; i++) part([0.05, 0.08, 0.04], [-0.08 + i * 0.08, 0.2 - i * 0.01, 0], C.stripe, { shape: "cyl", sides: 4, top: 0, on: id + ":h", layer: 7 });
   if (helmet === "retro") part([0.06, 0.05, 0.28], [0.02, 0.04, 0], C.stripe, { on: id + ":h", layer: 6 });
   else part([0.14, 0.11, 0.16], [0.17, -0.06, 0], C.helmet, { shape: "wedge", rot: [0, PI, 0], on: id + ":h" });
+  // Each side's leg and arm hang from a side group at the hip's offset across the bike (x 0, y 0, z
+  // ±0.15: nothing along it, so the test is which side of the bike's centre plane the eye is on, at any
+  // yaw and pitch). On the far side it drops under every bike part (`behind`: 7 → 0.5), so the far leg
+  // and arm draw behind the frame, tank, seat and wheels; the near side stays over them (layer 7).
   const thigh: DioramaObject[] = [], shin: DioramaObject[] = [], upper: DioramaObject[] = [], fore: DioramaObject[] = [];
   for (let s = 0; s < 2; s++) {
     const z = s ? 0.15 : -0.15, k = id + (s ? "R" : "L");
-    thigh.push(bone(k + "th", THIGH, 0.16, z, C.pants));
-    const sh = bone(k + "sh", SHIN, 0.14, z, C.boots);
+    d.add({ id: k + "sd", shape: "group", size: [0.2, 0, 0.2], pos: [0, 0, z], on: rid, layer: 5, behind: SIDE_DROP, pick: false });
+    thigh.push(bone(k + "th", THIGH, 0.16, 0, C.pants, k + "sd"));
+    const sh = bone(k + "sh", SHIN, 0.14, 0, C.boots, k + "sd");
     part([0.22, 0.09, 0.15], [SHIN - 0.02, -0.08, 0], C.boots, { on: k + "sh" });
     shin.push(sh);
-    upper.push(bone(k + "ua", UPPER, 0.11, z * 1.3, C.jersey));
-    const fa = bone(k + "fa", FORE, 0.1, z * 1.5, C.jersey);
+    upper.push(bone(k + "ua", UPPER, 0.11, z * 0.3, C.jersey, k + "sd"));
+    const fa = bone(k + "fa", FORE, 0.1, z * 0.5, C.jersey, k + "sd");
     part([0.09, 0.1, 0.1], [FORE, -0.05, 0], C.gloves, { on: k + "fa" });
     fore.push(fa);
   }
@@ -265,8 +273,9 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
       }
       ik(hx, hy, px, py, THIGH, SHIN, 1);
       const lz = side * (0.15 + spread * 0.55 + (loose ? 0.15 : 0));
-      thigh[s]!.pos[0] = hx; thigh[s]!.pos[1] = hy; thigh[s]!.pos[2] = side * 0.15 + (lz - side * 0.15) * 0.5; thigh[s]!.rot[2] = J[0]!;
-      shin[s]!.pos[0] = J[2]!; shin[s]!.pos[1] = J[3]!; shin[s]!.pos[2] = lz; shin[s]!.rot[2] = J[1]!;
+      // (z from the side group at side × 0.15.)
+      thigh[s]!.pos[0] = hx; thigh[s]!.pos[1] = hy; thigh[s]!.pos[2] = (lz - side * 0.15) * 0.5; thigh[s]!.rot[2] = J[0]!;
+      shin[s]!.pos[0] = J[2]!; shin[s]!.pos[1] = J[3]!; shin[s]!.pos[2] = lz - side * 0.15; shin[s]!.rot[2] = J[1]!;
       thigh[s]!.rot[0] = -side * spread * 0.9;
       shin[s]!.rot[0] = -side * spread * 0.9;
       // Arms: shoulder to grip (elbow out and down); hands off, they go up and out.
@@ -275,8 +284,8 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
       const dr = s === 0 ? DG[0]! : 0, reach = (UPPER + FORE) * 0.98;
       ik(sx, sy, gx + (sx + DG[1]! * reach - gx) * dr, gy + (sy + DG[2]! * reach - gy) * dr, UPPER, FORE, -1);
       const az = side * (0.2 + arms * 0.45 * hands + (loose ? 0.2 : 0) + dr * 0.35);
-      upper[s]!.pos[0] = sx; upper[s]!.pos[1] = sy; upper[s]!.pos[2] = side * 0.19; upper[s]!.rot[2] = J[0]!;
-      fore[s]!.pos[0] = J[2]!; fore[s]!.pos[1] = J[3]!; fore[s]!.pos[2] = az; fore[s]!.rot[2] = J[1]!;
+      upper[s]!.pos[0] = sx; upper[s]!.pos[1] = sy; upper[s]!.pos[2] = side * 0.04; upper[s]!.rot[2] = J[0]!;
+      fore[s]!.pos[0] = J[2]!; fore[s]!.pos[1] = J[3]!; fore[s]!.pos[2] = az - side * 0.15; fore[s]!.rot[2] = J[1]!;
       upper[s]!.rot[0] = fore[s]!.rot[0] = -side * arms * hands * 0.8;
     }
   }

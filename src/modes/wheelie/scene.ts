@@ -209,6 +209,9 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   /** The corner store's building (THE BLOCK's sign). */
   const STORE = (() => { for (let h = 0; h < NH; h++) if (HOUSES[h * 8 + 6] === L_STORE) return h; return 0; })();
 
+  /** The longest side of a ground tile under a big flat piece (see G in buildScene): short enough that
+   *  the tile under the chase camera, skipped for a corner behind it, never reaches into the frame. */
+  const TILE = 4;
   function buildScene() {
     dio.clear();
     rigs.length = nbs.length = arms.length = sprHeads.length = units.length = kinds.length = lites.length = 0;
@@ -222,7 +225,18 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     let hk = -1;
     const keep = (o: DioramaObject, flat = false) => (hk >= 0 && (HR[hk]!.push(o), flat || UP[hk]!.push(o)), o);
     const add = (d: DioramaObjectDef) => (d.on ? dio.add(d) : keep(dio.add(d), d.cluster === "ground"));
-    const G = (size: number[], pos: number[], color: string, layer: number, emissive = false) => keep(dio.add({ size, pos, color, cluster: "ground", layer, emissive, pick: false }), true);
+    // A ground piece. The diorama skips a face with any corner behind the camera's near plane, so a big
+    // flat piece (the lawn is 98 × 28) vanished whole when the chase camera stood over it, and the canal
+    // showed through. Under each one longer than TILE, the same top in TILE-sized tiles (top faces only,
+    // a hair lower in the sort): covered by the piece while it draws (no seams), there when it is skipped.
+    const G = (size: number[], pos: number[], color: string, layer: number, emissive = false) => {
+      const o = keep(dio.add({ size, pos, color, cluster: "ground", layer, emissive, pick: false }), true);
+      if ((size[0]! > TILE || size[2]! > TILE) && size[1]! < 0.5) {
+        const nx = Math.ceil(size[0]! / TILE), nz = Math.ceil(size[2]! / TILE), w = size[0]! / nx, d = size[2]! / nz;
+        for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) keep(dio.add({ size: [w, size[1]!, d], pos: [pos[0]! - size[0]! / 2 + w * (i + 0.5), pos[1]!, pos[2]! - size[2]! / 2 + d * (j + 0.5)], color, cluster: "ground", layer: layer - 0.05, emissive, mask: 1, pick: false }), true);
+      }
+      return o;
+    };
     for (let k = 0; k < NHOOD; k++) {
       hk = k;
       const hd = HOODS[k]!, cx = CX[k]!, cz = CZ[k]!, [lawn, walk, road] = P.hood[k]!;
@@ -1467,6 +1481,29 @@ export function mountCity(ctx: ModeCtx): ModeRun {
         engine.busy(1);
         engine.wake();
         return [x, z];
+      },
+      /** Put the bike at (lx, lz) from slot k's centre facing `yaw`, the chase camera snapped behind it;
+       *  returns the faces drawn last frame and, for a grid of ground points around and ahead of the
+       *  bike that lie on the island's lawn, their screen places (CSS px): [x, y, …]. */
+      spot(k: number, lx: number, lz: number, yaw: number) {
+        run.place(k * PITCH + lx, lz, yaw);
+        show();
+        CTP[0] = bike.b.pos[0]!; CTP[1] = Math.max(0, bike.b.pos[1]!); CTP[2] = bike.b.pos[2]!; target.yaw = bike.b.yaw;
+        chase(dio.cam, target, { ...chaseO, snap: true });
+        dio.draw();
+        const out: number[] = [], fx = Math.cos(yaw), fz = -Math.sin(yaw), TR = HOODS[slotKind(k)]!.terr;
+        for (let a = -2; a <= 8; a += 1) for (let s = -3; s <= 3; s += 1.5) {
+          const x = lx + fx * a - fz * s, z = lz + fz * a + fx * s;
+          if (Math.abs(x) > HX - 0.4 || Math.abs(z) > HZ - 0.4 || (Math.abs(a) < 1.6 && Math.abs(s) < 1.6)) continue;
+          let on = false; // (not on the hood's own water or a terrace)
+          for (let o = 0; o < TR.length && !on; o += 6) on = x > TR[o]! - 0.5 && x < TR[o + 2]! + 0.5 && z > TR[o + 1]! - 0.5 && z < TR[o + 3]! + 0.5;
+          if (on) continue;
+          if (dio.project(k * PITCH + x, CURB, z, PJ) && PJ[0]! > 2 && PJ[1]! > 2 && PJ[0]! < dio.width - 2 && PJ[1]! < dio.height - 2) out.push(PJ[0]!, PJ[1]!);
+        }
+        dirty = true;
+        engine.busy(1);
+        engine.wake();
+        return { faces: dio.stats.faces, dropped: dio.stats.dropped, pts: out };
       },
       /** Draw now, x-rayed (see XR) and with the rider shown or not: the frame's pixels are the test's. */
       draw(xr = 0, rider = 1) {
