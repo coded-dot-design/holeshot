@@ -1,6 +1,6 @@
 // Endless Wheelie City in Chromium: a building between the chase camera and the bike is ghosted.
-// The owner's case: the bike just out from a downtown tower's front, riding away from it, so the
-// tower fills the screen in front of the camera. Render-sampled at 1440 and 390: the bike's pixels
+// The owner's case: the bike just out from a tall building's front (a tower or the flats in the
+// first town), riding away from it, so the building fills the screen in front of the camera. Render-sampled at 1440 and 390: the bike's pixels
 // (where the frame with the rider differs from the one without, buildings hidden) are compared in the
 // frame as drawn with the same frame drawn solid; at least 80 % of them must read as the bike, not the
 // building. The tower is ghosted (its level in the probe); ridden clear, it is solid again.
@@ -53,7 +53,8 @@ try {
       await until(p, () => window.game && game.getSnapshot().screen !== "setup", null, `${name}: mounts`);
       await p.evaluate(() => game.start("endcity"));
       await until(p, () => game.run && game.getSnapshot().run.phase === "ready", null, `${name}: on the line`);
-      const tower = await p.evaluate(() => game.run.probe.towers()[3]);
+      const tower = await p.evaluate(() => game.run.probe.towers()[0]);
+      assert.ok(tower != null, `${name}: a tall building in the first town`);
       // ---- the owner's case: the tower right in front of the camera, the bike beyond it ----
       if (reduced) {
         await p.evaluate((h) => game.run.probe.behind(h, 2), tower);
@@ -77,7 +78,7 @@ try {
         M.push(`${tag}: ${(m.visible * 100).toFixed(0)} % visible (solid: ${(m.solidCover * 100).toFixed(0)} % covered)`);
       }
       // ---- ridden clear (the bike out on the open street, facing along it): solid again ----
-      await p.evaluate(() => game.run.probe.behind(0, 4, 0));
+      await p.evaluate((h) => game.run.probe.behind(h, 22), tower);
       await until(p, (h) => !game.run.probe.ghosts().includes(h) || game.run.probe.ghosts().indexOf(h) % 2 === 1, tower, `${name}: the tower is solid again`);
       assert.deepEqual(errs, [], `${name}: no page errors`);
       console.log(`${name}: ${M.join(" · ")}; solid again when clear.`);

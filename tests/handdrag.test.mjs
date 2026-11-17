@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import { minorGCs } from "./gc.mjs";
 
 const W = await import("../src/modes/wheelie/city.ts");
+const O = await import("../src/modes/wheelie/roam.ts");
 const R = await import("../src/modes/wheelie/ride.ts");
 const T = await import("../src/modes/wheelie/tricks.ts");
 const { tune } = await import("../src/model/tune.ts");
@@ -21,7 +22,7 @@ const spec = (id) => {
 /** A rider: up with the gas and the weight back, held at `goal` with the rear brake (feathered), then
  *  `out` decides the end: "down" brings it back under 12, "over" lets go of the brake (it loops). */
 function ride(out, goal = 1.75, secs = 8.5, id = "sparkhound") {
-  const run = W.cityRun([spec(id)], 3, true), ev = [], nose = [];
+  const run = O.openRun([spec(id)], 3), ev = [], nose = [], AI = new Float64Array(5);
   for (let f = 0; f < 60 * 14; f++) {
     const b = run.bike.b, th = run.bike.nose, w = b.S[3], v = b.speed;
     let gas = 0, brake = 0, lean = 0;
@@ -31,7 +32,9 @@ function ride(out, goal = 1.75, secs = 8.5, id = "sparkhound") {
       gas = u > 0 ? 1 : 0.7; brake = u < 0 ? Math.min(1, -u) : 0; lean = th > 1.3 ? 0 : -1;
     } else if (out === "down") (gas = 0), (brake = 1), (lean = 1);
     else (gas = 1), (brake = 0), (lean = -1);
-    run.step(DT, gas, brake, lean, 0, 0);
+    // (Steered along the road by the autopilot's line: the open world's roads bend.)
+    run.autopilot(AI);
+    run.step(DT, gas, brake, lean, AI[3], 0);
     for (let k = 0; k < run.n; k++) ev.push([f, run.ev[k * 2], run.ev[k * 2 + 1], run.sc.S[T.SC]]);
     run.clear();
     nose.push(th);
@@ -78,7 +81,7 @@ test("hand drag: looped out mid-drag, its points are lost (E_LOST), the score un
 test("hand drag: deterministic, and no allocation per step", async () => {
   const a = ride("down"), b = ride("down");
   assert.equal(Buffer.concat(a.run.bytes.map((x) => Buffer.from(x))).toString("base64"), Buffer.concat(b.run.bytes.map((x) => Buffer.from(x))).toString("base64"));
-  const run = W.cityRun([spec("sparkhound")], 3, true);
+  const run = O.openRun([spec("sparkhound")], 3);
   const n = await minorGCs(() => {
     for (let f = 0; f < 60 * 12; f++) {
       const bk = run.bike.b, th = run.bike.nose, u = (1.75 - th) * 10 - bk.S[3] * 4;

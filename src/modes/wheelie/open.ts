@@ -25,6 +25,8 @@ import type { Terrain } from "@fzlt/core/terrain";
 
 /** The road lattice (world units a cell) and how far a junction strays from its cell's middle (of RC). */
 export const RC = 120, JIT = 0.3;
+/** The world's seed (the same world on every screen). */
+export const CITY_SEED = 2611;
 /** The window (cells a side, the cell, the slide step in cells) and the far ring's. */
 export const WIN = 176, CELL = 0.5, STEP = 16, FAR_WIN = 136, FAR_CELL = 4, FAR_STEP = 4;
 /** A town's limits (units from its junction). */
@@ -61,13 +63,16 @@ function hashI(i: number, j: number, s: number) {
   return (h ^ (h >>> 16)) >>> 2;
 }
 const mod = (a: number, m: number) => ((a % m) + m) % m;
+/** The kind two or three of a triangle's corners share (else the first's). */
+const maj = (a: number, b: number, c: number) => (b === c ? b : a);
 
 /** One open world for a seed: its pure ground and the caches that speed it up. */
 export function openWorld(seed: number) {
   // Scratch: noise (Q), a node (NQ), the road query (RQ), the town query (TQ), a point on an edge (PQ).
-  const Q = new Float64Array(4), NQ = new Float64Array(2), RQ = new Float64Array(10), TQ = new Float64Array(6), PQ = new Float64Array(4), GQ = new Float64Array(2);
+  const X_baseQ = new Float64Array(2), X_groundQ = new Float64Array(2), X_roadQ = new Float64Array(2), X_townQ = new Float64Array(2), X_heightQ = new Float64Array(2), X_kindQ = new Float64Array(2);
+  const LB = new Float64Array(3), Q = new Float64Array(4), NQ = new Float64Array(2), RQ = new Float64Array(10), TQ = new Float64Array(6), PQ = new Float64Array(4), GQ = new Float64Array(2);
   function valueQ(s: number) {
-    const a = Q[0]!, b = Q[1]!, i = Math.floor(a), j = Math.floor(b);
+    const a = Q[0]!, b = Q[1]!, i = (Math.floor(a) | 0), j = (Math.floor(b) | 0);
     let fa = a - i, fb = b - j;
     fa = fa * fa * (3 - 2 * fa);
     fb = fb * fb * (3 - 2 * fb);
@@ -75,7 +80,8 @@ export function openWorld(seed: number) {
     Q[2] = v00 + (v10 - v00) * fa + (v01 - v00) * fb + (v00 - v10 - v01 + v11) * fa * fb;
   }
   /** The rolling fields' smooth ground at (x, z) into Q[3]. */
-  function baseQ(x: number, z: number) {
+  function baseQI() {
+    const x = X_baseQ[0]!, z = X_baseQ[1]!;
     Q[0] = x / 150; Q[1] = z / 150; valueQ(seed + 1);
     let h = 4.2 * Q[2]!;
     Q[0] = x / 55; Q[1] = z / 55; valueQ(seed + 2);
@@ -134,9 +140,10 @@ export function openWorld(seed: number) {
     for (let k = 0; k <= NS; k++) {
       const t = k / NS, u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
       const x = a * ax + b * c1x + c * c2x + d * bx, z = a * az + b * c1z + c * c2z + d * bz;
-      groundQ(x, z);
+      ((X_groundQ[0] = x), (X_groundQ[1] = z), groundQI());
       PT[o + k * 4] = x; PT[o + k * 4 + 1] = z; PT[o + k * 4 + 2] = GQ[0]!;
-      if (k) len += Math.sqrt((x - PT[o + k * 4 - 4]!) ** 2 + (z - PT[o + k * 4 - 3]!) ** 2);
+      const lx = x - PT[o + k * 4 - 4]!, lz = z - PT[o + k * 4 - 3]!;
+      if (k) len += Math.sqrt(lx * lx + lz * lz);
       PT[o + k * 4 + 3] = len;
       if (x < x0) x0 = x; if (x > x1) x1 = x; if (z < z0) z0 = z; if (z > z1) z1 = z;
     }
@@ -167,28 +174,34 @@ export function openWorld(seed: number) {
   // ---- the ground ----
   /** The fields' ground under the roads at (x, z) into GQ[0]: the rolling base, flattened round every
    *  junction (and over every town, out past its limits). */
-  function groundQ(x: number, z: number) {
-    baseQ(x, z);
+  function groundQI() {
+    const x = X_groundQ[0]!, z = X_groundQ[1]!;
+    ((X_baseQ[0] = x), (X_baseQ[1] = z), baseQI());
     let h = Q[3]!;
-    const ci = Math.floor(x / RC), cj = Math.floor(z / RC);
-    for (let j = cj - 1; j <= cj + 1; j++) for (let i = ci - 1; i <= ci + 1; i++) {
-      nodeQ(i, j);
-      const dx = x - NQ[0]!, dz = z - NQ[1]!, d = Math.sqrt(dx * dx + dz * dz), R = isTown(i, j) ? TOWN_R + 6 : 16, F = isTown(i, j) ? 26 : 14;
-      if (d >= R + F) continue;
-      const nx = NQ[0]!, nz = NQ[1]!;
-      baseQ(nx, nz);
-      let w = (R + F - d) / F;
-      w = w >= 1 ? 1 : w * w * (3 - 2 * w);
-      h += (Q[3]! - h) * w;
-    }
+    const ci = (Math.floor(x / RC) | 0), cj = (Math.floor(z / RC) | 0);
+    // Towns first, then every junction (so a junction is always level with the roads round it).
     GQ[0] = h;
+    for (let pass = 0; pass < 2; pass++)
+      for (let j = cj - 1; j <= cj + 1; j++) for (let i = ci - 1; i <= ci + 1; i++) {
+        const tw = isTown(i, j);
+        if (pass === 0 && !tw) continue;
+        nodeQ(i, j);
+        const dx = x - NQ[0]!, dz = z - NQ[1]!, d = Math.sqrt(dx * dx + dz * dz), R = pass === 0 ? TOWN_R + 6 : 16, F = pass === 0 ? 26 : 14;
+        if (d >= R + F) continue;
+        const nx = NQ[0]!, nz = NQ[1]!;
+        ((X_baseQ[0] = nx), (X_baseQ[1] = nz), baseQI());
+        let w = (R + F - d) / F;
+        w = w >= 1 ? 1 : w * w * (3 - 2 * w);
+        GQ[0] = GQ[0]! + (Q[3]! - GQ[0]!) * w;
+      }
   }
   /** The nearest road to (x, z) into RQ: [0] how far past its edge (≤ 0 on it), [1] its height there,
    *  [2] its half-width, [3] 1 on a roundabout's island, [4] the edge (−1: a ring), [5] s along it,
    *  [6] across it (signed), [7], [8] its direction, [9] the kicker's height there. */
-  function roadQ(x: number, z: number) {
+  function roadQI() {
+    const x = X_roadQ[0]!, z = X_roadQ[1]!;
     RQ[0] = 1e9; RQ[3] = 0; RQ[4] = -1; RQ[9] = 0;
-    const ci = Math.floor(x / RC), cj = Math.floor(z / RC);
+    const ci = (Math.floor(x / RC) | 0), cj = (Math.floor(z / RC) | 0);
     for (let dir = 0; dir < 2; dir++)
       for (let j = cj - 1 - (dir ? 0 : 0); j <= cj + 1; j++)
         for (let i = ci - 1; i <= ci + 1; i++) {
@@ -199,15 +212,16 @@ export function openWorld(seed: number) {
           const f = e * 8;
           if (x < EF[f + 2]! || x > EF[f + 4]! || z < EF[f + 3]! || z > EF[f + 5]!) continue;
           const o = e * EP, hw = EF[f]!;
-          let best = 1e18, bk = 0, bt = 0;
+          // (The loop's best in a scratch array: a double carried round a loop can be boxed before it is optimised.)
+          LB[0] = 1e18; LB[1] = 0; LB[2] = 0;
           for (let k = 0; k < NS; k++) {
             const px = PT[o + k * 4]!, pz = PT[o + k * 4 + 1]!, ex = PT[o + k * 4 + 4]! - px, ez = PT[o + k * 4 + 5]! - pz, L = ex * ex + ez * ez;
             let t = L > 0 ? ((x - px) * ex + (z - pz) * ez) / L : 0;
             t = t < 0 ? 0 : t > 1 ? 1 : t;
             const qx = px + ex * t - x, qz = pz + ez * t - z, d2 = qx * qx + qz * qz;
-            if (d2 < best) (best = d2), (bk = k), (bt = t);
+            if (d2 < LB[0]!) (LB[0] = d2), (LB[1] = k), (LB[2] = t);
           }
-          const d = Math.sqrt(best), ex2 = d - hw;
+          const d = Math.sqrt(LB[0]!), ex2 = d - hw, bk = LB[1]!, bt = LB[2]!;
           if (ex2 >= RQ[0]!) continue;
           const k4 = o + bk * 4, ex = PT[k4 + 4]! - PT[k4]!, ez = PT[k4 + 5]! - PT[k4 + 1]!, l = Math.sqrt(ex * ex + ez * ez) || 1;
           RQ[0] = ex2; RQ[1] = PT[k4 + 2]! + (PT[k4 + 6]! - PT[k4 + 2]!) * bt; RQ[2] = hw; RQ[4] = e;
@@ -223,13 +237,13 @@ export function openWorld(seed: number) {
       if (r > RB_R + RB_HW + SHOULDER + 1) continue;
       if (r < RB_ISLE) {
         RQ[3] = 1; RQ[0] = RB_ISLE - r; RQ[4] = -1;
-        groundQ(NQ[0]!, NQ[1]!); RQ[1] = GQ[0]!;
+        ((X_groundQ[0] = NQ[0]!), (X_groundQ[1] = NQ[1]!), groundQI()); RQ[1] = GQ[0]!;
         return;
       }
       const ex2 = (r - RB_R < 0 ? RB_R - r : r - RB_R) - RB_HW;
       if (ex2 < RQ[0]!) {
         nodeQ(i, j);
-        groundQ(NQ[0]!, NQ[1]!);
+        ((X_groundQ[0] = NQ[0]!), (X_groundQ[1] = NQ[1]!), groundQI());
         RQ[0] = ex2; RQ[1] = GQ[0]!; RQ[2] = RB_HW; RQ[4] = -1; RQ[5] = 0; RQ[6] = 0; RQ[7] = -dz / (r || 1); RQ[8] = dx / (r || 1);
       }
     }
@@ -246,9 +260,10 @@ export function openWorld(seed: number) {
     }
   }
   /** The nearest town to (x, z) into TQ: [0] distance to its junction (1e9: none within reach), [1] i, [2] j, [3] x, [4] z. */
-  function townQ(x: number, z: number) {
+  function townQI() {
+    const x = X_townQ[0]!, z = X_townQ[1]!;
     TQ[0] = 1e9;
-    const ci = Math.floor(x / RC), cj = Math.floor(z / RC);
+    const ci = (Math.floor(x / RC) | 0), cj = (Math.floor(z / RC) | 0);
     for (let j = cj - 1; j <= cj + 1; j++) for (let i = ci - 1; i <= ci + 1; i++) {
       if (!isTown(i, j)) continue;
       nodeQ(i, j);
@@ -258,10 +273,11 @@ export function openWorld(seed: number) {
   }
   /** The ground's height at (x, z) into HQ[0], its face kind into HQ[1]. */
   const HQ = new Float64Array(2);
-  function heightQ(x: number, z: number) {
-    groundQ(x, z);
+  function heightQI() {
+    const x = X_heightQ[0]!, z = X_heightQ[1]!;
+    ((X_groundQ[0] = x), (X_groundQ[1] = z), groundQI());
     const g = GQ[0]!;
-    roadQ(x, z);
+    ((X_roadQ[0] = x), (X_roadQ[1] = z), roadQI());
     const ex = RQ[0]!, yc = RQ[1]!;
     // The fields' own small roll, off the road.
     Q[0] = x / 4.5; Q[1] = z / 4.5; valueQ(seed + 4);
@@ -277,19 +293,20 @@ export function openWorld(seed: number) {
     HQ[0] = h;
   }
   /** The face kind at (x, z) into HQ[1] (heightQ's road query reused: call right after it, same point). */
-  function kindQ(x: number, z: number) {
+  function kindQI() {
+    const x = X_kindQ[0]!, z = X_kindQ[1]!;
     const ex = RQ[0]!;
     if (RQ[3] === 1) return void (HQ[1] = F_ISLE);
     if (ex <= 0) return void (HQ[1] = F_ROAD);
-    townQ(x, z);
+    ((X_townQ[0] = x), (X_townQ[1] = z), townQI());
     if (TQ[0]! < TOWN_R) return void (HQ[1] = ex < 1.6 ? F_WALK : F_LAWN);
     if (ex < 1.1) return void (HQ[1] = F_GRAVEL);
     if (TQ[0]! < TOWN_R + 10 || ex < 5) return void (HQ[1] = F_GRASS);
     // Plots: a skewed lattice of fields, some ploughed, some crops.
-    const a = x * 0.866 - z * 0.5, b = x * 0.5 + z * 0.866, r = hashI(Math.floor(a / 34), Math.floor(b / 22), seed + 21) * HI;
+    const a = x * 0.866 - z * 0.5, b = x * 0.5 + z * 0.866, r = hashI((Math.floor(a / 34) | 0), (Math.floor(b / 22) | 0), seed + 21) * HI;
     HQ[1] = r < 0.22 ? F_DIRT : r < 0.42 ? F_CROP : F_GRASS;
   }
-  const height = (x: number, z: number) => (heightQ(x, z), HQ[0]!);
+  const height = (x: number, z: number) => (((X_heightQ[0] = x), (X_heightQ[1] = z), heightQI()), HQ[0]!);
 
   // ---- towns: a fixed table of their lots (pure contents) ----
   const TCAP = 32, MAXL = 64;
@@ -327,14 +344,14 @@ export function openWorld(seed: number) {
     const o = (s0 * MAXL + TN[s0]!) * IS;
     if (TN[s0]! >= MAXL) return;
     TL[o] = k; TL[o + 1] = x; TL[o + 2] = z; TL[o + 3] = ux; TL[o + 4] = uz; TL[o + 5] = w; TL[o + 6] = d; TL[o + 7] = h; TL[o + 8] = look; TL[o + 9] = key;
-    groundQ(x, z); TL[o + 10] = GQ[0]!;
+    ((X_groundQ[0] = x), (X_groundQ[1] = z), groundQI()); TL[o + 10] = GQ[0]!;
     TN[s0] = TN[s0]! + 1;
   }
   /** Is a footprint (x, z, half extents a, b along u and across) clear of every road and of the lots so far? */
   function free(s0: number, x: number, z: number, ux: number, uz: number, a: number, b: number) {
     for (let q = 0; q < 5; q++) {
       const sa = q === 0 ? 0 : q & 1 ? 1 : -1, sb = q === 0 ? 0 : q & 2 ? 1 : -1, px = x + ux * a * sa - uz * b * sb, pz = z + uz * a * sa + ux * b * sb;
-      roadQ(px, pz);
+      ((X_roadQ[0] = px), (X_roadQ[1] = pz), roadQI());
       if (RQ[0]! < 0.9 || RQ[3] === 1) return false;
     }
     const r = Math.sqrt(a * a + b * b);
@@ -386,7 +403,7 @@ export function openWorld(seed: number) {
               if (free(s0, yx, yz, ux, uz, 1.6, 1.2)) put(s0, I_DOG, yx, yz, ux, uz, 2.8, 2.2, 0.5, 0, key), (dog = 0);
             }
           } else if (r < 0.45 && kind !== I_GAS) put(s0, I_BENCH, px + nx * (hw + 1.0) + tx * 2.2, pz + nz * (hw + 1.0) + tz * 2.2, tx, tz, 1.2, 0.45, 0.5, 0, key);
-          if (r > 0.7 && kind !== I_GAS) put(s0, I_CAR, px + nx * (hw - 1.1) + tx * 2, pz + nz * (hw - 1.1) + tz * 2, tx, tz, 2.3, 1.1, 1, hashI(k, j + q, seed + 50) & 3, key);
+          if (r > 0.7 && kind !== I_GAS) put(s0, I_CAR, px + nx * (hw + 0.9) - tx * 2.4, pz + nz * (hw + 0.9) - tz * 2.4, tx, tz, 2.3, 1.1, 1, hashI(k, j + q, seed + 50) & 3, key);
         }
       }
       // The town's sign on the way in.
@@ -400,17 +417,18 @@ export function openWorld(seed: number) {
 
   // ---- the gather: everything a rider can see or hit within R of (x, z), into a fixed array ----
   let G: Float64Array = new Float64Array(IS), n = 0, cap = 0;
-  function push(k: number, px: number, pz: number, ux: number, uz: number, w: number, d: number, h: number, look: number, key: number, y: number) {
+  /** Push the item in PU (its IS numbers) onto the gather's output. */
+  const PU = new Float64Array(IS);
+  function push() {
     if (n >= cap) return;
-    const o = n * IS;
-    G[o] = k; G[o + 1] = px; G[o + 2] = pz; G[o + 3] = ux; G[o + 4] = uz; G[o + 5] = w; G[o + 6] = d; G[o + 7] = h; G[o + 8] = look; G[o + 9] = key; G[o + 10] = y;
+    G.set(PU, n * IS);
     n++;
   }
   /** Into out (IS numbers an item), at most cap items, in a fixed order; returns the count. */
   function gather(x: number, z: number, R: number, outA: Float64Array, capN: number) {
     G = outA; n = 0; cap = capN;
     // The lattice cells whose junctions, roads or towns can reach within R.
-    const i0 = Math.floor((x - R - TOWN_R) / RC) - 1, i1 = Math.floor((x + R + TOWN_R) / RC) + 1, j0 = Math.floor((z - R - TOWN_R) / RC) - 1, j1 = Math.floor((z + R + TOWN_R) / RC) + 1;
+    const i0 = (Math.floor((x - R - TOWN_R) / RC) | 0) - 1, i1 = (Math.floor((x + R + TOWN_R) / RC) | 0) + 1, j0 = (Math.floor((z - R - TOWN_R) / RC) | 0) - 1, j1 = (Math.floor((z + R + TOWN_R) / RC) | 0) + 1;
     // Towns (their lots).
     for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
       if (!isTown(i, j)) continue;
@@ -421,7 +439,7 @@ export function openWorld(seed: number) {
       for (let m = 0; m < TN[s0]!; m++) {
         const o = (s0 * MAXL + m) * IS, ex = TL[o + 1]! - x, ez = TL[o + 2]! - z;
         if (ex * ex + ez * ez > R * R) continue;
-        push(TL[o]!, TL[o + 1]!, TL[o + 2]!, TL[o + 3]!, TL[o + 4]!, TL[o + 5]!, TL[o + 6]!, TL[o + 7]!, TL[o + 8]!, TL[o + 9]! + ((i * 977 + j * 131) % 100000) * 4096, TL[o + 10]!);
+        ((PU[0] = TL[o]!), (PU[1] = TL[o + 1]!), (PU[2] = TL[o + 2]!), (PU[3] = TL[o + 3]!), (PU[4] = TL[o + 4]!), (PU[5] = TL[o + 5]!), (PU[6] = TL[o + 6]!), (PU[7] = TL[o + 7]!), (PU[8] = TL[o + 8]!), (PU[9] = TL[o + 9]! + ((i * 977 + j * 131) % 100000) * 4096), (PU[10] = TL[o + 10]!), push());
       }
     }
     // The open road: tree rows, fences, a sign, the kicker's cones; out of town.
@@ -435,7 +453,7 @@ export function openWorld(seed: number) {
         at(e, s);
         const px = PQ[0]!, pz = PQ[1]!, tx = PQ[2]!, tz = PQ[3]!, ex = px - x, ez = pz - z;
         if (ex * ex + ez * ez > (R + 14) * (R + 14)) continue;
-        townQ(px, pz);
+        ((X_townQ[0] = px), (X_townQ[1] = pz), townQI());
         if (TQ[0]! < TOWN_R + 2) continue;
         const r = hashI(i * 13 + k, j * 7 + dir, seed + 71) * HI, side = r < 0.5 ? 1 : -1, nx = -tz * side, nz = tx * side, key = 1e9 + ((e * 4096 + k) % 1e8);
         const rowR = hashI(i, j, seed + 72 + dir) * HI;
@@ -443,28 +461,28 @@ export function openWorld(seed: number) {
           // A row of trees along both sides of this road.
           for (let sd = -1; sd <= 1; sd += 2) {
             const qx = px - tz * sd * (hw + 5.5), qz = pz + tx * sd * (hw + 5.5), qx2 = qx - x, qz2 = qz - z;
-            if (qx2 * qx2 + qz2 * qz2 < R * R) groundQ(qx, qz), push(I_TREE, qx, qz, tx, tz, 0, 0, 0, k & 3, key + sd, GQ[0]!);
+            if (qx2 * qx2 + qz2 * qz2 < R * R) ((X_groundQ[0] = qx), (X_groundQ[1] = qz), groundQI()), ((PU[0] = I_TREE), (PU[1] = qx), (PU[2] = qz), (PU[3] = tx), (PU[4] = tz), (PU[5] = 0), (PU[6] = 0), (PU[7] = 0), (PU[8] = k & 3), (PU[9] = key + sd), (PU[10] = GQ[0]!), push());
           }
         } else if (rowR < 0.7 && (k & 3) !== 3) {
           const qx = px + nx * (hw + 3.2), qz = pz + nz * (hw + 3.2);
-          groundQ(qx, qz);
-          push(I_FENCE, qx, qz, tx, tz, 8.6, 0.12, 0.6, 0, key, GQ[0]!);
+          ((X_groundQ[0] = qx), (X_groundQ[1] = qz), groundQI());
+          ((PU[0] = I_FENCE), (PU[1] = qx), (PU[2] = qz), (PU[3] = tx), (PU[4] = tz), (PU[5] = 8.6), (PU[6] = 0.12), (PU[7] = 0.6), (PU[8] = 0), (PU[9] = key), (PU[10] = GQ[0]!), push());
         }
         if (r > 0.94) {
           const qx = px + nx * (hw + 1.4), qz = pz + nz * (hw + 1.4);
-          groundQ(qx, qz);
-          push(r > 0.97 ? I_CAR : I_SIGN, qx, qz, tx, tz, 2.3, 1.1, 1, k & 3, key + 7, GQ[0]!);
+          ((X_groundQ[0] = qx), (X_groundQ[1] = qz), groundQI());
+          ((PU[0] = r > 0.97 ? I_CAR : I_SIGN), (PU[1] = qx), (PU[2] = qz), (PU[3] = tx), (PU[4] = tz), (PU[5] = 2.3), (PU[6] = 1.1), (PU[7] = 1), (PU[8] = k & 3), (PU[9] = key + 7), (PU[10] = GQ[0]!), push());
         }
       }
       if (ks >= 0) {
         at(e, ks);
         const px = PQ[0]!, pz = PQ[1]!, tx = PQ[2]!, tz = PQ[3]!, ex = px - x, ez = pz - z;
         if (ex * ex + ez * ez < (R + 6) * (R + 6)) {
-          groundQ(px, pz);
-          push(I_KICK, px, pz, tx, tz, KICK_W * 2, KICK_L, KICK_H, 0, 2e9 + e, GQ[0]!);
+          ((X_groundQ[0] = px), (X_groundQ[1] = pz), groundQI());
+          ((PU[0] = I_KICK), (PU[1] = px), (PU[2] = pz), (PU[3] = tx), (PU[4] = tz), (PU[5] = KICK_W * 2), (PU[6] = KICK_L), (PU[7] = KICK_H), (PU[8] = 0), (PU[9] = 2e9 + e), (PU[10] = GQ[0]!), push());
           for (let sd = -1; sd <= 1; sd += 2) for (let c = 0; c < 2; c++) {
             const qx = px - tz * sd * (KICK_W + 0.7) + tx * c * 2.4, qz = pz + tx * sd * (KICK_W + 0.7) + tz * c * 2.4;
-            push(I_CONE, qx, qz, tx, tz, 0, 0, 0, 0, 2e9 + e + sd + c * 3, GQ[0]!);
+            ((PU[0] = I_CONE), (PU[1] = qx), (PU[2] = qz), (PU[3] = tx), (PU[4] = tz), (PU[5] = 0), (PU[6] = 0), (PU[7] = 0), (PU[8] = 0), (PU[9] = 2e9 + e + sd + c * 3), (PU[10] = GQ[0]!), push());
           }
         }
       }
@@ -475,37 +493,37 @@ export function openWorld(seed: number) {
       nodeQ(i, j);
       const px = NQ[0]!, pz = NQ[1]!, ex = px - x, ez = pz - z;
       if (ex * ex + ez * ez > (R + RB_ISLE) * (R + RB_ISLE)) continue;
-      groundQ(px, pz);
-      push(I_ISLE, px, pz, 1, 0, RB_ISLE, RB_ISLE, 0.4, 1, 3e9 + i * 7 + j * 13, GQ[0]!);
+      ((X_groundQ[0] = px), (X_groundQ[1] = pz), groundQI());
+      ((PU[0] = I_ISLE), (PU[1] = px), (PU[2] = pz), (PU[3] = 1), (PU[4] = 0), (PU[5] = RB_ISLE), (PU[6] = RB_ISLE), (PU[7] = 0.4), (PU[8] = 1), (PU[9] = 3e9 + i * 7 + j * 13), (PU[10] = GQ[0]!), push());
     }
     // The fields: a lattice of scatter (trees, a stand of pines, rocks, hay bales, a farmstead).
-    const FC = 16, fi0 = Math.floor((x - R) / FC), fi1 = Math.floor((x + R) / FC), fj0 = Math.floor((z - R) / FC), fj1 = Math.floor((z + R) / FC);
+    const FC = 16, fi0 = (Math.floor((x - R) / FC) | 0), fi1 = (Math.floor((x + R) / FC) | 0), fj0 = (Math.floor((z - R) / FC) | 0), fj1 = (Math.floor((z + R) / FC) | 0);
     for (let j = fj0; j <= fj1; j++) for (let i = fi0; i <= fi1; i++) {
       const r = hashI(i, j, seed + 81) * HI;
       if (r > 0.42) continue;
       const px = (i + 0.2 + hashI(i, j, seed + 82) * HI * 0.6) * FC, pz = (j + 0.2 + hashI(i, j, seed + 83) * HI * 0.6) * FC, ex = px - x, ez = pz - z;
       if (ex * ex + ez * ez > R * R) continue;
-      roadQ(px, pz);
+      ((X_roadQ[0] = px), (X_roadQ[1] = pz), roadQI());
       const farm = r < 0.035;
       if (RQ[0]! < (farm ? 14 : 4) || RQ[3] === 1) continue;
-      townQ(px, pz);
+      ((X_townQ[0] = px), (X_townQ[1] = pz), townQI());
       if (TQ[0]! < TOWN_R + 4) continue;
-      groundQ(px, pz);
+      ((X_groundQ[0] = px), (X_groundQ[1] = pz), groundQI());
       const y = GQ[0]!, key = 4e9 + mod(i * 7919 + j * 104729, 1e9), a = (hashI(i, j, seed + 84) & 7) * 0.785;
       const ux = a < 1.6 ? 1 - a * 0.3 : 0.5, uz = Math.sqrt(1 - ux * ux) || 0;
       if (farm) {
-        push(I_BARN, px, pz, ux, uz, BW[I_BARN]!, BD[I_BARN]!, BH[I_BARN]!, hashI(i, j, seed + 85) & 7, key, y);
+        ((PU[0] = I_BARN), (PU[1] = px), (PU[2] = pz), (PU[3] = ux), (PU[4] = uz), (PU[5] = BW[I_BARN]!), (PU[6] = BD[I_BARN]!), (PU[7] = BH[I_BARN]!), (PU[8] = hashI(i, j, seed + 85) & 7), (PU[9] = key), (PU[10] = y), push());
         const sx = px + ux * 4.6, sz = pz + uz * 4.6;
-        groundQ(sx, sz);
-        push(I_SILO, sx, sz, ux, uz, BW[I_SILO]!, BD[I_SILO]!, BH[I_SILO]!, 0, key + 1, GQ[0]!);
-      } else if (r < 0.15) push(I_TREE, px, pz, ux, uz, 0, 0, 0, i & 3, key, y);
+        ((X_groundQ[0] = sx), (X_groundQ[1] = sz), groundQI());
+        ((PU[0] = I_SILO), (PU[1] = sx), (PU[2] = sz), (PU[3] = ux), (PU[4] = uz), (PU[5] = BW[I_SILO]!), (PU[6] = BD[I_SILO]!), (PU[7] = BH[I_SILO]!), (PU[8] = 0), (PU[9] = key + 1), (PU[10] = GQ[0]!), push());
+      } else if (r < 0.15) ((PU[0] = I_TREE), (PU[1] = px), (PU[2] = pz), (PU[3] = ux), (PU[4] = uz), (PU[5] = 0), (PU[6] = 0), (PU[7] = 0), (PU[8] = i & 3), (PU[9] = key), (PU[10] = y), push());
       else if (r < 0.24) {
-        push(I_PINE, px, pz, ux, uz, 0, 0, 0, j & 3, key, y);
+        ((PU[0] = I_PINE), (PU[1] = px), (PU[2] = pz), (PU[3] = ux), (PU[4] = uz), (PU[5] = 0), (PU[6] = 0), (PU[7] = 0), (PU[8] = j & 3), (PU[9] = key), (PU[10] = y), push());
         const qx = px + 1.7, qz = pz + 0.9;
-        groundQ(qx, qz);
-        push(I_PINE, qx, qz, ux, uz, 0, 0, 0, (j + 1) & 3, key + 1, GQ[0]!);
-      } else if (r < 0.32) push(I_ROCK, px, pz, ux, uz, 0, 0, 0, i & 3, key, y);
-      else push(I_HAY, px, pz, ux, uz, 0, 0, 0, 0, key, y);
+        ((X_groundQ[0] = qx), (X_groundQ[1] = qz), groundQI());
+        ((PU[0] = I_PINE), (PU[1] = qx), (PU[2] = qz), (PU[3] = ux), (PU[4] = uz), (PU[5] = 0), (PU[6] = 0), (PU[7] = 0), (PU[8] = (j + 1) & 3), (PU[9] = key + 1), (PU[10] = GQ[0]!), push());
+      } else if (r < 0.32) ((PU[0] = I_ROCK), (PU[1] = px), (PU[2] = pz), (PU[3] = ux), (PU[4] = uz), (PU[5] = 0), (PU[6] = 0), (PU[7] = 0), (PU[8] = i & 3), (PU[9] = key), (PU[10] = y), push());
+      else ((PU[0] = I_HAY), (PU[1] = px), (PU[2] = pz), (PU[3] = ux), (PU[4] = uz), (PU[5] = 0), (PU[6] = 0), (PU[7] = 0), (PU[8] = 0), (PU[9] = key), (PU[10] = y), push());
     }
     return n;
   }
@@ -547,7 +565,14 @@ export function openWorld(seed: number) {
 
   return {
     seed, RQ, TQ, PQ, NQ, IN, EF, PT, EP, HQ, EK,
-    heightQ, kindQ, height, roadQ, townQ, groundQ, nodeQ, edge, at, out, incident, isTown, isRound, vOn, gather, town, townName, townGraph, graph,
+    heightQ: (x: number, z: number) => ((X_heightQ[0] = x), (X_heightQ[1] = z), heightQI()),
+    kindQ: (x: number, z: number) => ((X_kindQ[0] = x), (X_kindQ[1] = z), kindQI()),
+    roadQ: (x: number, z: number) => ((X_roadQ[0] = x), (X_roadQ[1] = z), roadQI()),
+    townQ: (x: number, z: number) => ((X_townQ[0] = x), (X_townQ[1] = z), townQI()),
+    groundQ: (x: number, z: number) => ((X_groundQ[0] = x), (X_groundQ[1] = z), groundQI()),
+    /** The window's fill (no double crosses a call: V8 would box it): the point in XH, then `fillQ`. */
+    XH: X_heightQ, heightI: heightQI, fillQ: () => (heightQI(), (X_kindQ[0] = X_heightQ[0]!), (X_kindQ[1] = X_heightQ[1]!), kindQI()),
+    height, nodeQ, edge, at, out, incident, isTown, isRound, vOn, gather, town, townName, townGraph, graph,
     /** Town slot s's lots (for a test): count and the table. */
     lotsOf: (s: number) => TN[s]!, TL, MAXL,
   };
@@ -559,7 +584,7 @@ export type OpenWorld = ReturnType<typeof openWorld>;
  *  ../desert/world.ts's (kept rows and columns copied, only the new strip computed). With `kinds`
  *  off it is the view's far ring (heights only, coarser). */
 export function openWindow(W: OpenWorld, WINn = WIN, CELLn = CELL, STEPn = STEP, kinds = true) {
-  const W1 = WINn + 1, h = new Float64Array(W1 * W1), kind = new Uint8Array(WINn * WINn * 2), F = new Float64Array(3);
+  const XH = W.XH, W1 = WINn + 1, h = new Float64Array(W1 * W1), kind = new Uint8Array(WINn * WINn * 2), F = new Float64Array(3);
   const O = new Int32Array(2), N = new Float64Array(2);
   const t = {
     cols: WINn, rows: WINn, cell: CELLn, x0: 0, z0: 0, h, kind, version: 0, split: "adaptive" as const,
@@ -598,19 +623,22 @@ export function openWindow(W: OpenWorld, WINn = WIN, CELLn = CELL, STEPn = STEP,
       const z = (O[1]! + j) * CELLn;
       for (let i = i0; i <= i1; i++) {
         const x = (O[0]! + i) * CELLn;
-        W.heightQ(x, z);
+        XH[0] = x; XH[1] = z;
+        if (kinds) W.fillQ(), (VK[j * W1 + i] = W.HQ[1]!);
+        else W.heightI();
         h[j * W1 + i] = W.HQ[0]!;
-        if (kinds) W.kindQ(x, z), (VK[j * W1 + i] = W.HQ[1]!);
       }
     }
     N[1] = N[1]! + (i1 - i0 + 1) * (j1 - j0 + 1);
   }
-  /** Cells i0..i1 × j0..j1 take their corners' kinds. */
+  /** Cells i0..i1 × j0..j1: each triangle (as the adaptive split cuts it) takes the kind most of its
+   *  three corners have, so a road's edge runs along the diagonals instead of in steps. */
   function cells(i0: number, i1: number, j0: number, j1: number) {
     if (!kinds) return;
     for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
-      const o = (j * WINn + i) * 2;
-      kind[o] = kind[o + 1] = VK[j * W1 + i]!;
+      const k = j * W1 + i, o = (j * WINn + i) * 2, a = VK[k]!, b = VK[k + 1]!, cc = VK[k + W1 + 1]!, d = VK[k + W1]!;
+      if (Math.abs(h[k + 1]! - h[k + W1]!) < Math.abs(h[k + W1 + 1]! - h[k]!)) (kind[o] = maj(b, cc, d)), (kind[o + 1] = maj(a, b, d));
+      else (kind[o] = maj(a, b, cc)), (kind[o + 1] = maj(a, cc, d));
     }
   }
   function moveTo(ox: number, oz: number) {
@@ -645,7 +673,7 @@ export function openWindow(W: OpenWorld, WINn = WIN, CELLn = CELL, STEPn = STEP,
     }
   }
   function follow(x: number, z: number) {
-    const cx = Math.floor(x / CELLn / STEPn) * STEPn, cz = Math.floor(z / CELLn / STEPn) * STEPn;
+    const cx = (Math.floor(x / CELLn / STEPn) | 0) * STEPn, cz = (Math.floor(z / CELLn / STEPn) | 0) * STEPn;
     const ox = cx - WINn / 2 + STEPn / 2, oz = cz - WINn / 2 + STEPn / 2;
     if (t.version && ox === O[0] && oz === O[1]) return false;
     return moveTo(ox, oz);

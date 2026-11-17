@@ -8,6 +8,7 @@ import { makeMap, RIDE_MAPS } from "../src/modes/freeride/maps.ts";
 import { freeJam } from "../src/modes/freeride/jam.ts";
 import { airShow, DONE as AIR_DONE } from "../src/modes/bigair/show.ts";
 import * as W from "../src/modes/wheelie/city.ts";
+import * as OR from "../src/modes/wheelie/roam.ts";
 import { tune } from "../src/model/tune.ts";
 import { newBike } from "../src/model/profile.ts";
 import { STARTERS } from "../src/data/roster.ts";
@@ -72,8 +73,8 @@ export function compute() {
   }
   {
     const t = bikes[2];
-    // Endless Wheelie City: two minutes on the autopilot (the heat, the patrol, the humps, the tricks): every byte the run keeps.
-    const run = W.cityRun([{ id: "x", name: "x", kind: "", blurb: "", bars: [3, 3, 3], power: t.power, shape: t.shape, sweet: t.sweet, hop: t.hop }], 9, true), I = new Float64Array(5);
+    // Endless Wheelie City: two minutes on the autopilot through the open world (the roads, the towns, the heat, the patrol, the tricks): every byte the run keeps.
+    const run = OR.openRun([{ id: "x", name: "x", kind: "", blurb: "", bars: [3, 3, 3], power: t.power, shape: t.shape, sweet: t.sweet, hop: t.hop }], 9), I = new Float64Array(5);
     for (let f = 0; f < 60 * 120; f++) (run.autopilot(I), run.step(1 / 60, I[0], I[1], I[2], I[3], I[4]), run.clear());
     out["endless wheelie city ride"] = h(...run.bytes);
   }

@@ -179,7 +179,7 @@ test("cops: the heat rises from the noise and the patrol spawns, the same way ev
 });
 
 test("cops: heat cools once the rider is clean and out of sight", () => {
-  const cop = C.cops(5);
+  const cop = W.fixedCops(5);
   cop.heat(30);
   assert.equal(cop.S[C.STARS], 1);
   // Far from the units' streets (no rider move), 3.5 s clean, then 6 a second.
@@ -282,7 +282,7 @@ test("snapshot: the session's bytes are the whole of it: restored mid-chase, it 
 // ---- the patrol's rules (round 4): a ticket only when stopped or down; running heats it up; bound to its hood ----
 /** A cop with one unit parked `d` from a rider at a junction of hood 0 (the fixed table). */
 function adjacent(d = 0.5) {
-  const cop = C.cops(7), g = H.GRAPH[0], x = g.nodes[0] + H.CX[0], z = g.nodes[1] + H.CZ[0];
+  const cop = W.fixedCops(7), g = H.GRAPH[0], x = g.nodes[0] + H.CX[0], z = g.nodes[1] + H.CZ[0];
   cop.heat(25);
   for (let i = 0; i < 200 && cop.chasing === 0; i++) cop.step(DT, x, z, 0, false, true, 8), cop.clear();
   const o = 0;
@@ -320,7 +320,7 @@ test("cops: no ticket while riding, even with a unit right alongside; a ticket w
 });
 
 test("cops: running heats it up: the longer they're on your tail, the more join (a bike, a cart, then drones), up to the cap", () => {
-  const cop = C.cops(3), g = H.GRAPH[0];
+  const cop = W.fixedCops(3), g = H.GRAPH[0];
   cop.heat(25);
   let peak = 0, drones = 0, units = [];
   const x = g.nodes[2] + H.CX[0], z = g.nodes[3] + H.CZ[0];
@@ -341,35 +341,37 @@ test("cops: running heats it up: the longer they're on your tail, the more join 
   assert.ok(drones >= 3, `drones join (${drones} at once)`);
 });
 
-test("cops (Endless Wheelie City): every unit stays in its hood's slot; a hump into the next hood ends the chase; the same bytes every time", () => {
+test("cops (Endless Wheelie City): bound to the town: no unit leaves its limits, none spawn out of town, riding out of town loses them; the same bytes every time", async () => {
+  const { openRun, LIMIT } = await import("../src/modes/wheelie/roam.ts");
   const go = () => {
-    const run = W.cityRun([spec("sparkhound")], 11, true), I = new Float64Array(5);
-    let escapes = 0, worst = 0, crossed = 0;
-    for (let f = 0; f < 60 * 150; f++) {
-      if (f % 600 === 0) run.cop.heat(60);
-      const h0 = run.S[W.S_HOOD];
+    const run = openRun([spec("sparkhound")], 11), I = new Float64Array(5);
+    let escapes = 0, worst = -1e9, outSpawn = 0, left = 0;
+    for (let f = 0; f < 60 * 240; f++) {
+      if (f % 600 === 0 && run.inTown) run.cop.heat(60);
+      const wasIn = run.inTown;
       run.autopilot(I);
       run.step(DT, I[0], I[1], I[2], I[3], I[4]);
-      for (let k = 0; k < run.n; k++) if (run.ev[k * 2] === W.E_ESCAPE) escapes++;
+      for (let k = 0; k < run.n; k++) {
+        if (run.ev[k * 2] === W.E_ESCAPE) escapes++;
+        if (run.ev[k * 2] === W.E_UNIT && !run.inTown) outSpawn++;
+      }
       run.clear();
-      if (run.S[W.S_HOOD] !== h0) {
-        crossed++;
-        // Across the canal: every unit of the hood left behind peels off on its bank, and the new
-        // hood's own patrol takes NEW_HOOD seconds to come out.
-        for (let u = 0; u < C.MAXP; u++) assert.ok(!(run.cop.P[u * C.PS + C.P_ON] === 1 && run.cop.P[u * C.PS + C.P_HOOD] === h0), "the chase ends at the canal");
-        assert.equal(run.cop.chasing, 0, "nobody on the far bank yet");
+      if (wasIn && !run.inTown) {
+        left++;
+        // Out of town: every unit peels off, nobody chases.
+        assert.equal(run.cop.chasing, 0, "the chase ends at the town limits");
       }
       for (let u = 0; u < C.MAXP; u++) {
         const o = u * C.PS;
         if (run.cop.P[o + C.P_ON] !== 1) continue;
-        const h = run.cop.P[o + C.P_HOOD], cx = run.HC[h * 2], cz = run.HC[h * 2 + 1];
-        worst = Math.max(worst, Math.abs(run.cop.P[o + C.P_X] - cx) - H.HX, Math.abs(run.cop.P[o + C.P_Z] - cz) - H.HZ);
+        worst = Math.max(worst, Math.hypot(run.cop.P[o + C.P_X] - run.HC[0], run.cop.P[o + C.P_Z] - run.HC[1]) - LIMIT);
       }
     }
-    return { escapes, worst, crossed, bytes: Buffer.concat(run.bytes.map((b) => Buffer.from(b))).toString("base64") };
+    return { escapes, worst, outSpawn, left, bytes: Buffer.concat(run.bytes.map((b) => Buffer.from(b))).toString("base64") };
   };
   const a = go(), b = go();
-  assert.ok(a.crossed >= 3 && a.escapes >= 1, `crossed ${a.crossed} canals, ${a.escapes} escapes`);
-  assert.ok(a.worst <= 1e-9, `no chasing unit ever left its hood (the canal is past the edge; closest: ${(-a.worst).toFixed(2)} inside)`);
+  assert.ok(a.left >= 3 && a.escapes >= 1, `left ${a.left} towns, ${a.escapes} escapes ("LOST THEM!")`);
+  assert.ok(a.worst <= 1e-9, `no chasing unit ever passed the town limits (closest: ${(-a.worst).toFixed(2)} inside)`);
+  assert.equal(a.outSpawn, 0, "no unit out of town");
   assert.equal(a.bytes, b.bytes, "deterministic");
 });

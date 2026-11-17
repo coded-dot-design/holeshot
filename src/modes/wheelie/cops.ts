@@ -20,7 +20,6 @@
 //   drops fast and the escape pays.
 // Deterministic: seeded xorshift, ../../math.ts's sine, cosine and arctangent, the state in typed
 // arrays (S, P, R: ready for a snapshot). Zero allocation per step.
-import { GRAPH, CX, CZ, HX, HZ } from "./hoods.ts";
 import { sin, cos, atan2 } from "../../math.ts";
 
 const TAU = 6.283185307179586;
@@ -48,14 +47,12 @@ export const CATCH = 0.95, SIGHT = 10, DIRECT = 5.5, SPAWN_GAP = 1.6, COOL_AFTER
 /** Heading from (dx, dz) in the bike's convention (forward is (cos, −sin)): atan2(−dz, dx), from ../../math.ts (the same bits on every engine). */
 export const heading = (dx: number, dz: number) => atan2(-dz, dx);
 
-/** The hoods' centres (x, z per hood) on the fixed table; Endless Wheelie City passes its own (the
- *  town's junction, hood 0). */
-export const FIXED_C = Float64Array.from([CX[0]!, CZ[0]!, CX[1]!, CZ[1]!, CX[2]!, CZ[2]!, CX[3]!, CZ[3]!]);
 /** A street graph: nodes (local x, z), m edges (node pairs), all-pairs distance and next hop (n × n). */
 export interface StreetGraph { n: number; m: number; nodes: Float64Array; edges: Int16Array; D: Float64Array; NX: Int16Array }
-/** `graphs`: per hood its streets (default the hoods'); `bound`: 0 keeps a unit in its hood's
- *  rectangle, else within that radius of its centre (a town's limits). */
-export function cops(seed = 1, HC: Float64Array = FIXED_C, graphs: StreetGraph[] = GRAPH, bound = 0) {
+/** HC: per hood its centre (x, z); `graphs`: per hood its streets; `bound`: 0 keeps a unit in its
+ *  hood's rectangle (half sides HX, HZ: the fixed table's, ./city.ts `fixedCops`), else within that
+ *  radius of its centre (a town's limits: Endless Wheelie City). */
+export function cops(seed: number, HC: Float64Array, graphs: StreetGraph[], bound: number, HX = 0, HZ = 0) {
   const S = new Float64Array(15), P = new Float64Array(MAXP * PS), R = new Uint32Array(1);
   const ev = new Float64Array(16);
   // E: the rider's street (nearest edge's ends and their distances), scratch.

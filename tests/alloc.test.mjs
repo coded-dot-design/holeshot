@@ -68,7 +68,8 @@ test("alloc: Big Air, a whole run", async () => {
 });
 
 test("alloc: Endless Wheelie City, a minute and a half", async () => {
-  const run = W.cityRun([{ id: "x", name: "x", kind: "", blurb: "", bars: [3, 3, 3], power: t.power, shape: t.shape, sweet: t.sweet, hop: t.hop }], 1, true), I = new Float64Array(5), m = meter("endcity");
+  const { openRun } = await import("../src/modes/wheelie/roam.ts");
+  const run = openRun([{ id: "x", name: "x", kind: "", blurb: "", bars: [3, 3, 3], power: t.power, shape: t.shape, sweet: t.sweet, hop: t.hop }], 1), I = new Float64Array(5), m = meter("endcity");
   const n = await measure(() => {
     run.reset(0);
     for (let i = 0; i < 60 * 92; i++) (run.autopilot(I), run.step(1 / 60, I[0], I[1], I[2], I[3], I[4]), m.tick(run.bike.b, 1 / 60), run.clear());
@@ -77,8 +78,8 @@ test("alloc: Endless Wheelie City, a minute and a half", async () => {
 });
 
 test("alloc: Wheelie City's patrol (heat, spawns, the chase on the street graph, tickets), 20,000 steps", async () => {
-  const { cops, TIX } = await import("../src/modes/wheelie/cops.ts");
-  const cop = cops(3), X = new Float64Array(1);
+  const { TIX } = await import("../src/modes/wheelie/cops.ts");
+  const cop = W.fixedCops(3), X = new Float64Array(1);
   const n = await measure(() => {
     cop.reset(3);
     for (let i = 0; i < 20000; i++) {

@@ -1,5 +1,6 @@
-// Wheelie City's town and session, headless (tests/modes.test.mjs and tests/cops.test.mjs play it
-// with no browser). The town is four neighbourhoods on one table (./hoods.ts: THE BLOCK, HILLCREST,
+// Wheelie City's fixed table and session, headless (tests/modes.test.mjs and tests/cops.test.mjs play
+// it with no browser; the game rides Endless Wheelie City's open world, ./roam.ts, on the same
+// mechanics, and shares this file's events and tuning). The town is four neighbourhoods on one table (./hoods.ts: THE BLOCK, HILLCREST,
 // DOWNTOWN, NEON MARINA), each its own layout, separated by canals and fenced along their edges,
 // linked by humps: hit one at speed and you fly the canal into the next hood (the launch is set so
 // the jump lands on the far ramp, and the bike is held level in the air: it lands upright); too slow
@@ -20,34 +21,22 @@ import { cos, sin } from "../../math.ts";
 import { unstuck, U_AUTO, U_PROMPT } from "../unstuck.ts";
 import { tricks, ON, SC, PTS, F_CROSS, F_SPRINK, F_GRUMP, BANKED, MAXCB, CB as T_CB, GAP as T_GAP } from "./tricks.ts";
 import {
-  HOODS, CX, CZ, HX, HZ, GAP, CURB, W, HUMPS, NHUMP, ENTRY, BRANCH, hoodAt, NHOOD,
+  HOODS, CX, CZ, HX, HZ, CURB, W, GRAPH, HUMPS, NHUMP, ENTRY, BRANCH, hoodAt, NHOOD,
   K_ROAD, K_WALK, K_LAWN, K_DRIVE, K_WATER, K_SAND, RAMP, DECK, LIP, HUMP_H, HUMP_W, BANK, CANAL,
 } from "./hoods.ts";
-import { cops, FIXED_C, heading, C_TICKET, C_ESCAPE, C_STARS, C_UNIT, C_CLEAR, HEAT, STARS, NEAR } from "./cops.ts";
+import { cops, heading, C_TICKET, C_ESCAPE, C_STARS, C_UNIT, C_CLEAR, HEAT, STARS, NEAR } from "./cops.ts";
 
 export { HX, HZ, CURB, K_ROAD, K_WALK, K_LAWN, K_DRIVE, K_WATER };
-export const SESSION = 90;
-export const READY = 0, RUN = 1, CRASH = 2, DONE = 3;
-/** Events (one ring, read and cleared each step): what, and a value. */
-export const E_START = 1, E_TRICK = 2, E_CRASH = 3, E_RESPAWN = 4, E_GRUMP = 5, E_BARK = 6, E_SPLASH = 7, E_BONUS = 8, E_END = 9, E_HOP = 10, E_AIR = 11,
-  E_JUMP = 12, E_LAND = 13, E_TICKET = 14, E_ESCAPE = 15, E_STARS = 16, E_UNIT = 17, E_CLEAR = 18,
-  /** Unstuck: the prompt (1 up, 0 down); a reset to the last good spot on the street (1 asked for, 2 automatic). */
-  E_STUCK = 19, E_RESET = 20,
-  /** The hand drag: it starts (value 1); banked (its points) when the nose comes back under 12; lost (the points it had) on a loop-out. */
-  E_DRAG = 21, E_BANKED = 22, E_LOST = 23;
-/** The hand drag: hold the nose past 12 o'clock HAND_T seconds and the rider drops a hand to the road;
- *  while it drags it earns DRAG_RATE a second ×DRAG_X (× the combo), plus STREAK × seconds² when banked. */
-export const HAND_T = 1.5, DRAG_RATE = 40, DRAG_X = 10, STREAK = 120;
+export * from "./rules.ts";
+import { SESSION, READY, RUN, CRASH, DONE, E_START, E_TRICK, E_CRASH, E_RESPAWN, E_GRUMP, E_BARK, E_SPLASH, E_BONUS, E_END, E_HOP, E_AIR, E_JUMP, E_LAND, E_TICKET, E_ESCAPE, E_STARS, E_UNIT, E_CLEAR, E_STUCK, E_RESET, E_DRAG, E_BANKED, E_LOST, HAND_T, DRAG_RATE, DRAG_X, STREAK, HEAT_FROM, LINES, AP, SP_REACH } from "./rules.ts";
 const TAU = 6.283185307179586, CRASH_T = 1.8, R_BIKE = 0.45, BONK_V = 5;
 /** Over a hump: the least speed along it that flies, the flight's time, how far past the far lip it lands, the pitch it is held to. */
 export const FLY_V = 5, FLY_T = 1, LAND_AT = 2.4, FLY_PITCH = -0.08;
-/** Heat: a neighbour out, a sprinkler, the dog, per second on a lawn, per point of a banked trick (capped). */
-export const HEAT_FROM = { grump: 10, splash: 9, bark: 3, lawn: 7, perPoint: 1 / 150, trickCap: 10 };
 
 /** The world's lists for the scene: buildings (x, z, w, d, height, face, look, base), their hoods,
  *  cars, crosswalks, sprinklers, trees and lamps (with their hoods). */
 export const HOUSES = W.houses, NH = HOUSES.length / 8, CARS = W.cars, NCARS = CARS.length / 4, CAR_L = 2.3, CAR_W = 1.1;
-export const CROSS = W.cross, SPRINK = W.sprink, NSP = SPRINK.length / 4, SP_REACH = 2.6, TREES = W.trees, LAMPS = W.lamps;
+export const CROSS = W.cross, SPRINK = W.sprink, NSP = SPRINK.length / 4, TREES = W.trees, LAMPS = W.lamps;
 /** The dog's yard on THE BLOCK (world): x0, x1, z where it trots, and its fence [x0, z0, x1, z1]. */
 export const DOG = [7.8 + CX[0]!, 10.2 + CX[0]!, 5.0 + CZ[0]!];
 const FENCE_L = [7.4, 3.6, 10.6, 5.6];
@@ -59,15 +48,6 @@ for (const h of W.home) {
   NEIGH.push(h, x - 0.5, fz, f, x - 3.4, f < 0 ? fz - 6.9 : fz, x + 3.4, f < 0 ? fz : fz + 6.9);
 }
 export const NN = NEIGH.length / 8;
-/** Each neighbour's, sprinkler's and crosswalk's hood (Endless Wheelie City moves them with it). */
-export const NEIGH_H = Uint8Array.from({ length: NN }, (_, i) => W.hood[NEIGH[i * 8]!]!);
-const quad = (x: number, z: number) => (z < 0 ? 0 : 2) + (x < 0 ? 0 : 1);
-export const SPRINK_H = Uint8Array.from({ length: NSP }, (_, i) => quad(SPRINK[i * 4]!, SPRINK[i * 4 + 1]!));
-export const CROSS_H = Uint8Array.from({ length: CROSS.length / 4 }, (_, i) => quad(CROSS[i * 4]! + CROSS[i * 4 + 2]!, CROSS[i * 4 + 1]! + CROSS[i * 4 + 3]!));
-/** What they shout (comic and generic, never mean). */
-export const LINES = ["HEY! MY LAWN!", "SLOW DOWN!", "I JUST MOWED THAT!", "WHEELS DOWN, KID!", "NOT THE PETUNIAS!", "IT'S SUNDAY!", "BACK IN MY DAY…", "KEEP IT ON THE ROAD!", "I'M CALLING IT IN!", "SOME OF US WORK NIGHTS!"];
-/** The autopilot's gains (tuned headless): under the balance point by, gas at rest, nose rate per radian off, most nose rate, gas per rate error, gas per unit of speed under the target, lean per rate error, target speed, brake dead band, brake gain. */
-export const AP = [0.008, 0.077, 33.317, 2.172, 0.387, 0.04, 0.729, 3.383, 0.391, 1.244];
 /** Where the autopilot's loop starts in each hood (the waypoint it heads for first). */
 const START_LEG = [0, 0, 3, 4];
 
@@ -104,48 +84,19 @@ const SOL = HOODS.map((h, k) => {
 const PO = HOODS.map((h) => F64(h.posts));
 /** Each hood's loop (x, z, …, local). */
 const RT = HOODS.map((h) => F64(h.route));
-/** Endless: the autopilot's line through every hood (local x, z: along the south street, east). */
-const RTE = F64([-34, 8.6, 0, 8.6, 34, 8.6]);
-
-// ---- Endless Wheelie City: the same four hoods as reused SLOTS in a row along +x, canal to canal ----
-/** Slot k's centre is (k × PITCH, 0); its hood kind is `slotKind(k)`. Two slots side by side are
- *  never the same kind (k + 2·bit: neighbours differ by an odd number, mod 4), so one built hood per
- *  kind is enough: only a slot and the one it nears are ever drawn. Every slot has a hump at both
- *  ends on its south street (local z 8.5), lined up with the next slot's: the road runs on at every
- *  join, the hump flies the canal. */
-export const PITCH = 2 * HX + GAP, CITY_SEED = 2611, SLOT_Z = 8.5;
-/** The hood kind of endless slot k for `seed` (pure: the same row of hoods on every screen). */
-export function slotKind(k: number, seed = CITY_SEED) {
-  const m = Math.floor(k / 2);
-  let h = Math.imul(m, 0x27d4eb2d) ^ Math.imul(seed, 0x2c1b3c6d);
-  h = Math.imul(h ^ (h >>> 15), 0x297a2d39);
-  const v = (k + 2 * ((h >>> 16) & 1)) % 4;
-  return v < 0 ? v + 4 : v;
-}
-/** The slot a world x is in. */
-export const slotAt = (x: number) => Math.floor((x + PITCH / 2) / PITCH);
-
 // (Results go through Q, never returned: a double returned from a call that is not inlined is boxed.)
 // Q: road gap, height, kind, hump height.
 const Q = new Float64Array(4);
 const inR = (x: number, z: number, R: ArrayLike<number>, o: number) => x >= R[o]! && x <= R[o + 2]! && z >= R[o + 1]! && z <= R[o + 3]!;
 
-/** The town's ground: the fixed table (four hoods in a 2 × 2) or the endless row of slots. The
- *  fixed one is the module's exports below, exactly as before (the goldens hold it). */
-export function town(endless = false, seed = CITY_SEED) {
-  // Endless: every kind gets a stub to both ends of its south street and a hump at each (east 0, west 1).
-  const RDx = endless ? HOODS.map((h) => F64([...h.roads, HX - 2, 6.5, HX, 10.5, -HX, 6.5, -HX + 2, 10.5])) : RD;
-  const HUx = endless ? HOODS.map(() => F64([0, HX - LIP, SLOT_Z, 1, 0, 1, -(HX - LIP), SLOT_Z, -1, 0])) : HU;
+/** The town's ground: the fixed table (four hoods in a 2 × 2), the module's exports below (the goldens hold it). */
+export function town() {
+  const RDx = RD, HUx = HU;
   /** Where (x, z) is: hood kind, its centre x, z (LOC). */
   const LOC = new Float64Array(3);
   function locate(x: number, z: number) {
-    if (!endless) {
-      const h = hoodAt(x, z);
-      LOC[0] = h; LOC[1] = CX[h]!; LOC[2] = CZ[h]!;
-      return h;
-    }
-    const k = slotAt(x), h = slotKind(k, seed);
-    LOC[0] = h; LOC[1] = k * PITCH; LOC[2] = 0;
+    const h = hoodAt(x, z);
+    LOC[0] = h; LOC[1] = CX[h]!; LOC[2] = CZ[h]!;
     return h;
   }
   /** Distance to the nearest road or turning circle in hood h (0 on one): into Q[0]. */
@@ -253,10 +204,13 @@ export function town(endless = false, seed = CITY_SEED) {
     }
     return true;
   }
-  return { endless, seed, heightQ, height, kindAt, ground, streetClear, locate, LOC, HU: HUx };
+  return { heightQ, height, kindAt, ground, streetClear, locate, LOC, HU: HUx };
 }
 export type Town = ReturnType<typeof town>;
-const FIXED = town(false);
+const FIXED = town();
+/** The hoods' centres (x, z per hood) on the fixed table, and its patrol (the hoods' streets and rectangles). */
+export const FIXED_C = Float64Array.from([CX[0]!, CZ[0]!, CX[1]!, CZ[1]!, CX[2]!, CZ[2]!, CX[3]!, CZ[3]!]);
+export const fixedCops = (seed = 1) => cops(seed, FIXED_C, GRAPH, 0, HX, HZ);
 /** The fixed table's ground (the scene, the tests). */
 export const height = FIXED.height, kindAt = FIXED.kindAt, ground = FIXED.ground, streetClear = FIXED.streetClear;
 const heightQ = FIXED.heightQ;
@@ -266,26 +220,12 @@ const PH = 0, CLOCK = 1, RIDE = 2, CT = 3, GRUMPS = 4, SPLASH = 5, BARKS = 6, LE
 export const S_HOOD = HOOD, S_FLY = FLY, S_JUMPS = JUMPS, S_VISITED = VISITED, S_UNSTUCK = UNSTUCK;
 
 /** A session in town. Inputs each step: gas, brake, lean (−1 back .. 1 forward), steer, hop. */
-export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, citySeed = CITY_SEED) {
-  // The ground: the fixed table, or the endless row of slots (each hood kind's centre moves to the
-  // slot it is in: HC, x and z per kind, which the patrol paths by too; OFF: each kind's move from
-  // its place on the fixed table, for the world lists: neighbours, sprinklers, crosswalks, the dog).
-  const T = endless ? town(true, citySeed) : FIXED, HC = endless ? Float64Array.from(FIXED_C) : FIXED_C, OFF = new Float64Array(8);
+export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
+  const T = FIXED, HC = FIXED_C;
   // Walking the bike: anywhere a bike can be but the water, never into a wall, a house, a post (the fence).
-  const bike = ride(T.ground, specs, (p: Float64Array) => T.streetClear(p[0]!, p[1]!, 0.05, true)), sc = tricks(), cop = cops(seed, HC);
+  const bike = ride(T.ground, specs, (p: Float64Array) => T.streetClear(p[0]!, p[1]!, 0.05, true)), sc = tricks(), cop = fixedCops(seed);
   // Unstuck (a person riding): the ring of good spots on the street, the watch; US[0]: the prompt is up.
   const U = unstuck(T.ground, T.streetClear), US = new Float64Array(1);
-  // Endless: the slot ridden, the start's x, the furthest along +x from it (the distance).
-  const ES = new Float64Array(3);
-  /** Endless: into slot k (its hood kind moves there). */
-  function toSlot(k: number) {
-    const h = slotKind(k, citySeed);
-    ES[0] = k;
-    HC[h * 2] = k * PITCH; HC[h * 2 + 1] = 0;
-    OFF[h * 2] = k * PITCH - CX[h]!; OFF[h * 2 + 1] = -CZ[h]!;
-    if (h === 0) DG[0] = (DOG[0]! + DOG[1]!) / 2 + OFF[0]!;
-    return h;
-  }
   // S: phase, time left, ride, crash timer, grumps, splashes, barks, route leg, hop air, crash reason,
   // wall hit, sprinkler clock, hood, flying, flying to (hump), flight time, loop direction, escaping
   // for (hump + 1), humps jumped, hoods visited (bits), the autopilot's stuck timer and its rescues.
@@ -317,14 +257,6 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
     U.clear(); US[0] = 0;
     DG[0] = (DOG[0]! + DOG[1]!) / 2;
     n = 0;
-    if (endless) {
-      // Slot 0, on its south street heading east (the way the town goes on).
-      const h = toSlot(0);
-      S[HOOD] = h; S[LEG] = 0; S[VISITED] = 1 << h;
-      bike.use(which, -40, SLOT_Z + 0.1, 0);
-      ES[1] = -40; ES[2] = 0;
-      return;
-    }
     const st = HOODS[hood]!.start;
     bike.use(which, st[0]! + CX[hood]!, st[1]! + CZ[hood]!, st[2]!);
   }
@@ -377,10 +309,9 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
     }
   }
   function launch(i: number) {
-    // (Endless: i is the slot's own hump, 0 east, 1 west; its partner is the next slot's facing one.)
-    const b = bike.b, j = endless ? i : i ^ 1, dx = endless ? (i ? -1 : 1) : HUMPS[i * 5 + 2]!, dz = endless ? 0 : HUMPS[i * 5 + 3]!, p = b.pos;
+    const b = bike.b, j = i ^ 1, dx = HUMPS[i * 5 + 2]!, dz = HUMPS[i * 5 + 3]!, p = b.pos;
     // Straight across: the heading set to the hump's, the line kept; the landing on the far ramp.
-    const fx = endless ? (ES[0]! + dx) * PITCH - dx * (HX - LIP) : HUMPS[j * 5]!;
+    const fx = HUMPS[j * 5]!;
     const lx = dx !== 0 ? fx + dx * LAND_AT : p[0]!, lz = dz !== 0 ? HUMPS[j * 5 + 1]! + dz * LAND_AT : p[2]!;
     const D = (lx - p[0]!) * dx + (lz - p[2]!) * dz;
     T.heightQ(p[0]!, p[2]!);
@@ -397,10 +328,9 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
   }
   /** Down in the next hood: the patrol is lost; the autopilot picks up that hood's loop. */
   function landed() {
-    const j = S[FLYTO]!, dx = j ? -1 : 1, h = endless ? toSlot(ES[0]! + dx) : HUMPS[j * 5 + 4]!;
+    const j = S[FLYTO]!, h = HUMPS[j * 5 + 4]!;
     S[FLY] = 0; S[HOOD] = h; S[GO] = 0;
-    if (endless) (S[LEG] = dx > 0 ? 0 : RTE.length / 2 - 1), (S[DIR] = dx);
-    else (S[LEG] = ENTRY[j * 2]!), (S[DIR] = ENTRY[j * 2 + 1]!);
+    S[LEG] = ENTRY[j * 2]!; S[DIR] = ENTRY[j * 2 + 1]!;
     S[VISITED] = S[VISITED]! | (1 << h);
     emit(E_LAND, h);
     const pts = cop.escape();
@@ -416,7 +346,7 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
         // Back to the last good spot on the street (never the trap), upright and still; its hood.
         const o = U.reset(bike.b);
         bike.reset(o[0]!, o[1]!, o[2]!);
-        S[HOOD] = endless ? toSlot(slotAt(o[0]!)) : hoodAt(o[0]!, o[1]!);
+        S[HOOD] = hoodAt(o[0]!, o[1]!);
         sc.drop();
         if (US[0]) US[0] = 0;
         emit(E_RESET, again ? 1 : 2);
@@ -445,9 +375,8 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
     } else if ((S[PH] === RUN || ph === READY) && !b.crashed) humps();
     const x = b.pos[0]!, z = b.pos[2]!, speed = b.speed < 0 ? -b.speed : b.speed;
     if (S[PH] === RUN && !fly) drag(dt);
-    if (endless && S[PH] !== READY && x - ES[1]! > ES[2]!) ES[2] = x - ES[1]!;
     if (S[PH] === RUN) {
-      if (!endless) S[CLOCK] = Math.max(0, S[CLOCK]! - dt);
+      S[CLOCK] = Math.max(0, S[CLOCK]! - dt);
       // The trick in progress, and a hop when it lands.
       if (bike.air) {
         if (!wasAir) emit(E_AIR, 0);
@@ -459,9 +388,7 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
       if (sc.step(dt, bike.nose, bike.balance, bike.spec.sweet, speed, b.throttle, bike.air) === BANKED) bankedNow(E_TRICK);
       if (sc.S[ON]) {
         for (let o = 0; o < CROSS.length; o += 4) {
-          const ch = CROSS_H[o / 4]!;
-          if (endless && ch !== S[HOOD]) continue;
-          if (inR(x - OFF[ch * 2]!, z - OFF[ch * 2 + 1]!, CROSS, o) && sc.bonus(F_CROSS)) emit(E_BONUS, F_CROSS);
+          if (inR(x, z, CROSS, o) && sc.bonus(F_CROSS)) emit(E_BONUS, F_CROSS);
         }
       }
       if (S[CLOCK] === 0) {
@@ -471,7 +398,7 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
       }
     } else if (S[PH] === CRASH) {
       S[CT] = S[CT]! - dt;
-      if (!endless) S[CLOCK] = Math.max(0, S[CLOCK]! - dt);
+      S[CLOCK] = Math.max(0, S[CLOCK]! - dt);
       moving = true;
       if (S[CT]! <= 0) {
         S[PH] = S[CLOCK]! > 0 ? RUN : DONE;
@@ -533,9 +460,7 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
     const kind = S[FLY] ? K_WATER : T.kindAt(x, z), on = sc.S[ON] === 1, loud = on || speed > 9 || kind === K_LAWN;
     if (kind === K_LAWN && S[PH] === RUN && !bike.air) cop.heat(HEAT_FROM.lawn * dt);
     for (let i = 0; i < NN; i++) {
-      const nh = NEIGH_H[i]!;
-      if (endless && nh !== S[HOOD]) continue;
-      const o = i * 8, b = i * 3, ox = OFF[nh * 2]!, oz = OFF[nh * 2 + 1]!, inZone = x > NEIGH[o + 4]! + ox && x < NEIGH[o + 6]! + ox && z > NEIGH[o + 5]! + oz && z < NEIGH[o + 7]! + oz;
+      const o = i * 8, b = i * 3, inZone = x > NEIGH[o + 4]! && x < NEIGH[o + 6]! && z > NEIGH[o + 5]! && z < NEIGH[o + 7]!;
       if (NB[b + 1]! > 0) NB[b + 1] = NB[b + 1]! - dt;
       if (NB[b]! > 0) {
         NB[b] = Math.max(0, NB[b]! - dt);
@@ -551,9 +476,7 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
     }
     S[SPCLK] = S[SPCLK]! + dt;
     for (let i = 0; i < NSP; i++) {
-      const sh = SPRINK_H[i]!;
-      if (endless && sh !== S[HOOD]) continue;
-      const o = i * 4, dx = x - (SPRINK[o]! + OFF[sh * 2]!), dz = z - (SPRINK[o + 1]! + OFF[sh * 2 + 1]!), dd = hypot(dx, dz);
+      const o = i * 4, dx = x - SPRINK[o]!, dz = z - SPRINK[o + 1]!, dd = hypot(dx, dz);
       if (SPC[i]! > 0) SPC[i] = SPC[i]! - dt;
       if (dd > SP_REACH || dd < 0.2 || SPC[i]! > 0) continue;
       let da = heading(dx, dz) - sprinklerAim(i);
@@ -568,7 +491,7 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
     }
     any = true; // the sprinklers turn while the session runs
     // The dog trots along its fence after the bike and barks when it is close.
-    const gx = OFF[0]!, gz = DOG[2]! + OFF[1]!, dz = Math.abs(z - gz), want = dz < 9 && S[HOOD] === 0 ? Math.max(DOG[0]! + gx, Math.min(DOG[1]! + gx, x)) : (DOG[0]! + DOG[1]!) / 2 + gx, dx = want - DG[0]!;
+    const gz = DOG[2]!, dz = Math.abs(z - gz), want = dz < 9 && S[HOOD] === 0 ? Math.max(DOG[0]!, Math.min(DOG[1]!, x)) : (DOG[0]! + DOG[1]!) / 2, dx = want - DG[0]!;
     DG[0] = DG[0]! + Math.max(-4 * dt, Math.min(4 * dt, dx));
     if (DG[2]! > 0) DG[2] = Math.max(0, DG[2]! - dt);
     if (DG[3]! > 0) DG[3] = DG[3]! - dt;
@@ -583,7 +506,7 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
   // ---- the autopilot: round the hood's loop, a wheelie down each straight, the front down for the
   // corners; with the patrol after it, for the hood's escape hump at full gas ----
   function autopilot(I: Float64Array) {
-    const b = bike.b, h = S[HOOD]!, cx = HC[h * 2]!, cz = HC[h * 2 + 1]!, x = b.pos[0]! - cx, z = b.pos[2]! - cz, R = endless ? RTE : RT[h]!, nw = R.length / 2;
+    const b = bike.b, h = S[HOOD]!, cx = HC[h * 2]!, cz = HC[h * 2 + 1]!, x = b.pos[0]! - cx, z = b.pos[2]! - cz, R = RT[h]!, nw = R.length / 2;
     I[4] = 0;
     if (S[FLY]) return void (I[0] = I[1] = I[2] = I[3] = 0);
     // Wedged against something for two seconds (it has no reverse): back on the loop at its last waypoint (counted: the tests want none).
@@ -600,7 +523,7 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
     if (S[GO]! > 0) {
       // For the hump: past its lip, on its line.
       const i = S[GO]! - 1, E = T.HU[h]!;
-      const lx = endless ? E[i * 5 + 1]! : HUMPS[i * 5]! - cx, lz = endless ? E[i * 5 + 2]! : HUMPS[i * 5 + 1]! - cz, dx = endless ? E[i * 5 + 3]! : HUMPS[i * 5 + 2]!, dz = endless ? E[i * 5 + 4]! : HUMPS[i * 5 + 3]!;
+      const lx = HUMPS[i * 5]! - cx, lz = HUMPS[i * 5 + 1]! - cz, dx = HUMPS[i * 5 + 2]!, dz = HUMPS[i * 5 + 3]!;
       ax = lx + dx * 6; az = lz + dz * 6;
       if (dx !== 0) az = lz; else ax = lx;
       let err = heading(ax - x, az - z) - b.yaw;
@@ -611,18 +534,13 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
       I[0] = ae < 0.45 || v < 2.5 ? 1 : 0;
       I[1] = ae > 0.45 && v > 4.5 ? 0.8 : 0;
       I[2] = bike.nose > 0.04 ? 1 : 0.4;
-      if (!flee && ae > 2.2 && !endless) S[GO] = 0;
+      if (!flee && ae > 2.2) S[GO] = 0;
       return;
     }
     const tx = R[leg * 2]!, tz = R[leg * 2 + 1]!;
     let dist = hypot(tx - x, tz - z);
     if (dist < 2.6) {
       // At a waypoint: for an escape hump that turns off here (riding the loop the right way, the hump ahead or to the side), else on round.
-      if (endless && (flee || leg + dir < 0 || leg + dir >= nw)) {
-        // Endless: at the end of the street (or with the patrol on it), for the hump that way.
-        S[GO] = dir > 0 ? 1 : 2;
-        return autopilot(I);
-      }
       if (flee) {
         const U = HU[h]!;
         for (let o = 0; o < U.length; o += 5) {
@@ -686,14 +604,10 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
   // the sprinklers, the dog, the scorer, the patrol, the ride adapter and the bike ridden.
   const u8 = (a: Float64Array | Uint32Array) => new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
   const bytes = [u8(S), u8(NB), u8(SPC), u8(DG), u8(HD), u8(sc.S), u8(cop.S), u8(cop.P), u8(cop.R), u8(bike.R), u8(bike.vel), u8(U.S), u8(U.R), u8(US), ...bike.all.map((b) => b.state)];
-  if (endless) bytes.push(u8(ES), u8(HC), u8(OFF));
   return {
     S, ev, bike, sc, cop, NB, SPC, DG, bytes, unstuck: U,
-    /** The ground ridden (the fixed table or the endless row), the hood kinds' centres and moves. */
-    town: T, HC, OFF, endless, HD,
-    /** Endless: the slot ridden, and how far it has gone along the town (world units). */
-    get slot() { return ES[0]!; },
-    get far() { return ES[2]!; },
+    /** The ground ridden, the hoods' centres. */
+    town: T, HC, HD,
     /** The stuck prompt is up. */
     get stuck() { return US[0] === 1; },
     get n() { return n; },
@@ -703,7 +617,7 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
     choose(i: number, hood = 0) { reset(i, hood); },
     /** Put the bike down at world (x, z) facing yaw in its hood (a test, a harness). */
     place(x: number, z: number, yaw: number) {
-      const h = endless ? toSlot(slotAt(x)) : hoodAt(x, z);
+      const h = hoodAt(x, z);
       bike.reset(x, z, yaw);
       S[HOOD] = h; S[FLY] = 0; S[GO] = 0; S[VISITED] = S[VISITED]! | (1 << h);
     },

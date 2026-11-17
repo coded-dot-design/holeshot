@@ -19,12 +19,12 @@ import { unstuck, U_AUTO, U_PROMPT } from "../unstuck.ts";
 import { tricks, ON, SC, PTS, F_CROSS, F_SPRINK, F_GRUMP, BANKED, MAXCB, CB as T_CB, GAP as T_GAP } from "./tricks.ts";
 import { cops, heading, C_TICKET, C_STARS, C_UNIT, C_CLEAR, STARS, NEAR } from "./cops.ts";
 import {
-  openWorld, openWindow, IS, TOWN_R, I_PROP, I_HOUSE, I_HOUSE2, I_TREE, I_PINE, I_ROCK, I_HAY, I_LAMP, I_SIGN, I_MAIL, I_BENCH, I_CAR, I_FENCE, I_DOG, I_SPRINK, I_CROSS, I_SILO, F_LAWN,
+  openWorld, openWindow, CITY_SEED, IS, TOWN_R, I_PROP, I_HOUSE, I_HOUSE2, I_TREE, I_PINE, I_ROCK, I_HAY, I_LAMP, I_SIGN, I_MAIL, I_BENCH, I_CAR, I_FENCE, I_DOG, I_SPRINK, I_CROSS, I_SILO, F_LAWN,
 } from "./open.ts";
 import {
   READY, RUN, CRASH, DONE, E_START, E_TRICK, E_CRASH, E_RESPAWN, E_GRUMP, E_BARK, E_SPLASH, E_BONUS, E_HOP, E_AIR, E_TICKET, E_ESCAPE, E_STARS, E_UNIT, E_CLEAR,
-  E_STUCK, E_RESET, E_DRAG, E_BANKED, E_LOST, HAND_T, DRAG_RATE, DRAG_X, STREAK, HEAT_FROM, AP, LINES, SP_REACH, CITY_SEED,
-} from "./city.ts";
+  E_STUCK, E_RESET, E_DRAG, E_BANKED, E_LOST, HAND_T, DRAG_RATE, DRAG_X, STREAK, HEAT_FROM, AP, LINES, SP_REACH,
+} from "./rules.ts";
 
 /** Into a town (value 1) or out of its limits (0). */
 export const E_TOWN = 24;
@@ -149,10 +149,10 @@ export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEE
     W.at(e, 14);
     const x = W.PQ[0]!, z = W.PQ[1]! , tx = W.PQ[2]!, tz = W.PQ[3]!, hw = W.EF[e * 8]!;
     const sx = x - tz * hw * 0.5, sz = z + tx * hw * 0.5;
+    win.follow(sx, sz);
     bike.use(which, sx, sz, heading(tx, tz));
     S[AI] = 0; S[AJ] = 0; S[AD] = 0; S[AS] = 1;
     ES[0] = sx; ES[1] = sz; ES[2] = 0;
-    win.follow(sx, sz);
     SGC[2] = 0;
     regather(sx, sz);
     towns(sx, sz);
