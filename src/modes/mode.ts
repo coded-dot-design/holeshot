@@ -8,7 +8,7 @@ import type { Engine } from "@fzlt/core/kernel";
 import type { RigColors, RigHelmet } from "../bike/rig.ts";
 import type { Tuned } from "../model/tune.ts";
 
-export type ModeId = "race" | "freeride" | "bigair" | "wheelie" | "series";
+export type ModeId = "race" | "freeride" | "bigair" | "wheelie" | "series" | "desert";
 
 /** What a ride did, for the payout and the wear. Every mode fills the common part. */
 export interface RunStats {
@@ -38,6 +38,8 @@ export interface RunStats {
   /** Free Ride: tricks landed (big airs and flips; `flips` counts the flips among them). */
   tricks?: number;
   score?: number;
+  /** Endless Desert: how far it rode (world units, about metres): its best is kept in the profile. */
+  far?: number;
   /** A line for the result card (what happened, in words). */
   summary?: string;
   /** The map or track ridden (its id). */
@@ -64,6 +66,8 @@ export interface ModeCtx {
   seed: number;
   /** Which map or track (a mode with several; its default if absent). */
   map?: string;
+  /** The rider's best distance in this mode (Endless Desert), for the HUD. */
+  best?: number;
   /** Ride itself (the landing hero, the tests). */
   auto?: boolean;
   /** The landing hero: no HUD, no cards, loop forever on the autopilot. */

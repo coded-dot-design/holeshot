@@ -200,8 +200,8 @@ test("save: the garage's fields fill in with defaults (no schema step of their o
   assert.deepEqual(back.profile, P.normalize(q));
   // The series' schema step (1 → 2) and the garage's defaults compose: a v2 save from before the
   // garage (the series record, old mods, no garage fields) gets the same defaults, keeps its series.
-  assert.equal(P.VERSION, 2, "the series' schema; the garage adds no step");
-  assert.equal(p.v, 2);
+  assert.equal(P.VERSION, 3, "the series' schema, then best distance (Endless Desert); the garage adds no step");
+  assert.equal(p.v, 3);
   assert.deepEqual(p.series.best, {}, "the v1 save went through the series' step");
   const v2 = { ...old, v: 2, series: { best: { rookie: 2 }, titles: 1, run: null, last: null } };
   const p2 = P.migrate(v2), b2 = p2.bikes[0];

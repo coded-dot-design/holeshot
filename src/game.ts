@@ -32,7 +32,7 @@ import { blankStats } from "./modes/mode.ts";
 import { mountTrack, type NetRun, type NetView } from "./modes/race/scene.ts";
 import { applyOnline, settleOnline } from "./model/economy.ts";
 import { match, OVER, type Match, type Ride, type SeatResult } from "./online/match.ts";
-import { joinRoom, cleanName, encode, scoreBits, packMode, unpackMode, B_AUTO, SEATS, K_RACE, K_JAM, K_AIR } from "./net.ts";
+import { joinRoom, cleanName, encode, scoreBits, packMode, unpackMode, B_AUTO, B_RESET, SEATS, K_RACE, K_JAM, K_AIR } from "./net.ts";
 import { KINDS, pickName, roomCard, seatsHTML, standingsHTML } from "./online/room.ts";
 export { lookOf };
 
@@ -233,6 +233,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       look: L2.look, helmet: L2.helmet, number: L2.number, name: profile.name,
       seed: opt.seed ?? ((o.seed ?? 20261114) + profile.stats.events * 7919) >>> 0,
       map: opt.map,
+      best: profile.stats.far[id] ?? 0,
       auto: opt.auto ?? !!o.attract,
       attract: !!o.attract,
       reduced,
@@ -569,7 +570,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       return scoreBits(done ? N.final : Number(run.state.score) || 0, done);
     }
     const I = (run as NetRun).input();
-    return encode(I[0]!, I[1]!, I[2]!, I[3]!, run.auto ? B_AUTO : 0);
+    return encode(I[0]!, I[1]!, I[2]!, I[3]!, (run.auto ? B_AUTO : 0) | (I[4] === 2 ? B_RESET : 0));
   }
   /** Each rider's tag: people's names ("· AI" once they left), the race's AI rivals'. */
   function tags() {

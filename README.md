@@ -28,6 +28,13 @@ pick your jersey and a name. That bike rides every event.
 - **Free Ride**: five maps to yourself (the Neon Loop, Dune Sea, the Quarry, Forest Enduro, Night
   Park), no laps, no clock; END banks the session (a little pay for saddle time, air, wheelies and
   tricks).
+- **Endless Desert**: a dune sea that never ends. Big rolling dunes across the wind, sharp crests,
+  witches'-hat peaks and bowls, and now and then a kicker, a whoop section, a cactus clump, a rock pile
+  or a camp with a beacon to ride to; a neon grid over the sand and a haze that swallows the far dunes
+  into the sky, so there is never an edge. The ground is a pure function of the seed and the place
+  (the same dune is always the same dune); the bike rides an 80 × 80 unit window of it that slides
+  with you. The HUD counts kilometres (a unit is about a metre: the bike's wheelbase is 1.5) and your
+  best distance is kept in the profile. END banks it (Free Ride's pay, plus 20 a km, under its cap).
 - **Big Air**: a minute in the arena, two steel kickers. Hold TRICK in the air and the stick picks
   one of four tricks; weight all the way back flips it. Five judges score the run and pay.
 - **Wheelie City**: ninety seconds across four neighbourhoods (the suburb block, a hillside of
@@ -63,7 +70,16 @@ ridden a few events and can't pay.
 
 **Controls.** Space or J gas, K or Shift brake, W/S or ↑/↓ your weight (back lifts the front; in the
 air it pitches the bike), A/D or ←/→ steer, L trick (Big Air) or hop (Wheelie City), V camera, M
-sound, P or Escape pause. A mouse: hold the track for gas, drag to steer and lean. Phones: the stick
+sound, P or Escape pause, R reset (Free Ride and Endless Desert; the ↺ key on the HUD, a gamepad's
+Back/Select).
+
+**Stuck?** In Free Ride and Endless Desert the game keeps the last good places you rode (on the
+ground, upright, moving, clear of trees, cactus and rocks; one a second). Barely moving for two
+seconds with your hands on the controls brings up "STUCK? Hold R / tap ↺ to reset"; four seconds
+and it resets on its own. A reset puts you upright and still on the newest of those places that is
+clear, on gentle ground with six units of run-up ahead and at least two units from where you got
+stuck (so never back into the same trap), facing the way you were going, with a short blink. It is
+an input of the frame (online, every screen does the same). A mouse: hold the track for gas, drag to steer and lean. Phones: the stick
 under the left thumb leans and steers, GAS and BRAKE (and TRICK or HOP) under the right. A gamepad
 works too. The look follows the page's `<html data-theme>`.
 

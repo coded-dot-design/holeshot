@@ -1,5 +1,36 @@
 # Changelog
 
+## Unreleased
+
+- **Endless Desert, a new mode.** A dune sea that never ends: big ridged dunes across the wind, a
+  second smaller set, ripples, witches'-hat peaks and bowls on a 72-unit lattice, and sparse
+  features on a 40-unit lattice (half the cells are open sand; the rest a kicker, a whoop section, a
+  cactus clump, a rock pile or a camp with a beacon). The ground is `heightAt(seed, x, z)`, pure and
+  deterministic (integer hashes, + − × ÷, floors and square roots; no builtin transcendentals); the
+  bike rides a 160 × 160 cell window (80 × 80 units) that slides 8 units at a time, copying what it
+  keeps and computing only the new strip, so where the window is never changes a height. A neon grid
+  over the sand (world-fixed, so it slides under you) and a haze from 16 to 33 units ahead fades the
+  far sand into the sky's horizon colour: no edge. Scenery comes from a fixed pool placed on the 3 × 3
+  lattice cells round you. Measured headless (`tests/desert.test.mjs`): 10 km on the autopilot, the
+  rider never closer than 24 units to the window's edge, zero young-generation GCs over 3,000 steps;
+  in Chromium (headless, the autopilot, 8 s to 100 s in) the terrain drew 2,513–3,205 faces a frame at
+  1440 and 1,247–2,142 at 390. Free Ride is
+  unchanged.
+- **Best distance** in the profile: `stats.far` (by mode), profile version 3 (a v2 save gets
+  `far.desert = 0`, everything else carries over). The HUD shows km and your best; the result pays
+  20 a km within Free Ride's cap.
+- **Unstuck** (Free Ride, Endless Desert, the Free Ride jam): a ring of the last ten good places, a
+  stuck prompt after two seconds without half a unit of progress with the controls held, an automatic
+  reset after four, and a manual reset (R, the ↺ key on the HUD, a gamepad's Back/Select; online the
+  input bit `B_RESET`). The reset never lands within two units of the trap, needs gentle ground and
+  six units of clear run-up, nudges a unit or two sideways if the place itself is blocked, and blinks
+  the bike for 1.2 s (no tree or cactus hits meanwhile). Tests: a wedged bike gets the prompt and then
+  the reset, lands upright behind the trap and rides more than 2 units in a second; R resets.
+- The golden file: the two Free Ride jam hashes change (a jam's bytes now carry each rider's
+  distance and unstuck ring); every other hash is unchanged.
+- Size budget 168,000 B gzip (163,637 B measured, +7,794 B: the desert's ground, window, grid, haze
+  and scenery, the unstuck ring and reset, best distance and the profile's v3 step).
+
 ## 0.3.0
 
 - **Wheelie City: four neighbourhoods and the neon patrol.** THE BLOCK (the suburb strip),

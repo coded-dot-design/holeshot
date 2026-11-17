@@ -1,0 +1,163 @@
+// Endless Desert, drawn: the dune sea's palette (a neon night in dark, a hot pastel day in light),
+// the sand's bands, the Tron grid laid over the sand (world-fixed lines every GRID units: they slide
+// under the bike as it rides, so the ground reads as motion), the haze that swallows the far sand
+// into the sky's horizon colour (so the window's edge is never seen), and the scenery streamed round
+// the rider from a fixed pool: the lattice's cactus clusters, rock piles and camps with their beacon,
+// placed from the same seeded lattice the sim's posts come from. Nothing here allocates per frame.
+import type { Diorama, DioramaObject } from "@fzlt/core/diorama";
+import type { Pal } from "../race/scene.ts";
+import { featureOf, hash2, postDir, DIRS, FCELL, D_CACTUS, D_ROCKS, D_CAMP, type World } from "./world.ts";
+
+/** Grid spacing (units), reach (units from the bike), haze start and full (units from the bike). */
+export const GRID = 4, REACH = 34, HAZE0 = 16, HAZE1 = 33;
+
+export const DESERT_DARK: Partial<Pal> = {
+  light: [-0.75, 0.55, 0.35], amb: 0.3,
+  sky0: "#07031c", sky1: "#2a0b46", sky2: "#7a2470", grid: "#22e6ff", star: "#ffd6f2",
+  ground: ["#3a1858", "#4c2070", "#5e2a86"], crest: "#8a44a8", steep: "#1c0b34", dust: "#b06ad8",
+  edge: "#22e6ff", edge2: "#ffb13b", table: "#6a1d6a", tower: "#2a1a48", lamp: "#ffd166",
+};
+export const DESERT_LIGHT: Partial<Pal> = {
+  light: [-0.75, 0.6, 0.35], amb: 0.42,
+  sky0: "#8fd3ff", sky1: "#ffd9c2", sky2: "#ffeedd", grid: "#ff7a59",
+  ground: ["#f2c088", "#f5cc96", "#f8d8a6"], crest: "#fff0d4", steep: "#c9824e", dust: "#efc597",
+  edge: "#13a9bb", edge2: "#ff7a59", table: "#fff1e0", tower: "#8a6a58", lamp: "#ffe08a",
+};
+export const desertBands = (p: Pal): [number, string][] => [[1.2, p.ground[0]!], [2.6, p.ground[1]!], [4.2, p.ground[2]!], [99, p.crest]];
+
+/** Lattice slots streamed round the rider (3 × 3 feature cells) and the parts each slot can show. */
+const SLOTS = 9, CACTI = 4, ROCKS = 4;
+
+export function desertView(d: Diorama, W: World) {
+  const P3 = new Float64Array(3), F = new Float64Array(4), SL = new Float64Array(SLOTS * 3);
+  const cacti: DioramaObject[] = [], rocks: DioramaObject[] = [], camps: DioramaObject[] = [], beams: DioramaObject[] = [];
+  const objs: DioramaObject[] = [];
+  let ci0 = NaN, cj0 = NaN;
+  const PT = new Float64Array(3), PT2 = new Float64Array(3);
+
+  /** (Re)build the pool in palette p (a theme change rebuilds the scene). */
+  function build(p: Pal) {
+    cacti.length = rocks.length = camps.length = beams.length = objs.length = 0;
+    for (let s = 0; s < SLOTS; s++) {
+      for (let k = 0; k < CACTI; k++) {
+        const id = `dc${s}_${k}`, g = d.add({ id, shape: "cyl", sides: 6, size: [0.32, 2, 0.32], pos: [0, -50, 0], color: p.night ? "#1f5a4a" : "#5f9a6a", pick: false, hidden: true });
+        d.add({ shape: "cyl", sides: 6, size: [0.2, 0.8, 0.2], pos: [0.3, -1.1, 0], rot: [0, 0, 0], on: id, color: p.night ? "#1f5a4a" : "#5f9a6a", pick: false });
+        d.add({ shape: "cyl", sides: 6, size: [0.34, 0.08, 0.34], on: id, color: p.night ? p.edge : "#b8f0a0", emissive: p.night, pick: false });
+        cacti.push(g), objs.push(g);
+      }
+      for (let k = 0; k < ROCKS; k++) {
+        const r = d.add({ shape: "cyl", sides: 5, top: 0.5, size: [1, 0.6, 0.9], pos: [0, -50, 0], color: p.night ? "#2a1a48" : "#c98f6a", pick: false, hidden: true });
+        rocks.push(r), objs.push(r);
+      }
+      // A camp: a tent and its beacon (a tall pole with a lamp: something to ride to).
+      const cid = `dk${s}`, c = d.add({ id: cid, shape: "group", size: [1, 0, 1], pos: [0, -50, 0], pick: false, hidden: true });
+      d.add({ shape: "cyl", sides: 4, top: 0, size: [2.2, 1.4, 2.2], pos: [2.2, 0, 1.4], on: cid, color: p.night ? "#3a1d5c" : "#ffffff", pick: false });
+      const pole = d.add({ id: cid + "p", shape: "cyl", sides: 6, size: [0.18, 5.2, 0.18], pos: [0, 0, 0], on: cid, color: p.tower, pick: false });
+      void pole;
+      const lamp = d.add({ shape: "box", size: [0.5, 0.5, 0.5], on: cid + "p", color: p.edge2, emissive: true, pick: false });
+      camps.push(c), objs.push(c), beams.push(lamp);
+    }
+    ci0 = cj0 = NaN;
+  }
+  /** Put the pool on the 3 × 3 lattice cells round (x, z) (when the rider's cell changes). */
+  function place(x: number, z: number) {
+    const ci = Math.floor(x / FCELL), cj = Math.floor(z / FCELL);
+    if (ci === ci0 && cj === cj0) return;
+    ci0 = ci; cj0 = cj;
+    for (let o = 0; o < objs.length; o++) objs[o]!.hidden = true;
+    let s = 0;
+    for (let j = cj - 1; j <= cj + 1; j++)
+      for (let i = ci - 1; i <= ci + 1; i++, s++) {
+        const k = featureOf(W.seed, i, j, F);
+        SL[s * 3] = F[1]!; SL[s * 3 + 1] = F[2]!; SL[s * 3 + 2] = k;
+        if (k === D_CACTUS || k === D_ROCKS) {
+          for (let q = 0; q < 4; q++) {
+            // The same places as the sim's posts (./world.ts postsNear).
+            const a = postDir(i, j, q, W.seed), rr = 1.2 + hash2(i, j * 7 + q, W.seed + 91) * 3.2;
+            const px = F[1]! + DIRS[a * 2]! * rr, pz = F[2]! + DIRS[a * 2 + 1]! * rr, y = W.height(px, pz);
+            const ob = k === D_CACTUS ? cacti[s * CACTI + q]! : rocks[s * ROCKS + q]!;
+            ob.pos[0] = px; ob.pos[1] = y - 0.1; ob.pos[2] = pz;
+            ob.rot[1] = a * 1.7 + q;
+            if (k === D_ROCKS) {
+              const sz = 0.32 + hash2(i + q, j + q, W.seed + 92) * 0.3;
+              ob.size[0] = sz * 3; ob.size[1] = sz * 1.8; ob.size[2] = sz * 2.6;
+            } else ob.size[1] = 1.6 + q * 0.3;
+            ob.hidden = false;
+          }
+        } else if (k === D_CAMP) {
+          const c = camps[s]!;
+          c.pos[0] = F[1]!; c.pos[1] = W.height(F[1]!, F[2]!) - 0.1; c.pos[2] = F[2]!;
+          c.hidden = false;
+        }
+      }
+  }
+  /** Each frame: stream the pool, fade what is out in the haze. (x, z): the bike. */
+  function frame(x: number, z: number, night: boolean, time: number) {
+    place(x, z);
+    for (let o = 0; o < objs.length; o++) {
+      const ob = objs[o]!;
+      if (ob.hidden) continue;
+      const dx = ob.pos[0]! - x, dz = ob.pos[2]! - z, dd = Math.sqrt(dx * dx + dz * dz);
+      // Camps' beacons show further: they are what you ride to.
+      const far = HAZE1 + 6;
+      ob.alpha = dd < HAZE0 ? 1 : dd > far ? 0 : 1 - (dd - HAZE0) / (far - HAZE0);
+    }
+    for (let k = 0; k < beams.length; k++) beams[k]!.alpha = night ? 0.65 + 0.35 * Math.sin(time * 4 + k) : 1;
+  }
+
+  /** The grid over the sand round (x, z), faded by distance (painted in the terrain's sort, over the faces). */
+  function paintGrid(ctx: CanvasRenderingContext2D, x: number, z: number, color: string, alpha: number) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(1, d.width / 1100);
+    ctx.lineCap = "round";
+    const gx0 = Math.ceil((x - REACH) / GRID) * GRID, gz0 = Math.ceil((z - REACH) / GRID) * GRID;
+    for (let pass = 0; pass < 2; pass++) {
+      for (let band = 0; band < 3; band++) {
+        // Three rings: near, middle, far (fainter: the haze's job is finished by the fog).
+        ctx.globalAlpha = alpha * (band === 0 ? 1 : band === 1 ? 0.6 : 0.3);
+        const r0 = band === 0 ? 0 : band === 1 ? 12 : 22, r1 = band === 0 ? 12 : band === 1 ? 22 : REACH;
+        ctx.beginPath();
+        for (let g = pass ? gz0 : gx0; g <= (pass ? z : x) + REACH; g += GRID) {
+          let pen = false;
+          for (let s = -REACH; s <= REACH; s += 1) {
+            const px = pass ? x + s : g, pz = pass ? g : z + s, dx = px - x, dz = pz - z, dd = Math.sqrt(dx * dx + dz * dz);
+            if (dd < r0 || dd > r1) { pen = false; continue; }
+            if (!d.project(px, W.t.height(px, pz) + 0.04, pz, PT) || PT[2]! < 0.5) { pen = false; continue; }
+            if (pen) ctx.lineTo(PT[0]!, PT[1]!);
+            else ctx.moveTo(PT[0]!, PT[1]!), (pen = true);
+          }
+        }
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+  /** The horizon's screen y (the eye's level, straight ahead). */
+  function horizon() {
+    const c = d.cam, f = d.height / 2 / Math.tan(c.fov / 2);
+    return d.height / 2 + c.oy - f * Math.tan(c.pitch);
+  }
+  /** The haze: the sky's horizon colour over the far sand, from the horizon down to where the sand
+   *  HAZE0 units ahead of the bike meets the screen (and solid above HAZE1). */
+  function paintFog(ctx: CanvasRenderingContext2D, x: number, z: number, color: string, g: { g: CanvasGradient | null; y0: number; y1: number }) {
+    const c = d.cam, fx = -Math.sin(c.yaw), fz = -Math.cos(c.yaw), y = W.t.height(x, z);
+    const ok1 = d.project(x + fx * HAZE1, y, z + fz * HAZE1, PT), ok0 = d.project(x + fx * HAZE0, y, z + fz * HAZE0, PT2);
+    const yh = horizon(), y1 = ok1 ? Math.max(yh, PT[1]!) : yh + 4, y0 = ok0 ? Math.max(y1 + 8, PT2[1]!) : y1 + 40;
+    const top = yh - d.height * 0.1;
+    if (!g.g || Math.abs(g.y0 - y0) > 3 || Math.abs(g.y1 - y1) > 3) {
+      // One gradient: clear well above the horizon, solid from the horizon to the haze's full line,
+      // clear again where the near sand starts (a tall far dune fades into the sky, never cut).
+      const span = y0 - top || 1;
+      g.g = ctx.createLinearGradient(0, top, 0, y0);
+      g.g.addColorStop(0, color + "00");
+      g.g.addColorStop(Math.max(0.01, (yh - top) / span), color);
+      g.g.addColorStop(Math.min(0.98, Math.max(0.02, (y1 - top) / span)), color);
+      g.g.addColorStop(1, color + "00");
+      g.y0 = y0; g.y1 = y1;
+    }
+    ctx.fillStyle = g.g;
+    ctx.fillRect(0, top, d.width, g.y0 - top);
+  }
+  return { build, frame, paintGrid, paintFog, horizon, place, slots: SL };
+}
+export type DesertView = ReturnType<typeof desertView>;

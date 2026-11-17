@@ -22,6 +22,7 @@ const RENDER = {
   "modes/bigair/scene.ts": "the arena scene",
   "modes/wheelie/scene.ts": "the town scene",
   "modes/freeride/scenery.ts": "map scenery and skies (drawn)",
+  "modes/desert/look.ts": "the desert's grid, haze and scenery pool (drawn)",
   "modes/freeride/picker.ts": "the map picker's previews",
   "modes/race/preview.ts": "a track drawn as SVG",
   "game.ts": "the shell's cards and preview",

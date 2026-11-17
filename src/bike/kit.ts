@@ -98,7 +98,7 @@ export function voice() {
 }
 export type Voice = ReturnType<typeof voice>;
 
-/** The first gamepad into out = [stick x, stick y, gas, brake, trick, start]; false with none. Only
+/** The first gamepad into out = [stick x, stick y, gas, brake, trick, start, back/select]; false with none. Only
  *  polled once a pad has said hello (`gamepadconnected`), so pages without one never call it. */
 export function gamepad(out: Float64Array) {
   const pads = navigator.getGamepads ? navigator.getGamepads() : null;
@@ -114,6 +114,7 @@ export function gamepad(out: Float64Array) {
     out[3] = Math.max(v(6), v(1));
     out[4] = Math.max(v(2), v(3), v(5));
     out[5] = v(9);
+    if (out.length > 6) out[6] = v(8);
     return true;
   }
   return false;

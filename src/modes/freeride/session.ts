@@ -13,6 +13,13 @@ import { F_GAP, F_KICKER, F_STEP, type RideMap } from "./maps.ts";
 import type { Terrain } from "@fzlt/core/terrain";
 import { E_CRASH, E_LAND, E_RESPAWN, E_WHEELIE, E_FINISH, GRID, RACE, DONE, type Track } from "../race/course.ts";
 import { atan, cos, sin } from "../../math.ts";
+import { unstuck, RESET, U_AUTO, U_PROMPT } from "../unstuck.ts";
+import { postsNear, type World } from "../desert/world.ts";
+
+/** Endless Desert's stand-in for a track: no line, the endless world (../desert/track.ts). */
+export interface EndlessTrack { isEndless: true; world: World }
+/** Unstuck: the prompt came up, or a reset happened (value 1 asked for, 2 automatic). */
+export const E_STUCK = 11, E_RESET = 12;
 
 /** The free-ride maps: each a track plan to roam (the loop is there to follow, never required). */
 export interface FreeMap { id: string; name: string; blurb: string; track: () => Track }
@@ -22,16 +29,25 @@ export const TRICK_AIR = 0.6, FLIP_SPIN = 5.2;
 /** A trick landed (value: 1 big air, 2 a flip). */
 export const E_TRICK = 10;
 
-export function freeRun(track: Track | RideMap, me: { power: Power; shape?: BikeShape }, limit = 600, ground?: Terrain) {
+export function freeRun(track: Track | RideMap | (Track & EndlessTrack), me: { power: Power; shape?: BikeShape }, limit = 600, ground?: Terrain) {
   const { HX, HZ, NT, TRACK, YAW, NR, near, WANT, FK, PF, prof, sAt } = track;
-  const map = "isMap" in track ? track : null;
-  const t = ground ?? (map ? map.terrain : track.course());
+  const map = "isMap" in track ? track : null, Wd = "isEndless" in track ? track.world : null;
+  if (Wd) Wd.follow(0, 0);
+  const t = ground ?? (Wd ? Wd.t : map ? map.terrain : track.course());
   const SP = map ? map.SPAWN : null, POSTS = map ? map.POSTS : null, NP = map ? map.NP : 0, HALF = map ? map.def.width / 2 : 0;
   const b: Bike = bike(t, me.power, me.shape);
   const riders = [b];
   // S: phase, clock, started, near index, fall x, fall z, fall yaw, off the table, tricks, flips,
   // seconds still since the end.
   const S = new Float64Array(11);
+  // D: distance ridden (world units, on the ground and in the air), the furthest from the start,
+  // the stuck prompt up (1) or not.
+  const D = new Float64Array(3);
+  // Endless: the posts near the rider (cactus, rocks, the beacon), refreshed from its lattice cell.
+  const EP = new Float64Array(3 * 40), EC = new Float64Array(3);
+  EC[0] = NaN;
+  const clearAt = (x: number, z: number, r: number) => !anyPost(x, z, r);
+  const U = unstuck({ sample: (x: number, z: number, o: { [i: number]: number }) => t.sample(x, z, o) }, clearAt);
   const ev = new Float64Array(48);
   // NE: the event count (in a typed array: it is state, and the state is bytes).
   const NE = new Uint32Array(1);
@@ -41,6 +57,15 @@ export function freeRun(track: Track | RideMap, me: { power: Power; shape?: Bike
   function reset() {
     S.fill(0);
     PP.fill(0);
+    D.fill(0);
+    U.clear();
+    EC[0] = NaN;
+    if (Wd) {
+      Wd.follow(0, 0);
+      b.reset(0, 0, 0);
+      S[0] = GRID;
+      return;
+    }
     NE[0] = 0;
     if (SP) {
       b.reset(SP[0]!, SP[1]!, SP[2]!);
@@ -82,6 +107,24 @@ export function freeRun(track: Track | RideMap, me: { power: Power; shape?: Bike
     for (let a = 0; a <= 28; a += 2) if ((prof(sAt(i + a)), PF[0]! > 0.02)) return 0;
     return 1;
   }
+  /** Endless: the posts round (x, z) (the 3 × 3 lattice cells about it). */
+  function endlessPosts(x: number, z: number) {
+    const ci = Math.floor(x / 40), cj = Math.floor(z / 40);
+    if (ci === EC[0] && cj === EC[1]) return;
+    EC[0] = ci; EC[1] = cj;
+    EC[2] = postsNear(Wd!.seed, x, z, EP);
+  }
+  function anyPost(x: number, z: number, r: number) {
+    if (Wd) {
+      endlessPosts(x, z);
+      for (let p = 0; p < EC[2]!; p++) {
+        const dx = EP[p * 3]! - x, dz = EP[p * 3 + 1]! - z, q = EP[p * 3 + 2]! + r;
+        if (dx * dx + dz * dz < q * q) return true;
+      }
+      return false;
+    }
+    return NP ? postAt(x, z, r) : false;
+  }
   /** A post within r of (x, z). */
   function postAt(x: number, z: number, r: number) {
     for (let p = 0; p < NP; p++) {
@@ -121,6 +164,7 @@ export function freeRun(track: Track | RideMap, me: { power: Power; shape?: Bike
       return m && S[10]! < STILL;
     }
     if (auto) I = autopilot(IN);
+    if (Wd) Wd.follow(b.crashed ? b.rider[0]! : b.pos[0]!, b.crashed ? b.rider[2]! : b.pos[2]!);
     if (ph === GRID && (I[0]! > 0 || I[1]! > 0 || I[2] !== 0 || I[3] !== 0)) (S[0] = RACE), (S[2] = 1);
     if (S[0] === RACE) S[1] = S[1]! + dt;
     if (b.crashed) {
@@ -128,7 +172,12 @@ export function freeRun(track: Track | RideMap, me: { power: Power; shape?: Bike
       b.step(dt);
       events();
       if (b.crashTime > RESPAWN) {
-        if (map) respawnMap();
+        if (Wd) {
+          // Up where it fell if that is good ground, else the last good place.
+          t.sample(S[4]!, S[5]!, G4);
+          if (G4[2]! > 0.9 && clearAt(S[4]!, S[5]!, 0.7)) b.reset(S[4]!, S[5]!, S[6]!);
+          else U.reset(b);
+        } else if (map) respawnMap();
         else if (S[7]) {
           near(S[4]!, S[5]!);
           const i = NR[1]!;
@@ -136,17 +185,50 @@ export function freeRun(track: Track | RideMap, me: { power: Power; shape?: Bike
           S[3] = i;
         } else b.reset(S[4]!, S[5]!, S[6]!);
         S[7] = 0;
+        if (Wd) Wd.follow(b.pos[0]!, b.pos[2]!);
         emit(E_RESPAWN, 0, 0);
       }
       return true;
     }
+    // Reset (R, the pad's ↺, a gamepad's Back; or the watch, after AUTO_T stuck): the last good place.
+    if (I[4] === RESET && S[0] === RACE) {
+      U.reset(b);
+      if (map) near(b.pos[0]!, b.pos[2]!), (S[3] = NR[1]!);
+      D[2] = 0;
+      if (Wd) Wd.follow(b.pos[0]!, b.pos[2]!);
+      emit(E_RESET, 0, 1);
+      return true;
+    }
     b.set(I[0]!, I[1]!, I[2]!, I[3]!, 0);
+    const x0 = b.pos[0]!, z0 = b.pos[2]!;
     const moving = b.step(dt);
     events();
+    if (S[0] === RACE) {
+      const dx = b.pos[0]! - x0, dz = b.pos[2]! - z0;
+      D[0] = D[0]! + Math.sqrt(dx * dx + dz * dz);
+      D[1] = Math.max(D[1]!, Math.sqrt(b.pos[0]! * b.pos[0]! + b.pos[2]! * b.pos[2]!));
+      const u = U.watch(b, dt, I[0]! > 0.1 || I[1]! > 0.1 || I[2] !== 0 || I[3] !== 0);
+      if (u === U_AUTO) {
+        U.reset(b);
+        if (map) near(b.pos[0]!, b.pos[2]!), (S[3] = NR[1]!);
+        D[2] = 0;
+        if (Wd) Wd.follow(b.pos[0]!, b.pos[2]!);
+        emit(E_RESET, 0, 2);
+        return true;
+      }
+      const up = u === U_PROMPT ? 1 : 0;
+      if (up !== D[2]) (D[2] = up), emit(E_STUCK, 0, up);
+    }
+    if (Wd) {
+      Wd.follow(b.pos[0]!, b.pos[2]!);
+      if (!b.crashed && U.blink <= 0 && anyPost(b.pos[0]!, b.pos[2]!, 0.28)) (S[4] = b.pos[0]!), (S[5] = b.pos[2]!), (S[6] = b.yaw), b.knock(STRIKE), b.clear(), emit(E_CRASH, 0, 6);
+      if (S[0] === RACE && S[1]! >= limit) finish();
+      return moving || S[0] === RACE;
+    }
     near(b.pos[0]!, b.pos[2]!, S[3]!, 8);
     S[3] = NR[1]!;
     if (Math.abs(b.pos[0]!) > HX - 0.3 || Math.abs(b.pos[2]!) > HZ - 0.3) (S[4] = b.pos[0]!), (S[5] = b.pos[2]!), (S[7] = 1), b.knock(STRIKE), b.clear(), emit(E_CRASH, 0, 9);
-    else if (NP && !b.crashed && postAt(b.pos[0]!, b.pos[2]!, 0.28)) (S[4] = b.pos[0]!), (S[5] = b.pos[2]!), (S[6] = b.yaw), b.knock(STRIKE), b.clear(), emit(E_CRASH, 0, 6);
+    else if (NP && !b.crashed && U.blink <= 0 && postAt(b.pos[0]!, b.pos[2]!, 0.28)) (S[4] = b.pos[0]!), (S[5] = b.pos[2]!), (S[6] = b.yaw), b.knock(STRIKE), b.clear(), emit(E_CRASH, 0, 6);
     if (S[0] === RACE && S[1]! >= limit) finish();
     return moving || S[0] === RACE;
   }
@@ -164,6 +246,7 @@ export function freeRun(track: Track | RideMap, me: { power: Power; shape?: Bike
   }
   /** Rides the loop (the hero, the tests): look ahead along the line, the loop's speeds, level in the air. */
   function autopilot(out: Float64Array) {
+    if (Wd) return autoDesert(out);
     const i = S[3]!, sp = b.speed, k = (i + (((map ? 6 : 4) + Math.max(0, sp) * (map ? 0.34 : 0.22)) | 0)) % NT;
     // An open map: too slow for a big jump ahead, it rides round it on the open ground beside the
     // line (toward the middle of the table), and back on the line past it.
@@ -217,11 +300,35 @@ export function freeRun(track: Track | RideMap, me: { power: Power; shape?: Bike
     void FK;
     return out;
   }
+  /** Endless: ride on across the dunes, a slow weave, the gas to a cruising speed, level in the air
+   *  (the poster, the tests' 10 km run). Steers round the posts ahead. */
+  function autoDesert(out: Float64Array) {
+    const sp = b.speed, p = b.pitch, rate = (p - PP[0]!) * 60;
+    PP[0] = p;
+    const want = 0.35 * sin(S[1]! * 0.11) + 0.25 * sin(S[1]! * 0.043 + 1);
+    let d = want - b.yaw;
+    d -= 6.283185307179586 * Math.floor(d / 6.283185307179586 + 0.5);
+    const fx = b.cy, fz = -b.sy;
+    let dodge = 0;
+    for (let a = 2; a <= 8; a += 2) if (anyPost(b.pos[0]! + fx * a, b.pos[2]! + fz * a, 1.2)) dodge = 1;
+    out[3] = Math.max(-1, Math.min(1, dodge ? 1 : -d * 1.6));
+    out[4] = 0;
+    if (b.air > 0) {
+      out[2] = Math.max(-1, Math.min(1, (0 - (p + rate * 0.25)) * 3));
+      out[0] = out[1] = 0;
+    } else {
+      const v = 10.5;
+      out[0] = sp < v ? 1 : sp < v + 0.8 ? 0.35 : 0;
+      out[1] = sp > v + 2 ? 0.6 : 0;
+      out[2] = b.rel > 0.12 ? -1 : b.rel > 0.05 ? -0.4 : b.rel < -0.12 ? 1 : b.rel < -0.05 ? 0.4 : 0;
+    }
+    return out;
+  }
   reset();
   return {
     t, track, riders, S, ev,
     /** The whole state as bytes (rollback, the desync hash). */
-    bytes: [S, PP, NE, b.state].map((a) => new Uint8Array(a.buffer, a.byteOffset, a.byteLength)),
+    bytes: [S, PP, NE, D, U.S, U.R, b.state].map((a) => new Uint8Array(a.buffer, a.byteOffset, a.byteLength)),
     get n() { return NE[0]!; },
     clear: () => void (NE[0] = 0),
     get phase() { return S[0]!; },
@@ -230,6 +337,12 @@ export function freeRun(track: Track | RideMap, me: { power: Power; shape?: Bike
     get tricks() { return S[8]!; },
     get flips() { return S[9]!; },
     nearIndex: () => S[3]!,
+    /** Distance ridden (world units: 1 is about a metre, the bike's wheelbase is 1.5), the furthest
+     *  from the start, and whether the stuck prompt is up. */
+    get distance() { return D[0]!; },
+    get far() { return D[1]!; },
+    get stuck() { return D[2] === 1; },
+    unstuck: U, world: Wd,
     step, reset, finish, autopilot,
   };
 }

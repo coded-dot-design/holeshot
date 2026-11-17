@@ -56,6 +56,7 @@ export function payout(s: RunStats): [string, number][] {
       if (c > 0) L.push([k, c]);
     };
     add("SADDLE TIME", t);
+    if (s.far) add(`${(s.far / 1000).toFixed(2)} KM`, Math.round((s.far / 1000) * P.perKm));
     add(`${s.air.toFixed(1)}s AIR`, a);
     add(`${s.wheelie.toFixed(1)}s WHEELIE`, w);
     const fl = s.flips ?? 0, tr = Math.max(0, (s.tricks ?? 0) - fl);
@@ -92,6 +93,8 @@ export function apply(p: Profile, r: ModeResult): Profile {
   n.stats.events++;
   n.stats.earned += r.credits;
   if (r.stats.mode === "race" && r.stats.finished && r.stats.place === 0) n.stats.wins++;
+  // Endless: the best distance (kept apart from the scores: ./profile.ts `stats.far`).
+  if (r.stats.far !== undefined && r.stats.far > (n.stats.far[r.stats.mode] ?? 0)) n.stats.far[r.stats.mode] = Math.round(r.stats.far);
   const key = r.stats.mode + (r.stats.where ? ":" + r.stats.where : "");
   const best = r.stats.mode === "race" ? r.stats.time : r.stats.mode === "bigair" ? r.stats.judges : r.stats.score;
   if (r.stats.finished && best !== undefined && best > 0) {

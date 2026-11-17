@@ -7,6 +7,7 @@ import { mountTrack } from "./race/scene.ts";
 import { makeMap, RIDE_MAPS, type RideMap } from "./freeride/maps.ts";
 import { mountAir } from "./bigair/scene.ts";
 import { mountCity } from "./wheelie/scene.ts";
+import { desertTrack } from "./desert/track.ts";
 
 /** Race tracks (id → plan). Phase 1: the one fixed loop; a generated track is another TrackPlan. */
 export const TRACKS: TrackPlan[] = [MOTO_TRACK];
@@ -40,6 +41,11 @@ export const MODES: Mode[] = [
     id: "freeride", name: "FREE RIDE", blurb: "Five open maps to yourself. No laps, no clock. Saddle time, air, wheelies and tricks pay a little.",
     maps: FREE_MAPS.map((m) => ({ id: m.id, name: m.name })),
     start: (ctx) => mountTrack(ctx, freeMap(ctx.map), true, []),
+  },
+  {
+    id: "desert", name: "ENDLESS DESERT", blurb: "Endless dunes under a neon sky: ridges, bowls, peaks, kickers, a camp to ride to. No edge, no clock. How far can you go?",
+    maps: [{ id: "desert", name: "THE DUNE SEA" }],
+    start: (ctx) => mountTrack(ctx, desertTrack(), true, []),
   },
   {
     id: "bigair", name: "BIG AIR", blurb: "A minute in the arena: two kickers, four tricks, flips. Five judges pay.",

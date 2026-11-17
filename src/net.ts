@@ -15,9 +15,11 @@ import { fresh, newBike, riding, type BikeSave, type Profile, type RiderKit } fr
 
 /** Input bits (riding): gas 0..15 (bits 0–3), brake 0..15 (4–7), lean 1..255 (8–15, 128 level),
  *  steer 1..255 (16–23, 128 straight); the autopilot (24), ready for the next ride (25), the seat left
- *  (26), done (27: a score run finished). A score run's frames carry the score in bits 0–23 instead;
+ *  (26), done (27: a score run finished), reset (28). A score run's frames carry the score in bits 0–23 instead;
  *  the hello frames carry three bytes of the seat's hello there. */
 export const B_AUTO = 1 << 24, B_READY = 1 << 25, B_GONE = 1 << 26, B_DONE = 1 << 27;
+/** Reset to the last good place (../modes/unstuck.ts): the sims read it as IN[4] === 2. */
+export const B_RESET = 1 << 28;
 /** At most this many seats in a room, and this many name characters. */
 export const SEATS = 4, NAME = 8;
 /** A seat that left plays these bits from the frame after its last input (every screen the same):
@@ -35,7 +37,7 @@ export function decode(bits: number, r: number, IN: Float64Array, AUTO: Uint8Arr
   IN[q + 1] = ((bits >>> 4) & 15) / 15;
   IN[q + 2] = (((bits >>> 8) & 255) - 128) / 127;
   IN[q + 3] = (((bits >>> 16) & 255) - 128) / 127;
-  IN[q + 4] = 0;
+  IN[q + 4] = bits & B_RESET && !(bits & B_GONE) ? 2 : 0;
   AUTO[r] = bits & (B_AUTO | B_GONE) ? 1 : 0;
 }
 /** A score run's bits: the score so far (0..16,777,215) and done. */

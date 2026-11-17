@@ -27,7 +27,11 @@ import { readdirSync, readFileSync } from "node:fs";
 // hoods' layouts and their placing rules, the humps and the flight, the heat and the patrol's pathing
 // on the street graphs, towers, shops, shacks, palms and the patrol units in the scene, the heat chip
 // and the ticket card), plus about 4 KB of room.
-const BUDGET = 160_000;
+// Unreleased, Endless Desert and Unstuck: 163,637 B measured (holeshot.js; +7,794 B over 155,843: the
+// desert's pure ground and sliding window, its grid, haze, sky and scenery pool, the session's
+// endless path and autopilot, the unstuck ring and reset with its HUD prompt and key, best distance
+// and the profile's v3 step), plus about 4.3 KB of room.
+const BUDGET = 168_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

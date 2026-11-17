@@ -5,7 +5,7 @@ import Base from '../layouts/Base.astro';
 import { base, GZIP, FIZLET, REPO } from '../site';
 import { CLASSES, MODELS, STARTERS } from '../../../src/data/roster.ts';
 import { MODES } from '../../../src/modes/index.ts';
-const description = 'Holeshot is a dirt bike game on a tabletop: one bike and a garage, races against rivals, a race series on a new track every round, five free-ride maps, a Big Air show and Wheelie City. Earn credits, wear out tyres and top ends, rebuild, mod and paint. Free in the browser, by Chris Cooley, built on Fizlet.';
+const description = 'Holeshot is a dirt bike game on a tabletop: one bike and a garage, races against rivals, a race series on a new track every round, five free-ride maps, the endless dunes of Endless Desert, a Big Air show and Wheelie City. Earn credits, wear out tyres and top ends, rebuild, mod and paint. Free in the browser, by Chris Cooley, built on Fizlet.';
 const kb = (GZIP / 1024).toFixed(1);
 const steps = [
   ['PICK YOUR BIKE', 'One bike to start: a peaky 2-stroke, a torquey 4-stroke, a light e-bike or an electric dirt bike. Paint it, number it, pick your jersey. That bike rides every event.'],
@@ -43,7 +43,7 @@ const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound'
   <section class="section" id="modes">
     <div class="wrap">
       <p class="eyebrow"><span class="index">02</span> THE EVENTS</p>
-      <h2>Four ways to ride.</h2>
+      <h2>Five ways to ride.</h2>
       <ol class="modes">
         {MODES.map((m) => (
           <li class="panel">
