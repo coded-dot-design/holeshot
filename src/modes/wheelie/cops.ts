@@ -39,7 +39,10 @@ export const CATCH = 0.95, SIGHT = 10, DIRECT = 5.5, SPAWN_GAP = 1.6, COOL_AFTER
 /** Heading from (dx, dz) in the bike's convention (forward is (cos, −sin)): atan2(−dz, dx), from ../../math.ts (the same bits on every engine). */
 export const heading = (dx: number, dz: number) => atan2(-dz, dx);
 
-export function cops(seed = 1) {
+/** The hoods' centres (x, z per hood) on the fixed table; Endless Wheelie City passes its own, moved
+ *  to the slot each hood kind is in (./city.ts). */
+export const FIXED_C = Float64Array.from([CX[0]!, CZ[0]!, CX[1]!, CZ[1]!, CX[2]!, CZ[2]!, CX[3]!, CZ[3]!]);
+export function cops(seed = 1, HC: Float64Array = FIXED_C) {
   const S = new Float64Array(13), P = new Float64Array(MAXP * PS), R = new Uint32Array(1);
   const ev = new Float64Array(16);
   // E: the rider's street (nearest edge's ends and their distances), scratch.
@@ -148,7 +151,7 @@ export function cops(seed = 1) {
       }
     }
     const o = slot * PS, kind = ORDER[k]!;
-    P[o + P_ON] = 1; P[o + P_KIND] = kind; P[o + P_X] = N[pick * 2]! + CX[h]!; P[o + P_Z] = N[pick * 2 + 1]! + CZ[h]!;
+    P[o + P_ON] = 1; P[o + P_KIND] = kind; P[o + P_X] = N[pick * 2]! + HC[h * 2]!; P[o + P_Z] = N[pick * 2 + 1]! + HC[h * 2 + 1]!;
     P[o + P_YAW] = heading(lx - N[pick * 2]!, lz - N[pick * 2 + 1]!); P[o + P_V] = 0;
     P[o + P_FROM] = P[o + P_TO] = pick; P[o + P_AGE] = 0; P[o + P_HOOD] = h; P[o + P_FADE] = 0; P[o + P_DIRECT] = 0;
     emit(C_UNIT, kind);
@@ -160,7 +163,7 @@ export function cops(seed = 1) {
     if (S[GRACE]! > 0) S[GRACE] = Math.max(0, S[GRACE]! - dt);
     if (S[FAST]! > 0) S[FAST] = Math.max(0, S[FAST]! - dt);
     S[CALM] = S[CALM]! + dt;
-    const lx = x - CX[h]!, lz = z - CZ[h]!;
+    const lx = x - HC[h * 2]!, lz = z - HC[h * 2 + 1]!;
     // The nearest unit (for the HUD, and whether the rider is in sight).
     let near = 1e9;
     for (let i = 0; i < MAXP; i++) {
@@ -218,7 +221,7 @@ export function cops(seed = 1) {
   }
   /** One unit after the rider: along the graph to the rider's street, then straight at the rider. */
   function chase(o: number, h: number, x: number, z: number, lx: number, lz: number, dt: number) {
-    const g = GRAPH[h]!, N = g.nodes, kind = P[o + P_KIND]!, cx = CX[h]!, cz = CZ[h]!;
+    const g = GRAPH[h]!, N = g.nodes, kind = P[o + P_KIND]!, cx = HC[h * 2]!, cz = HC[h * 2 + 1]!;
     P[o + P_AGE] = P[o + P_AGE]! + dt;
     const px = P[o + P_X]!, pz = P[o + P_Z]!, d = Math.sqrt(sq(px - x) + sq(pz - z));
     let tx = x, tz = z;

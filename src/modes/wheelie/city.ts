@@ -20,10 +20,10 @@ import { cos, sin } from "../../math.ts";
 import { unstuck, U_AUTO, U_PROMPT } from "../unstuck.ts";
 import { tricks, ON, SC, PTS, F_CROSS, F_SPRINK, F_GRUMP, BANKED } from "./tricks.ts";
 import {
-  HOODS, CX, CZ, HX, HZ, CURB, W, HUMPS, NHUMP, ENTRY, BRANCH, hoodAt, NHOOD,
+  HOODS, CX, CZ, HX, HZ, GAP, CURB, W, HUMPS, NHUMP, ENTRY, BRANCH, hoodAt, NHOOD,
   K_ROAD, K_WALK, K_LAWN, K_DRIVE, K_WATER, K_SAND, RAMP, DECK, LIP, HUMP_H, HUMP_W, BANK, CANAL,
 } from "./hoods.ts";
-import { cops, heading, C_TICKET, C_ESCAPE, C_STARS, C_UNIT, C_CLEAR, HEAT, STARS, NEAR } from "./cops.ts";
+import { cops, FIXED_C, heading, C_TICKET, C_ESCAPE, C_STARS, C_UNIT, C_CLEAR, HEAT, STARS, NEAR } from "./cops.ts";
 
 export { HX, HZ, CURB, K_ROAD, K_WALK, K_LAWN, K_DRIVE, K_WATER };
 export const SESSION = 90;
@@ -54,6 +54,11 @@ for (const h of W.home) {
   NEIGH.push(h, x - 0.5, fz, f, x - 3.4, f < 0 ? fz - 6.9 : fz, x + 3.4, f < 0 ? fz : fz + 6.9);
 }
 export const NN = NEIGH.length / 8;
+/** Each neighbour's, sprinkler's and crosswalk's hood (Endless Wheelie City moves them with it). */
+export const NEIGH_H = Uint8Array.from({ length: NN }, (_, i) => W.hood[NEIGH[i * 8]!]!);
+const quad = (x: number, z: number) => (z < 0 ? 0 : 2) + (x < 0 ? 0 : 1);
+export const SPRINK_H = Uint8Array.from({ length: NSP }, (_, i) => quad(SPRINK[i * 4]!, SPRINK[i * 4 + 1]!));
+export const CROSS_H = Uint8Array.from({ length: CROSS.length / 4 }, (_, i) => quad(CROSS[i * 4]! + CROSS[i * 4 + 2]!, CROSS[i * 4 + 1]! + CROSS[i * 4 + 3]!));
 /** What they shout (comic and generic, never mean). */
 export const LINES = ["HEY! MY LAWN!", "SLOW DOWN!", "I JUST MOWED THAT!", "WHEELS DOWN, KID!", "NOT THE PETUNIAS!", "IT'S SUNDAY!", "BACK IN MY DAY…", "KEEP IT ON THE ROAD!", "I'M CALLING IT IN!", "SOME OF US WORK NIGHTS!"];
 /** The autopilot's gains (tuned headless): under the balance point by, gas at rest, nose rate per radian off, most nose rate, gas per rate error, gas per unit of speed under the target, lean per rate error, target speed, brake dead band, brake gain. */
@@ -94,123 +99,183 @@ const SOL = HOODS.map((h, k) => {
 const PO = HOODS.map((h) => F64(h.posts));
 /** Each hood's loop (x, z, …, local). */
 const RT = HOODS.map((h) => F64(h.route));
+/** Endless: the autopilot's line through every hood (local x, z: along the south street, east). */
+const RTE = F64([-34, 8.6, 0, 8.6, 34, 8.6]);
+
+// ---- Endless Wheelie City: the same four hoods as reused SLOTS in a row along +x, canal to canal ----
+/** Slot k's centre is (k × PITCH, 0); its hood kind is `slotKind(k)`. Two slots side by side are
+ *  never the same kind (k + 2·bit: neighbours differ by an odd number, mod 4), so one built hood per
+ *  kind is enough: only a slot and the one it nears are ever drawn. Every slot has a hump at both
+ *  ends on its south street (local z 8.5), lined up with the next slot's: the road runs on at every
+ *  join, the hump flies the canal. */
+export const PITCH = 2 * HX + GAP, CITY_SEED = 2611, SLOT_Z = 8.5;
+/** The hood kind of endless slot k for `seed` (pure: the same row of hoods on every screen). */
+export function slotKind(k: number, seed = CITY_SEED) {
+  const m = Math.floor(k / 2);
+  let h = Math.imul(m, 0x27d4eb2d) ^ Math.imul(seed, 0x2c1b3c6d);
+  h = Math.imul(h ^ (h >>> 15), 0x297a2d39);
+  const v = (k + 2 * ((h >>> 16) & 1)) % 4;
+  return v < 0 ? v + 4 : v;
+}
+/** The slot a world x is in. */
+export const slotAt = (x: number) => Math.floor((x + PITCH / 2) / PITCH);
 
 // (Results go through Q, never returned: a double returned from a call that is not inlined is boxed.)
 // Q: road gap, height, kind.
 const Q = new Float64Array(3);
 const inR = (x: number, z: number, R: ArrayLike<number>, o: number) => x >= R[o]! && x <= R[o + 2]! && z >= R[o + 1]! && z <= R[o + 3]!;
-/** Distance to the nearest road or turning circle in hood h (0 on one): into Q[0]. */
-function roadGap(h: number, x: number, z: number) {
-  const R = RD[h]!, C = RG[h]!;
-  Q[0] = 1e9;
-  for (let o = 0; o < R.length; o += 4) {
-    const ax = R[o]! - x, bx = x - R[o + 2]!, az = R[o + 1]! - z, bz = z - R[o + 3]!;
-    const dx = ax > bx ? (ax > 0 ? ax : 0) : bx > 0 ? bx : 0, dz = az > bz ? (az > 0 ? az : 0) : bz > 0 ? bz : 0, d = dx > dz ? dx : dz;
-    if (d < Q[0]!) Q[0] = d;
-  }
-  for (let o = 0; o < C.length; o += 3) {
-    const d = hypot(x - C[o]!, z - C[o + 1]!) - C[o + 2]!;
-    if (d < Q[0]!) Q[0] = d > 0 ? d : 0;
-  }
-}
-/** The hump ramps of hood h at local (x, z): their height, or −1 off them. */
-function humpQ(h: number, x: number, z: number) {
-  const U = HU[h]!;
-  let r = -1;
-  for (let o = 0; o < U.length; o += 5) {
-    const px = x - U[o + 1]!, pz = z - U[o + 2]!, dx = U[o + 3]!, dz = U[o + 4]!, s = px * dx + pz * dz, l = px * dz - pz * dx;
-    if ((l < 0 ? -l : l) < HUMP_W && s > -(RAMP + DECK) && s < LIP + BANK) r = s < -DECK ? (HUMP_H * (s + RAMP + DECK)) / RAMP : HUMP_H;
-  }
-  return r;
-}
-/** The ground's height at world (x, z): into Q[1]; the hood's kind cues into Q[2] (water off the bank). */
-function heightQ(x: number, z: number) {
-  const h = hoodAt(x, z), lx = x - CX[h]!, lz = z - CZ[h]!, ax = (lx < 0 ? -lx : lx) - HX, az = (lz < 0 ? -lz : lz) - HZ;
-  if (ax > 0 || az > 0) {
-    // Off the hood: its bank (the hump's deck runs on over it), then the canal.
-    Q[2] = 1;
-    if ((ax > az ? ax : az) >= BANK) return void (Q[1] = CANAL);
-    const r = humpQ(h, lx, lz);
-    return void (Q[1] = r >= 0 ? r : CURB);
-  }
-  Q[2] = 0;
-  roadGap(h, lx, lz);
-  const g = Q[0]!;
-  let y = g > 0 ? (g >= 0.08 ? CURB : CURB * (g / 0.08)) : 0;
-  if (g <= 0) {
-    const B = BU[h]!, K = KI[h]!;
-    for (let o = 0; o < B.length; o += 5) {
-      const bx = Math.abs(lx - B[o]!);
-      if (bx < B[o + 3]! && lz > B[o + 1]! && lz < B[o + 2]!) {
-        const u = bx / B[o + 3]!;
-        y += B[o + 4]! * (1 - u * u);
-      }
-    }
-    for (let o = 0; o < K.length; o += 5) if (lx > K[o]! && lx < K[o + 2]! && lz > K[o + 1]! && lz < K[o + 3]!) y += (K[o + 4]! * (lz - K[o + 1]!)) / (K[o + 3]! - K[o + 1]!);
-  }
-  const r = humpQ(h, lx, lz);
-  Q[1] = r > y ? r : y;
-}
-/** The ground's height at (x, z). */
-export function height(x: number, z: number) {
-  heightQ(x, z);
-  return Q[1]!;
-}
-/** The kind of ground at (x, z) (K_ROAD … K_PLAZA). */
-export function kindAt(x: number, z: number) {
-  const h = hoodAt(x, z), lx = x - CX[h]!, lz = z - CZ[h]!, ax = (lx < 0 ? -lx : lx) - HX, az = (lz < 0 ? -lz : lz) - HZ;
-  if (ax > 0 || az > 0) return (ax > az ? ax : az) >= BANK ? K_WATER : K_WALK;
-  roadGap(h, lx, lz);
-  const g = Q[0]!, D = DR[h]!, Bk = BL[h]!, F = SF[h]!;
-  if (g <= 0) {
-    for (let o = 0; o < F.length; o += 5) if (lx >= F[o]! && lx <= F[o + 2]! && lz >= F[o + 1]! && lz <= F[o + 3]!) return F[o + 4]!;
-    return K_ROAD;
-  }
-  for (let o = 0; o < D.length; o += 4) if (lx >= D[o]! && lx <= D[o + 2]! && lz >= D[o + 1]! && lz <= D[o + 3]!) return K_DRIVE;
-  for (let o = 0; o < Bk.length; o += 4)
-    if (lx >= Bk[o]! && lx <= Bk[o + 2]! && lz >= Bk[o + 1]! && lz <= Bk[o + 3]!) return lx - Bk[o]! < 1 || Bk[o + 2]! - lx < 1 || lz - Bk[o + 1]! < 1 || Bk[o + 3]! - lz < 1 ? K_WALK : K_LAWN;
-  return g < 1.2 ? K_WALK : K_LAWN;
-}
-/** The ground for the bike: height and normal (from the neighbours), and the kind. */
-export const ground = {
-  sample(x: number, z: number, out: { [i: number]: number }) {
-    const e = 0.05;
-    heightQ(x + e, z); const hx1 = Q[1]!;
-    heightQ(x - e, z); const hx0 = Q[1]!;
-    heightQ(x, z + e); const hz1 = Q[1]!;
-    heightQ(x, z - e); const hz0 = Q[1]!;
-    heightQ(x, z);
-    const nx = -(hx1 - hx0) / (2 * e), nz = -(hz1 - hz0) / (2 * e), l = Math.sqrt(nx * nx + nz * nz + 1);
-    out[0] = Q[1]!; out[1] = nx / l; out[2] = 1 / l; out[3] = nz / l;
-    return kindAt(x, z);
-  },
-};
 
-/** A spot a reset can use: on the street (road, drive, walk, plaza, boardwalk; never a lawn, sand or
- *  the water), inside its hood's fence, r clear of anything solid. */
-export function streetClear(x: number, z: number, r: number) {
-  const h = hoodAt(x, z), lx = x - CX[h]!, lz = z - CZ[h]!;
-  if ((lx < 0 ? -lx : lx) > HX - 0.5 - r || (lz < 0 ? -lz : lz) > HZ - 0.5 - r) return false;
-  const k = kindAt(x, z);
-  if (k === K_LAWN || k === K_WATER || k === K_SAND) return false;
-  const B = SOL[h]!, C = PO[h]!;
-  for (let o = 0; o < B.length; o += 4) if (lx > B[o]! - r - R_BIKE && lx < B[o + 2]! + r + R_BIKE && lz > B[o + 1]! - r - R_BIKE && lz < B[o + 3]! + r + R_BIKE) return false;
-  for (let o = 0; o < C.length; o += 4) {
-    const dx = lx - C[o]!, dz = lz - C[o + 1]!, rr = C[o + 2]! + r + R_BIKE;
-    if (dx * dx + dz * dz < rr * rr) return false;
+/** The town's ground: the fixed table (four hoods in a 2 × 2) or the endless row of slots. The
+ *  fixed one is the module's exports below, exactly as before (the goldens hold it). */
+export function town(endless = false, seed = CITY_SEED) {
+  // Endless: every kind gets a stub to both ends of its south street and a hump at each (east 0, west 1).
+  const RDx = endless ? HOODS.map((h) => F64([...h.roads, HX - 2, 6.5, HX, 10.5, -HX, 6.5, -HX + 2, 10.5])) : RD;
+  const HUx = endless ? HOODS.map(() => F64([0, HX - LIP, SLOT_Z, 1, 0, 1, -(HX - LIP), SLOT_Z, -1, 0])) : HU;
+  /** Where (x, z) is: hood kind, its centre x, z (LOC). */
+  const LOC = new Float64Array(3);
+  function locate(x: number, z: number) {
+    if (!endless) {
+      const h = hoodAt(x, z);
+      LOC[0] = h; LOC[1] = CX[h]!; LOC[2] = CZ[h]!;
+      return h;
+    }
+    const k = slotAt(x), h = slotKind(k, seed);
+    LOC[0] = h; LOC[1] = k * PITCH; LOC[2] = 0;
+    return h;
   }
-  return true;
+  /** Distance to the nearest road or turning circle in hood h (0 on one): into Q[0]. */
+  function roadGap(h: number, x: number, z: number) {
+    const R = RDx[h]!, C = RG[h]!;
+    Q[0] = 1e9;
+    for (let o = 0; o < R.length; o += 4) {
+      const ax = R[o]! - x, bx = x - R[o + 2]!, az = R[o + 1]! - z, bz = z - R[o + 3]!;
+      const dx = ax > bx ? (ax > 0 ? ax : 0) : bx > 0 ? bx : 0, dz = az > bz ? (az > 0 ? az : 0) : bz > 0 ? bz : 0, d = dx > dz ? dx : dz;
+      if (d < Q[0]!) Q[0] = d;
+    }
+    for (let o = 0; o < C.length; o += 3) {
+      const d = hypot(x - C[o]!, z - C[o + 1]!) - C[o + 2]!;
+      if (d < Q[0]!) Q[0] = d > 0 ? d : 0;
+    }
+  }
+  /** The hump ramps of hood h at local (x, z): their height, or −1 off them. */
+  function humpQ(h: number, x: number, z: number) {
+    const U = HUx[h]!;
+    let r = -1;
+    for (let o = 0; o < U.length; o += 5) {
+      const px = x - U[o + 1]!, pz = z - U[o + 2]!, dx = U[o + 3]!, dz = U[o + 4]!, s = px * dx + pz * dz, l = px * dz - pz * dx;
+      if ((l < 0 ? -l : l) < HUMP_W && s > -(RAMP + DECK) && s < LIP + BANK) r = s < -DECK ? (HUMP_H * (s + RAMP + DECK)) / RAMP : HUMP_H;
+    }
+    return r;
+  }
+  /** The ground's height at world (x, z): into Q[1]; the hood's kind cues into Q[2] (water off the bank). */
+  function heightQ(x: number, z: number) {
+    const h = locate(x, z), lx = x - LOC[1]!, lz = z - LOC[2]!, ax = (lx < 0 ? -lx : lx) - HX, az = (lz < 0 ? -lz : lz) - HZ;
+    if (ax > 0 || az > 0) {
+      // Off the hood: its bank (the hump's deck runs on over it), then the canal.
+      Q[2] = 1;
+      if ((ax > az ? ax : az) >= BANK) return void (Q[1] = CANAL);
+      const r = humpQ(h, lx, lz);
+      return void (Q[1] = r >= 0 ? r : CURB);
+    }
+    Q[2] = 0;
+    roadGap(h, lx, lz);
+    const g = Q[0]!;
+    let y = g > 0 ? (g >= 0.08 ? CURB : CURB * (g / 0.08)) : 0;
+    if (g <= 0) {
+      const B = BU[h]!, K = KI[h]!;
+      for (let o = 0; o < B.length; o += 5) {
+        const bx = Math.abs(lx - B[o]!);
+        if (bx < B[o + 3]! && lz > B[o + 1]! && lz < B[o + 2]!) {
+          const u = bx / B[o + 3]!;
+          y += B[o + 4]! * (1 - u * u);
+        }
+      }
+      for (let o = 0; o < K.length; o += 5) if (lx > K[o]! && lx < K[o + 2]! && lz > K[o + 1]! && lz < K[o + 3]!) y += (K[o + 4]! * (lz - K[o + 1]!)) / (K[o + 3]! - K[o + 1]!);
+    }
+    const r = humpQ(h, lx, lz);
+    Q[1] = r > y ? r : y;
+  }
+  /** The ground's height at (x, z). */
+  function height(x: number, z: number) {
+    heightQ(x, z);
+    return Q[1]!;
+  }
+  /** The kind of ground at (x, z) (K_ROAD … K_PLAZA). */
+  function kindAt(x: number, z: number) {
+    const h = locate(x, z), lx = x - LOC[1]!, lz = z - LOC[2]!, ax = (lx < 0 ? -lx : lx) - HX, az = (lz < 0 ? -lz : lz) - HZ;
+    if (ax > 0 || az > 0) return (ax > az ? ax : az) >= BANK ? K_WATER : K_WALK;
+    roadGap(h, lx, lz);
+    const g = Q[0]!, D = DR[h]!, Bk = BL[h]!, F = SF[h]!;
+    if (g <= 0) {
+      for (let o = 0; o < F.length; o += 5) if (lx >= F[o]! && lx <= F[o + 2]! && lz >= F[o + 1]! && lz <= F[o + 3]!) return F[o + 4]!;
+      return K_ROAD;
+    }
+    for (let o = 0; o < D.length; o += 4) if (lx >= D[o]! && lx <= D[o + 2]! && lz >= D[o + 1]! && lz <= D[o + 3]!) return K_DRIVE;
+    for (let o = 0; o < Bk.length; o += 4)
+      if (lx >= Bk[o]! && lx <= Bk[o + 2]! && lz >= Bk[o + 1]! && lz <= Bk[o + 3]!) return lx - Bk[o]! < 1 || Bk[o + 2]! - lx < 1 || lz - Bk[o + 1]! < 1 || Bk[o + 3]! - lz < 1 ? K_WALK : K_LAWN;
+    return g < 1.2 ? K_WALK : K_LAWN;
+  }
+  /** The ground for the bike: height and normal (from the neighbours), and the kind. */
+  const ground = {
+    sample(x: number, z: number, out: { [i: number]: number }) {
+      const e = 0.05;
+      heightQ(x + e, z); const hx1 = Q[1]!;
+      heightQ(x - e, z); const hx0 = Q[1]!;
+      heightQ(x, z + e); const hz1 = Q[1]!;
+      heightQ(x, z - e); const hz0 = Q[1]!;
+      heightQ(x, z);
+      const nx = -(hx1 - hx0) / (2 * e), nz = -(hz1 - hz0) / (2 * e), l = Math.sqrt(nx * nx + nz * nz + 1);
+      out[0] = Q[1]!; out[1] = nx / l; out[2] = 1 / l; out[3] = nz / l;
+      return kindAt(x, z);
+    },
+  };
+  /** A spot a reset can use: on the street (road, drive, walk, plaza, boardwalk; never a lawn, sand or
+   *  the water), inside its hood's fence, r clear of anything solid. */
+  function streetClear(x: number, z: number, r: number) {
+    const h = locate(x, z), lx = x - LOC[1]!, lz = z - LOC[2]!;
+    if ((lx < 0 ? -lx : lx) > HX - 0.5 - r || (lz < 0 ? -lz : lz) > HZ - 0.5 - r) return false;
+    const k = kindAt(x, z);
+    if (k === K_LAWN || k === K_WATER || k === K_SAND) return false;
+    const B = SOL[h]!, C = PO[h]!;
+    for (let o = 0; o < B.length; o += 4) if (lx > B[o]! - r - R_BIKE && lx < B[o + 2]! + r + R_BIKE && lz > B[o + 1]! - r - R_BIKE && lz < B[o + 3]! + r + R_BIKE) return false;
+    for (let o = 0; o < C.length; o += 4) {
+      const dx = lx - C[o]!, dz = lz - C[o + 1]!, rr = C[o + 2]! + r + R_BIKE;
+      if (dx * dx + dz * dz < rr * rr) return false;
+    }
+    return true;
+  }
+  return { endless, seed, heightQ, height, kindAt, ground, streetClear, locate, LOC, HU: HUx };
 }
+export type Town = ReturnType<typeof town>;
+const FIXED = town(false);
+/** The fixed table's ground (the scene, the tests). */
+export const height = FIXED.height, kindAt = FIXED.kindAt, ground = FIXED.ground, streetClear = FIXED.streetClear;
+const heightQ = FIXED.heightQ;
 
 // S: the session's state, by index.
 const PH = 0, CLOCK = 1, RIDE = 2, CT = 3, GRUMPS = 4, SPLASH = 5, BARKS = 6, LEG = 7, HOPAIR = 8, WHY = 9, WALL = 10, SPCLK = 11, HOOD = 12, FLY = 13, FLYTO = 14, FLYT = 15, DIR = 16, GO = 17, JUMPS = 18, VISITED = 19, STUCK = 20, UNSTUCK = 21;
 export const S_HOOD = HOOD, S_FLY = FLY, S_JUMPS = JUMPS, S_VISITED = VISITED, S_UNSTUCK = UNSTUCK;
 
 /** A session in town. Inputs each step: gas, brake, lean (−1 back .. 1 forward), steer, hop. */
-export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
-  const bike = ride(ground, specs), sc = tricks(), cop = cops(seed);
+export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, citySeed = CITY_SEED) {
+  // The ground: the fixed table, or the endless row of slots (each hood kind's centre moves to the
+  // slot it is in: HC, x and z per kind, which the patrol paths by too; OFF: each kind's move from
+  // its place on the fixed table, for the world lists: neighbours, sprinklers, crosswalks, the dog).
+  const T = endless ? town(true, citySeed) : FIXED, HC = endless ? Float64Array.from(FIXED_C) : FIXED_C, OFF = new Float64Array(8);
+  const bike = ride(T.ground, specs), sc = tricks(), cop = cops(seed, HC);
   // Unstuck (a person riding): the ring of good spots on the street, the watch; US[0]: the prompt is up.
-  const U = unstuck(ground, streetClear), US = new Float64Array(1);
+  const U = unstuck(T.ground, T.streetClear), US = new Float64Array(1);
+  // Endless: the slot ridden, the start's x, the furthest along +x from it (the distance).
+  const ES = new Float64Array(3);
+  /** Endless: into slot k (its hood kind moves there). */
+  function toSlot(k: number) {
+    const h = slotKind(k, citySeed);
+    ES[0] = k;
+    HC[h * 2] = k * PITCH; HC[h * 2 + 1] = 0;
+    OFF[h * 2] = k * PITCH - CX[h]!; OFF[h * 2 + 1] = -CZ[h]!;
+    if (h === 0) DG[0] = (DOG[0]! + DOG[1]!) / 2 + OFF[0]!;
+    return h;
+  }
   // S: phase, time left, ride, crash timer, grumps, splashes, barks, route leg, hop air, crash reason,
   // wall hit, sprinkler clock, hood, flying, flying to (hump), flight time, loop direction, escaping
   // for (hump + 1), humps jumped, hoods visited (bits), the autopilot's stuck timer and its rescues.
@@ -231,19 +296,27 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
   function reset(which = S[RIDE]!, hood = 0) {
     S.fill(0);
     S[CLOCK] = SESSION; S[RIDE] = which; S[HOOD] = hood; S[LEG] = START_LEG[hood]!; S[DIR] = 1; S[VISITED] = 1 << hood;
-    const st = HOODS[hood]!.start;
-    bike.use(which, st[0]! + CX[hood]!, st[1]! + CZ[hood]!, st[2]!);
     sc.reset();
     cop.reset(seed);
     NB.fill(0); SPC.fill(0); DG.fill(0);
     U.clear(); US[0] = 0;
     DG[0] = (DOG[0]! + DOG[1]!) / 2;
     n = 0;
+    if (endless) {
+      // Slot 0, on its south street heading east (the way the town goes on).
+      const h = toSlot(0);
+      S[HOOD] = h; S[LEG] = 0; S[VISITED] = 1 << h;
+      bike.use(which, -40, SLOT_Z + 0.1, 0);
+      ES[1] = -40; ES[2] = 0;
+      return;
+    }
+    const st = HOODS[hood]!.start;
+    bike.use(which, st[0]! + CX[hood]!, st[1]! + CZ[hood]!, st[2]!);
   }
   /** Bump out of anything solid in the hood and its fence; a hard hit is a crash. Not in the air over a hump. */
   function collide() {
     if (S[FLY]) return;
-    const p = bike.b.pos, h = S[HOOD]!, cx = CX[h]!, cz = CZ[h]!, B = SOL[h]!, C = PO[h]!;
+    const p = bike.b.pos, h = S[HOOD]!, cx = HC[h * 2]!, cz = HC[h * 2 + 1]!, B = SOL[h]!, C = PO[h]!;
     for (let o = 0; o < B.length; o += 4) {
       const lx = p[0]! - cx, lz = p[2]! - cz;
       const qx = Math.max(B[o]!, Math.min(B[o + 2]!, lx)), qz = Math.max(B[o + 1]!, Math.min(B[o + 3]!, lz));
@@ -278,7 +351,7 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
   }
   /** On a hump's deck at speed: launch for the far ramp (the flight is set: it lands on it). */
   function humps() {
-    const b = bike.b, h = S[HOOD]!, U = HU[h]!, lx = b.pos[0]! - CX[h]!, lz = b.pos[2]! - CZ[h]!;
+    const b = bike.b, h = S[HOOD]!, U = T.HU[h]!, lx = b.pos[0]! - HC[h * 2]!, lz = b.pos[2]! - HC[h * 2 + 1]!;
     for (let o = 0; o < U.length; o += 5) {
       const dx = U[o + 3]!, dz = U[o + 4]!, px = lx - U[o + 1]!, pz = lz - U[o + 2]!, s = px * dx + pz * dz, l = px * dz - pz * dx;
       if ((l < 0 ? -l : l) >= HUMP_W || s < -1.1 || s > LIP + 0.6) continue;
@@ -289,13 +362,15 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
     }
   }
   function launch(i: number) {
-    const b = bike.b, j = i ^ 1, dx = HUMPS[i * 5 + 2]!, dz = HUMPS[i * 5 + 3]!, p = b.pos;
+    // (Endless: i is the slot's own hump, 0 east, 1 west; its partner is the next slot's facing one.)
+    const b = bike.b, j = endless ? i : i ^ 1, dx = endless ? (i ? -1 : 1) : HUMPS[i * 5 + 2]!, dz = endless ? 0 : HUMPS[i * 5 + 3]!, p = b.pos;
     // Straight across: the heading set to the hump's, the line kept; the landing on the far ramp.
-    const lx = dx !== 0 ? HUMPS[j * 5]! + dx * LAND_AT : p[0]!, lz = dz !== 0 ? HUMPS[j * 5 + 1]! + dz * LAND_AT : p[2]!;
+    const fx = endless ? (ES[0]! + dx) * PITCH - dx * (HX - LIP) : HUMPS[j * 5]!;
+    const lx = dx !== 0 ? fx + dx * LAND_AT : p[0]!, lz = dz !== 0 ? HUMPS[j * 5 + 1]! + dz * LAND_AT : p[2]!;
     const D = (lx - p[0]!) * dx + (lz - p[2]!) * dz;
-    heightQ(p[0]!, p[2]!);
+    T.heightQ(p[0]!, p[2]!);
     const off = p[1]! - Q[1]!;
-    heightQ(lx, lz);
+    T.heightQ(lx, lz);
     const yl = Q[1]! + off, g = bike.spec.shape.gravity ?? 20;
     b.S[0] = dx > 0.5 ? 0 : dx < -0.5 ? Math.PI : dz > 0 ? -Math.PI / 2 : Math.PI / 2;
     b.S[1] = 0; b.S[3] = 0;
@@ -307,8 +382,10 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
   }
   /** Down in the next hood: the patrol is lost; the autopilot picks up that hood's loop. */
   function landed() {
-    const j = S[FLYTO]!, h = HUMPS[j * 5 + 4]!;
-    S[FLY] = 0; S[HOOD] = h; S[LEG] = ENTRY[j * 2]!; S[DIR] = ENTRY[j * 2 + 1]!; S[GO] = 0;
+    const j = S[FLYTO]!, dx = j ? -1 : 1, h = endless ? toSlot(ES[0]! + dx) : HUMPS[j * 5 + 4]!;
+    S[FLY] = 0; S[HOOD] = h; S[GO] = 0;
+    if (endless) (S[LEG] = dx > 0 ? 0 : RTE.length / 2 - 1), (S[DIR] = dx);
+    else (S[LEG] = ENTRY[j * 2]!), (S[DIR] = ENTRY[j * 2 + 1]!);
     S[VISITED] = S[VISITED]! | (1 << h);
     emit(E_LAND, h);
     const pts = cop.escape();
@@ -323,7 +400,7 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
         // Back to the last good spot on the street (never the trap), upright and still; its hood.
         const o = U.reset(bike.b);
         bike.reset(o[0]!, o[1]!, o[2]!);
-        S[HOOD] = hoodAt(o[0]!, o[1]!);
+        S[HOOD] = endless ? toSlot(slotAt(o[0]!)) : hoodAt(o[0]!, o[1]!);
         sc.drop();
         if (US[0]) US[0] = 0;
         emit(E_RESET, again ? 1 : 2);
@@ -351,8 +428,9 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
       if ((S[FLYT]! > 0.25 && !bike.air) || b.crashed || S[FLYT]! > 3) landed();
     } else if ((S[PH] === RUN || ph === READY) && !b.crashed) humps();
     const x = b.pos[0]!, z = b.pos[2]!, speed = b.speed < 0 ? -b.speed : b.speed;
+    if (endless && S[PH] !== READY && x - ES[1]! > ES[2]!) ES[2] = x - ES[1]!;
     if (S[PH] === RUN) {
-      S[CLOCK] = Math.max(0, S[CLOCK]! - dt);
+      if (!endless) S[CLOCK] = Math.max(0, S[CLOCK]! - dt);
       // The trick in progress, and a hop when it lands.
       if (bike.air) {
         if (!wasAir) emit(E_AIR, 0);
@@ -363,7 +441,11 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
       }
       if (sc.step(dt, bike.nose, bike.balance, bike.spec.sweet, speed, b.throttle, bike.air) === BANKED) bankedNow(E_TRICK);
       if (sc.S[ON]) {
-        for (let o = 0; o < CROSS.length; o += 4) if (inR(x, z, CROSS, o) && sc.bonus(F_CROSS)) emit(E_BONUS, F_CROSS);
+        for (let o = 0; o < CROSS.length; o += 4) {
+          const ch = CROSS_H[o / 4]!;
+          if (endless && ch !== S[HOOD]) continue;
+          if (inR(x - OFF[ch * 2]!, z - OFF[ch * 2 + 1]!, CROSS, o) && sc.bonus(F_CROSS)) emit(E_BONUS, F_CROSS);
+        }
       }
       if (S[CLOCK] === 0) {
         if (sc.S[ON] && sc.step(dt, 0, 1, 0, 0, 0, false) === BANKED) bankedNow(E_TRICK);
@@ -372,13 +454,13 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
       }
     } else if (S[PH] === CRASH) {
       S[CT] = S[CT]! - dt;
-      S[CLOCK] = Math.max(0, S[CLOCK]! - dt);
+      if (!endless) S[CLOCK] = Math.max(0, S[CLOCK]! - dt);
       moving = true;
       if (S[CT]! <= 0) {
         S[PH] = S[CLOCK]! > 0 ? RUN : DONE;
         // Back up where it fell (in the hood: never in a canal).
-        const h = S[HOOD]!, lx = Math.max(-HX + 1.5, Math.min(HX - 1.5, x - CX[h]!)), lz = Math.max(-HZ + 1.5, Math.min(HZ - 1.5, z - CZ[h]!));
-        bike.reset(lx + CX[h]!, lz + CZ[h]!, b.yaw);
+        const h = S[HOOD]!, lx = Math.max(-HX + 1.5, Math.min(HX - 1.5, x - HC[h * 2]!)), lz = Math.max(-HZ + 1.5, Math.min(HZ - 1.5, z - HC[h * 2 + 1]!));
+        bike.reset(lx + HC[h * 2]!, lz + HC[h * 2 + 1]!, b.yaw);
         collide();
         emit(S[PH] === DONE ? E_END : E_RESPAWN, 0);
       }
@@ -411,10 +493,12 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
   /** Neighbours, sprinklers and the dog. True while any of them moves. */
   function world(dt: number, x: number, z: number, speed: number) {
     let any = false;
-    const kind = S[FLY] ? K_WATER : kindAt(x, z), on = sc.S[ON] === 1, loud = on || speed > 9 || kind === K_LAWN;
+    const kind = S[FLY] ? K_WATER : T.kindAt(x, z), on = sc.S[ON] === 1, loud = on || speed > 9 || kind === K_LAWN;
     if (kind === K_LAWN && S[PH] === RUN && !bike.air) cop.heat(HEAT_FROM.lawn * dt);
     for (let i = 0; i < NN; i++) {
-      const o = i * 8, b = i * 3, inZone = x > NEIGH[o + 4]! && x < NEIGH[o + 6]! && z > NEIGH[o + 5]! && z < NEIGH[o + 7]!;
+      const nh = NEIGH_H[i]!;
+      if (endless && nh !== S[HOOD]) continue;
+      const o = i * 8, b = i * 3, ox = OFF[nh * 2]!, oz = OFF[nh * 2 + 1]!, inZone = x > NEIGH[o + 4]! + ox && x < NEIGH[o + 6]! + ox && z > NEIGH[o + 5]! + oz && z < NEIGH[o + 7]! + oz;
       if (NB[b + 1]! > 0) NB[b + 1] = NB[b + 1]! - dt;
       if (NB[b]! > 0) {
         NB[b] = Math.max(0, NB[b]! - dt);
@@ -430,7 +514,9 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
     }
     S[SPCLK] = S[SPCLK]! + dt;
     for (let i = 0; i < NSP; i++) {
-      const o = i * 4, dx = x - SPRINK[o]!, dz = z - SPRINK[o + 1]!, dd = hypot(dx, dz);
+      const sh = SPRINK_H[i]!;
+      if (endless && sh !== S[HOOD]) continue;
+      const o = i * 4, dx = x - (SPRINK[o]! + OFF[sh * 2]!), dz = z - (SPRINK[o + 1]! + OFF[sh * 2 + 1]!), dd = hypot(dx, dz);
       if (SPC[i]! > 0) SPC[i] = SPC[i]! - dt;
       if (dd > SP_REACH || dd < 0.2 || SPC[i]! > 0) continue;
       let da = heading(dx, dz) - sprinklerAim(i);
@@ -445,11 +531,11 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
     }
     any = true; // the sprinklers turn while the session runs
     // The dog trots along its fence after the bike and barks when it is close.
-    const dz = Math.abs(z - DOG[2]!), want = dz < 9 && S[HOOD] === 0 ? Math.max(DOG[0]!, Math.min(DOG[1]!, x)) : (DOG[0]! + DOG[1]!) / 2, dx = want - DG[0]!;
+    const gx = OFF[0]!, gz = DOG[2]! + OFF[1]!, dz = Math.abs(z - gz), want = dz < 9 && S[HOOD] === 0 ? Math.max(DOG[0]! + gx, Math.min(DOG[1]! + gx, x)) : (DOG[0]! + DOG[1]!) / 2 + gx, dx = want - DG[0]!;
     DG[0] = DG[0]! + Math.max(-4 * dt, Math.min(4 * dt, dx));
     if (DG[2]! > 0) DG[2] = Math.max(0, DG[2]! - dt);
     if (DG[3]! > 0) DG[3] = DG[3]! - dt;
-    if (hypot(x - DG[0]!, z - DOG[2]!) < 5.5 && DG[3]! <= 0) (DG[2] = 0.6), (DG[3] = 1.6), (S[BARKS] = S[BARKS]! + 1), cop.heat(HEAT_FROM.bark), emit(E_BARK, 0);
+    if (hypot(x - DG[0]!, z - gz) < 5.5 && DG[3]! <= 0) (DG[2] = 0.6), (DG[3] = 1.6), (S[BARKS] = S[BARKS]! + 1), cop.heat(HEAT_FROM.bark), emit(E_BARK, 0);
     return any || Math.abs(dx) > 0.01 || DG[2]! > 0;
   }
   /** Where sprinkler i points now (radians, 0 is +x, anticlockwise from above). */
@@ -460,7 +546,7 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
   // ---- the autopilot: round the hood's loop, a wheelie down each straight, the front down for the
   // corners; with the patrol after it, for the hood's escape hump at full gas ----
   function autopilot(I: Float64Array) {
-    const b = bike.b, h = S[HOOD]!, cx = CX[h]!, cz = CZ[h]!, x = b.pos[0]! - cx, z = b.pos[2]! - cz, R = RT[h]!, nw = R.length / 2;
+    const b = bike.b, h = S[HOOD]!, cx = HC[h * 2]!, cz = HC[h * 2 + 1]!, x = b.pos[0]! - cx, z = b.pos[2]! - cz, R = endless ? RTE : RT[h]!, nw = R.length / 2;
     I[4] = 0;
     if (S[FLY]) return void (I[0] = I[1] = I[2] = I[3] = 0);
     // Wedged against something for two seconds (it has no reverse): back on the loop at its last waypoint (counted: the tests want none).
@@ -476,7 +562,8 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
     let ax: number, az: number, thru = 0;
     if (S[GO]! > 0) {
       // For the hump: past its lip, on its line.
-      const i = S[GO]! - 1, lx = HUMPS[i * 5]! - cx, lz = HUMPS[i * 5 + 1]! - cz, dx = HUMPS[i * 5 + 2]!, dz = HUMPS[i * 5 + 3]!;
+      const i = S[GO]! - 1, E = T.HU[h]!;
+      const lx = endless ? E[i * 5 + 1]! : HUMPS[i * 5]! - cx, lz = endless ? E[i * 5 + 2]! : HUMPS[i * 5 + 1]! - cz, dx = endless ? E[i * 5 + 3]! : HUMPS[i * 5 + 2]!, dz = endless ? E[i * 5 + 4]! : HUMPS[i * 5 + 3]!;
       ax = lx + dx * 6; az = lz + dz * 6;
       if (dx !== 0) az = lz; else ax = lx;
       let err = heading(ax - x, az - z) - b.yaw;
@@ -487,13 +574,18 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
       I[0] = ae < 0.45 || v < 2.5 ? 1 : 0;
       I[1] = ae > 0.45 && v > 4.5 ? 0.8 : 0;
       I[2] = bike.nose > 0.04 ? 1 : 0.4;
-      if (!flee && ae > 2.2) S[GO] = 0;
+      if (!flee && ae > 2.2 && !endless) S[GO] = 0;
       return;
     }
     const tx = R[leg * 2]!, tz = R[leg * 2 + 1]!;
     let dist = hypot(tx - x, tz - z);
     if (dist < 2.6) {
       // At a waypoint: for an escape hump that turns off here (riding the loop the right way, the hump ahead or to the side), else on round.
+      if (endless && (flee || leg + dir < 0 || leg + dir >= nw)) {
+        // Endless: at the end of the street (or with the patrol on it), for the hump that way.
+        S[GO] = dir > 0 ? 1 : 2;
+        return autopilot(I);
+      }
       if (flee) {
         const U = HU[h]!;
         for (let o = 0; o < U.length; o += 5) {
@@ -526,7 +618,7 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
       return;
     }
     // (Not for a hump, unless running: off the gas and on the brakes at one.)
-    const U = HU[h]!;
+    const U = T.HU[h]!;
     let lip = false;
     for (let o = 0; o < U.length; o += 5) if (v > 3 && hypot(U[o + 1]! - x, U[o + 2]! - z) < 9 && b.cy * U[o + 3]! - b.sy * U[o + 4]! > 0.5) lip = true;
     if (lip || v > 11.5 || (v > 6.5 && !thru && dist < 3 + v * 0.6)) {
@@ -557,8 +649,14 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
   // the sprinklers, the dog, the scorer, the patrol, the ride adapter and the bike ridden.
   const u8 = (a: Float64Array | Uint32Array) => new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
   const bytes = [u8(S), u8(NB), u8(SPC), u8(DG), u8(sc.S), u8(cop.S), u8(cop.P), u8(cop.R), u8(bike.R), u8(bike.vel), u8(U.S), u8(U.R), u8(US), ...bike.all.map((b) => b.state)];
+  if (endless) bytes.push(u8(ES), u8(HC), u8(OFF));
   return {
     S, ev, bike, sc, cop, NB, SPC, DG, bytes, unstuck: U,
+    /** The ground ridden (the fixed table or the endless row), the hood kinds' centres and moves. */
+    town: T, HC, OFF, endless,
+    /** Endless: the slot ridden, and how far it has gone along the town (world units). */
+    get slot() { return ES[0]!; },
+    get far() { return ES[2]!; },
     /** The stuck prompt is up. */
     get stuck() { return US[0] === 1; },
     get n() { return n; },
@@ -568,7 +666,7 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
     choose(i: number, hood = 0) { reset(i, hood); },
     /** Put the bike down at world (x, z) facing yaw in its hood (a test, a harness). */
     place(x: number, z: number, yaw: number) {
-      const h = hoodAt(x, z);
+      const h = endless ? toSlot(slotAt(x)) : hoodAt(x, z);
       bike.reset(x, z, yaw);
       S[HOOD] = h; S[FLY] = 0; S[GO] = 0; S[VISITED] = S[VISITED]! | (1 << h);
     },
