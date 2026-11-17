@@ -198,7 +198,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     }
     tv = terrainView(dio, t, {
       bands: endless ? desertBands(P) : look ? look.bands(P as Parameters<typeof look.bands>[0]) : [[0.45, P.ground[0]!], [0.85, P.ground[1]!], [1.25, P.ground[2]!], [99, P.crest]], steep: 0.5, steepColor: P.steep, kinds: look ? look.kinds(P as Parameters<typeof look.kinds>[0]) : [P.track, P.face],
-      light: P.light, ambient: P.amb, lod: endless ? [14, 30] : [24, 44], shadows: RIDERS + 1, shadowColor: P.shadow,
+      light: P.light, ambient: P.amb, lod: endless ? [14, 26] : [24, 44], shadows: RIDERS + 1, shadowColor: P.shadow,
     });
     if (dv) {
       dv.build(P);

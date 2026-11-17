@@ -7,11 +7,13 @@
   from 34 to 250 units, each hazier than the last (the lit sand into the sky's horizon colour) with a
   lighter crest line, and each only above the near sand's silhouette (sampled down the same screen
   column), so a near dune always stands in front. The near haze now runs 20 to 35 units and fades into
-  the first band. LOD [14, 30] (was [14, 26]): the coarsest stride only inside the haze. Light-mode
-  grid a darker coral (#c8431f) at 0.62 (was #ff7a59 at 0.4). The palette, dunes, handling and camera
-  are round 1's. Measured in headless Chromium (autopilot, 8 s from 4 s in, dpr 1): faces a frame p50
-  2,888 → 3,078 at 1440 and 2,005 → 2,120 at 390; frames in 8 s 400 → 370 at 1440, 481 → 481 at 390.
-- Size: 166,062 B gzip (+2,425 B: the far ring and its painter, unstuck in three more modes), under the 168,000 B budget.
+  the first band. Light-mode grid a darker coral (#c8431f) at 0.62 (was #ff7a59 at 0.4). The palette,
+  dunes, handling, LOD and camera are round 1's. Measured in headless Chromium (autopilot, 8 s from
+  4 s in, dpr 1, 4× CPU throttle): frame p50 at 390 33.4 → 33.4 ms, at 1440 100 → 117 ms; faces a
+  frame p50 at 1440 2,848 → 2,873 (the far ring adds 5 polygons and 5 crest lines a frame, not
+  faces). A finer LOD to smooth the crests ([14, 30]: stride 4 only inside the haze) was measured
+  and left out: +8 % faces and 390 throttled p50 33 → 50 ms.
+- Size: 166,064 B gzip (+2,427 B: the far ring and its painter, unstuck in three more modes), under the 168,000 B budget.
 - **Unstuck in Race, Big Air and Wheelie City** (the same watch and timings as Free Ride: the prompt
   at 2 s, an automatic reset at 4 s, R / ↺ / a gamepad's Back). Race: back on the line behind where
   you were, the progress taken back, held 1.2 s; it never gains a place (tested). Big Air: the run-in

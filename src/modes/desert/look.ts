@@ -154,21 +154,21 @@ export function desertView(d: Diorama, W: World) {
     const c = d.cam, cp = Math.cos(c.pitch), sp = Math.sin(c.pitch), sy = Math.sin(c.yaw), cy = Math.cos(c.yaw);
     const ex = c.tx + c.dist * sy * cp, ez = c.tz + c.dist * cy * cp;
     const fx = -sy, fz = -cy, rx = cy, rz = -sy, f = d.height / 2 / Math.tan(c.fov / 2), mid = d.width / 2 + c.ox;
-    const n = Math.min(COLS, Math.max(24, Math.ceil(d.width / 9) + 1)), span = (d.width / 2 + 24) / f * cp, H = d.height;
+    const n = Math.min(COLS, Math.max(24, Math.ceil(d.width / 14) + 1)), span = (d.width / 2 + 24) / f * cp, H = d.height;
     const nt = W.t, x0 = nt.x0, z0 = nt.z0, x1 = x0 + nt.cols * nt.cell, z1 = z0 + nt.rows * nt.cell;
     for (let i = 0; i < n; i++) {
       const u = -span + (2 * span * i) / (n - 1), l = Math.sqrt(1 + u * u), dx = (fx + rx * u) / l, dz = (fz + rz * u) / l;
       CX[i] = mid + (u * f) / cp;
       // The near sand's top down this column (to the window's edge).
       let top = H + 2;
-      for (let r = 1.5; r < BANDS[0]! + 12; r += 0.6 + r * 0.05) {
+      for (let r = 1.5; r < BANDS[0]! + 12; r += 0.8 + r * 0.07) {
         const px = ex + dx * r, pz = ez + dz * r;
         if (px <= x0 || pz <= z0 || px >= x1 || pz >= z1) break;
         if (d.project(px, nt.height(px, pz), pz, PT) && PT[2]! > 0.5 && PT[1]! < top) top = PT[1]!;
       }
       SIL[i] = top;
       for (let b = 0; b < NB; b++) {
-        const r0 = BANDS[b * 2]!, r1 = BANDS[b * 2 + 1]!, st = (r1 - r0) / 8;
+        const r0 = BANDS[b * 2]!, r1 = BANDS[b * 2 + 1]!, st = (r1 - r0) / 6;
         let y = H + 2;
         for (let r = r0; r <= r1 + 0.01; r += st) {
           const px = ex + dx * r, pz = ez + dz * r;
