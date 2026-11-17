@@ -14,6 +14,7 @@ import { diorama, type DioramaObject } from "@fzlt/core/diorama";
 import { terrainView, type TerrainView } from "@fzlt/core/terrain";
 import { chase } from "@fzlt/core/drive";
 import { controls } from "@fzlt/core/input";
+import { rocker } from "../../bike/rocker.ts";
 import { pad } from "@fzlt/core/pad";
 import { sound } from "@fzlt/core/sound";
 import { LOOP, ENDO, CASE, BAIL, type Power } from "../../bike/bike.ts";
@@ -156,13 +157,12 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   const RESETK = c.id("reset"), GAS = c.id("gas"), BRAKE = c.id("brake"), LEFT = c.id("left"), RIGHT = c.id("right"), FWD = c.id("fwd"), BACK = c.id("back");
   const thePad = pad(engine, c, {
     scheme: "stick",
-    actions: [
-      { intent: "gas", label: "GAS", name: "Gas (Space)", key: "SPACE", role: "go", hold: true },
-      { intent: "brake", label: "BRAKE", name: "Brake (K)", key: "K", role: "attack", hold: true },
-    ],
+    // Gas and brake on the throttle rocker (../../bike/rocker.ts), under the right thumb.
+    actions: [],
     host: stage,
   });
   thePad.el.classList.add("mt-pad");
+  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal });
   if (ctx.attract) thePad.el.hidden = true;
   const paintMute = () => (muteK.textContent = snd.on ? "♪" : "×", muteK.setAttribute("aria-pressed", "" + snd.on));
   paintMute();
@@ -844,6 +844,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       if (paused === on || ended) return;
       paused = on;
       PD[0] = 0;
+      if (on) rock.release();
       // (Online the ride goes on: pausing only lets go of the bike.)
       if (net) return;
       if (on) engine.stop();

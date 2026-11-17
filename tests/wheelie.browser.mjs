@@ -1,7 +1,7 @@
 // Endless Wheelie City in Chromium (the built dist/holeshot.mjs), at 1440 (keyboard) and 390 (touch):
 // it starts, draws and rides (the slot it is in drawn, the far hoods hidden);
-// the pad is unchanged (a stick and GAS, BRAKE, HOP); on the start line it settles; ridden by hand
-// (Space, or the pad's GAS) it never sleeps; on the autopilot the heat rises and the neon patrol comes
+// the pad: a stick and HOP, gas and brake on the throttle rocker; on the start line it settles; ridden by hand
+// (Space, or the rocker's GAS) it never sleeps; on the autopilot the heat rises and the neon patrol comes
 // (the heat chip with its stars, the hint), the run turns for a hump and escapes into the next hood
 // with the chase framing held through the flight, and the result pays the escapes (and the tickets,
 // if it took any) and settles. Waits on state.
@@ -42,8 +42,8 @@ try {
     await p.evaluate(() => game.start("endcity"));
     if (touch) {
       const pad = await p.evaluate(() => { const r = document.querySelector("[data-fizlet-host]").shadowRoot, keys = [...r.querySelectorAll(".wc-pad .bui-pad-keys button")].map((b) => b.getAttribute("aria-label")); return { stick: !!r.querySelector(".wc-pad .bui-pad-stick, .wc-pad [class*=stick]"), keys }; });
-      assert.ok(pad.stick && pad.keys.length === 3 && /gas/i.test(pad.keys[0]) && /brake/i.test(pad.keys[1]) && /hop/i.test(pad.keys[2]), `${name}: the pad: ${JSON.stringify(pad)}`);
-      const gas = await p.evaluate(() => { const b = [...document.querySelector("[data-fizlet-host]").shadowRoot.querySelectorAll(".bui-pad button")].find((x) => /gas/i.test(x.getAttribute("aria-label") || "")), r = b.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
+      assert.ok(pad.stick && pad.keys.length === 1 && /hop/i.test(pad.keys[0]), `${name}: the pad: a stick, HOP (gas and brake on the rocker): ${JSON.stringify(pad)}`);
+      const gas = await p.evaluate(() => { const r = document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".hs-rocker").getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height * 0.15]; });
       const cdp = await ctx.newCDPSession(p);
       await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: gas[0], y: gas[1], id: 1 }] });
       await until(p, () => game.getSnapshot().run.speed > 2, null, `${name}: the pad's GAS rides`);

@@ -36,7 +36,11 @@ import { readdirSync, readFileSync } from "node:fs";
 // path and autopilot line), the scene's hood moves, haze and fade, the END key; three biome grounds
 // and feature mixes on the desert's window, their scenery and palettes, the ENDLESS picker card, the
 // profile's v4 step), plus about 3.8 KB of room.
-const BUDGET = 174_000;
+// Unreleased, round 4: 174,039 B measured (holeshot.js; +3,851 B over 170,188 with the fixed city's
+// scene code gone: the camera's occlusion test and the ghosts' outlines, the patrol's new rules and
+// the drones' neon and searchlights, the hand drag (its sim, HUD chip, pose, sparks), the throttle
+// rocker (its icons and CSS), the profile's v5 step), plus about 4 KB of room for the crests.
+const BUDGET = 178_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

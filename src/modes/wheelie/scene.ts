@@ -1,15 +1,15 @@
-// Wheelie City: four tabletop neighbourhoods to wheelie, on the player's own bike (from Fizlet's
+// Endless Wheelie City: four tabletop neighbourhoods to wheelie, on the player's own bike (from Fizlet's
 // Wheelie City gallery piece). THE BLOCK (the suburb strip: houses with lawns and driveways, the flats
 // and the corner store, the dog's yard), HILLCREST (cul-de-sacs and turning circles, houses perched on
 // retaining walls under a ridge), DOWNTOWN (neon towers round a plaza with a fountain) and NEON MARINA
 // (a boardwalk over the sand, beach shacks, palms, the sea): islands on the table with canals between
-// them, linked by humps: hit one at speed and you fly into the next hood. Ninety seconds from the first
-// touch of the gas: lift the front with the gas, balance it with your weight (stick or W/S), save it
+// them, linked by humps: hit one at speed and you fly into the next hood; the hoods repeat as slots in
+// a row that never ends (no clock: how far). Lift the front with the gas, balance it with your weight (stick or W/S), save it
 // with the brake, and score wheelies and manuals (distance, time, and the time held at the balance
 // point), hops and stoppies. A trick across a crosswalk, through a sprinkler or past a neighbour who
 // came out to shake a fist pays a bonus. Too loud and the heat rises: the neon patrol (bikes, a cart, a
-// drone, lights and a siren) comes after you; caught is a TICKET (the combo and half the points at
-// risk); a hump loses them and pays. At night the curbs glow cyan and the windows warm, by day pastel.
+// drone, lights and a siren) comes after you; caught stopped (or down) is a TICKET (the combo and half
+// the points at risk); a hump loses them and pays. Past 12 o'clock held, the hand drag (×10). At night the curbs glow cyan and the windows warm, by day pastel.
 // Bricks: the kernel, diorama, drive (`chase`), input, pad, sound. The town and the session are
 // ./city.ts (the layouts ./hoods.ts, the patrol ./cops.ts), the scorer ./tricks.ts, all headless; the
 // ride is ./ride.ts on the shared bike.
@@ -17,6 +17,7 @@ import { createEngine, seeded } from "@fzlt/core/kernel";
 import { diorama, type DioramaObject, type DioramaObjectDef, type DioramaPoints } from "@fzlt/core/diorama";
 import { chase } from "@fzlt/core/drive";
 import { controls } from "@fzlt/core/input";
+import { rocker } from "../../bike/rocker.ts";
 import { pad } from "@fzlt/core/pad";
 import { sound } from "@fzlt/core/sound";
 import {
@@ -148,19 +149,17 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   });
   const c = controls(engine, { keys: { left: [], right: [], fwd: [], back: [], gas: [], brake: [], hop: [], reset: [] }, target: play });
   const GAS = c.id("gas"), BRAKE = c.id("brake"), HOPK = c.id("hop"), RESETK = c.id("reset");
-  const ICON_GAS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z" fill="currentColor"/></svg>';
-  const ICON_BRAKE = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
   const ICON_HOP = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 5 12h4v6h6v-6h4z" fill="currentColor"/></svg>';
   const thePad = pad(engine, c, {
     scheme: "stick",
+    // Gas and brake on the throttle rocker (../../bike/rocker.ts): the seam is the wheelie; HOP an icon key.
     actions: [
-      { intent: "gas", label: "", icon: ICON_GAS, name: "Gas (Space or J)", key: "J", role: "go", hold: true },
-      { intent: "brake", label: "", icon: ICON_BRAKE, name: "Brake (K)", key: "K", role: "attack", hold: true },
       { intent: "hop", label: "", icon: ICON_HOP, name: "Hop (L)", key: "L", role: "aim" },
     ],
     host: stage,
   });
   thePad.el.classList.add("wc-pad");
+  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal });
   if (ctx.attract) thePad.el.hidden = true;
   // The motor's whine (../../bike/kit.ts): nothing is made until a gesture.
   const vox = voice();
@@ -853,7 +852,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     for (let k = 0; k < run.n; k++) {
       const type = run.ev[k * 2]!, val = run.ev[k * 2 + 1]!;
       hudDirty = true;
-      if (type === E_START) setView(1), engine.events.emit("start"), toast("GO! NINETY SECONDS", "go"), say("Go: ninety seconds");
+      if (type === E_START) setView(1), engine.events.emit("start"), toast("GO! THE TOWN NEVER ENDS", "go"), say("Go: the town never ends");
       else if (type === E_TRICK) {
         engine.events.emit("trick");
         const kind = sc[KIND]!, bonus = sc[16]!;
@@ -1426,6 +1425,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       const ph = S[0]!;
       return {
         phase: ph === READY ? "ready" : ph === RUN || ph === CRASH ? "run" : ph === DONE ? "done" : "idle", clock: S[1]!, score: sc[SC]!, combo: sc[CB]!, trick: sc[ON] === 1, nose: bike.nose, view: view ? "chase" : "table", speed: bike.b.speed, crashes, grumps: S[4]!, best: sc[BEST_W]!, ended,
+        gas: I[0]!, brake: I[1]!, drag: run.HD[1]!, hold: run.HD[0]!,
         hood: HOOD_IDS[S[S_HOOD]!], slot: run.slot, far: run.far, endless: true, near: cop.S[NEAR]!, flying: S[S_FLY] === 1, jumps: S[S_JUMPS]!, heat: cop.S[HEAT]!, stars: cop.S[STARS]!, units: cop.chasing, risk: cop.S[HOT]!, escapes: cop.S[ESC]!, tickets: cop.S[TIX]!, drawn: vis, objects: dio.stats.objects, faces: dio.stats.faces,
       };
     },
@@ -1439,7 +1439,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     pause(on: boolean) {
       if (paused === on || ended) return;
       paused = on;
-      c.press("gas", false);
+      c.press("gas", false), rock.release();
       if (on) engine.stop();
       else engine.start();
     },
@@ -1447,14 +1447,14 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     probe: {
       /** Put the bike `back` units out from house h's front, facing away from it, in the first slot
        *  (from `from`) that shows h's hood: the building stands between the chase camera and the bike. */
-      behind(h: number, back = 4, from = 0) {
+      behind(h: number, back = 4, from = 0, along = 0) {
         const k0 = W.hood[h]!;
         let k = from;
         while (slotKind(k) !== k0) k++;
         // Riding along the street (east, or west), the chase camera sits back and to one side
         // (yaw − π/2 + side): put the bike on that line out from the tower's front.
         const f = HOUSES[h * 8 + 5]!, yaw = f < 0 ? 0 : Math.PI, cy = yaw - Math.PI / 2 + chaseO.side, ux = Math.sin(cy), uz = Math.cos(cy);
-        const t = (HOUSES[h * 8 + 3]! / 2 + back) / Math.abs(uz), x = HOUSES[h * 8]! - CX[k0]! + k * PITCH - ux * t, z = HOUSES[h * 8 + 1]! - CZ[k0]! - uz * t;
+        const t = (HOUSES[h * 8 + 3]! / 2 + back) / Math.abs(uz), x = HOUSES[h * 8]! - CX[k0]! + k * PITCH - ux * t + along, z = HOUSES[h * 8 + 1]! - CZ[k0]! - uz * t;
         run.place(x, z, yaw);
         show();
         CTP[0] = bike.b.pos[0]!; CTP[1] = Math.max(0, bike.b.pos[1]!); CTP[2] = bike.b.pos[2]!; target.yaw = bike.b.yaw;
@@ -1494,6 +1494,12 @@ export function mountCity(ctx: ModeCtx): ModeRun {
         const o = HO[h];
         if (o) boxOf(h, o, 0);
         return [OP[0], OP[1], OP[2], dio.cam.yaw, bike.b.yaw, ...BOX];
+      },
+      /** Heat for the patrol (a harness: a chase on demand). */
+      heat(v: number) {
+        cop.heat(v);
+        engine.wake();
+        return cop.S[HEAT]!;
       },
       /** The towers (house ids), for scripting a ride past one. */
       towers() {

@@ -51,7 +51,13 @@ pick your jersey and a name. That bike rides every event.
   one hump between each (the same row on every screen); wheelies, manuals, hops and stoppies, bonuses
   across crosswalks, through sprinklers and past a neighbour shaking a fist. Too loud and the neon
   patrol comes (comic, no weapons); a hump into the next hood loses them. No clock: how far across
-  town? Kilometres on the HUD, END banks it, the best is kept. A building between the chase camera
+  town? Kilometres on the HUD, END banks it, the best is kept. **The patrol** tickets you only when it
+catches you stopped (or down after a crash); keep riding and the heat climbs instead: more units
+join, a cart, then neon drone cops with searchlights, up to six; they are bound to their hood, so a
+hump into the next one loses them (LOST THEM! points, the combo up). **The hand drag:** the city's
+bikes go back past 12 o'clock to about 1; hold it past 12 for a second and a half and the rider
+drags a hand on the road: ×10 points while it lasts, banked when you come back under 12, lost if
+you loop out. A building between the chase camera
   and the bike fades to a ghost (outlined) and comes back when the bike is clear; one the camera is
   all but inside fades out completely.
 - **Series**: three championship tiers (ROOKIE CUP, PRO CIRCUIT, NEON MASTERS) of four to six
@@ -95,7 +101,10 @@ Wheelie City: a race reset puts you back on the line behind where you were (the 
 that progress back and holds you 1.2 s while the field rides on, so it can never gain a place; Big Air
 puts you at the run-in of the current jump; Wheelie City at the last good spot on the street (never a
 lawn, the sand or the water). A mouse: hold the track for gas, drag to steer and lean. Phones: the stick
-under the left thumb leans and steers, GAS and BRAKE (and TRICK or HOP) under the right. A gamepad
+under the left thumb leans and steers; under the right, the **throttle rocker**, one tall pill: slide
+the thumb up for gas, down for brake, and onto the middle seam for both at once (the wheelie and the
+feather), never lifting; a second finger on the pill adds the brake too. TRICK (Big Air) and HOP
+(Wheelie City) are icon keys beside it; every touch key is an icon with a spoken label. A gamepad
 works too. The look follows the page's `<html data-theme>`.
 
 **Camera.** The chase camera's framing is set once at the start of an event and never zooms: not

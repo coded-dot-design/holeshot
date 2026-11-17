@@ -1,7 +1,7 @@
 // Holeshot in Chromium (the built dist/holeshot.mjs), at 1440 (keyboard and mouse) and 390 (touch):
 // a new rider gets the first-run setup (a starter of each class, paint, jersey, name, number; every
 // key 44 px or more), picks a bike with clicks and lands in the garage with the bike drawn; RIDE →
-// RACE starts the gate on that bike; the keys (Space) or the pad's GAS ride it; P or ❚❚ pauses (the
+// RACE starts the gate on that bike; the keys (Space) or the throttle rocker's GAS ride it; P or ❚❚ pauses (the
 // clock holds) and RESUME goes on; the autopilot finishes the race and the result pays and wears the
 // bike; NEW SET in the garage buys tyres; Free Ride (END banks it), Big Air and Endless Wheelie City each
 // start and end on the same bike and pay; leaving mid-event pays nothing and still wears; a reload
@@ -63,7 +63,7 @@ try {
       await p.keyboard.up("Space");
       await p.keyboard.press("KeyP");
     } else {
-      const gas = await p.evaluate(() => { const b = [...document.querySelector("[data-fizlet-host]").shadowRoot.querySelectorAll(".bui-pad button")].find((x) => /gas/i.test(x.getAttribute("aria-label") || x.title || x.textContent)), r = b.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
+      const gas = await p.evaluate(() => { const r = document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".hs-rocker").getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height * 0.15]; });
       const cdp = await ctx.newCDPSession(p);
       await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: gas[0], y: gas[1], id: 1 }] });
       await until(p, () => game.getSnapshot().run.speed > 3, null, `${name}: the pad's GAS rides`);

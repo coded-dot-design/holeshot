@@ -13,6 +13,7 @@ import { diorama } from "@fzlt/core/diorama";
 import { terrainView, type TerrainView } from "@fzlt/core/terrain";
 import { chase } from "@fzlt/core/drive";
 import { controls } from "@fzlt/core/input";
+import { rocker } from "../../bike/rocker.ts";
 import { pad } from "@fzlt/core/pad";
 import { sound } from "@fzlt/core/sound";
 import { LOOP, ENDO, CASE, BAIL } from "../../bike/bike.ts";
@@ -85,16 +86,17 @@ export function mountAir(ctx: ModeCtx): ModeRun {
   vox.on = snd.on;
   const c = controls(engine, { keys: { left: [], right: [], fwd: [], back: [], gas: [], brake: [], trick: [], reset: [] }, target: play });
   const GAS = c.id("gas"), BRAKE = c.id("brake"), LEFT = c.id("left"), RIGHT = c.id("right"), FWD = c.id("fwd"), BACK = c.id("back"), TRICK = c.id("trick"), RESETK = c.id("reset");
+  const ICON_TRICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 3 7 7 .6-5.4 4.6 1.7 7.3L12 17.6 5.7 21.5l1.7-7.3L2 9.6 9 9z" fill="currentColor"/></svg>';
   const thePad = pad(engine, c, {
     scheme: "stick",
+    // Gas and brake on the throttle rocker (../../bike/rocker.ts); TRICK an icon key beside it.
     actions: [
-      { intent: "gas", label: "GAS", name: "Gas (Space)", key: "SPACE", role: "go", hold: true },
-      { intent: "trick", label: "TRICK", name: "Trick (L)", key: "L", role: "flag", hold: true },
-      { intent: "brake", label: "BRAKE", name: "Brake (K)", key: "K", role: "attack", hold: true },
+      { intent: "trick", label: "", icon: ICON_TRICK, name: "Trick (L)", key: "L", role: "flag", hold: true },
     ],
     host: stage,
   });
   thePad.el.classList.add("ba-pad");
+  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal });
   if (ctx.attract) thePad.el.hidden = true;
   const paintMute = () => (muteK.textContent = snd.on ? "♪" : "×", muteK.setAttribute("aria-pressed", "" + snd.on));
   paintMute();
@@ -583,6 +585,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
       if (paused === on || ended) return;
       paused = on;
       PD[0] = 0;
+      if (on) rock.release();
       if (on) engine.stop();
       else engine.start();
     },

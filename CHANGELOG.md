@@ -18,6 +18,20 @@
   is built before it moves to its slot, and the headless patrol and unstuck tests ride it). Golden:
   the four fixed-session hashes go, one "endless wheelie city ride" comes; every other hash is as it
   was.
+- Size: 174,039 B gzip (holeshot.js, +3,851 B), budget 174,000 → 178,000 B (scripts/size.mjs has
+  the reasons).
+- **The throttle rocker (every mode, touch).** Gas and brake leave the round keys for one tall pill
+  under the right thumb (`src/bike/rocker.ts`, at least 72 × 150 px, safe-area aware): the top is
+  GAS, the bottom BRAKE, the middle SEAM both at once (gas and brake together is the wheelie, and the
+  feather that holds it); the thumb slides between them without lifting, the zone lights at once,
+  a short buzz on a change where there is one (never with reduced motion), and a second finger on
+  the pill adds the brake. Icons only (flame, brake disc, the seam's curve; Big Air's TRICK a star,
+  Wheelie City's HOP an arrow), every one with its words in an aria-label. A first-time hint ("slide
+  to the middle to wheelie") until the seam is used. Desktop keys unchanged. Test:
+  `tests/rocker.browser.mjs` (390 portrait, 844 landscape: one finger gas → seam → brake → gas never
+  lifted, two fingers, icons and labels, the size, the hint; the hand drag reached and held with the
+  rocker alone; Race and Big Air ride on it). Endless Wheelie City's start toast no longer says
+  "ninety seconds".
 - **The hand drag (Endless Wheelie City).** The city's bikes now go back past 12 o'clock (vertical)
   to about 1 (`LOOP_AT`: 30° past; `BikeShape.loop`, the shared bike's new option, default as
   before so every other mode is bit for bit the same); past the balance point the rear brake has more

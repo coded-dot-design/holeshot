@@ -1,7 +1,7 @@
 // The Race Series in Chromium (the built dist/holeshot.mjs), at 1440 (keyboard and mouse) and 390
 // (touch): SERIES shows three tiers (the Rookie Cup open, the others locked; keys 44 px or more, no
 // sideways scroll); ENTER opens the championship: the next round's track from above and the
-// standings; RIDE ROUND 1 races it (Space or the pad's GAS, then the autopilot) against the tier's
+// standings; RIDE ROUND 1 races it (Space or the rocker's GAS, then the autopilot) against the tier's
 // rivals; the result pays the round's prize, wears the bike and shows the table after round 1 (all
 // four scored); round 2 is a different track; leaving round 2 pays nothing, scores the player
 // nothing and moves the championship on; a reload keeps it. Screenshots in light and dark go to
@@ -52,7 +52,7 @@ try {
       await until(p, () => game.getSnapshot().run.speed > 3, null, `${name}: Space rides`);
       await p.keyboard.up("Space");
     } else {
-      const gas = await p.evaluate(() => { const b = [...document.querySelector("[data-fizlet-host]").shadowRoot.querySelectorAll(".bui-pad button")].find((x) => /gas/i.test(x.getAttribute("aria-label") || x.title || x.textContent)), r = b.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
+      const gas = await p.evaluate(() => { const r = document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".hs-rocker").getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height * 0.15]; });
       const cdp = await ctx.newCDPSession(p);
       await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: gas[0], y: gas[1], id: 1 }] });
       await until(p, () => game.getSnapshot().run.speed > 3, null, `${name}: the pad's GAS rides`);

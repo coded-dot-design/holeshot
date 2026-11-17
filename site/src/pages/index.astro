@@ -9,8 +9,8 @@ const description = 'Holeshot is a dirt bike game on a tabletop: one bike and a 
 const kb = (GZIP / 1024).toFixed(1);
 const steps = [
   ['PICK YOUR BIKE', 'One bike to start: a peaky 2-stroke, a torquey 4-stroke, a light e-bike or an electric dirt bike. Paint it, number it, pick your jersey. That bike rides every event.'],
-  ['RIDE IT', 'Space is the gas, K the brake, W and S your weight (back lifts the front; in the air it pitches the bike), A and D steer. On a phone: the stick leans and steers, GAS and BRAKE under the right thumb.'],
-  ['EARN', 'Races and series rounds pay by place, Big Air by the judges, Endless Wheelie City by points, Free Ride a little for saddle time. Crash and you tumble, get back up, and keep riding.'],
+  ['RIDE IT', 'Space is the gas, K the brake, W and S your weight (back lifts the front; in the air it pitches the bike), A and D steer; gas and brake together pop a wheelie. On a phone: the stick leans and steers, and one throttle rocker under the right thumb: slide up for gas, down for brake, the middle for both, without lifting.'],
+  ['EARN', 'Races and series rounds pay by place, Big Air by the judges, Endless Wheelie City by points (hold a wheelie past 12 o'clock for a ×10 hand drag; stop and the neon patrol tickets you), Free Ride a little for saddle time. Crash and you tumble, get back up, and keep riding.'],
   ['WRENCH', 'Every lap wears the bike: tyres lose grip, a 2-stroke\'s top end loses pull, seals blow and it cases sooner. Buy new tyres, rebuild the motor, add mods, change the paint and the kit.'],
 ];
 const classes = Object.values(CLASSES).map((c) => ({ ...c, models: MODELS.filter((m) => m.cls === c.id), starter: STARTERS.find((m) => m.cls === c.id)! }));
