@@ -11,6 +11,7 @@ import { terrain, type Terrain } from "@fzlt/core/terrain";
 import { bike, type Bike, type BikeShape, type Power, TWO_STROKE, B_CRASH, B_LAND } from "../../bike/bike.ts";
 import { tricks, TRICKS, HOP } from "./tricks.ts";
 import { atan, cos, pow, sin } from "../../math.ts";
+import { PROGRESS, PROMPT_T, AUTO_T } from "../unstuck.ts";
 
 export const COLS = 116, ROWS = 56, CELL = 0.45, HX = (COLS * CELL) / 2, HZ = (ROWS * CELL) / 2;
 export const TRACK_W = 4.2, KIND_TRACK = 1, KIND_STEEL = 2, KIND_LAND = 3;
@@ -19,6 +20,8 @@ export const PICK = 0, READY = 1, RUN = 2, DONE = 3;
 export const RUN_T = 60;
 /** Events: [type, value]. */
 export const E_START = 1, E_AIR = 2, E_TRICK = 3, E_LAND = 4, E_CRASH = 5, E_RESPAWN = 6, E_END = 7, E_FLIP = 8;
+/** Unstuck: the prompt (1 up, 0 down), a reset (1 asked for, 2 automatic). The reset input is I[5] = 1. */
+export const E_STUCK = 9, E_RESET = 10;
 /** The freestyle feel: lighter gravity (hang time), more pitch from the rider in the air. */
 export const GRAVITY = 14, AIR_PITCH = 13;
 const RESPAWN = 1.5;
@@ -145,6 +148,8 @@ export function airShow(seed = 20261120, me: { power: Power; shape?: BikeShape }
   // S: phase, clock (left), started, near index, trick id (−1 none), trick amount, last pitch, autopilot jump count, air flag, crash time.
   const S = new Float64Array(12);
   const PH = 0, CLK = 1, NI = 3, TID = 4, TAM = 5, PP = 6, AJ = 7, AIRF = 8, FL = 9;
+  // Unstuck (a person riding): seconds without PROGRESS round the lap with the controls held, the lap mark.
+  const STL = 10, MK = 11;
   const ev = new Float64Array(16);
   let nev = 0;
   const emit = (type: number, v: number) => void (nev < 8 && ((ev[nev * 2] = type), (ev[nev * 2 + 1] = v), nev++));
@@ -183,6 +188,43 @@ export function airShow(seed = 20261120, me: { power: Power; shape?: BikeShape }
     LD[1] = k * 0.03;
   }
 
+  /** Back to the run-in of the current jump: the floor 10.5 units before the kicker last passed or next up. */
+  function runIn() {
+    const s = sAt(S[NI]!);
+    let best = 0, bd = Infinity;
+    for (let k = 0; k < 2; k++) {
+      const st = (((KICK[k]! - 10.5) % LAP) + LAP) % LAP, d = (((s - st) % LAP) + LAP) % LAP;
+      if (d < bd) (bd = d), (best = st);
+    }
+    place(Math.round(best / (LAP / NT)) % NT);
+  }
+  /** Unstuck: the watch and the reset input (I[5]). True if it reset. */
+  function unstick(I: Float64Array, dt: number) {
+    let why = I[5]! > 0 ? 1 : 0;
+    if (!why) {
+      const ds = sAt(S[NI]!) - S[MK]!, d = ds - LAP * Math.floor(ds / LAP + 0.5);
+      if (d > PROGRESS || d < -PROGRESS) {
+        if (S[STL]! >= PROMPT_T) emit(E_STUCK, 0);
+        S[MK] = sAt(S[NI]!);
+        S[STL] = 0;
+        return false;
+      }
+      const rel = b.rel < 0 ? -b.rel : b.rel;
+      if (!(I[0]! > 0.1 || I[1]! > 0.1 || I[2] !== 0 || I[3] !== 0 || rel > 1.1)) return false;
+      const was = S[STL]!;
+      S[STL] = was + dt;
+      if (was < PROMPT_T && S[STL]! >= PROMPT_T) emit(E_STUCK, 1);
+      if (S[STL]! >= AUTO_T) why = 2;
+    }
+    if (!why) return false;
+    runIn();
+    S[TID] = -1;
+    S[TAM] = 0;
+    S[MK] = sAt(S[NI]!);
+    S[STL] = 0;
+    emit(E_RESET, why);
+    return true;
+  }
   /** Inputs that ride the arena: out = [gas, brake, lean, steer, trick held]. */
   function autopilot(out: Float64Array) {
     const i = S[NI]!, sp = b.speed, look = (4 + Math.max(0, sp) * 0.2) | 0, k = (i + look) % NT;
@@ -224,7 +266,7 @@ export function airShow(seed = 20261120, me: { power: Power; shape?: BikeShape }
     return lean < -0.5 ? 1 : lean > 0.5 ? 3 : steer > 0.5 || steer < -0.5 ? 2 : 0;
   }
 
-  /** Advance dt: I = [gas, brake, lean, steer, trick held]; `auto` rides it. True while anything moves. */
+  /** Advance dt: I = [gas, brake, lean, steer, trick held, reset]; `auto` rides it. True while anything moves. */
   function step(dt: number, I: Float64Array, auto = false) {
     const ph = S[PH]!;
     if (ph === PICK || ph === DONE) {
@@ -236,6 +278,7 @@ export function airShow(seed = 20261120, me: { power: Power; shape?: BikeShape }
     if (auto) autopilot(IN), (I = IN);
     if (ph === READY && (I[0]! > 0 || I[1]! > 0)) (S[PH] = RUN), emit(E_START, 0);
     if (S[PH] === RUN) S[CLK] = Math.max(0, S[CLK]! - dt);
+    if (!auto && !b.crashed && S[PH] === RUN && unstick(I, dt)) return true;
     if (b.crashed) {
       b.set(0, 0, 0, 0);
       b.step(dt);
@@ -250,6 +293,7 @@ export function airShow(seed = 20261120, me: { power: Power; shape?: BikeShape }
         place(i);
         S[TID] = -1;
         S[TAM] = 0;
+        if (!auto) (S[MK] = sAt(S[NI]!)), (S[STL] = 0);
         emit(E_RESPAWN, 0);
       }
       if (S[CLK] === 0 && S[PH] === RUN) end();

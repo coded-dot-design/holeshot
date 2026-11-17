@@ -79,3 +79,5 @@
 .ba~[data-fizlet-slot] .ba-judges span:nth-child(even){rotate:2deg}
 .ba~[data-fizlet-slot] .ba-score{rotate:-1.5deg}
 [data-fizlet-slot]:focus-within .ba-play:focus-visible{outline:3px solid #22e6ff}
+.ba~[data-fizlet-slot] .ba-stuck{position:absolute;left:50%;bottom:22%;translate:-50% 0;margin:0;padding:.4em .8em;background:#ffd166;color:#0b0a14;border:2px solid var(--rim);border-radius:8px;box-shadow:calc(3px * var(--bui-sx)) calc(3px * var(--bui-sy)) 0 var(--bui-shadow);font-weight:900;letter-spacing:.03em;white-space:nowrap}
+.ba~[data-fizlet-slot] .ba-stuck[hidden]{display:none}

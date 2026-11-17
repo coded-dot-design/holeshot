@@ -8,12 +8,17 @@
 import { terrain, type Terrain } from "@fzlt/core/terrain";
 import { bike, nudge, type Bike, type BikeShape, type Power, TWO_STROKE, FOUR_STROKE, B_CRASH, B_LAND, B_WHEELIE, STRIKE } from "../../bike/bike.ts";
 import { atan, cos, pow, sin } from "../../math.ts";
+import { RESET, PROGRESS, PROMPT_T, AUTO_T } from "../unstuck.ts";
 
 export const CELL = 0.45;
 export const TRACK_W = 3.4, KIND_TRACK = 1, KIND_FACE = 2, RIDERS = 4, LAPS = 3;
 export const PICK = 0, GRID = 1, RACE = 2, DONE = 3;
 /** Events (one ring, read and cleared each step): [type, rider, value]. */
 export const E_GATE = 1, E_LAP = 2, E_FINISH = 3, E_CRASH = 4, E_RESPAWN = 5, E_LAND = 6, E_WHEELIE = 7, E_PLACE = 8, E_COUNT = 9;
+/** Unstuck in a race (the same codes as Free Ride's): the prompt (value 1 up, 0 down), a reset (1 asked for, 2 automatic). */
+export const E_STUCK = 11, E_RESET = 12;
+/** A reset's time cost: the bike is held on the line this long (the field rides on). */
+export const RESET_HOLD = 1.2;
 const COUNT = 3, RESPAWN = 1.45;
 
 /** A turn: `turn` radians (+ left, − right; a hairpin is about ±π), of radius `r` (the plan's RAD if
@@ -354,6 +359,9 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
   // crashes, place, last pitch (for the autopilot), respawn, best lap, lap start, finished.
   const R = new Float64Array(RIDERS * 16);
   const NI = 0, LP = 1, PG = 2, LN = 3, NV = 4, FT = 5, CR = 6, PL = 7, PP = 8, LS = 9, BL = 10, DN = 11, LT = 12, OFF = 13;
+  // Unstuck (people only): seconds without PROGRESS along the line with the controls held (negative:
+  // the reset's hold, counting up to 0), and the progress mark it is measured from.
+  const STL = 14, MK = 15;
   const S = new Float64Array(8); // phase, clock, countdown, gate down, started, the first person's finish time
   const ev = new Float64Array(48);
   // NE: the event count, the seeded draw.
@@ -424,6 +432,42 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
     }
   }
 
+  /** Back on the line just behind where rider r is (a crash, a reset), facing on, progress taken back. */
+  function respawn(r: number) {
+    const o = r * 16;
+    let i = (R[o + NI]! - 1 + NT) % NT;
+    for (let k = 0; k < 40 && (prof(sAt(i)), PF[0]! > 0.02 || (prof(sAt(i + 2)), PF[0]! > 0.02)); k++) i = (i - 1 + NT) % NT;
+    place(r, i, R[o + LN]! * 0.5);
+    R[o + PG] = R[o + PG]! - ((((sAt(R[o + NI]!) - sAt(i)) % LAP) + LAP) % LAP);
+  }
+  /** Unstuck for person r: the watch (the prompt, the automatic reset) and the reset input. True if it reset. */
+  function unstick(r: number, dt: number) {
+    const o = r * 16, b = riders[r]!, q = r * 5;
+    const ask = PIN[q + 4] === RESET;
+    let why = ask ? 1 : 0;
+    if (!why) {
+      if (R[o + PG]! - R[o + MK]! > PROGRESS || R[o + PG]! < R[o + MK]! - 4) {
+        if (R[o + STL]! >= PROMPT_T) emit(E_STUCK, r, 0);
+        R[o + MK] = R[o + PG]!;
+        R[o + STL] = 0;
+        return false;
+      }
+      const rel = b.rel < 0 ? -b.rel : b.rel, held = PIN[q]! > 0.1 || PIN[q + 1]! > 0.1 || PIN[q + 2] !== 0 || PIN[q + 3] !== 0 || rel > 1.1;
+      if (!held) return false;
+      const was = R[o + STL]!;
+      R[o + STL] = was + dt;
+      if (was < PROMPT_T && R[o + STL]! >= PROMPT_T) emit(E_STUCK, r, 1);
+      if (R[o + STL]! >= AUTO_T) why = 2;
+    }
+    if (!why) return false;
+    respawn(r);
+    // The progress follows the bike back (the line's distance from where it was to where it is now).
+    follow(r);
+    R[o + MK] = R[o + PG]!;
+    R[o + STL] = -RESET_HOLD;
+    emit(E_RESET, r, why);
+    return true;
+  }
   /** Inputs that ride rider r round the track: out = [gas, brake, lean, steer, trick]. */
   function autopilot(r: number, out: Float64Array) {
     const b = riders[r]!, i = R[r * 16 + NI]!, sp = b.speed, look = 4 + Math.max(0, sp) * 0.22 | 0, k = (i + look) % NT;
@@ -525,10 +569,8 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
         bikeEvents(r);
         if (b.crashTime > RESPAWN) {
           // Back on the track just behind where it went down, facing on.
-          let i = (R[o + NI]! - 1 + NT) % NT;
-          for (let k = 0; k < 40 && (prof(sAt(i)), PF[0]! > 0.02 || (prof(sAt(i + 2)), PF[0]! > 0.02)); k++) i = (i - 1 + NT) % NT;
-          place(r, i, R[o + LN]! * 0.5);
-          R[o + PG] = R[o + PG]! - ((((sAt(R[o + NI]!) - sAt(i)) % LAP) + LAP) % LAP);
+          respawn(r);
+          if (r < H && !AUTO[r]) (R[o + MK] = R[o + PG]!), (R[o + STL] = 0);
           emit(E_RESPAWN, r, 0);
         }
         moving = true;
@@ -539,6 +581,22 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
         b.set(0, Math.abs(b.speed) > 0.4 ? 0.5 : 0, 0, autopilot(r, IN)[3]!);
         if (b.step(dt)) moving = true;
         follow(r);
+        continue;
+      }
+      if (r < H && R[o + STL]! < 0) {
+        // A reset's hold: upright on the line, still, while the field rides on.
+        R[o + STL] = Math.min(0, R[o + STL]! + dt);
+        b.set(0, 1, 0, 0);
+        HOLD[0] = b.pos[0]!; HOLD[2] = b.pos[2]!;
+        b.step(dt);
+        b.pos[0] = HOLD[0]!; b.pos[2] = HOLD[2]!;
+        b.S[5] = 0;
+        b.clear();
+        moving = true;
+        continue;
+      }
+      if (r < H && S[0] === RACE && !AUTO[r] && unstick(r, dt)) {
+        moving = true;
         continue;
       }
       if (r >= H || AUTO[r]) autopilot(r, IN), b.set(IN[0]!, IN[1]!, IN[2]!, IN[3]!, 0);

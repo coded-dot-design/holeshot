@@ -22,7 +22,7 @@ import type { ModeCtx, ModeRun } from "../mode.ts";
 import { rig, type Rig, type RigColors } from "../../bike/rig.ts";
 import { pool, voice, gamepad, type Pool } from "../../bike/kit.ts";
 import { TRICKS, CLEAN, SC, CB, PTS, LFLIPS, AIRT, BEST, FLIPS, CLEANS, CRASHES, JUMPS, SEEN } from "./tricks.ts";
-import { DONE, E_CRASH, E_END, E_LAND, E_RESPAWN, E_START, E_TRICK, HX, HZ, KICK, KICK_L, LAP, NT, READY, RUN, RUN_T, TRACK, TRACK_W, TURN, YAW, airShow, trackEdges } from "./show.ts";
+import { DONE, E_CRASH, E_END, E_LAND, E_RESPAWN, E_RESET, E_STUCK, E_START, E_TRICK, HX, HZ, KICK, KICK_L, LAP, NT, READY, RUN, RUN_T, TRACK, TRACK_W, TURN, YAW, airShow, trackEdges } from "./show.ts";
 
 const TAU = 6.283185307179586;
 type Kit = Omit<RigColors, "plastic" | "plastic2" | "jersey" | "pants" | "helmet" | "stripe" | "plate" | "ink">;
@@ -66,18 +66,25 @@ export function mountAir(ctx: ModeCtx): ModeRun {
   play.setAttribute("aria-label", "Big Air: Space or J for gas, K or Shift to brake, W and S (or up and down) shift your weight (in the air: pitch, all the way back for a flip), A and D steer; in the air hold L or E for a trick, the stick picks which. V changes the view, M mutes, P or Escape pauses");
   const hud = L.add(document.createElement("div"));
   hud.className = "ba-hud";
-  hud.innerHTML = `<div class="ba-head"><p class="ba-top"><b class="ba-chip ba-score"><span>0</span><i>×1</i></b><b class="ba-chip ba-time"><span>1:00</span></b><b class="ba-chip ba-ride"><span>#${ctx.number} ${ctx.bike.model.name}</span></b></p><p class="ba-hint"></p></div><p class="ba-toast" hidden></p><p class="ba-live" aria-live="polite"></p><p class="ba-keys"><button type="button" class="ba-key ba-view" aria-label="Camera view (V)">VIEW</button><button type="button" class="ba-key ba-mute" aria-label="Mute (M)" aria-pressed="true">♪</button><button type="button" class="ba-key ba-menu" aria-label="Pause (P)">❚❚</button></p>`;
+  hud.innerHTML = `<div class="ba-head"><p class="ba-top"><b class="ba-chip ba-score"><span>0</span><i>×1</i></b><b class="ba-chip ba-time"><span>1:00</span></b><b class="ba-chip ba-ride"><span>#${ctx.number} ${ctx.bike.model.name}</span></b></p><p class="ba-hint"></p></div><p class="ba-toast" hidden></p><p class="ba-live" aria-live="polite"></p><p class="ba-keys"><button type="button" class="ba-key ba-reset" aria-label="Back to the run-in (R)">↺</button><button type="button" class="ba-key ba-view" aria-label="Camera view (V)">VIEW</button><button type="button" class="ba-key ba-mute" aria-label="Mute (M)" aria-pressed="true">♪</button><button type="button" class="ba-key ba-menu" aria-label="Pause (P)">❚❚</button></p>`;
   const head = hud.children[0] as HTMLElement, top = head.children[0] as HTMLElement, hintEl = head.children[1] as HTMLElement;
   const toastEl = hud.children[1] as HTMLElement, live = hud.children[2] as HTMLElement, keysEl = hud.children[3] as HTMLElement;
   const scoreEl = top.children[0]!.firstChild as HTMLElement, comboEl = top.children[0]!.lastChild as HTMLElement, timeEl = top.children[1]!.firstChild as HTMLElement;
-  const viewK = keysEl.children[0] as HTMLButtonElement, muteK = keysEl.children[1] as HTMLButtonElement;
+  const viewK = keysEl.children[1] as HTMLButtonElement, muteK = keysEl.children[2] as HTMLButtonElement;
+  // Unstuck: the prompt (the race scene's sticker, ../race/scene.css).
+  const stuckEl = document.createElement("p");
+  stuckEl.className = "ba-stuck";
+  stuckEl.hidden = true;
+  stuckEl.textContent = "STUCK? Hold R / tap ↺ to reset";
+  hud.append(stuckEl);
+  let resetQ = 0;
   stage.append(canvas, play, hud);
   if (ctx.attract) hud.hidden = true;
   const snd = sound(engine, { cues: { start: "ready", trick: "click", clean: "power", sketchy: "click", crash: "boom", end: "win" }, volume: 0.1, on: ctx.sound && !ctx.attract });
   const vox = voice();
   vox.on = snd.on;
-  const c = controls(engine, { keys: { left: [], right: [], fwd: [], back: [], gas: [], brake: [], trick: [] }, target: play });
-  const GAS = c.id("gas"), BRAKE = c.id("brake"), LEFT = c.id("left"), RIGHT = c.id("right"), FWD = c.id("fwd"), BACK = c.id("back"), TRICK = c.id("trick");
+  const c = controls(engine, { keys: { left: [], right: [], fwd: [], back: [], gas: [], brake: [], trick: [], reset: [] }, target: play });
+  const GAS = c.id("gas"), BRAKE = c.id("brake"), LEFT = c.id("left"), RIGHT = c.id("right"), FWD = c.id("fwd"), BACK = c.id("back"), TRICK = c.id("trick"), RESETK = c.id("reset");
   const thePad = pad(engine, c, {
     scheme: "stick",
     actions: [
@@ -164,7 +171,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
   }
 
   // ---- state ----
-  const I = new Float64Array(6), GP = new Float64Array(6), tmp = new Float64Array(3), tmp2 = new Float64Array(3);
+  const I = new Float64Array(6), GP = new Float64Array(7), tmp = new Float64Array(3), tmp2 = new Float64Array(3);
   const PD = new Float64Array(6);
   PD[5] = -1;
   const V = new Float64Array(8);
@@ -247,6 +254,12 @@ export function mountAir(ctx: ModeCtx): ModeRun {
       } else if (type === E_RESPAWN) {
         CTP.set(me.pos);
         chase(dio.cam, target, { ...chaseO, snap: view === 1 }, 1 / 60);
+      } else if (type === E_STUCK) stuckEl.hidden = !val;
+      else if (type === E_RESET) {
+        stuckEl.hidden = true;
+        CTP.set(me.pos);
+        chase(dio.cam, target, { ...chaseO, snap: true }, 1 / 60);
+        toast(val === 2 ? "UNSTUCK · BACK TO THE RUN-IN" : "BACK TO THE RUN-IN", "go");
       } else if (type === E_END) {
         engine.events.emit("end");
         toast("TIME!", "go");
@@ -467,6 +480,8 @@ export function mountAir(ctx: ModeCtx): ModeRun {
       I[2] = (+c.down(BACK) - +c.down(FWD)) || (c.stick.active ? c.stick.y : 0) || GP[1]! || (PD[0] ? Math.max(-1, Math.min(1, (PD[4]! - PD[2]!) / drag)) : 0);
       I[3] = (+c.down(RIGHT) - +c.down(LEFT)) || (c.stick.active ? c.stick.x : 0) || GP[0]! || (PD[0] ? Math.max(-1, Math.min(1, (PD[3]! - PD[1]!) / drag)) : 0);
       I[4] = c.down(TRICK) || GP[4]! > 0.5 ? 1 : 0;
+      I[5] = resetQ || c.down(RESETK) || GP[6]! > 0.5 ? 1 : 0;
+      resetQ = 0;
       if (paused || ended) I.fill(0);
       const ph = show.phase;
       let moving = show.step(dt, I, auto);
@@ -492,7 +507,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
     },
   });
 
-  const MAP: Record<string, string> = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowUp: "fwd", KeyW: "fwd", ArrowDown: "back", KeyS: "back", Space: "gas", KeyJ: "gas", KeyK: "brake", ShiftLeft: "brake", ShiftRight: "brake", KeyL: "trick", KeyE: "trick" };
+  const MAP: Record<string, string> = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowUp: "fwd", KeyW: "fwd", ArrowDown: "back", KeyS: "back", Space: "gas", KeyJ: "gas", KeyK: "brake", ShiftLeft: "brake", ShiftRight: "brake", KeyL: "trick", KeyE: "trick", KeyR: "reset" };
   const wake = () => vox.wake(me.power);
   const src = (e: Event) => (e.composedPath?.()[0] ?? e.target) as Element | null;
   window.addEventListener("keydown", (e) => {
@@ -528,6 +543,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
   muteK.addEventListener("click", toggle, sig);
   viewK.addEventListener("click", () => setView(view ? 0 : 1), sig);
   keysEl.querySelector(".ba-menu")!.addEventListener("click", () => ctx.menu(), sig);
+  keysEl.querySelector(".ba-reset")!.addEventListener("click", () => ((resetQ = 1), (auto = false), engine.wake()), sig);
   thePad.el.addEventListener("pointerdown", () => ((auto = false), wake(), engine.wake()), sig);
 
   buildScene();
