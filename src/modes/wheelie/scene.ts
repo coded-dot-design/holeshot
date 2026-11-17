@@ -113,7 +113,7 @@ const VR = 46, VMOVE = 5, VCAP = 520;
 const POOL = new Int32Array(NITEM);
 [[I_HOUSE, 20], [I_HOUSE2, 16], [I_SHOP, 10], [I_DINER, 2], [I_STORE, 5], [I_GAS, 2], [I_FLATS, 7], [I_TOWER, 5], [I_WARE, 4], [I_BARN, 3], [I_SILO, 3], [I_TREE, 44], [I_PINE, 24], [I_ROCK, 14], [I_HAY, 14], [I_LAMP, 40], [I_SIGN, 8], [I_MAIL, 18], [I_BENCH, 10], [I_CAR, 14], [I_FENCE, 28], [I_CONE, 8], [I_ISLE, 3], [I_DOG, 2], [I_KICK, 3]].forEach(([k, v]) => (POOL[k!] = v!));
 /** Occlusion: a building in front of the bike fades to GHOST over OCC_T seconds. */
-const GHOST = 0.16, OCC_T = 0.15;
+const GHOST = 0.1, OCC_T = 0.15;
 const B_TOP = [0.9, 0.9, 0.15, 0.6, 0.15, 0.9, 0.15, 1.5, 0.25, 1.6, 0.5];
 
 /** Endless Wheelie City: the open world, no clock, how far. */

@@ -53,8 +53,8 @@ export const MODES: Mode[] = [
     start: (ctx) => mountAir(ctx),
   },
   {
-    id: "endcity", name: "ENDLESS WHEELIE CITY", blurb: "The four hoods, on and on: hump the canal into the next one, wheelie its streets, lose the neon patrol. No clock. How far across town?",
-    maps: [{ id: "city", name: "THE ROW OF HOODS" }],
+    id: "endcity", name: "ENDLESS WHEELIE CITY", blurb: "An open world of roads, towns and fields that never ends: wheelie the long smooth roads in any direction, roll through town after town, ride out of town limits to lose the neon patrol. No clock. How far out can you get?",
+    maps: [{ id: "city", name: "THE OPEN ROAD" }],
     start: (ctx) => mountCity(ctx),
   },
 ];

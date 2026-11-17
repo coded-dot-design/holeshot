@@ -46,15 +46,19 @@ pick your jersey and a name. That bike rides every event.
   best distance is kept in the profile. END banks it (Free Ride's pay, plus 20 a km, under its cap).
 - **Big Air**: a minute in the arena, two steel kickers. Hold TRICK in the air and the stick picks
   one of four tricks; weight all the way back flips it. Five judges score the run and pay.
-- **Endless Wheelie City**: four neighbourhoods (the suburb block, a hillside of cul-de-sacs, a
-  downtown grid round a plaza, a boardwalk marina) as slots in a row that never ends, one canal and
-  one hump between each (the same row on every screen); wheelies, manuals, hops and stoppies, bonuses
-  across crosswalks, through sprinklers and past a neighbour shaking a fist. Too loud and the neon
-  patrol comes (comic, no weapons); a hump into the next hood loses them. No clock: how far across
-  town? Kilometres on the HUD, END banks it, the best is kept. **The patrol** tickets you only when it
+- **Endless Wheelie City**: an open world of roads, towns and fields that never ends, in every
+  direction (the same world on every screen): long smooth roads sweep across rolling fields
+  (highways, smaller roads branching off, junctions and roundabouts, kickers now and then on the
+  crown of the open road), towns strung along them (shops, a diner, a gas station, flats and a tower
+  round the middle, houses with lawns, sprinklers and a dog further out, warehouses on the edge) and
+  farmland between (ploughed plots, crops, tree rows, fences, hay bales, farmsteads). Wheelies,
+  manuals, hops and stoppies, bonuses across crosswalks, through sprinklers and past a neighbour
+  shaking a fist. Too loud in town and the neon patrol comes (comic, no weapons); ride out of the
+  town's limits and you lose them. No clock: how far out from the start? Kilometres on the HUD, END
+  banks it, the best is kept. **The patrol** tickets you only when it
 catches you stopped (or down after a crash); keep riding and the heat climbs instead: more units
-join, a cart, then neon drone cops with searchlights, up to six; they are bound to their hood, so a
-hump into the next one loses them (LOST THEM! points, the combo up). **The hand drag:** the city's
+join, a cart, then neon drone cops with searchlights, up to six; they are bound to their town, so
+riding out past its limits loses them (LOST THEM! points, the combo up). **The hand drag:** the city's
 bikes go back past 12 o'clock to about 1; hold it past 12 for a second and a half and the rider
 drags a hand on the road: ×10 points while it lasts, banked when you come back under 12, lost if
 you loop out. A building between the chase camera
@@ -107,7 +111,7 @@ stuck (so never back into the same trap), facing the way you were going, with a 
 an input of the frame (online, every screen does the same). The same watch runs in Race, Big Air and
 Wheelie City: a race reset puts you back on the line behind where you were (the crash respawn), takes
 that progress back and holds you 1.2 s while the field rides on, so it can never gain a place; Big Air
-puts you at the run-in of the current jump; Wheelie City at the last good spot on the street (never a
+puts you at the run-in of the current jump; Wheelie City at the last good spot (never a
 lawn, the sand or the water). A mouse: hold the track for gas, drag to steer and lean. Phones: the stick
 under the left thumb leans and steers; under the right, the **throttle rocker**, one tall pill: slide
 the thumb up for gas, down for brake, and onto the middle seam for both at once (the wheelie and the

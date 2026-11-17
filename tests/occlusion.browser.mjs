@@ -57,7 +57,7 @@ try {
       assert.ok(tower != null, `${name}: a tall building in the first town`);
       // ---- the owner's case: the tower right in front of the camera, the bike beyond it ----
       if (reduced) {
-        await p.evaluate((h) => game.run.probe.behind(h, 2), tower);
+        await p.evaluate(([h, b]) => game.run.probe.behind(h, b), [tower, touch ? 1.6 : 0.6]);
         // Reduced motion: no fade, the next step has it ghosted.
         await p.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
         const g = await p.evaluate(() => game.run.probe.ghosts());
@@ -67,7 +67,11 @@ try {
       }
       // Three cases: the camera just behind the tower (ghosted, outlined), and the camera all but touching its back wall (gone: faded out completely), and the camera inside its volume (gone; drawn solid its walls cull, so only the fade is checked).
       const M = [];
-      for (const [back, lvl, tag, cover] of [[2, 100, "behind", 0.5], [3.3, 200, "touching", 0.25], [4.5, 200, "inside", 0]]) {
+      // (How far out from the front puts the camera just behind, touching and inside: the phone's chase camera sits further back.)
+      // (On the phone the higher chase camera passes over the town's towers rather than through them:
+      // only the ghosted case there.)
+      const CASES = touch ? [[1.6, 100, "behind", 0.5]] : [[0.6, 100, "behind", 0.5], [2.5, 200, "touching", 0.25], [4, 200, "inside", 0]];
+      for (const [back, lvl, tag, cover] of CASES) {
         await p.evaluate(([h, back]) => game.run.probe.behind(h, back), [tower, back]);
         await until(p, ([h, lvl]) => { const g = game.run.probe.ghosts(), i = g.indexOf(h); return i >= 0 && i % 2 === 0 && g[i + 1] === lvl; }, [tower, lvl], `${name}: ${tag}: the tower ${lvl === 100 ? "ghosts" : "goes"}`);
         const m = await measure(p);

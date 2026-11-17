@@ -2,6 +2,48 @@
 
 ## Unreleased
 
+- **Endless Wheelie City is an open world.** The row of hood slots is gone: the city is now roads,
+  towns and fields that never end, in every direction, on the desert's streaming approach (a window
+  of the ground round the rider sliding in whole steps, a coarse far ring to the horizon, the haze).
+  Everything is a pure function of the seed and the place (`src/modes/wheelie/open.ts`), so the same
+  spot is the same world on every screen. **Roads:** one jittered junction per 120-unit lattice cell,
+  each joined to the next east and west (every third row a highway, wider, a double centre line) and
+  north or south on most columns (always on every fourth), each join a smooth cubic whose tangent runs
+  through the junctions either side, so roads sweep through junctions instead of turning corners;
+  some junctions are roundabouts; every junction has at least two roads (no dead ends). Roads lie
+  level across and smoothed along on gently rolling fields, blended in over a 6-unit shoulder, with a
+  kicker now and then on the crown of an open road; lane paint (edge lines, dashes, crosswalk zebras,
+  the rings) is painted on the ground. **Towns:** about two junctions in five (always the start):
+  lots along every road out of the junction, set back and facing the street (shops, a diner, a gas
+  station, flats and a tower near the middle; houses with mailboxes, sprinklers and one dog's yard
+  further out; warehouses on the edge), lamps, benches, parked cars, crosswalks, a sign on the way
+  in ("ENTERING …": fictional names from bike words). **Fields:** grass, ploughed dirt and crops in
+  skewed plots, tree rows and fences along the roads, trees, pines, rocks, hay bales, farmsteads.
+  The scene draws the ground with `terrainView` (each triangle takes the kind most of its corners
+  have) and a fixed pool of buildings and props placed from the same gather the sim uses.
+- **Every city mechanic rides along** (`src/modes/wheelie/roam.ts`): wheelies, manuals, hops,
+  stoppies, the hand drag (×10), the combo and its bonuses, neighbours, sprinklers, the dog, the
+  heat, walk-the-bike, unstuck, occlusion, the chase camera. **The patrol is bound to each town:** it
+  spawns only inside a town's limits (46 units from its junction, plus 3), paths on that town's
+  streets (`townGraph`) and stops at the limits; ride out of town with them on you and you lose them
+  (LOST THEM!, the points, the combo up). A ticket still only when caught stopped or down. The
+  distance is how far out from the start (the furthest so far); `stats.far.city` keeps the best (its
+  shape is unchanged: no profile step). The VIEW key's second view is a high map view over the bike.
+- **The fixed table stays headless only** (`cityRun`, its tests and goldens unchanged); the shared
+  rules moved to `src/modes/wheelie/rules.ts` and the patrol no longer imports the hoods, so the game's
+  bundle carries only the open world. The slot row (`slotKind`, `PITCH`, the endless `town`, the
+  scene's hood moves) is deleted.
+- **Goldens:** only "endless wheelie city ride" changes (a new world and session: two minutes on the
+  autopilot through the open world); every fixed-table and other hash is unchanged.
+- Size: SIZE_LINE
+- Perf: PERF_LINE
+- Tests: `tests/endless.test.mjs` (chunks pure and cache-independent; roads continuous, smooth along,
+  level across, no dead ends, never far; towns along and facing their roads; a 20 km ride along the
+  roads in random directions never leaves the streamed window, passes towns, allocates nothing; the
+  same inputs, the same bytes), `tests/cops.test.mjs` (units never past the town limits, none out of
+  town, leaving town ends the chase), the hand drag, unstuck and alloc tests on the open world, and
+  the browser tests (`wheelie`, `occlusion`, `ground`) rewritten for it.
+
 - **Wheelie City's ground no longer drops out.** At some headings the lawn, sidewalks and roads around
   the bike vanished and the canal showed through (the owner, light mode). The diorama skips a face with
   any corner behind the camera's near plane, and the island's lawn (98 × 28), its top and the long
