@@ -48,7 +48,7 @@ try {
       assert.ok(m.drawn && m.hud, `${at}: the hero draws the race, no HUD over the copy`);
       assert.equal(m.h1, "Holeshot.One bike. Every kind of dirt.", `${at}: the title and hook`);
       assert.match(m.play, /\/play\/$/, `${at}: PLAY links to /play/`);
-      assert.ok(m.playSize && m.sections && m.modes === 5 && m.by, `${at}: PLAY ≥ 44 px, four sections, five events, by Chris Cooley`);
+      assert.ok(m.playSize && m.sections && m.modes === 6 && m.by, `${at}: PLAY ≥ 44 px, four sections, six events, by Chris Cooley`);
       assert.ok(m.size.includes(`${gz.toLocaleString("en-US")} bytes gzip`), `${at}: the measured size (${gz} B)`);
       assert.equal(m.sideways, false, `${at}: no sideways scroll`);
       if (SHOTS) {

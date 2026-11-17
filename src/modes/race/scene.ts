@@ -22,7 +22,7 @@ import { pool, voice, gamepad, type Pool } from "../../bike/kit.ts";
 import { DONE, E_CRASH, E_FINISH, E_GATE, E_LAND, E_LAP, E_PLACE, E_RESPAWN, E_WHEELIE, E_COUNT, GRID, LAPS, RACE, TRACK_W, motoRace, type RaceOpts, type Track } from "./course.ts";
 import { freeRun, E_TRICK, E_STUCK, E_RESET } from "../freeride/session.ts";
 import { RESET } from "../unstuck.ts";
-import { desertView, DESERT_DARK, DESERT_LIGHT, desertBands, GRID_A, type DesertView } from "../desert/look.ts";
+import { desertView, biomePal, desertBands, GRID_A, type DesertView } from "../desert/look.ts";
 import type { DesertTrack } from "../desert/track.ts";
 import type { RideMap } from "../freeride/maps.ts";
 import { mapLook, type MapLine } from "../freeride/scenery.ts";
@@ -118,7 +118,8 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   const map = "isMap" in track ? track : null, look = map ? mapLook(map) : null;
   // Endless Desert: no table, no line; the world streams round the rider (../desert/).
   const endless = "isEndless" in track ? (track as DesertTrack) : null;
-  const DK: Pal = look ? { ...DARK, ...look.dark } : endless ? { ...DARK, ...DESERT_DARK } : DARK, LT: Pal = look ? { ...LIGHT, ...look.light } : endless ? { ...LIGHT, ...DESERT_LIGHT } : LIGHT;
+  const bp = endless ? biomePal(endless.biome.bi) : null;
+  const DK: Pal = look ? { ...DARK, ...look.dark } : bp ? { ...DARK, ...bp.dark } : DARK, LT: Pal = look ? { ...LIGHT, ...look.light } : bp ? { ...LIGHT, ...bp.light } : LIGHT;
   let P: Pal = document.documentElement.dataset.theme === "light" ? LT : DK;
   const { HX, HZ, NT, TRACK, YAW } = track, { TURN, LAP, GATE_S, LINE_S } = track as Track;
   const me0 = { power: ctx.bike.power, shape: ctx.bike.shape };
@@ -197,7 +198,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       dio.add({ id: "rim", size: [HX * 2 + 0.7, 0.12, HZ * 2 + 0.7], pos: [0, -0.2, 0], color: P.rim, cluster: "table", layer: 2, emissive: true, pick: false });
     }
     tv = terrainView(dio, t, {
-      bands: endless ? desertBands(P) : look ? look.bands(P as Parameters<typeof look.bands>[0]) : [[0.45, P.ground[0]!], [0.85, P.ground[1]!], [1.25, P.ground[2]!], [99, P.crest]], steep: 0.5, steepColor: P.steep, kinds: look ? look.kinds(P as Parameters<typeof look.kinds>[0]) : [P.track, P.face],
+      bands: endless ? desertBands(P, endless.biome.bi) : look ? look.bands(P as Parameters<typeof look.bands>[0]) : [[0.45, P.ground[0]!], [0.85, P.ground[1]!], [1.25, P.ground[2]!], [99, P.crest]], steep: 0.5, steepColor: P.steep, kinds: look ? look.kinds(P as Parameters<typeof look.kinds>[0]) : [P.track, P.face],
       light: P.light, ambient: P.amb, lod: endless ? [14, 26] : [24, 44], shadows: RIDERS + 1, shadowColor: P.shadow,
     });
     if (dv) {
@@ -430,14 +431,14 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     const hint = jam
       ? ph === GRID ? "Trick points: big air, flips, long wheelies · most in three minutes wins" : ""
       : free
-      ? ph === GRID ? (endless ? (touch ? "Hold GAS: the desert never ends · END banks it" : "Space to ride: the desert never ends · END (or E) banks it") : touch ? "Hold GAS and ride anywhere · END banks it" : "Space to ride, anywhere · END (or E) banks it") : ""
+      ? ph === GRID ? (endless ? (touch ? `Hold GAS: ${endless.biome.id === "desert" ? "the desert" : "it"} never ends · END banks it` : `Space to ride: ${endless.biome.id === "desert" ? "the desert" : "it"} never ends · END (or E) banks it`) : touch ? "Hold GAS and ride anywhere · END banks it" : "Space to ride, anywhere · END (or E) banks it") : ""
       : ph === GRID ? (touch ? "Hold GAS to rev · it drops on GO" : "Hold Space to rev · it drops on GO") : ph === RACE && sim.clock < 6 ? (touch ? "Stick: lean and steer · back lifts the front" : "W/S lean · A/D steer · Space gas · K brake") : "";
     if (hintEl.textContent !== hint) hintEl.textContent = hint;
   }
   function stats() {
     if (race) return m.stats({ place: race.place(seat), time: race.finishTime(seat), bestLap: race.bestLap(seat), led: led && race.place(seat) === 0, finished: race.finished(seat), where: track.id, order: [0, 1, 2, 3].map((r) => race.place(r)), summary: `${ORD[race.place(seat)]} · ${clock(race.finishTime(seat) || race.clock)} · best lap ${clock(race.bestLap(seat))}` });
     if (jam) return m.stats({ finished: jam.phase === DONE, where: track.id, tricks: jam.tricks(seat), flips: jam.flips(seat), score: jam.points(seat), place: jam.place(seat), summary: `${ORD[jam.place(seat)]} · ${jam.points(seat).toLocaleString("en-US")} trick points · ${m.M[3]!.toFixed(1)}s in the air` });
-    if (endless) return m.stats({ finished: true, where: track.id, tricks: fr!.tricks, flips: fr!.flips, far: fr!.distance, summary: `${km(fr!.distance)} across the dunes · ${clock(sim.clock)} ridden · ${m.M[3]!.toFixed(1)}s in the air${fr!.tricks ? ` · ${fr!.tricks} ${fr!.tricks === 1 ? "trick" : "tricks"}` : ""}` });
+    if (endless) return m.stats({ finished: true, where: track.id, farKey: endless.biome.id, tricks: fr!.tricks, flips: fr!.flips, far: fr!.distance, summary: `${km(fr!.distance)} ${endless.biome.word} · ${clock(sim.clock)} ridden · ${m.M[3]!.toFixed(1)}s in the air${fr!.tricks ? ` · ${fr!.tricks} ${fr!.tricks === 1 ? "trick" : "tricks"}` : ""}` });
     return m.stats({ finished: true, where: track.id, tricks: fr!.tricks, flips: fr!.flips, summary: `${map ? map.name + " · " : ""}${clock(sim.clock)} ridden · ${m.M[3]!.toFixed(1)}s in the air · ${m.M[4]!.toFixed(1)}s on one wheel${fr!.tricks ? ` · ${fr!.tricks} ${fr!.tricks === 1 ? "trick" : "tricks"}` : ""}` });
   }
   function end() {

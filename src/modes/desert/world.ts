@@ -23,6 +23,18 @@ export const D_NONE = 0, D_KICKER = 1, D_WHOOPS = 2, D_CACTUS = 3, D_ROCKS = 4, 
 export const postDir = (i: number, j: number, q: number, seed: number) => ((hashI(i * 7 + q, j, seed + 90) & 7) + q * 2) & 7;
 export const DIRS = [1, 0, 0.7071067811865476, 0.7071067811865476, 0, 1, -0.7071067811865476, 0.7071067811865476, -1, 0, -0.7071067811865476, -0.7071067811865476, 0, -1, 0.7071067811865476, -0.7071067811865476];
 export const D_NAMES = ["", "KICKER", "WHOOPS", "CACTUS", "ROCKS", "CAMP"];
+/** The endless biomes: the desert (Free Ride's DUNE SEA, endless) and one per other open Free Ride
+ *  map, each its own ground on the same streaming window: B_QUARRY benches and faces, B_FOREST
+ *  wooded hills, B_PARK a flat park of jump lines. Feature kinds keep their slots: per biome a kicker
+ *  is a ledge, a log jump or a double; whoops are rubble, roots or rollers; the "cactus" cluster is a
+ *  stand of trees or a row of pylons; the camp is a light tower or a cabin. */
+export const B_DESERT = 0, B_QUARRY = 1, B_FOREST = 2, B_PARK = 3;
+/** Per biome: the feature mix (the roll's upper bounds for none, kicker, whoops, cactus, rocks; the camp
+ *  takes the rest), the whoops' height, the cluster's post radius. */
+const MIX = [
+  [0.5, 0.68, 0.78, 0.86, 0.94], [0.42, 0.62, 0.7, 0.7, 0.92], [0.34, 0.48, 0.6, 0.88, 0.95], [0.3, 0.6, 0.76, 0.86, 0.88],
+];
+const WH = [0.25, 0.32, 0.12, 0.28], POST_R = [0.22, 0.22, 0.32, 0.18];
 /** The wind (crests run across it): a unit vector. */
 const WX = 0.9578262852211514, WZ = 0.28734788556634544;
 
@@ -70,10 +82,10 @@ export function dunes(seed: number, x: number, z: number) {
 const HD = [1, 0, 0.7071067811865476, 0.7071067811865476, 0, 1, -0.7071067811865476, 0.7071067811865476, -1, 0, -0.7071067811865476, -0.7071067811865476, 0, -1, 0.7071067811865476, -0.7071067811865476];
 
 /** A feature lattice cell: its kind, centre and heading into F = [kind, x, z, heading 0..7]. */
-export function featureOf(seed: number, ci: number, cj: number, F: Float64Array) {
-  const r = hashI(ci, cj, seed + 77) * HI;
+export function featureOf(seed: number, ci: number, cj: number, F: Float64Array, bi = 0) {
+  const r = hashI(ci, cj, seed + 77) * HI, M = MIX[bi]!;
   // The start (cell 0, 0) stays open sand.
-  const kind = ci === 0 && cj === 0 ? D_NONE : r < 0.5 ? D_NONE : r < 0.68 ? D_KICKER : r < 0.78 ? D_WHOOPS : r < 0.86 ? D_CACTUS : r < 0.94 ? D_ROCKS : D_CAMP;
+  const kind = ci === 0 && cj === 0 ? D_NONE : r < M[0]! ? D_NONE : r < M[1]! ? D_KICKER : r < M[2]! ? D_WHOOPS : r < M[3]! ? D_CACTUS : r < M[4]! ? D_ROCKS : D_CAMP;
   F[0] = kind;
   F[1] = (ci + 0.5) * FCELL + (hashI(ci, cj, seed + 78) * HI - 0.5) * 16;
   F[2] = (cj + 0.5) * FCELL + (hashI(ci, cj, seed + 79) * HI - 0.5) * 16;
@@ -81,13 +93,44 @@ export function featureOf(seed: number, ci: number, cj: number, F: Float64Array)
   return kind;
 }
 const FF = new Float64Array(4);
-/** The ground at (Q[4], Q[5]) into Q[6]: the dunes, the peaks and bowls, a feature's pad and its shape. */
-function heightQ(seed: number) {
+/** A biome's open ground at (Q[4], Q[5]) into Q[3] (the desert's is `dunesQ`). */
+function baseQ(seed: number, bi: number) {
+  if (bi === B_DESERT) return dunesQ(seed);
   const x = Q[4]!, z = Q[5]!;
-  dunesQ(seed);
+  if (bi === B_QUARRY) {
+    // Benches: a broad rise cut into terraces 1.1 high, each riser a steep face; broken rock over it.
+    Q[0] = x / 70; Q[1] = z / 70; valueQ(seed, 0);
+    let H = 9 * Q[2]!;
+    Q[0] = x / 23; Q[1] = z / 23; valueQ(seed + 1013, 0);
+    H = (H + 2.5 * Q[2]!) / 1.1;
+    const t = Math.floor(H), f = H - t, u = f < 0.58 ? 0 : (f - 0.58) / 0.42;
+    Q[0] = x / 3; Q[1] = z / 3; valueQ(seed + 2026, 0);
+    Q[3] = 1.1 * (t + u * u * (3 - 2 * u)) + 0.3 * Q[2]!;
+    return;
+  }
+  if (bi === B_FOREST) {
+    // Wooded hills: long rolls, a second set, the forest floor.
+    Q[0] = x / 30; Q[1] = z / 30; valueQ(seed, 0);
+    let h = 3 * Q[2]!;
+    Q[0] = x / 11; Q[1] = z / 11; valueQ(seed + 1013, 0);
+    h += 1.3 * Q[2]!;
+    Q[0] = x / 3.5; Q[1] = z / 3.5; valueQ(seed + 2026, 0);
+    Q[3] = h + 0.25 * Q[2]!;
+    return;
+  }
+  // The park: nearly flat, a gentle roll (the jump lines do the rest).
+  Q[0] = x / 16; Q[1] = z / 16; valueQ(seed, 0);
+  const h = 0.6 * Q[2]!;
+  Q[0] = x / 6; Q[1] = z / 6; valueQ(seed + 1013, 0);
+  Q[3] = h + 0.2 * Q[2]!;
+}
+/** The ground at (Q[4], Q[5]) into Q[6]: the dunes, the peaks and bowls, a feature's pad and its shape. */
+function heightQ(seed: number, bi = 0) {
+  const x = Q[4]!, z = Q[5]!;
+  baseQ(seed, bi);
   let h = Q[3]!;
-  // A witches'-hat peak or a bowl on the peak lattice (well inside its cell).
-  {
+  // A witches'-hat peak or a bowl on the peak lattice (well inside its cell): the desert's.
+  if (bi === B_DESERT) {
     const pi = Math.floor(x / PCELL), pj = Math.floor(z / PCELL), r = hashI(pi, pj, seed + 5) * HI;
     if (r < 0.62 && !(pi === 0 && pj === 0)) {
       const cx = (pi + 0.5) * PCELL + (hashI(pi, pj, seed + 6) * HI - 0.5) * 24, cz = (pj + 0.5) * PCELL + (hashI(pi, pj, seed + 7) * HI - 0.5) * 24;
@@ -109,14 +152,14 @@ function heightQ(seed: number) {
   }
   Q[6] = h;
   // A feature: a flattened pad, then its shape.
-  const kind = featureOf(seed, Math.floor(x / FCELL), Math.floor(z / FCELL), FF);
+  const kind = featureOf(seed, Math.floor(x / FCELL), Math.floor(z / FCELL), FF, bi);
   if (kind !== D_KICKER && kind !== D_WHOOPS) return;
   const dx = x - FF[1]!, dz = z - FF[2]!, d = Math.sqrt(dx * dx + dz * dz);
   if (d > 12) return;
   Q[4] = FF[1]!; Q[5] = FF[2]!;
-  dunesQ(seed);
+  baseQ(seed, bi);
   Q[4] = x; Q[5] = z;
-  const base = Q[3]! * 0.5 + 1;
+  const base = bi === B_DESERT ? Q[3]! * 0.5 + 1 : Q[3]!;
   let w = (d - 8) / 4;
   w = w <= 0 ? 1 : w >= 1 ? 0 : 1 - w * w * (3 - 2 * w);
   h += (base - h) * w;
@@ -129,7 +172,7 @@ function heightQ(seed: number) {
     if (u > -7.6 && u < 7.6) {
       // 0.25 × (½ − ½ cos): a whoop every 1.9 units, as (1 − c²)-free smooth bumps: sin² by a parabola per hump.
       const ph = ((u + 7.6) / 1.9) % 1, bump = 4 * ph * (1 - ph);
-      h += 0.25 * bump * bump * (3 - 2 * bump) * across;
+      h += WH[bi]! * bump * bump * (3 - 2 * bump) * across;
     }
     return void (Q[6] = h);
   }
@@ -146,25 +189,25 @@ function heightQ(seed: number) {
   Q[6] = h + y * across;
 }
 /** The ground at (x, z). Pure: the same seed and place, the same height, on every engine. */
-export function heightAt(seed: number, x: number, z: number) {
+export function heightAt(seed: number, x: number, z: number, bi = 0) {
   Q[4] = x; Q[5] = z;
-  heightQ(seed);
+  heightQ(seed, bi);
   return Q[6]!;
 }
 
 /** The posts near (x, z) a rider can hit (cactus, rocks, the beacon): [x, z, r] into P; returns the count. */
-export function postsNear(seed: number, x: number, z: number, P: Float64Array) {
+export function postsNear(seed: number, x: number, z: number, P: Float64Array, bi = 0) {
   let n = 0;
   const ci = Math.floor(x / FCELL), cj = Math.floor(z / FCELL);
   for (let j = cj - 1; j <= cj + 1; j++)
     for (let i = ci - 1; i <= ci + 1; i++) {
-      const k = featureOf(seed, i, j, FF);
+      const k = featureOf(seed, i, j, FF, bi);
       if (k === D_CACTUS || k === D_ROCKS) {
         for (let q = 0; q < 4 && n * 3 < P.length; q++) {
           const a = ((hashI(i * 7 + q, j, seed + 90) & 7) + q * 2) & 7, rr = 1.2 + hashI(i, j * 7 + q, seed + 91) * HI * 3.2;
           P[n * 3] = FF[1]! + HD[a * 2]! * rr;
           P[n * 3 + 1] = FF[2]! + HD[a * 2 + 1]! * rr;
-          P[n * 3 + 2] = k === D_CACTUS ? 0.22 : 0.32 + hashI(i + q, j + q, seed + 92) * HI * 0.3;
+          P[n * 3 + 2] = k === D_CACTUS ? POST_R[bi]! : 0.32 + hashI(i + q, j + q, seed + 92) * HI * 0.3;
           n++;
         }
       } else if (k === D_CAMP && n * 3 < P.length) {
@@ -178,7 +221,7 @@ export function postsNear(seed: number, x: number, z: number, P: Float64Array) {
 /** The window: a heightfield of WIN × WIN cells that follows the rider (the Terrain shape terrainView
  *  and the bike read: cols, rows, cell, x0, z0, h, kind, version, height, normal, sample, kindAt, at).
  *  With other sizes it is the view's far ring (./look.ts): the same ground, coarser. */
-export function world(seed: number, WIN = WIN0, CELL = CELL0, STEP = STEP0) {
+export function world(seed: number, WIN = WIN0, CELL = CELL0, STEP = STEP0, biome = 0) {
   const W1 = WIN + 1, h = new Float64Array(W1 * W1), kind = new Uint8Array(WIN * WIN * 2), F = new Float64Array(3);
   // OX, OZ: the window's first vertex, in cells (integers); stats: slides, vertices computed.
   const O = new Int32Array(2), N = new Float64Array(2);
@@ -214,7 +257,7 @@ export function world(seed: number, WIN = WIN0, CELL = CELL0, STEP = STEP0) {
   function fill(i0: number, i1: number, j0: number, j1: number) {
     for (let j = j0; j <= j1; j++) {
       const z = (O[1]! + j) * CELL;
-      for (let i = i0; i <= i1; i++) (Q[4] = (O[0]! + i) * CELL), (Q[5] = z), heightQ(seed), (h[j * W1 + i] = Q[6]!);
+      for (let i = i0; i <= i1; i++) (Q[4] = (O[0]! + i) * CELL), (Q[5] = z), heightQ(seed, biome), (h[j * W1 + i] = Q[6]!);
     }
     N[1] = N[1]! + (i1 - i0 + 1) * (j1 - j0 + 1);
   }
@@ -253,19 +296,19 @@ export function world(seed: number, WIN = WIN0, CELL = CELL0, STEP = STEP0) {
     return moveTo(ox, oz);
   }
   return {
-    seed, t: t as unknown as Terrain & { x0: number; z0: number }, O,
+    seed, biome, t: t as unknown as Terrain & { x0: number; z0: number }, O,
     /** Slides so far, vertices computed so far (the test's and the perf note's numbers). */
     stats: N,
     follow, moveTo,
-    height: (x: number, z: number) => heightAt(seed, x, z),
+    height: (x: number, z: number) => heightAt(seed, x, z, biome),
   };
 }
 export type World = ReturnType<typeof world>;
 
 /** One chunk of the ground, as bytes: (CH + 1)² heights at the chunk's vertices (the determinism test:
  *  same seed and chunk, same bytes). */
-export function chunkBytes(seed: number, ci: number, cj: number, CH = 8) {
+export function chunkBytes(seed: number, ci: number, cj: number, CH = 8, bi = 0) {
   const out = new Float64Array((CH + 1) * (CH + 1));
-  for (let j = 0; j <= CH; j++) for (let i = 0; i <= CH; i++) out[j * (CH + 1) + i] = heightAt(seed, (ci * CH + i) * CELL, (cj * CH + j) * CELL);
+  for (let j = 0; j <= CH; j++) for (let i = 0; i <= CH; i++) out[j * (CH + 1) + i] = heightAt(seed, (ci * CH + i) * CELL, (cj * CH + j) * CELL, bi);
   return new Uint8Array(out.buffer);
 }

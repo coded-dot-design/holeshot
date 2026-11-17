@@ -7,7 +7,7 @@ import { mountTrack } from "./race/scene.ts";
 import { makeMap, RIDE_MAPS, type RideMap } from "./freeride/maps.ts";
 import { mountAir } from "./bigair/scene.ts";
 import { mountCity } from "./wheelie/scene.ts";
-import { desertTrack } from "./desert/track.ts";
+import { desertTrack, BIOMES, DESERT_SEED } from "./desert/track.ts";
 
 /** Race tracks (id → plan). Phase 1: the one fixed loop; a generated track is another TrackPlan. */
 export const TRACKS: TrackPlan[] = [MOTO_TRACK];
@@ -43,9 +43,9 @@ export const MODES: Mode[] = [
     start: (ctx) => mountTrack(ctx, freeMap(ctx.map), true, []),
   },
   {
-    id: "desert", name: "ENDLESS DESERT", blurb: "Endless dunes under a neon sky: ridges, bowls, peaks, kickers, a camp to ride to. No edge, no clock. How far can you go?",
-    maps: [{ id: "desert", name: "THE DUNE SEA" }],
-    start: (ctx) => mountTrack(ctx, desertTrack(), true, []),
+    id: "desert", name: "ENDLESS", blurb: "Ground that never ends: the dune sea, or an endless quarry, woods or night park (each Free Ride map, endless). No edge, no clock. How far can you go?",
+    maps: BIOMES.map((b) => ({ id: b.id, name: b.name })),
+    start: (ctx) => mountTrack(ctx, desertTrack(DESERT_SEED, ctx.map), true, []),
   },
   {
     id: "bigair", name: "BIG AIR", blurb: "A minute in the arena: two kickers, four tricks, flips. Five judges pay.",
@@ -56,6 +56,11 @@ export const MODES: Mode[] = [
     id: "wheelie", name: "WHEELIE CITY", blurb: "Four hoods, ninety seconds: wheelies, manuals, hops. Too loud and the neon patrol comes; jump a hump to lose them.",
     maps: [{ id: "city", name: "FOUR HOODS" }],
     start: (ctx) => mountCity(ctx),
+  },
+  {
+    id: "endcity", name: "ENDLESS WHEELIE CITY", blurb: "The four hoods, on and on: hump the canal into the next one, wheelie its streets, lose the neon patrol. No clock. How far across town?",
+    maps: [{ id: "city", name: "THE ROW OF HOODS" }],
+    start: (ctx) => mountCity(ctx, true),
   },
 ];
 export const mode = (id: string) => MODES.find((m) => m.id === id) ?? MODES[0]!;

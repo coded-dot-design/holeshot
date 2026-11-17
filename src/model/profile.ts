@@ -9,7 +9,10 @@ import { PARTS, START_CREDITS, GARAGE_SLOTS, MODS, SETUPS, TYRES, LOG_MAX, ONLIN
 import { PAINTS, SWATCHES, HELMETS, VISORS, PATTERNS, GRAPHICS, PLASTICS, PLATES } from "../data/looks.ts";
 import { freshSeries, normSeries, type SeriesSave } from "./series.ts";
 
-export const VERSION = 3;
+export const VERSION = 4;
+/** The endless bests a profile keeps (world units): the ENDLESS grounds and Endless Wheelie City. */
+export const FAR_KEYS = ["desert", "quarry", "forest", "night-park", "city"];
+const farZero = () => Object.fromEntries(FAR_KEYS.map((k) => [k, 0])) as Record<string, number>;
 export const STORE_KEY = "holeshot:profile";
 /** Where the game saved before it was called HOLESHOT (it was "Dirt Hop"): read when STORE_KEY is
  *  empty, so a local save carries over; the next save writes STORE_KEY and the old key is left alone. */
@@ -91,7 +94,7 @@ export function newBike(modelId: string, uid: string, paint = "gridline", number
 }
 /** A profile before the first-run setup: no name, no bike yet. */
 export function fresh(): Profile {
-  return { v: VERSION, name: "", credits: START_CREDITS, ride: 0, bikes: [], kit: { ...STARTER_KIT }, owned: [], stats: { events: 0, wins: 0, earned: 0, best: {}, far: { desert: 0 } }, pit: 0, settings: { sound: true, view: "chase" }, series: freshSeries(), online: [] };
+  return { v: VERSION, name: "", credits: START_CREDITS, ride: 0, bikes: [], kit: { ...STARTER_KIT }, owned: [], stats: { events: 0, wins: 0, earned: 0, best: {}, far: farZero() }, pit: 0, settings: { sound: true, view: "chase" }, series: freshSeries(), online: [] };
 }
 /** The first-run setup: your one starter bike, its paint and number, your name and kit colours. */
 export function setup(p: Profile, o: { starter: string; paint: string; number: number; name: string; kit?: Partial<RiderKit> }): Profile {
@@ -147,7 +150,7 @@ export function normalize(raw: unknown): Profile {
   bikes.forEach((b, i) => bikes.slice(0, i).some((a) => a.uid === b.uid) && (b.uid = "b" + (i + 1) + "x"));
   const best: Record<string, number> = {};
   for (const [key, v] of Object.entries(obj(st.best))) if (typeof v === "number" && isFinite(v)) best[key.slice(0, 32)] = v;
-  const far: Record<string, number> = { desert: 0 };
+  const far: Record<string, number> = farZero();
   for (const [key, v] of Object.entries(obj(st.far))) if (typeof v === "number" && isFinite(v) && v >= 0) far[key.slice(0, 16)] = Math.min(1e9, v);
   return {
     v: VERSION,
@@ -181,7 +184,9 @@ export type Migration = (old: Record<string, unknown>) => Record<string, unknown
  *  1 → 2: the Race Series. A v1 save gets an empty series record; a rider who already won races on
  *  the fixed track has proved the Rookie Cup's level, so three wins or more open the Pro Circuit.
  *  2 → 3: Endless Desert. Best distances get their own record (`stats.far`, by mode); a v2 save
- *  starts it at 0 for the desert, and its other stats carry over untouched. */
+ *  starts it at 0 for the desert, and its other stats carry over untouched.
+ *  3 → 4: Endless Wheelie City and the endless grounds. Each gets its own best (`stats.far.city`,
+ *  `.quarry`, `.forest`, `.night-park`), from 0; the desert's best carries over as it was. */
 export const MIGRATIONS: Record<number, Migration> = {
   1: (o) => {
     const wins = typeof (o.stats as { wins?: unknown } | undefined)?.wins === "number" ? ((o.stats as { wins: number }).wins) : 0;
@@ -190,6 +195,10 @@ export const MIGRATIONS: Record<number, Migration> = {
   2: (o) => {
     const st = obj(o.stats);
     return { ...o, stats: { ...st, far: { desert: 0, ...obj(st.far) } } };
+  },
+  3: (o) => {
+    const st = obj(o.stats);
+    return { ...o, stats: { ...st, far: { ...farZero(), ...obj(st.far) } } };
   },
 };
 

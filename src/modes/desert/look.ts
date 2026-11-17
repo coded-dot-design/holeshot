@@ -6,7 +6,8 @@
 // placed from the same seeded lattice the sim's posts come from. Nothing here allocates per frame.
 import type { Diorama, DioramaObject } from "@fzlt/core/diorama";
 import type { Pal } from "../race/scene.ts";
-import { featureOf, hash2, postDir, world, DIRS, FCELL, FAR_WIN, FAR_CELL, FAR_STEP, D_CACTUS, D_ROCKS, D_CAMP, type World } from "./world.ts";
+import { featureOf, hash2, postDir, world, DIRS, FCELL, FAR_WIN, FAR_CELL, FAR_STEP, D_CACTUS, D_ROCKS, D_CAMP, B_DESERT, B_QUARRY, B_FOREST, type World } from "./world.ts";
+import { lookColors } from "../freeride/scenery.ts";
 
 /** Grid spacing (units), reach (units from the bike), haze start and full (units from the bike). */
 export const GRID = 4, REACH = 34, HAZE0 = 20, HAZE1 = 35;
@@ -29,12 +30,26 @@ export const DESERT_LIGHT: Partial<Pal> = {
   ground: ["#f2c088", "#f5cc96", "#f8d8a6"], crest: "#fff0d4", steep: "#c9824e", dust: "#efc597",
   edge: "#13a9bb", edge2: "#ff7a59", table: "#fff1e0", tower: "#8a6a58", lamp: "#ffe08a",
 };
-export const desertBands = (p: Pal): [number, string][] => [[1.2, p.ground[0]!], [2.6, p.ground[1]!], [4.2, p.ground[2]!], [99, p.crest]];
+/** The ground's bands by biome (the heights each biome's ground spans: benches, hills, the park's rolls). */
+const BAND_H = [[1.2, 2.6, 4.2], [2.6, 5.2, 7.8], [1.5, 2.5, 3.4], [0.28, 0.5, 0.7]];
+export const desertBands = (p: Pal, bi = 0): [number, string][] => [[BAND_H[bi]![0]!, p.ground[0]!], [BAND_H[bi]![1]!, p.ground[1]!], [BAND_H[bi]![2]!, p.ground[2]!], [99, p.crest]];
+/** A biome's palette over the track scene's: the desert's own; the others their Free Ride map's
+ *  colours (../freeride/scenery.ts), with the endless look's light and the haze's sky. */
+const BIOME_MAP = ["dune-sea", "quarry", "forest", "night-park"];
+export function biomePal(bi: number): { dark: Partial<Pal>; light: Partial<Pal> } {
+  if (bi === B_DESERT) return { dark: DESERT_DARK, light: DESERT_LIGHT };
+  const c = lookColors(BIOME_MAP[bi]!), d = c.dark as Partial<Pal> & { leafTop?: string }, l = c.light as Partial<Pal>;
+  return {
+    dark: { ...d, light: DESERT_DARK.light, amb: 0.3, grid: d.grid ?? d.edge, table: d.table ?? "#0b0618" },
+    light: { ...l, light: DESERT_LIGHT.light, amb: 0.42, grid: l.edge ?? DESERT_LIGHT.grid },
+  };
+}
 
 /** Lattice slots streamed round the rider (3 × 3 feature cells) and the parts each slot can show. */
 const SLOTS = 9, CACTI = 4, ROCKS = 4;
 
 export function desertView(d: Diorama, W: World) {
+  const bi = W.biome;
   const P3 = new Float64Array(3), F = new Float64Array(4), SL = new Float64Array(SLOTS * 3);
   const cacti: DioramaObject[] = [], rocks: DioramaObject[] = [], camps: DioramaObject[] = [], beams: DioramaObject[] = [];
   const objs: DioramaObject[] = [];
@@ -52,20 +67,43 @@ export function desertView(d: Diorama, W: World) {
     HZ.length = CR.length = 0;
     for (let k = 0; k <= NB; k++) HZ.push(mix(p.ground[k ? 0 : 2]!, p.sky2, HAZES[k]!)), CR.push(mix(p.crest, p.sky2, HAZES[k]! * 0.8));
     cacti.length = rocks.length = camps.length = beams.length = objs.length = 0;
+    const q = p as Pal & { trunk?: string; leaf?: string; leafTop?: string; rock?: string; wall?: string };
     for (let s = 0; s < SLOTS; s++) {
       for (let k = 0; k < CACTI; k++) {
-        const id = `dc${s}_${k}`, g = d.add({ id, shape: "cyl", sides: 6, size: [0.32, 2, 0.32], pos: [0, -50, 0], color: p.night ? "#1f5a4a" : "#5f9a6a", pick: false, hidden: true });
-        d.add({ shape: "cyl", sides: 6, size: [0.2, 0.8, 0.2], pos: [0.3, -1.1, 0], rot: [0, 0, 0], on: id, color: p.night ? "#1f5a4a" : "#5f9a6a", pick: false });
-        d.add({ shape: "cyl", sides: 6, size: [0.34, 0.08, 0.34], on: id, color: p.night ? p.edge : "#b8f0a0", emissive: p.night, pick: false });
+        const id = `dc${s}_${k}`;
+        let g: DioramaObject;
+        if (bi === B_FOREST) {
+          // A neon tree: a trunk, a dark crown, a lit tip (the woods' posts).
+          g = d.add({ id, shape: "cyl", sides: 5, size: [0.3, 0.9, 0.3], pos: [0, -50, 0], color: q.trunk!, pick: false, hidden: true });
+          d.add({ id: id + "c", shape: "cyl", sides: 6, top: 0, size: [1.7, 2.2, 1.7], pos: [0, 0, 0], on: id, color: q.leaf!, pick: false });
+          d.add({ shape: "cyl", sides: 6, top: 0, size: [0.8, 0.8, 0.8], pos: [0, -1, 0], on: id + "c", color: q.leafTop!, emissive: p.night, pick: false });
+        } else if (bi !== B_DESERT) {
+          // A pylon: a post with a neon tip (the park's and the quarry's markers).
+          g = d.add({ id, shape: "cyl", sides: 6, size: [0.16, 1.1, 0.16], pos: [0, -50, 0], color: p.gatePost ?? p.tower, pick: false, hidden: true });
+          d.add({ shape: "cyl", sides: 6, size: [0.26, 0.2, 0.26], on: id, color: k & 1 ? p.edge : p.edge2, emissive: true, pick: false });
+        } else {
+          g = d.add({ id, shape: "cyl", sides: 6, size: [0.32, 2, 0.32], pos: [0, -50, 0], color: p.night ? "#1f5a4a" : "#5f9a6a", pick: false, hidden: true });
+          d.add({ shape: "cyl", sides: 6, size: [0.2, 0.8, 0.2], pos: [0.3, -1.1, 0], rot: [0, 0, 0], on: id, color: p.night ? "#1f5a4a" : "#5f9a6a", pick: false });
+          d.add({ shape: "cyl", sides: 6, size: [0.34, 0.08, 0.34], on: id, color: p.night ? p.edge : "#b8f0a0", emissive: p.night, pick: false });
+        }
         cacti.push(g), objs.push(g);
       }
       for (let k = 0; k < ROCKS; k++) {
-        const r = d.add({ shape: "cyl", sides: 5, top: 0.5, size: [1, 0.6, 0.9], pos: [0, -50, 0], color: p.night ? "#2a1a48" : "#c98f6a", pick: false, hidden: true });
+        const r = d.add({ shape: "cyl", sides: 5, top: 0.5, size: [1, 0.6, 0.9], pos: [0, -50, 0], color: q.rock ?? (p.night ? "#2a1a48" : "#c98f6a"), pick: false, hidden: true });
         rocks.push(r), objs.push(r);
       }
-      // A camp: a tent and its beacon (a tall pole with a lamp: something to ride to).
+      // A camp: a tent and its beacon (a tall pole with a lamp: something to ride to); the quarry's a
+      // hopper on a rig, the woods' a cabin, the park's a light tower on its own.
       const cid = `dk${s}`, c = d.add({ id: cid, shape: "group", size: [1, 0, 1], pos: [0, -50, 0], pick: false, hidden: true });
-      d.add({ shape: "cyl", sides: 4, top: 0, size: [2.2, 1.4, 2.2], pos: [2.2, 0, 1.4], on: cid, color: p.night ? "#3a1d5c" : "#ffffff", pick: false });
+      if (bi === B_DESERT) d.add({ shape: "cyl", sides: 4, top: 0, size: [2.2, 1.4, 2.2], pos: [2.2, 0, 1.4], on: cid, color: p.night ? "#3a1d5c" : "#ffffff", pick: false });
+      else if (bi === B_QUARRY) {
+        d.add({ id: cid + "h", size: [2.2, 1.4, 1.6], pos: [2.4, 0, 1.4], on: cid, color: p.tower, pick: false });
+        d.add({ size: [2.22, 0.14, 1.62], pos: [0, -0.4, 0], on: cid + "h", color: p.rim, emissive: true, pick: false });
+      } else if (bi === B_FOREST) {
+        d.add({ id: cid + "h", size: [2.4, 1.3, 2], pos: [2.4, 0, 1.4], on: cid, color: q.wall ?? p.tower, pick: false });
+        d.add({ shape: "wedge", size: [2.6, 0.8, 2.2], pos: [0, 0, 0], on: cid + "h", color: q.trunk ?? p.tower, pick: false });
+        d.add({ size: [0.5, 0.4, 0.04], pos: [0.5, -0.55, 1.01], on: cid + "h", color: p.lamp, emissive: true, pick: false });
+      }
       const pole = d.add({ id: cid + "p", shape: "cyl", sides: 6, size: [0.18, 5.2, 0.18], pos: [0, 0, 0], on: cid, color: p.tower, pick: false });
       void pole;
       const lamp = d.add({ shape: "box", size: [0.5, 0.5, 0.5], on: cid + "p", color: p.edge2, emissive: true, pick: false });
@@ -82,7 +120,7 @@ export function desertView(d: Diorama, W: World) {
     let s = 0;
     for (let j = cj - 1; j <= cj + 1; j++)
       for (let i = ci - 1; i <= ci + 1; i++, s++) {
-        const k = featureOf(W.seed, i, j, F);
+        const k = featureOf(W.seed, i, j, F, bi);
         SL[s * 3] = F[1]!; SL[s * 3 + 1] = F[2]!; SL[s * 3 + 2] = k;
         if (k === D_CACTUS || k === D_ROCKS) {
           for (let q = 0; q < 4; q++) {
@@ -95,7 +133,7 @@ export function desertView(d: Diorama, W: World) {
             if (k === D_ROCKS) {
               const sz = 0.32 + hash2(i + q, j + q, W.seed + 92) * 0.3;
               ob.size[0] = sz * 3; ob.size[1] = sz * 1.8; ob.size[2] = sz * 2.6;
-            } else ob.size[1] = 1.6 + q * 0.3;
+            } else ob.size[1] = bi === B_FOREST ? 0.8 + q * 0.15 : bi !== B_DESERT ? 1.1 : 1.6 + q * 0.3;
             ob.hidden = false;
           }
         } else if (k === D_CAMP) {

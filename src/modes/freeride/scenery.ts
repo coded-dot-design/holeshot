@@ -169,6 +169,8 @@ const PARK_LOOK: Look = {
   kinds: (p) => [p.track, p.face, p.lot],
 };
 
+/** A map's palette (dark, light) by id: the endless biomes take their map's colours (../desert/look.ts). */
+export const lookColors = (id: string) => { const L = LOOKS[id] ?? PARK_LOOK; return { dark: L.dark, light: L.light }; };
 const LOOKS: Record<string, Look> = { "dune-sea": DUNES, quarry: QUARRY_LOOK, forest: FOREST_LOOK, "night-park": PARK_LOOK };
 /** A map's ground bands and painted kinds, for the picker's preview (every look sets them). */
 export function previewColors(m: RideMap, night: boolean) {

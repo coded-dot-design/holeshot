@@ -121,8 +121,8 @@ export function slotKind(k: number, seed = CITY_SEED) {
 export const slotAt = (x: number) => Math.floor((x + PITCH / 2) / PITCH);
 
 // (Results go through Q, never returned: a double returned from a call that is not inlined is boxed.)
-// Q: road gap, height, kind.
-const Q = new Float64Array(3);
+// Q: road gap, height, kind, hump height.
+const Q = new Float64Array(4);
 const inR = (x: number, z: number, R: ArrayLike<number>, o: number) => x >= R[o]! && x <= R[o + 2]! && z >= R[o + 1]! && z <= R[o + 3]!;
 
 /** The town's ground: the fixed table (four hoods in a 2 × 2) or the endless row of slots. The
@@ -153,11 +153,13 @@ export function town(endless = false, seed = CITY_SEED) {
       if (d < Q[0]!) Q[0] = d;
     }
     for (let o = 0; o < C.length; o += 3) {
-      const d = hypot(x - C[o]!, z - C[o + 1]!) - C[o + 2]!;
+      // (hypot's own arithmetic, inline: the same bits, and no boxed double from a call.)
+      const ax = x - C[o]! < 0 ? C[o]! - x : x - C[o]!, ay = z - C[o + 1]! < 0 ? C[o + 1]! - z : z - C[o + 1]!, mx = ax > ay ? ax : ay, zz = mx === 0 ? 1 : mx, pp = ax / zz, qq = ay / zz;
+      const d = (ax === Infinity || ay === Infinity ? Infinity : Math.sqrt(pp * pp + qq * qq) * mx) - C[o + 2]!;
       if (d < Q[0]!) Q[0] = d > 0 ? d : 0;
     }
   }
-  /** The hump ramps of hood h at local (x, z): their height, or −1 off them. */
+  /** The hump ramps of hood h at local (x, z): their height, or −1 off them, into Q[3]. */
   function humpQ(h: number, x: number, z: number) {
     const U = HUx[h]!;
     let r = -1;
@@ -165,7 +167,7 @@ export function town(endless = false, seed = CITY_SEED) {
       const px = x - U[o + 1]!, pz = z - U[o + 2]!, dx = U[o + 3]!, dz = U[o + 4]!, s = px * dx + pz * dz, l = px * dz - pz * dx;
       if ((l < 0 ? -l : l) < HUMP_W && s > -(RAMP + DECK) && s < LIP + BANK) r = s < -DECK ? (HUMP_H * (s + RAMP + DECK)) / RAMP : HUMP_H;
     }
-    return r;
+    Q[3] = r;
   }
   /** The ground's height at world (x, z): into Q[1]; the hood's kind cues into Q[2] (water off the bank). */
   function heightQ(x: number, z: number) {
@@ -174,7 +176,8 @@ export function town(endless = false, seed = CITY_SEED) {
       // Off the hood: its bank (the hump's deck runs on over it), then the canal.
       Q[2] = 1;
       if ((ax > az ? ax : az) >= BANK) return void (Q[1] = CANAL);
-      const r = humpQ(h, lx, lz);
+      humpQ(h, lx, lz);
+      const r = Q[3]!;
       return void (Q[1] = r >= 0 ? r : CURB);
     }
     Q[2] = 0;
@@ -192,7 +195,8 @@ export function town(endless = false, seed = CITY_SEED) {
       }
       for (let o = 0; o < K.length; o += 5) if (lx > K[o]! && lx < K[o + 2]! && lz > K[o + 1]! && lz < K[o + 3]!) y += (K[o + 4]! * (lz - K[o + 1]!)) / (K[o + 3]! - K[o + 1]!);
     }
-    const r = humpQ(h, lx, lz);
+    humpQ(h, lx, lz);
+    const r = Q[3]!;
     Q[1] = r > y ? r : y;
   }
   /** The ground's height at (x, z). */

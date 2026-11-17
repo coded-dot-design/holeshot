@@ -112,7 +112,7 @@ export function freeRun(track: Track | RideMap | (Track & EndlessTrack), me: { p
     const ci = Math.floor(x / 40), cj = Math.floor(z / 40);
     if (ci === EC[0] && cj === EC[1]) return;
     EC[0] = ci; EC[1] = cj;
-    EC[2] = postsNear(Wd!.seed, x, z, EP);
+    EC[2] = postsNear(Wd!.seed, x, z, EP, Wd!.biome);
   }
   function anyPost(x: number, z: number, r: number) {
     if (Wd) {

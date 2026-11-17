@@ -28,7 +28,15 @@ pick your jersey and a name. That bike rides every event.
 - **Free Ride**: five maps to yourself (the Neon Loop, Dune Sea, the Quarry, Forest Enduro, Night
   Park), no laps, no clock; END banks the session (a little pay for saddle time, air, wheelies and
   tricks).
-- **Endless Desert**: a dune sea that never ends. Big rolling dunes across the wind, sharp crests,
+- **Endless**: ground that never ends; pick it on the ENDLESS card (each keeps its own best). THE
+  DUNE SEA (below, the default), and one endless version of each other open Free Ride map on the same
+  streaming window: THE DEEP QUARRY (benches 1.1 high cut into a broad rise, each riser a steep face,
+  broken rock; ledges, rubble, boulders, light rigs), THE ENDLESS WOODS (long wooded hills; log
+  jumps, roots, rock gardens and stands of neon trees you can hit) and THE NIGHT PARK (nearly flat;
+  doubles, rollers, pylon rows, light towers), each in its Free Ride map's colours and its own seed.
+  The phone menu keeps one ENDLESS tile with a picker (four grounds would be four near-identical
+  tiles). The desert, as it was:
+- **The Dune Sea** (Endless): a dune sea that never ends. Big rolling dunes across the wind, sharp crests,
   witches'-hat peaks and bowls, and now and then a kicker, a whoop section, a cactus clump, a rock pile
   or a camp with a beacon to ride to; a neon grid over the sand, a haze over the near window and
   behind it ridgelines layered out to 250 units (the same ground on a coarse far ring, five bands,

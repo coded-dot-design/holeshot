@@ -94,7 +94,8 @@ export function apply(p: Profile, r: ModeResult): Profile {
   n.stats.earned += r.credits;
   if (r.stats.mode === "race" && r.stats.finished && r.stats.place === 0) n.stats.wins++;
   // Endless: the best distance (kept apart from the scores: ./profile.ts `stats.far`).
-  if (r.stats.far !== undefined && r.stats.far > (n.stats.far[r.stats.mode] ?? 0)) n.stats.far[r.stats.mode] = Math.round(r.stats.far);
+  const fk = r.stats.farKey ?? r.stats.mode;
+  if (r.stats.far !== undefined && r.stats.far > (n.stats.far[fk] ?? 0)) n.stats.far[fk] = Math.round(r.stats.far);
   const key = r.stats.mode + (r.stats.where ? ":" + r.stats.where : "");
   const best = r.stats.mode === "race" ? r.stats.time : r.stats.mode === "bigair" ? r.stats.judges : r.stats.score;
   if (r.stats.finished && best !== undefined && best > 0) {

@@ -16,6 +16,8 @@ import { PAINTS, SWATCHES } from "./data/looks.ts";
 import { MODES, mode as modeOf } from "./modes/index.ts";
 import type { ModeCtx, ModeId, ModeRun, RunStats } from "./modes/mode.ts";
 import { mapsCard, paintMaps } from "./modes/freeride/picker.ts";
+import { BIOMES } from "./modes/desert/track.ts";
+import { FREE_MAPS } from "./modes/index.ts";
 import { exportCode, importCode, load, local, newBike, ready, riding, save, setup, fresh, type Profile, type Store, type RiderKit } from "./model/profile.ts";
 import { tune } from "./model/tune.ts";
 import { apply, pitFix, pitReady, settle, type ModeResult } from "./model/economy.ts";
@@ -52,7 +54,7 @@ export interface HoleshotOptions {
   rooms?: string;
 }
 
-type Screen = "setup" | "menu" | "garage" | "ride" | "maps" | "series" | "settings" | "event" | "result" | "online";
+type Screen = "setup" | "menu" | "garage" | "ride" | "maps" | "endless" | "series" | "settings" | "event" | "result" | "online";
 
 export function createHoleshot(o: HoleshotOptions = {}) {
   const dropIn = !o.host, store = o.store ?? local;
@@ -161,6 +163,14 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   }
   const seriesCard = () => seriesScreen(profile, head(), tabs("series"), note);
   /** A mode's name for the cards (a series round is a race on the series' track). */
+  /** The profile key of a ride's best distance: the biome (ENDLESS), "city" (Endless Wheelie City). */
+  const farKey = (id: ModeId, map?: string) => (id === "endcity" ? "city" : id === "desert" ? map ?? "desert" : id);
+  const km = (u: number) => `${(u / 1000).toFixed(2)} KM`;
+  /** RIDE → ENDLESS: the ground to ride (the desert first), each with its best distance. */
+  function endlessCard() {
+    const keys = BIOMES.map((b, i) => `<li><button type="button" class="bui-key dh-mapk" data-endless="${b.id}"><b><i>${i + 1}</i> ${b.name}</b><small>${b.blurb}</small><em>BEST ${km(profile.stats.far[b.id] ?? 0)}${i ? ` · ${FREE_MAPS.find((m) => m.id === b.map)?.name ?? ""}, ENDLESS` : ""}</em></button></li>`).join("");
+    return `<div class="dh-card dh-mapc" data-screen="endless">${head()}${tabs("ride")}<p class="dh-row"><button type="button" class="bui-key" data-go="ride">← RIDE</button><b class="dh-h">ENDLESS · PICK THE GROUND</b></p><p class="dh-sub">No edge, no clock: ride as far as you can, END banks it. The distance pays a little; each ground keeps its own best.</p><ul class="dh-maps">${keys}</ul></div>`;
+  }
   const modeName = (id: ModeId) => (id === "series" ? seriesName(profile) : modeOf(id).name);
   function settingsCard() {
     return `<div class="dh-card dh-set" data-screen="settings">${head()}${tabs("settings")}<p class="dh-row"><button type="button" class="bui-key dh-sound" aria-pressed="${profile.settings.sound}">SOUND ${profile.settings.sound ? "ON" : "OFF"}</button></p>
@@ -191,7 +201,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       engine.wake();
       return;
     }
-    const html = s === "setup" ? setupCard() : s === "menu" ? menuCard() : s === "garage" ? garageCard() : s === "ride" ? rideCard() : s === "maps" ? mapsCard(head(), tabs("ride")) : s === "series" ? seriesCard() : s === "settings" ? settingsCard() : s === "result" ? resultCard() : paused ? pauseCard() : "";
+    const html = s === "setup" ? setupCard() : s === "menu" ? menuCard() : s === "garage" ? garageCard() : s === "ride" ? rideCard() : s === "maps" ? mapsCard(head(), tabs("ride")) : s === "endless" ? endlessCard() : s === "series" ? seriesCard() : s === "settings" ? settingsCard() : s === "result" ? resultCard() : paused ? pauseCard() : "";
     cards.innerHTML = html;
     cards.hidden = !html;
     stage.toggleAttribute("data-menu", s !== "event" && s !== "result");
@@ -233,7 +243,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       look: L2.look, helmet: L2.helmet, number: L2.number, name: profile.name,
       seed: opt.seed ?? ((o.seed ?? 20261114) + profile.stats.events * 7919) >>> 0,
       map: opt.map,
-      best: profile.stats.far[id] ?? 0,
+      best: profile.stats.far[farKey(id, opt.map)] ?? 0,
       auto: opt.auto ?? !!o.attract,
       attract: !!o.attract,
       reduced,
@@ -289,7 +299,8 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     if (g) return g.buy ? did(g.buy[0], g.buy[1]) : (g.profile && ((profile = g.profile), keep()), show("garage"));
     if (t.classList.contains("dh-risk-go") && pending) return (sure = true), startEvent(pending[0], pending[1]);
     if (t.classList.contains("ol-open")) return openRoom();
-    if (d.mode) return d.mode === "freeride" ? show("maps") : startEvent(d.mode as ModeId);
+    if (d.mode) return d.mode === "freeride" ? show("maps") : d.mode === "desert" ? show("endless") : startEvent(d.mode as ModeId);
+    if (d.endless) return startEvent("desert", { map: d.endless });
     if (d.map) return startEvent("freeride", { map: d.map });
     if (d.seriesEnter) {
       const p = enterSeries(profile, d.seriesEnter as TierId, ((o.seed ?? 20261114) ^ Math.imul(profile.stats.events + 1, 0x9e3779b1) ^ Math.imul(profile.series.titles + 7, 0x85ebca6b)) >>> 0);

@@ -23,6 +23,7 @@ import {
   CARS, CAR_L, CAR_W, CROSS, DOG, DONE, E_AIR, E_BARK, E_BONUS, E_CRASH, E_END, E_GRUMP, E_HOP, E_RESPAWN, E_RESET, E_STUCK, E_SPLASH, E_START, E_TRICK,
   E_JUMP, E_LAND, E_TICKET, E_ESCAPE, E_STARS, E_UNIT, E_CLEAR, S_HOOD, S_FLY, S_JUMPS,
   FENCE, HOUSES, LAMPS, LINES, NCARS, NEIGH, NH, NN, NSP, READY, RUN, CRASH, SESSION, SPRINK, SP_REACH, TREES, cityRun, height,
+  CITY_SEED, PITCH, slotAt, slotKind,
 } from "./city.ts";
 import { HOODS, HOOD_NAMES, CX, CZ, HX, HZ, CURB, GAP, BANK, W, HUMPS, NHUMP, RAMP, DECK, LIP, HUMP_H, HUMP_W, K_PLAZA, K_BOARD, L_FLATS, L_STORE, L_TOWER, L_SHOP, L_SHACK, NHOOD } from "./hoods.ts";
 import { HEAT, STARS, HOT, ESC, TIX, NEAR, MAXP, PS, P_ON, P_KIND, P_X, P_Z, P_YAW, P_FADE, U_CART, U_DRONE } from "./cops.ts";
@@ -86,18 +87,21 @@ const LIGHT: Pal = {
 // FX pools: dust and tyre smoke, sparks, sprinkler water (per sprinkler DROPS), splashes.
 const DUST = 70, SPARK = 40, DROPS = 18, WATER = NSP * DROPS, SPLASH = 40;
 const T_CARD = 1;
+/** Endless: the haze (units from the bike: what stands up fades from HAZE0, gone at HAZE1; the ground under the fog band). */
+const HAZE0 = 24, HAZE1 = 38;
 /** Start hoods by map id (the RIDE menu starts on THE BLOCK; a harness can start elsewhere). */
 const HOOD_IDS = HOODS.map((h) => h.id);
 
-export function mountCity(ctx: ModeCtx): ModeRun {
+/** Wheelie City; `endless`: Endless Wheelie City (the same hoods as slots in a row, no clock, how far). */
+export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
   const stage = modeStage(ctx.host, "wc");
   const engine = createEngine({ root: stage, settle: 0.5, seed: ctx.seed });
-  const m = meter("wheelie");
+  const m = meter(endless ? "endcity" : "wheelie");
   // The one ride: the player's bike, tuned (its balance window and hop from tune()).
   const SPEC: RideSpec = { id: ctx.bike.model.id, name: ctx.bike.model.name, kind: ctx.bike.power.name, blurb: "", bars: [3, 3, 3], power: ctx.bike.power, shape: ctx.bike.shape, sweet: ctx.bike.sweet, hop: ctx.bike.hop };
   const L = engine.ledger, sig = { signal: engine.signal };
   let P: Pal = document.documentElement.dataset.theme === "light" ? LIGHT : DARK;
-  const startHood = Math.max(0, HOOD_IDS.indexOf(ctx.map ?? ""));
+  const startHood = Math.max(0, HOOD_IDS.indexOf(ctx.map ?? "")), best = ctx.best ?? 0;
 
   // ---- the page: the canvas, the play surface (pointer + keyboard focus), the stickers, the cards, the pad ----
   const canvas = L.add(document.createElement("canvas"));
@@ -108,14 +112,14 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   play.setAttribute("aria-label", "Wheelie City: Space or J for gas, K or Shift to brake, W and S (or up and down) lean forward and back, A and D (or left and right) steer, L hops. V changes the view, M mutes, P or Escape pauses");
   const hud = L.add(document.createElement("div"));
   hud.className = "wc-hud";
-  hud.innerHTML = `<div class="wc-head"><p class="wc-top"><b class="wc-chip wc-time"><span>1:30</span></b><b class="wc-chip wc-score"><span>0</span><i>×1</i></b><b class="wc-chip wc-heat" hidden aria-label="Heat"><span></span><i hidden></i></b><b class="wc-chip wc-trick" hidden><span></span></b></p><p class="wc-hint"></p></div><p class="wc-toast" hidden></p><div class="wc-ticket" hidden><b>TICKET!</b><p>NEON PATROL · NOISE NOTICE</p><p class="wc-tline"></p></div><p class="wc-live" aria-live="polite"></p><p class="wc-keys"><button type="button" class="wc-key wc-reset" aria-label="Reset to the last good spot (R)">↺</button><button type="button" class="wc-key wc-view" aria-label="Camera view (V)">VIEW</button><button type="button" class="wc-key wc-mute" aria-label="Mute (M)" aria-pressed="true">♪</button><button type="button" class="wc-key wc-menu" aria-label="Pause (P)">❚❚</button></p>`;
+  hud.innerHTML = `<div class="wc-head"><p class="wc-top"><b class="wc-chip wc-time"><span>1:30</span></b><b class="wc-chip wc-score"><span>0</span><i>×1</i></b><b class="wc-chip wc-heat" hidden aria-label="Heat"><span></span><i hidden></i></b><b class="wc-chip wc-trick" hidden><span></span></b></p><p class="wc-hint"></p></div><p class="wc-toast" hidden></p><div class="wc-ticket" hidden><b>TICKET!</b><p>NEON PATROL · NOISE NOTICE</p><p class="wc-tline"></p></div><p class="wc-live" aria-live="polite"></p><p class="wc-keys">${endless ? `<button type="button" class="wc-key wc-end" aria-label="End the ride and bank it (E)">END</button>` : ""}<button type="button" class="wc-key wc-reset" aria-label="Reset to the last good spot (R)">↺</button><button type="button" class="wc-key wc-view" aria-label="Camera view (V)">VIEW</button><button type="button" class="wc-key wc-mute" aria-label="Mute (M)" aria-pressed="true">♪</button><button type="button" class="wc-key wc-menu" aria-label="Pause (P)">❚❚</button></p>`;
   const head = hud.children[0] as HTMLElement, top = head.children[0] as HTMLElement, hintEl = head.children[1] as HTMLElement;
   const toastEl = hud.children[1] as HTMLElement, ticketEl = hud.children[2] as HTMLElement, live = hud.children[3] as HTMLElement, keysEl = hud.children[4] as HTMLElement;
   const timeEl = top.children[0]!.firstChild as HTMLElement, scoreEl = top.children[1]!.firstChild as HTMLElement, comboEl = top.children[1]!.lastChild as HTMLElement;
   const heatChip = top.children[2] as HTMLElement, heatEl = heatChip.firstChild as HTMLElement, riskEl = heatChip.lastChild as HTMLElement;
   const trickChip = top.children[3] as HTMLElement, trickEl = trickChip.firstChild as HTMLElement;
   const tlineEl = ticketEl.lastChild as HTMLElement;
-  const viewK = keysEl.children[1] as HTMLButtonElement, muteK = keysEl.children[2] as HTMLButtonElement;
+  const viewK = keysEl.querySelector(".wc-view") as HTMLButtonElement, muteK = keysEl.querySelector(".wc-mute") as HTMLButtonElement;
   // Unstuck: the prompt sticker.
   const stuckEl = document.createElement("p");
   stuckEl.className = "wc-stuck";
@@ -167,12 +171,21 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   paintMute();
 
   // ---- the run and the diorama ----
-  const run = cityRun([SPEC], ctx.seed >>> 0 || 1), bike = run.bike, S = run.S, sc = run.sc.S, cop = run.cop;
-  const dio = diorama(canvas, { light: P.light, ambient: P.amb, background: () => P.table, overlay: drawOverlay, get shadowColor() { return P.shadow; }, maxVerts: 196608, maxFaces: 16384 });
+  const run = cityRun([SPEC], ctx.seed >>> 0 || 1, endless, CITY_SEED), bike = run.bike, S = run.S, sc = run.sc.S, cop = run.cop, hgt = run.town.height;
+  // Endless: each hood kind is built once at its fixed-table place and moved to the slot it shows in
+  // (VO: its move, x and z per kind: what the per-frame drawing adds to the world lists).
+  const VO = new Float64Array(8);
+  const dio = diorama(canvas, { light: P.light, ambient: P.amb, background: () => (endless ? P.sky2 : P.table), overlay: drawOverlay, get shadowColor() { return P.shadow; }, maxVerts: 196608, maxFaces: 16384 });
   const rigs: Rig[] = [];
   const nbs: DioramaObject[] = [], arms: DioramaObject[] = [], sprHeads: DioramaObject[] = [];
-  /** Per hood: its root objects (shown or hidden as the rider nears it). */
-  const HR: DioramaObject[][] = [[], [], [], []];
+  /** Per hood: its root objects (shown or hidden as the rider nears it), and those not on the ground (faded by distance, endless). */
+  const HR: DioramaObject[][] = [[], [], [], []], UP: DioramaObject[][] = [[], [], [], []];
+  /** Each hood's humps (world, on the fixed table): x, z, dir x, dir z (endless: both ends of the south street). */
+  const HL: number[][] = [[], [], [], []];
+  for (let k = 0; k < NHOOD; k++) {
+    if (!endless) { for (let i = 0; i < NHUMP; i++) if (HUMPS[i * 5 + 4] === k) HL[k]!.push(HUMPS[i * 5]!, HUMPS[i * 5 + 1]!, HUMPS[i * 5 + 2]!, HUMPS[i * 5 + 3]!); }
+    else { const U = run.town.HU[k]!; for (let o = 0; o < U.length; o += 5) HL[k]!.push(U[o + 1]! + CX[k]!, U[o + 2]! + CZ[k]!, U[o + 3]!, U[o + 4]!); }
+  }
   // Patrol units: per slot the group and each kind's group, and the two lights of each kind.
   const units: DioramaObject[] = [], kinds: DioramaObject[] = [], lites: DioramaObject[] = [];
   let dog: DioramaObject, dogTail: DioramaObject, dust: Pool, spark: Pool, water: DioramaPoints, splash: Pool;
@@ -194,16 +207,19 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     dio.clear();
     rigs.length = nbs.length = arms.length = sprHeads.length = units.length = kinds.length = lites.length = 0;
     for (const a of HR) a.length = 0;
+    for (const a of UP) a.length = 0;
+    VO.fill(0);
     dio.setLight(P.light, P.amb);
     dio.cluster("sky", { fixed: -10 });
     dio.cluster("ground", { fixed: -5 });
     dio.decal("sky", 0, paintSky);
     let hk = -1;
-    const keep = (o: DioramaObject) => (hk >= 0 && HR[hk]!.push(o), o);
-    const add = (d: DioramaObjectDef) => (d.on ? dio.add(d) : keep(dio.add(d)));
-    const G = (size: number[], pos: number[], color: string, layer: number, emissive = false) => keep(dio.add({ size, pos, color, cluster: "ground", layer, emissive, pick: false }));
-    // The table under the town: the plinth, its neon rim, the canals.
+    const keep = (o: DioramaObject, flat = false) => (hk >= 0 && (HR[hk]!.push(o), flat || UP[hk]!.push(o)), o);
+    const add = (d: DioramaObjectDef) => (d.on ? dio.add(d) : keep(dio.add(d), d.cluster === "ground"));
+    const G = (size: number[], pos: number[], color: string, layer: number, emissive = false) => keep(dio.add({ size, pos, color, cluster: "ground", layer, emissive, pick: false }), true);
+    // The table under the town: the plinth, its neon rim, the canals (endless: each island's own water, below).
     const TX = 2 * HX + GAP / 2 + BANK + 3, TZ = 2 * HZ + GAP / 2 + BANK + 3;
+    if (!endless) {
     G([TX * 2 + 7, 0.5, TZ * 2 + 6], [0, -1.55, 0.6], P.table, 0);
     G([TX * 2 + 0.5, 1.05, TZ * 2 + 0.5], [0, -1.6, 0], P.plinth, 1);
     G([TX * 2 + 0.7, 0.1, TZ * 2 + 0.7], [0, -0.71, 0], P.rim, 2, true);
@@ -213,9 +229,19 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       if (Math.abs(x - CX[h]!) < HX + BANK && Math.abs(x1 - CX[h]!) < HX + BANK && Math.abs(z - CZ[h]!) < HZ + BANK && Math.abs(z1 - CZ[h]!) < HZ + BANK) continue;
       dio.add({ size: [x1 - x, 0.02, z1 - z], pos: [(x + x1) / 2, -0.55, (z + z1) / 2], color: P.canal, cluster: "ground", layer: 2.5, mask: 1, pick: false });
     }
+    }
     for (let k = 0; k < NHOOD; k++) {
       hk = k;
       const hd = HOODS[k]!, cx = CX[k]!, cz = CZ[k]!, [lawn, walk, road] = P.hood[k]!;
+      if (endless) {
+        // The island's water: half the canal each side along the row, a wide band to the north and south (in tiles).
+        const ax = HX + GAP / 2, az = HZ + 40;
+        for (let x = -ax; x < ax - 0.01; x += 10.6) for (let z = -az; z < az - 0.01; z += 9) {
+          const x1 = Math.min(ax, x + 10.6), z1 = Math.min(az, z + 9);
+          if (x > -HX - BANK && x1 < HX + BANK && z > -HZ - BANK && z1 < HZ + BANK) continue;
+          G([x1 - x, 0.02, z1 - z], [cx + (x + x1) / 2, -0.55, cz + (z + z1) / 2], P.canal, 2.5);
+        }
+      }
       // The island: its wall down to the water, the lawn on top; the blocks' sidewalks; the roads, circles, drives and surfaces.
       // (The island's wall in lengths, like the canal tiles; its top is the bank.)
       for (let a = -(HX + BANK); a < HX + BANK - 0.01; a += 7) for (const sz of [-1, 1]) G([Math.min(7, HX + BANK - a), CURB + 0.55, 0.1], [cx + a + Math.min(7, HX + BANK - a) / 2, -0.55, cz + sz * (HZ + BANK - 0.05)], P.isle, 3);
@@ -229,7 +255,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       }
       // The outer sidewalks along the hood's edges.
       G([HX * 2, CURB + 0.01, 1.2], [cx, 0, cz - HZ + 2.9], walk!, 4); G([HX * 2, CURB + 0.01, 1.2], [cx, 0, cz + HZ - 2.9], walk!, 4);
-      const R = hd.roads;
+      const R = endless ? [...hd.roads, HX - 2, 6.5, HX, 10.5, -HX, 6.5, -HX + 2, 10.5] : hd.roads;
       for (let o = 0; o < R.length; o += 4) G([R[o + 2]! - R[o]!, 0.01, R[o + 3]! - R[o + 1]!], [(R[o]! + R[o + 2]!) / 2 + cx, -0.01, (R[o + 1]! + R[o + 3]!) / 2 + cz], road!, 5);
       for (let o = 0; o < hd.rings.length; o += 3) keep(dio.add({ shape: "cyl", sides: 18, size: [hd.rings[o + 2]! * 2, 0.01, hd.rings[o + 2]! * 2], pos: [hd.rings[o]! + cx, -0.01, hd.rings[o + 1]! + cz], color: road!, cluster: "ground", layer: 5, pick: false }));
       const F = hd.surf;
@@ -287,9 +313,8 @@ export function mountCity(ctx: ModeCtx): ModeRun {
         }
       }
       // The humps: a ramp, the deck to the lip, neon chevrons, a gantry over it.
-      for (let i = 0; i < NHUMP; i++) {
-        if (HUMPS[i * 5 + 4] !== k) continue;
-        const lx = HUMPS[i * 5]!, lz = HUMPS[i * 5 + 1]!, dx = HUMPS[i * 5 + 2]!, dz = HUMPS[i * 5 + 3]!, rot = dx > 0.5 ? Math.PI : dx < -0.5 ? 0 : dz > 0 ? Math.PI / 2 : -Math.PI / 2;
+      for (let i = 0; i < HL[k]!.length / 4; i++) {
+        const lx = HL[k]![i * 4]!, lz = HL[k]![i * 4 + 1]!, dx = HL[k]![i * 4 + 2]!, dz = HL[k]![i * 4 + 3]!, rot = dx > 0.5 ? Math.PI : dx < -0.5 ? 0 : dz > 0 ? Math.PI / 2 : -Math.PI / 2;
         const rc = RAMP / 2 + DECK, dl = DECK + LIP + BANK, dc = (LIP + BANK - DECK) / 2;
         keep(dio.add({ shape: "wedge", size: [RAMP, HUMP_H, HUMP_W * 2], pos: [lx - dx * rc, 0, lz - dz * rc], rot: [0, rot, 0], color: P.hump, cluster: "ground", layer: 8, pick: false }));
         keep(dio.add({ size: dx ? [dl, HUMP_H, HUMP_W * 2] : [HUMP_W * 2, HUMP_H, dl], pos: [lx + dx * dc, 0, lz + dz * dc], color: P.deck, cluster: "ground", layer: 8, pick: false }));
@@ -298,7 +323,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
           keep(dio.add({ size: dx ? [0.18, 0.01, HUMP_W * 1.4] : [HUMP_W * 1.4, 0.01, 0.18], pos: [lx + dx * u, ht, lz + dz * u], color: P.chev, emissive: true, cluster: "ground", layer: 8.5, pick: false }));
         }
         // (The gantry stands over the foot of the ramp, well clear of a flight.)
-        const gid = `gy${i}`, gx = lx - dx * (RAMP + DECK + 0.4), gz = lz - dz * (RAMP + DECK + 0.4);
+        const gid = `gy${k}_${i}`, gx = lx - dx * (RAMP + DECK + 0.4), gz = lz - dz * (RAMP + DECK + 0.4);
         for (const sd of [-1, 1]) keep(dio.add({ id: gid + sd, size: [0.16, 3.2, 0.16], pos: [gx + dz * sd * (HUMP_W + 0.4), CURB, gz + dx * sd * (HUMP_W + 0.4)], color: P.pole, pick: false }));
         keep(dio.add({ size: dx ? [0.16, 0.36, HUMP_W * 2 + 0.96] : [HUMP_W * 2 + 0.96, 0.36, 0.16], pos: [gx, CURB + 3.2, gz], color: P.hump, emissive: true, pick: false }));
       }
@@ -319,6 +344,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     hk = -1;
     dio.decal("ground", 9, paintLines);
     dio.decal("ground", 9.5, paintShadow);
+    if (endless) dio.decal("ground", 9.8, paintFog);
     buildings();
     // Parked cars: body, cabin, glass, wheels, lights.
     for (let q = 0; q < NCARS; q++) {
@@ -418,9 +444,8 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       const gaps = (ax: number, x0: number, x1: number, fixed: number) => {
         // Along axis ax (0: x), from x0 to x1 at the other coordinate `fixed`, with the humps' bands cut out.
         let a = x0;
-        for (let i = 0; i < NHUMP; i++) {
-          if (HUMPS[i * 5 + 4] !== k) continue;
-          const hx = HUMPS[i * 5]!, hz = HUMPS[i * 5 + 1]!, on = ax ? Math.abs(hx - fixed) < 1 : Math.abs(hz - fixed) < 1;
+        for (let i = 0; i < HL[k]!.length / 4; i++) {
+          const hx = HL[k]![i * 4]!, hz = HL[k]![i * 4 + 1]!, on = ax ? Math.abs(hx - fixed) < 1 : Math.abs(hz - fixed) < 1;
           if (!on) continue;
           const c0 = (ax ? hz : hx) - HUMP_W - 0.2, c1 = (ax ? hz : hx) + HUMP_W + 0.2;
           ax ? rail(fixed, a, fixed, c0) : rail(a, fixed, c0, fixed);
@@ -525,6 +550,14 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   function show() {
     const d = bike.b, x = d.pos[0]!, z = d.pos[2]!;
     let v = 0;
+    if (endless) {
+      // The slot the bike is over, and the one it nears (never the same kind: one built hood each).
+      const k = slotAt(x), lx = x - k * PITCH, j = k + (lx > 0 ? 1 : -1), a = slotKind(k), b = slotKind(j);
+      moveHood(a, k);
+      v |= 1 << a;
+      if ((lx < 0 ? -lx : lx) > HX - 34) moveHood(b, j), (v |= 1 << b);
+      fade(x, z, v);
+    } else
     for (let k = 0; k < NHOOD; k++) {
       const dx = Math.max(0, Math.abs(x - CX[k]!) - HX), dz = Math.max(0, Math.abs(z - CZ[k]!) - HZ);
       if (k === S[S_HOOD] || (dx < 34 && dz < 30)) v |= 1 << k;
@@ -536,6 +569,32 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       for (let i = 0; i < R.length; i++) if (R[i]!.on === null && R[i]!.alpha !== a && !(R[i]!.id ?? "").startsWith("nb")) R[i]!.alpha = a;
     }
     dirty = true;
+  }
+  /** Endless: hood kind h to slot k (every root it built moves by the difference). */
+  function moveHood(h: number, k: number) {
+    const tx = k * PITCH - CX[h]!, tz = -CZ[h]!, dx = tx - VO[h * 2]!, dz = tz - VO[h * 2 + 1]!;
+    if (!dx && !dz) return;
+    VO[h * 2] = tx; VO[h * 2 + 1] = tz;
+    const R = HR[h]!;
+    for (let i = 0; i < R.length; i++) {
+      const o = R[i]!;
+      if (o.on !== null) continue;
+      o.pos[0] = o.pos[0]! + dx; o.pos[2] = o.pos[2]! + dz;
+    }
+    dirty = true;
+  }
+  /** Endless: what stands up off the ground fades out into the haze (HAZE0 .. HAZE1 from the bike). */
+  function fade(x: number, z: number, v: number) {
+    for (let h = 0; h < NHOOD; h++) {
+      if (!(v & (1 << h))) continue;
+      const R = UP[h]!;
+      for (let i = 0; i < R.length; i++) {
+        const o = R[i]!;
+        if ((o.id ?? "").startsWith("nb")) continue;
+        const dx = o.pos[0]! - x, dz = o.pos[2]! - z, dd = Math.sqrt(dx * dx + dz * dz);
+        o.alpha = dd < HAZE0 ? 1 : dd > HAZE1 ? 0 : 1 - (dd - HAZE0) / (HAZE1 - HAZE0);
+      }
+    }
   }
   // ---- state ----
   const I = new Float64Array(5), tmp = new Float64Array(3), tmp2 = new Float64Array(3);
@@ -580,7 +639,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       nb.alpha = t > 0 && vis & (1 << NBH[i]!) ? 1 : 0;
       if (t <= 0) continue;
       const out = t > 2.25 ? (2.6 - t) / 0.35 : t < 0.35 ? t / 0.35 : 1, step = apt ? 0.12 : 0.75;
-      nb.pos[2] = NEIGH[i * 8 + 2]! + f * out * step;
+      nb.pos[2] = NEIGH[i * 8 + 2]! + VO[NBH[i]! * 2 + 1]! + f * out * step;
       nb.pos[1] = CURB + HOUSES[h * 8 + 7]! + (apt ? 1.65 : 0);
       arms[i]!.rot[2] = -0.35 + Math.sin(t * 22) * 0.3;
     }
@@ -595,7 +654,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       const kd = Pt[o + P_KIND]!;
       for (let q = 0; q < 3; q++) kinds[i * 3 + q]!.alpha = q === kd ? 1 : 0;
       u.pos[0] = Pt[o + P_X]!; u.pos[2] = Pt[o + P_Z]!;
-      u.pos[1] = height(u.pos[0]!, u.pos[2]!) + (kd === U_DRONE ? 2.3 + Math.sin(engine.time * 3 + i) * 0.15 : 0.2);
+      u.pos[1] = hgt(u.pos[0]!, u.pos[2]!) + (kd === U_DRONE ? 2.3 + Math.sin(engine.time * 3 + i) * 0.15 : 0.2);
       u.rot[1] = Pt[o + P_YAW]!;
       for (let s = 0; s < 2; s++) {
         const li = lites[(i * 3 + kd) * 2 + s]!;
@@ -625,8 +684,8 @@ export function mountCity(ctx: ModeCtx): ModeRun {
         const a = run.sprinklerAim(i), ca = Math.cos(a), sa = Math.sin(a), seen = vis & (1 << SPH[i]!), shower = SPH[i] === 3, y0 = (shower ? 1.7 : 0.15) + (height(SPRINK[i * 4]!, SPRINK[i * 4 + 1]!) > 0.06 ? CURB : 0);
         for (let k = 0; k < DROPS; k++) {
           const u = ((k / DROPS + spin * 0.9) % 1), j = i * DROPS + k, rr = u * SP_REACH * (shower ? 0.5 : 1);
-          water.x[j] = SPRINK[i * 4]! + ca * rr;
-          water.z[j] = SPRINK[i * 4 + 1]! - sa * rr;
+          water.x[j] = SPRINK[i * 4]! + VO[SPH[i]! * 2]! + ca * rr;
+          water.z[j] = SPRINK[i * 4 + 1]! + VO[SPH[i]! * 2 + 1]! - sa * rr;
           water.y[j] = shower ? y0 - u * 1.6 : CURB + 0.15 + u * (1 - u) * 2.4;
           water.r[j] = 0.035 + u * 0.03;
           water.a[j] = seen ? 0.85 - u * 0.5 : 0;
@@ -746,7 +805,10 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   }
   function hudWrite() {
     const ph = S[0]!, secs = ph === READY ? SESSION : Math.ceil(S[1]!);
-    if (was[0] !== secs) (was[0] = secs), (timeEl.textContent = `${(secs / 60) | 0}:${("" + (secs % 60)).padStart(2, "0")}`), timeEl.parentElement!.classList.toggle("wc-hot", secs <= 10 && ph !== READY);
+    if (endless) {
+      const cm = Math.floor(run.far / 10);
+      if (was[0] !== cm) (was[0] = cm), (timeEl.textContent = `${(cm / 100).toFixed(2)} KM`), timeEl.parentElement!.classList.toggle("wc-hot", run.far > best && best > 0);
+    } else if (was[0] !== secs) (was[0] = secs), (timeEl.textContent = `${(secs / 60) | 0}:${("" + (secs % 60)).padStart(2, "0")}`), timeEl.parentElement!.classList.toggle("wc-hot", secs <= 10 && ph !== READY);
     const s = sc[SC]!;
     if (was[1] !== s) (was[1] = s), (scoreEl.textContent = s.toLocaleString("en-US"));
     const cb = sc[CB]!;
@@ -772,25 +834,26 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     if (was[4] !== ph * 10 + g + rideN * 100) {
       was[4] = ph * 10 + g + rideN * 100;
       const touch = !!thePad.el.offsetParent;
-      hintEl.textContent = ph === READY ? (touch ? `${SPEC.name} · hold ⚡ to go · stick back to lean back` : `${SPEC.name} · Space gas · K brake · W/S lean · A/D steer · L hop`) : g && ph === RUN ? "NEON PATROL ON YOU · JUMP A HUMP TO LOSE THEM" : "";
+      hintEl.textContent = ph === READY && endless ? `BEST ${(best / 1000).toFixed(2)} KM · ${touch ? "hold ⚡: the town never ends · END banks it" : "Space to ride: the town never ends · END (or E) banks it"}` : ph === READY ? (touch ? `${SPEC.name} · hold ⚡ to go · stick back to lean back` : `${SPEC.name} · Space gas · K brake · W/S lean · A/D steer · L hop`) : g && ph === RUN ? "NEON PATROL ON YOU · JUMP A HUMP TO LOSE THEM" : "";
     }
   }
   function stats() {
     const esc = cop.S[ESC]!, tix = cop.S[TIX]!;
+    if (endless) return m.stats({ finished: true, score: sc[SC]!, where: "city", farKey: "city", far: run.far, escapes: esc, tickets: tix, summary: `${(run.far / 1000).toFixed(2)} KM across town · ${run.slot} hoods along · longest wheelie ${sc[BEST_W]!.toFixed(1)} m · ${S[S_JUMPS]} humps · ${esc} ${esc === 1 ? "escape" : "escapes"} · ${tix} ${tix === 1 ? "ticket" : "tickets"}` });
     return m.stats({ finished: S[0] === DONE, score: sc[SC]!, where: "city", escapes: esc, tickets: tix, summary: `longest wheelie ${sc[BEST_W]!.toFixed(1)} m (${sc[BEST_WS]!.toFixed(1)}s) · longest manual ${sc[BEST_M]!.toFixed(1)} m · ${sc[HOPS]} hops · top combo ×${1 + sc[TOP]!} · ${S[4]} grumpy neighbours · ${S[S_JUMPS]} humps · ${esc} ${esc === 1 ? "escape" : "escapes"} · ${tix} ${tix === 1 ? "ticket" : "tickets"}` });
   }
   function end() {
     if (ended || ctx.attract) return;
     ended = true;
     setView(0);
-    say(`Time. ${sc[SC]} points`);
+    say(endless ? `${(run.far / 1000).toFixed(2)} kilometres` : `Time. ${sc[SC]} points`);
     ctx.end(stats());
   }
 
   // ---- camera: the table view (the hood the rider is in) or the chase view, a three-quarter view of the bike ----
   const framedFor = (h: number) => framed === h;
   function frameTable() {
-    const h = S[S_HOOD]!, cx = CX[h]!, cz = CZ[h]!;
+    const h = S[S_HOOD]!, cx = run.HC[h * 2]!, cz = run.HC[h * 2 + 1]!;
     const pts = [cx - HX - 0.4, -1.1, cz - HZ - 0.4, cx + HX + 0.4, -1.1, cz - HZ - 0.4, cx - HX - 0.4, -1.1, cz + HZ + 0.4, cx + HX + 0.4, -1.1, cz + HZ + 0.4, cx - HX, 2.4, cz - HZ, cx + HX, 2.4, cz - HZ, cx + 5.4, 4.5, cz - 2.3];
     const Wd = dio.width, H = dio.height, tall = H / Wd > 0.75;
     // A hood is a long strip: across a wide stage, up and down a tall one (the same framing in every hood: only the target moves).
@@ -801,7 +864,8 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     TABLE.tz = cz + 0.6;
     dio.fit(TABLE, pts, { x0: 8, y0: V[3]!, x1: Wd - 8, y1: H - V[4]! });
     framed = h;
-    if (!chaseSet) (chaseSet = true), (chaseO.dist = tall ? 12.5 : 10.5), (chaseO.pitch = tall ? 0.7 : 0.6);
+    // (Endless: lower, to see down the row of hoods to the haze.)
+    if (!chaseSet) (chaseSet = true), (chaseO.dist = tall ? 12.5 : 10.5), (chaseO.pitch = endless ? (tall ? 0.46 : 0.36) : tall ? 0.7 : 0.6);
   }
   function stepCam(dt: number) {
     const cam = dio.cam, d = bike.b;
@@ -863,6 +927,27 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       c2.fill();
     }
   }
+  /** Endless: the haze over the far ground (the sky's horizon colour from the horizon down to where
+   *  the ground HAZE0 units ahead meets the screen), as the desert's. */
+  const FOG = { g: null as CanvasGradient | null, y0: 0, y1: 0, c: "" };
+  function paintFog(c2: CanvasRenderingContext2D) {
+    const c = dio.cam, d = bike.b, x = d.pos[0]!, z = d.pos[2]!, fx = -Math.sin(c.yaw), fz = -Math.cos(c.yaw), f = dio.height / 2 / Math.tan(c.fov / 2);
+    const yh = dio.height / 2 + c.oy - f * Math.tan(c.pitch);
+    const ok1 = dio.project(x + fx * (HAZE1 - 4), 0, z + fz * (HAZE1 - 4), tmp), y1 = ok1 ? Math.max(yh, tmp[1]!) : yh + 4;
+    const ok0 = dio.project(x + fx * (HAZE0 - 6), 0, z + fz * (HAZE0 - 6), tmp2), y0 = ok0 ? Math.max(y1 + 8, tmp2[1]!) : y1 + 40;
+    const top = yh - dio.height * 0.12;
+    if (!FOG.g || FOG.c !== P.sky2 || Math.abs(FOG.y0 - y0) > 3 || Math.abs(FOG.y1 - y1) > 3) {
+      const span = y0 - top || 1;
+      FOG.g = c2.createLinearGradient(0, top, 0, y0);
+      FOG.g.addColorStop(0, P.sky2 + "00");
+      FOG.g.addColorStop(Math.max(0.01, (yh - top) / span), P.sky2);
+      FOG.g.addColorStop(Math.min(0.98, Math.max(0.02, (y1 - top) / span)), P.sky2);
+      FOG.g.addColorStop(1, P.sky2 + "00");
+      FOG.y0 = y0; FOG.y1 = y1; FOG.c = P.sky2;
+    }
+    c2.fillStyle = FOG.g;
+    c2.fillRect(0, top, dio.width, FOG.y0 - top);
+  }
   /** One projected segment (skipped when either end is behind the camera). */
   function seg(c2: CanvasRenderingContext2D, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number) {
     if (!dio.project(x0, y0, z0, tmp) || tmp[2]! < 0.5 || !dio.project(x1, y1, z1, tmp2) || tmp2[2]! < 0.5) return;
@@ -879,7 +964,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     const y = CURB + 0.005;
     for (let k = 0; k < NHOOD; k++) {
       if (!(vis & (1 << k))) continue;
-      const B = HOODS[k]!.blocks, cx = CX[k]!, cz = CZ[k]!, C = HOODS[k]!.rings;
+      const B = HOODS[k]!.blocks, cx = CX[k]! + VO[k * 2]!, cz = CZ[k]! + VO[k * 2 + 1]!, C = HOODS[k]!.rings;
       for (let o = 0; o < B.length; o += 4) {
         const x0 = B[o]! + cx, z0 = B[o + 1]! + cz, x1 = B[o + 2]! + cx, z1 = B[o + 3]! + cz;
         seg(c2, x0, y, z0, x1, y, z0); seg(c2, x1, y, z0, x1, y, z1); seg(c2, x1, y, z1, x0, y, z1); seg(c2, x0, y, z1, x0, y, z0);
@@ -900,7 +985,8 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     c2.fillStyle = P.glow;
     const f = dio.focal();
     for (let k = 0; k < LAMPS.length; k += 2) {
-      if (!(vis & (1 << W.lampHood[k / 2]!)) || !dio.project(LAMPS[k]!, 0.13, LAMPS[k + 1]!, tmp) || tmp[2]! < 0.5) continue;
+      const lh = W.lampHood[k / 2]!;
+      if (!(vis & (1 << lh)) || !dio.project(LAMPS[k]! + VO[lh * 2]!, 0.13, LAMPS[k + 1]! + VO[lh * 2 + 1]!, tmp) || tmp[2]! < 0.5) continue;
       const r = (f * 2.2) / tmp[2]!;
       c2.globalAlpha = 0.08;
       c2.beginPath();
@@ -928,7 +1014,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   }
   /** The bike's shadow on the ground: an ellipse under it, smaller and fainter the higher it is. */
   function paintShadow(c2: CanvasRenderingContext2D) {
-    const d = bike.b, x = d.pos[0]!, z = d.pos[2]!, gy = height(x, z), lift = Math.max(0, d.pos[1]! - gy - d.drop - d.radius - 0.3);
+    const d = bike.b, x = d.pos[0]!, z = d.pos[2]!, gy = hgt(x, z), lift = Math.max(0, d.pos[1]! - gy - d.drop - d.radius - 0.3);
     if (!dio.project(x, gy + 0.01, z, tmp) || tmp[2]! < 0.5) return;
     const f = dio.focal(), r = (f * 0.85) / tmp[2]!;
     c2.fillStyle = P.shadow;
@@ -941,7 +1027,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   function paintSign(c2: CanvasRenderingContext2D) {
     // The store's sign: one word, on the sign's face.
     const o = STORE * 8, f = HOUSES[o + 5]!;
-    if (!(vis & 1) || !dio.project(HOUSES[o]!, CURB + HOUSES[o + 4]! - 0.21, HOUSES[o + 1]! + (f * HOUSES[o + 3]!) / 2 + f * 0.08, tmp) || tmp[2]! < 0.5) return;
+    if (!(vis & 1) || !dio.project(HOUSES[o]! + VO[0]!, CURB + HOUSES[o + 4]! - 0.21, HOUSES[o + 1]! + VO[1]! + (f * HOUSES[o + 3]!) / 2 + f * 0.08, tmp) || tmp[2]! < 0.5) return;
     const s = dio.focal() / tmp[2]!;
     if (s < 6) return;
     c2.font = `900 ${Math.round(s * 0.28)}px ui-rounded, system-ui, sans-serif`;
@@ -1112,6 +1198,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     wake();
     if (e.code === "KeyM") return void (e.preventDefault(), toggle());
     if (e.code === "KeyV") return void (e.preventDefault(), setView(view ? 0 : 1));
+    if (endless && e.code === "KeyE" && S[0] !== READY) return void (e.preventDefault(), end());
     const k = MAP[e.code];
     if (!k || src(e)?.closest?.(".bui-pad")) return;
     e.preventDefault();
@@ -1140,6 +1227,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   muteK.addEventListener("click", toggle, sig);
   viewK.addEventListener("click", () => setView(view ? 0 : 1), sig);
   keysEl.querySelector(".wc-menu")!.addEventListener("click", () => ctx.menu(), sig);
+  keysEl.querySelector(".wc-end")?.addEventListener("click", () => end(), sig);
   keysEl.querySelector(".wc-reset")!.addEventListener("click", () => ((resetQ = 1), (auto = false), engine.wake()), sig);
   thePad.el.addEventListener("pointerdown", () => ((auto = false), engine.wake()), sig);
 
@@ -1166,7 +1254,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       const ph = S[0]!;
       return {
         phase: ph === READY ? "ready" : ph === RUN || ph === CRASH ? "run" : ph === DONE ? "done" : "idle", clock: S[1]!, score: sc[SC]!, combo: sc[CB]!, trick: sc[ON] === 1, nose: bike.nose, view: view ? "chase" : "table", speed: bike.b.speed, crashes, grumps: S[4]!, best: sc[BEST_W]!, ended,
-        hood: HOOD_IDS[S[S_HOOD]!], near: cop.S[NEAR]!, flying: S[S_FLY] === 1, jumps: S[S_JUMPS]!, heat: cop.S[HEAT]!, stars: cop.S[STARS]!, units: cop.chasing, risk: cop.S[HOT]!, escapes: cop.S[ESC]!, tickets: cop.S[TIX]!, drawn: vis, objects: dio.stats.objects, faces: dio.stats.faces,
+        hood: HOOD_IDS[S[S_HOOD]!], slot: run.slot, far: run.far, endless, near: cop.S[NEAR]!, flying: S[S_FLY] === 1, jumps: S[S_JUMPS]!, heat: cop.S[HEAT]!, stars: cop.S[STARS]!, units: cop.chasing, risk: cop.S[HOT]!, escapes: cop.S[ESC]!, tickets: cop.S[TIX]!, drawn: vis, objects: dio.stats.objects, faces: dio.stats.faces,
       };
     },
     get camera() {
@@ -1174,6 +1262,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     },
     finish() {
       if (ended) return;
+      if (endless) return end();
       if (S[0] === READY) S[0] = RUN;
       S[1] = Math.min(S[1]!, 0.001);
       engine.wake();

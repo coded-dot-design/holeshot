@@ -31,7 +31,12 @@ import { readdirSync, readFileSync } from "node:fs";
 // desert's pure ground and sliding window, its grid, haze, sky and scenery pool, the session's
 // endless path and autopilot, the unstuck ring and reset with its HUD prompt and key, best distance
 // and the profile's v3 step), plus about 4.3 KB of room.
-const BUDGET = 168_000;
+// Unreleased, round 3, Endless Wheelie City and the endless grounds: 170,188 B measured (holeshot.js;
+// +4,124 B over 166,064: the town as slots (the ground factory, the slot row, the session's endless
+// path and autopilot line), the scene's hood moves, haze and fade, the END key; three biome grounds
+// and feature mixes on the desert's window, their scenery and palettes, the ENDLESS picker card, the
+// profile's v4 step), plus about 3.8 KB of room.
+const BUDGET = 174_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;
