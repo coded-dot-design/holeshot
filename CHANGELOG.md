@@ -35,8 +35,12 @@
   scene's hood moves) is deleted.
 - **Goldens:** only "endless wheelie city ride" changes (a new world and session: two minutes on the
   autopilot through the open world); every fixed-table and other hash is unchanged.
-- Size: SIZE_LINE
-- Perf: PERF_LINE
+- Size: 176,994 B gzip (holeshot.js; round 4 measured 174,039 on its own, the last committed build 174,076): +2.9 KB
+  for the open world and its scene, with the fixed table's hoods and session out of the bundle; the
+  178,000 B budget holds (no change).
+- Perf (the round-2 harness, autopilot, 4× CPU throttle, 8 s): 1440 frame p50 116.6 ms (the slot row
+  116.7), faces p50 456 (3,490); 390 frame p50 33.4 ms (50.1), faces p50 294 (3,680). A window slide
+  (8 units of new ground, heights and kinds) costs about 4 ms unthrottled; zero allocation per step.
 - Tests: `tests/endless.test.mjs` (chunks pure and cache-independent; roads continuous, smooth along,
   level across, no dead ends, never far; towns along and facing their roads; a 20 km ride along the
   roads in random directions never leaves the streamed window, passes towns, allocates nothing; the
