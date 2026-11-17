@@ -6,10 +6,16 @@
 // placed from the same seeded lattice the sim's posts come from. Nothing here allocates per frame.
 import type { Diorama, DioramaObject } from "@fzlt/core/diorama";
 import type { Pal } from "../race/scene.ts";
-import { featureOf, hash2, postDir, DIRS, FCELL, D_CACTUS, D_ROCKS, D_CAMP, type World } from "./world.ts";
+import { featureOf, hash2, postDir, world, DIRS, FCELL, FAR_WIN, FAR_CELL, FAR_STEP, D_CACTUS, D_ROCKS, D_CAMP, type World } from "./world.ts";
 
 /** Grid spacing (units), reach (units from the bike), haze start and full (units from the bike). */
-export const GRID = 4, REACH = 34, HAZE0 = 16, HAZE1 = 33;
+export const GRID = 4, REACH = 34, HAZE0 = 20, HAZE1 = 35;
+/** The far ring's bands (units from the eye: each band's near and far edge) and how far each one is
+ *  gone into the haze (0: the sand, 1: the sky's horizon colour). The near haze fades to the first. */
+export const BANDS = [34, 52, 52, 78, 78, 112, 112, 160, 160, 250];
+const HAZES = [0.22, 0.3, 0.44, 0.58, 0.71, 0.83];
+/** The grid's strength by theme (light sand needs more ink than the neon night). */
+export const GRID_A = { night: 0.55, day: 0.62 };
 
 export const DESERT_DARK: Partial<Pal> = {
   light: [-0.75, 0.55, 0.35], amb: 0.3,
@@ -19,7 +25,7 @@ export const DESERT_DARK: Partial<Pal> = {
 };
 export const DESERT_LIGHT: Partial<Pal> = {
   light: [-0.75, 0.6, 0.35], amb: 0.42,
-  sky0: "#8fd3ff", sky1: "#ffd9c2", sky2: "#ffeedd", grid: "#ff7a59",
+  sky0: "#8fd3ff", sky1: "#ffd9c2", sky2: "#ffeedd", grid: "#c8431f",
   ground: ["#f2c088", "#f5cc96", "#f8d8a6"], crest: "#fff0d4", steep: "#c9824e", dust: "#efc597",
   edge: "#13a9bb", edge2: "#ff7a59", table: "#fff1e0", tower: "#8a6a58", lamp: "#ffe08a",
 };
@@ -34,9 +40,17 @@ export function desertView(d: Diorama, W: World) {
   const objs: DioramaObject[] = [];
   let ci0 = NaN, cj0 = NaN;
   const PT = new Float64Array(3), PT2 = new Float64Array(3);
+  // The far ring: the same ground, 4-unit cells, 544 units a side (view only; slides 16 units at a time).
+  const FR = world(W.seed, FAR_WIN, FAR_CELL, FAR_STEP), NB = BANDS.length / 2;
+  // Per screen column: its x, the near sand's top (its silhouette), each band's ridge (screen y).
+  const COLS = 200, CX = new Float64Array(COLS), SIL = new Float64Array(COLS), RID = new Float64Array(COLS * NB);
+  const HZ: string[] = [], CR: string[] = [];
 
   /** (Re)build the pool in palette p (a theme change rebuilds the scene). */
   function build(p: Pal) {
+    // The bands' colours: the lit sand going into the sky's horizon colour, band by band; a crest line a step lighter.
+    HZ.length = CR.length = 0;
+    for (let k = 0; k <= NB; k++) HZ.push(mix(p.ground[k ? 0 : 2]!, p.sky2, HAZES[k]!)), CR.push(mix(p.crest, p.sky2, HAZES[k]! * 0.8));
     cacti.length = rocks.length = camps.length = beams.length = objs.length = 0;
     for (let s = 0; s < SLOTS; s++) {
       for (let k = 0; k < CACTI; k++) {
@@ -94,6 +108,7 @@ export function desertView(d: Diorama, W: World) {
   /** Each frame: stream the pool, fade what is out in the haze. (x, z): the bike. */
   function frame(x: number, z: number, night: boolean, time: number) {
     place(x, z);
+    FR.follow(x, z);
     for (let o = 0; o < objs.length; o++) {
       const ob = objs[o]!;
       if (ob.hidden) continue;
@@ -132,6 +147,66 @@ export function desertView(d: Diorama, W: World) {
     }
     ctx.globalAlpha = 1;
   }
+  /** The far ring: dune ridgelines layered to the horizon, one band at a time from the farthest in
+   *  (hazier the further), each drawn only above the near sand's silhouette (sampled down the same
+   *  column), so a near crest always stands in front. Painted after the near sand and its haze. */
+  function paintFar(ctx: CanvasRenderingContext2D) {
+    const c = d.cam, cp = Math.cos(c.pitch), sp = Math.sin(c.pitch), sy = Math.sin(c.yaw), cy = Math.cos(c.yaw);
+    const ex = c.tx + c.dist * sy * cp, ez = c.tz + c.dist * cy * cp;
+    const fx = -sy, fz = -cy, rx = cy, rz = -sy, f = d.height / 2 / Math.tan(c.fov / 2), mid = d.width / 2 + c.ox;
+    const n = Math.min(COLS, Math.max(24, Math.ceil(d.width / 9) + 1)), span = (d.width / 2 + 24) / f * cp, H = d.height;
+    const nt = W.t, x0 = nt.x0, z0 = nt.z0, x1 = x0 + nt.cols * nt.cell, z1 = z0 + nt.rows * nt.cell;
+    for (let i = 0; i < n; i++) {
+      const u = -span + (2 * span * i) / (n - 1), l = Math.sqrt(1 + u * u), dx = (fx + rx * u) / l, dz = (fz + rz * u) / l;
+      CX[i] = mid + (u * f) / cp;
+      // The near sand's top down this column (to the window's edge).
+      let top = H + 2;
+      for (let r = 1.5; r < BANDS[0]! + 12; r += 0.6 + r * 0.05) {
+        const px = ex + dx * r, pz = ez + dz * r;
+        if (px <= x0 || pz <= z0 || px >= x1 || pz >= z1) break;
+        if (d.project(px, nt.height(px, pz), pz, PT) && PT[2]! > 0.5 && PT[1]! < top) top = PT[1]!;
+      }
+      SIL[i] = top;
+      for (let b = 0; b < NB; b++) {
+        const r0 = BANDS[b * 2]!, r1 = BANDS[b * 2 + 1]!, st = (r1 - r0) / 8;
+        let y = H + 2;
+        for (let r = r0; r <= r1 + 0.01; r += st) {
+          const px = ex + dx * r, pz = ez + dz * r;
+          if (d.project(px, FR.t.height(px, pz), pz, PT) && PT[1]! < y) y = PT[1]!;
+        }
+        RID[b * COLS + i] = y;
+      }
+    }
+    void sp;
+    ctx.lineJoin = "round";
+    ctx.lineWidth = Math.max(1.2, d.width / 700);
+    for (let b = NB - 1; b >= 0; b--) {
+      // The band: its ridge left to right, back along the near silhouette (clamped: where the near sand
+      // is higher the band has no height there).
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) {
+        const y = Math.min(RID[b * COLS + i]!, SIL[i]!);
+        i ? ctx.lineTo(CX[i]!, y) : ctx.moveTo(CX[i]!, y);
+      }
+      for (let i = n - 1; i >= 0; i--) ctx.lineTo(CX[i]!, SIL[i]!);
+      ctx.closePath();
+      ctx.fillStyle = HZ[b + 1]!;
+      ctx.fill();
+      // Its crest line, only where the ridge shows.
+      ctx.beginPath();
+      let pen = false;
+      for (let i = 0; i < n; i++) {
+        const y = RID[b * COLS + i]!;
+        if (y >= SIL[i]! - 0.5) { pen = false; continue; }
+        if (pen) ctx.lineTo(CX[i]!, y);
+        else ctx.moveTo(CX[i]!, y), (pen = true);
+      }
+      ctx.strokeStyle = CR[b + 1]!;
+      ctx.stroke();
+    }
+  }
+  /** The near haze's colour: the first band's (the far ring carries on from it). */
+  const hazeColor = () => HZ[0]!;
   /** The horizon's screen y (the eye's level, straight ahead). */
   function horizon() {
     const c = d.cam, f = d.height / 2 / Math.tan(c.fov / 2);
@@ -158,6 +233,14 @@ export function desertView(d: Diorama, W: World) {
     ctx.fillStyle = g.g;
     ctx.fillRect(0, top, d.width, g.y0 - top);
   }
-  return { build, frame, paintGrid, paintFog, horizon, place, slots: SL };
+  return { build, frame, paintGrid, paintFog, paintFar, hazeColor, horizon, place, slots: SL, far: FR };
 }
 export type DesertView = ReturnType<typeof desertView>;
+
+/** a → b by t, as "#rrggbb" (theme changes only). */
+function mix(a: string, b: string, t: number) {
+  const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16);
+  let o = 0;
+  for (let s = 16; s >= 0; s -= 8) o |= Math.round(((A >> s) & 255) + (((B >> s) & 255) - ((A >> s) & 255)) * t) << s;
+  return "#" + o.toString(16).padStart(6, "0");
+}

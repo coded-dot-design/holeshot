@@ -11,6 +11,10 @@ import type { Terrain } from "@fzlt/core/terrain";
 
 /** The window: cells a side, the cell (world units, as the open maps), the slide step in cells. */
 export const WIN = 160, CELL = 0.5, STEP = 16, HALF = (WIN * CELL) / 2;
+const WIN0 = WIN, CELL0 = CELL, STEP0 = STEP;
+/** The far ring: the same ground on a coarse window (cells a side, the cell, the slide step in cells)
+ *  that the view reads for the ridgelines to the horizon (never the bike: it rides the near window). */
+export const FAR_WIN = 136, FAR_CELL = 4, FAR_STEP = 4;
 /** The feature lattice (world units a cell) and the peak lattice. */
 export const FCELL = 40, PCELL = 72;
 /** Feature kinds on the lattice. */
@@ -172,8 +176,9 @@ export function postsNear(seed: number, x: number, z: number, P: Float64Array) {
 }
 
 /** The window: a heightfield of WIN × WIN cells that follows the rider (the Terrain shape terrainView
- *  and the bike read: cols, rows, cell, x0, z0, h, kind, version, height, normal, sample, kindAt, at). */
-export function world(seed: number) {
+ *  and the bike read: cols, rows, cell, x0, z0, h, kind, version, height, normal, sample, kindAt, at).
+ *  With other sizes it is the view's far ring (./look.ts): the same ground, coarser. */
+export function world(seed: number, WIN = WIN0, CELL = CELL0, STEP = STEP0) {
   const W1 = WIN + 1, h = new Float64Array(W1 * W1), kind = new Uint8Array(WIN * WIN * 2), F = new Float64Array(3);
   // OX, OZ: the window's first vertex, in cells (integers); stats: slides, vertices computed.
   const O = new Int32Array(2), N = new Float64Array(2);

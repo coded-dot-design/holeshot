@@ -22,7 +22,7 @@ import { pool, voice, gamepad, type Pool } from "../../bike/kit.ts";
 import { DONE, E_CRASH, E_FINISH, E_GATE, E_LAND, E_LAP, E_PLACE, E_RESPAWN, E_WHEELIE, E_COUNT, GRID, LAPS, RACE, TRACK_W, motoRace, type RaceOpts, type Track } from "./course.ts";
 import { freeRun, E_TRICK, E_STUCK, E_RESET } from "../freeride/session.ts";
 import { RESET } from "../unstuck.ts";
-import { desertView, DESERT_DARK, DESERT_LIGHT, desertBands, type DesertView } from "../desert/look.ts";
+import { desertView, DESERT_DARK, DESERT_LIGHT, desertBands, GRID_A, type DesertView } from "../desert/look.ts";
 import type { DesertTrack } from "../desert/track.ts";
 import type { RideMap } from "../freeride/maps.ts";
 import { mapLook, type MapLine } from "../freeride/scenery.ts";
@@ -198,13 +198,14 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     }
     tv = terrainView(dio, t, {
       bands: endless ? desertBands(P) : look ? look.bands(P as Parameters<typeof look.bands>[0]) : [[0.45, P.ground[0]!], [0.85, P.ground[1]!], [1.25, P.ground[2]!], [99, P.crest]], steep: 0.5, steepColor: P.steep, kinds: look ? look.kinds(P as Parameters<typeof look.kinds>[0]) : [P.track, P.face],
-      light: P.light, ambient: P.amb, lod: endless ? [14, 26] : [24, 44], shadows: RIDERS + 1, shadowColor: P.shadow,
+      light: P.light, ambient: P.amb, lod: endless ? [14, 30] : [24, 44], shadows: RIDERS + 1, shadowColor: P.shadow,
     });
     if (dv) {
-      dio.decal("terrain", 1, (c2) => dv.paintGrid(c2, me.pos[0]!, me.pos[2]!, P.grid, P.night ? 0.55 : 0.4));
-      dio.decal("terrain", 2, (c2) => dv.paintFog(c2, me.pos[0]!, me.pos[2]!, P.sky2, FOG));
-      FOG.g = null;
       dv.build(P);
+      dio.decal("terrain", 1, (c2) => dv.paintGrid(c2, me.pos[0]!, me.pos[2]!, P.grid, P.night ? GRID_A.night : GRID_A.day));
+      dio.decal("terrain", 2, (c2) => dv.paintFog(c2, me.pos[0]!, me.pos[2]!, dv.hazeColor(), FOG));
+      dio.decal("terrain", 3, (c2) => dv.paintFar(c2));
+      FOG.g = null;
     } else dio.decal("terrain", 1, paintLines);
     if (look) look.build(dio, t, P as Parameters<typeof look.build>[2]);
     else if (!endless) trackScenery();

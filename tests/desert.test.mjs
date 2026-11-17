@@ -42,6 +42,20 @@ test("desert: the window reads the pure ground wherever it has been", () => {
   }
 });
 
+test("desert: the far ring is the same ground, coarser, out past 250 units", () => {
+  const f = Wm.world(2611, Wm.FAR_WIN, Wm.FAR_CELL, Wm.FAR_STEP), G = new Float64Array(4);
+  for (const [x, z] of [[0, 0], [5000, -1200], [-80, 9999]]) {
+    f.follow(x, z);
+    const half = (Wm.FAR_WIN * Wm.FAR_CELL) / 2;
+    assert.ok(x - f.t.x0 > 250 && f.t.x0 + 2 * half - x > 250 && z - f.t.z0 > 250 && f.t.z0 + 2 * half - z > 250, "250 units every way");
+    for (let k = 0; k < 20; k++) {
+      const vx = (Math.floor(x / Wm.FAR_CELL) + (k % 7) * 9 - 27) * Wm.FAR_CELL, vz = (Math.floor(z / Wm.FAR_CELL) + ((k * 5) % 9) * 7 - 28) * Wm.FAR_CELL;
+      f.t.sample(vx, vz, G);
+      assert.equal(G[0], Wm.heightAt(2611, vx, vz), `far vertex ${vx},${vz}`);
+    }
+  }
+});
+
 test("desert: 10 km on the autopilot: no edge, no allocation per step", async () => {
   const tr = desertTrack(), f = freeRun(tr, { power: t.power, shape: t.shape }, 1e9), I = new Float64Array(5), w = tr.world;
   I[0] = 1;
@@ -60,7 +74,7 @@ test("desert: 10 km on the autopilot: no edge, no allocation per step", async ()
   };
   while (f.distance < 10000 && steps < 60 * 1500) ride(600);
   assert.ok(f.distance >= 10000, `rode ${f.distance.toFixed(0)} units`);
-  assert.ok(WO[0] >= 24, `the rider stays ${WO[0].toFixed(1)} units inside the window (haze full at 33 from the bike, from the camera's side ≥ 24)`);
+  assert.ok(WO[0] >= 24, `the rider stays ${WO[0].toFixed(1)} units inside the window (haze full at 35 from the bike, from the camera's side ≥ 24)`);
   assert.ok(w.stats[0] > 1000, `the window slid ${w.stats[0]} times`);
   const n = await minorGCs(() => ride(3000), 5);
   assert.ok(n <= 1, `${n} young-generation GCs over 3,000 steps`);
