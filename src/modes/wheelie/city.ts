@@ -17,10 +17,11 @@ import { hypot } from "@fzlt/core/steer";
 import { ride, RIDES, type RideSpec } from "./ride.ts";
 import { B_CRASH, B_STOPPIE } from "../../bike/bike.ts";
 import { cos, sin } from "../../math.ts";
+import { unstuck, U_AUTO, U_PROMPT } from "../unstuck.ts";
 import { tricks, ON, SC, PTS, F_CROSS, F_SPRINK, F_GRUMP, BANKED } from "./tricks.ts";
 import {
   HOODS, CX, CZ, HX, HZ, CURB, W, HUMPS, NHUMP, ENTRY, BRANCH, hoodAt, NHOOD,
-  K_ROAD, K_WALK, K_LAWN, K_DRIVE, K_WATER, RAMP, DECK, LIP, HUMP_H, HUMP_W, BANK, CANAL,
+  K_ROAD, K_WALK, K_LAWN, K_DRIVE, K_WATER, K_SAND, RAMP, DECK, LIP, HUMP_H, HUMP_W, BANK, CANAL,
 } from "./hoods.ts";
 import { cops, heading, C_TICKET, C_ESCAPE, C_STARS, C_UNIT, C_CLEAR, HEAT, STARS, NEAR } from "./cops.ts";
 
@@ -29,7 +30,9 @@ export const SESSION = 90;
 export const READY = 0, RUN = 1, CRASH = 2, DONE = 3;
 /** Events (one ring, read and cleared each step): what, and a value. */
 export const E_START = 1, E_TRICK = 2, E_CRASH = 3, E_RESPAWN = 4, E_GRUMP = 5, E_BARK = 6, E_SPLASH = 7, E_BONUS = 8, E_END = 9, E_HOP = 10, E_AIR = 11,
-  E_JUMP = 12, E_LAND = 13, E_TICKET = 14, E_ESCAPE = 15, E_STARS = 16, E_UNIT = 17, E_CLEAR = 18;
+  E_JUMP = 12, E_LAND = 13, E_TICKET = 14, E_ESCAPE = 15, E_STARS = 16, E_UNIT = 17, E_CLEAR = 18,
+  /** Unstuck: the prompt (1 up, 0 down); a reset to the last good spot on the street (1 asked for, 2 automatic). */
+  E_STUCK = 19, E_RESET = 20;
 const TAU = 6.283185307179586, CRASH_T = 1.8, R_BIKE = 0.45, BONK_V = 5;
 /** Over a hump: the least speed along it that flies, the flight's time, how far past the far lip it lands, the pitch it is held to. */
 export const FLY_V = 5, FLY_T = 1, LAND_AT = 2.4, FLY_PITCH = -0.08;
@@ -183,6 +186,22 @@ export const ground = {
   },
 };
 
+/** A spot a reset can use: on the street (road, drive, walk, plaza, boardwalk; never a lawn, sand or
+ *  the water), inside its hood's fence, r clear of anything solid. */
+export function streetClear(x: number, z: number, r: number) {
+  const h = hoodAt(x, z), lx = x - CX[h]!, lz = z - CZ[h]!;
+  if ((lx < 0 ? -lx : lx) > HX - 0.5 - r || (lz < 0 ? -lz : lz) > HZ - 0.5 - r) return false;
+  const k = kindAt(x, z);
+  if (k === K_LAWN || k === K_WATER || k === K_SAND) return false;
+  const B = SOL[h]!, C = PO[h]!;
+  for (let o = 0; o < B.length; o += 4) if (lx > B[o]! - r - R_BIKE && lx < B[o + 2]! + r + R_BIKE && lz > B[o + 1]! - r - R_BIKE && lz < B[o + 3]! + r + R_BIKE) return false;
+  for (let o = 0; o < C.length; o += 4) {
+    const dx = lx - C[o]!, dz = lz - C[o + 1]!, rr = C[o + 2]! + r + R_BIKE;
+    if (dx * dx + dz * dz < rr * rr) return false;
+  }
+  return true;
+}
+
 // S: the session's state, by index.
 const PH = 0, CLOCK = 1, RIDE = 2, CT = 3, GRUMPS = 4, SPLASH = 5, BARKS = 6, LEG = 7, HOPAIR = 8, WHY = 9, WALL = 10, SPCLK = 11, HOOD = 12, FLY = 13, FLYTO = 14, FLYT = 15, DIR = 16, GO = 17, JUMPS = 18, VISITED = 19, STUCK = 20, UNSTUCK = 21;
 export const S_HOOD = HOOD, S_FLY = FLY, S_JUMPS = JUMPS, S_VISITED = VISITED, S_UNSTUCK = UNSTUCK;
@@ -190,6 +209,8 @@ export const S_HOOD = HOOD, S_FLY = FLY, S_JUMPS = JUMPS, S_VISITED = VISITED, S
 /** A session in town. Inputs each step: gas, brake, lean (−1 back .. 1 forward), steer, hop. */
 export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
   const bike = ride(ground, specs), sc = tricks(), cop = cops(seed);
+  // Unstuck (a person riding): the ring of good spots on the street, the watch; US[0]: the prompt is up.
+  const U = unstuck(ground, streetClear), US = new Float64Array(1);
   // S: phase, time left, ride, crash timer, grumps, splashes, barks, route leg, hop air, crash reason,
   // wall hit, sprinkler clock, hood, flying, flying to (hump), flight time, loop direction, escaping
   // for (hump + 1), humps jumped, hoods visited (bits), the autopilot's stuck timer and its rescues.
@@ -215,6 +236,7 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
     sc.reset();
     cop.reset(seed);
     NB.fill(0); SPC.fill(0); DG.fill(0);
+    U.clear(); US[0] = 0;
     DG[0] = (DOG[0]! + DOG[1]!) / 2;
     n = 0;
   }
@@ -292,8 +314,24 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
     const pts = cop.escape();
     if (pts > 0) (sc.S[SC] = sc.S[SC]! + pts), emit(E_ESCAPE, pts);
   }
-  function step(dt: number, gas: number, brake: number, lean: number, steer: number, hop: number) {
+  /** Advance dt. `person`: a person is riding (the unstuck watch runs); `again`: the reset input (R). */
+  function step(dt: number, gas: number, brake: number, lean: number, steer: number, hop: number, person = false, again = false) {
     const ph = S[PH]!;
+    if (person && S[PH] === RUN && !S[FLY] && !bike.b.crashed) {
+      const u = U.watch(bike.b, dt, gas > 0.1 || brake > 0.1 || lean !== 0 || steer !== 0);
+      if (again || u === U_AUTO) {
+        // Back to the last good spot on the street (never the trap), upright and still; its hood.
+        const o = U.reset(bike.b);
+        bike.reset(o[0]!, o[1]!, o[2]!);
+        S[HOOD] = hoodAt(o[0]!, o[1]!);
+        sc.drop();
+        if (US[0]) US[0] = 0;
+        emit(E_RESET, again ? 1 : 2);
+        return true;
+      }
+      const up = u === U_PROMPT ? 1 : 0;
+      if (up !== US[0]) (US[0] = up), emit(E_STUCK, up);
+    }
     if (ph === READY && gas > 0) (S[PH] = RUN), emit(E_START, 0);
     const live = S[PH] === RUN, fly = S[FLY] === 1;
     const wasAir = bike.air, b = bike.b;
@@ -518,9 +556,11 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
   // Every number the session keeps, as bytes (rollback, a desync hash): the session, the neighbours,
   // the sprinklers, the dog, the scorer, the patrol, the ride adapter and the bike ridden.
   const u8 = (a: Float64Array | Uint32Array) => new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
-  const bytes = [u8(S), u8(NB), u8(SPC), u8(DG), u8(sc.S), u8(cop.S), u8(cop.P), u8(cop.R), u8(bike.R), u8(bike.vel), ...bike.all.map((b) => b.state)];
+  const bytes = [u8(S), u8(NB), u8(SPC), u8(DG), u8(sc.S), u8(cop.S), u8(cop.P), u8(cop.R), u8(bike.R), u8(bike.vel), u8(U.S), u8(U.R), u8(US), ...bike.all.map((b) => b.state)];
   return {
-    S, ev, bike, sc, cop, NB, SPC, DG, bytes,
+    S, ev, bike, sc, cop, NB, SPC, DG, bytes, unstuck: U,
+    /** The stuck prompt is up. */
+    get stuck() { return US[0] === 1; },
     get n() { return n; },
     clear() { n = 0; },
     step, reset, autopilot, sprinklerAim,

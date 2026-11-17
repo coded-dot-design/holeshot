@@ -20,7 +20,7 @@ import { controls } from "@fzlt/core/input";
 import { pad } from "@fzlt/core/pad";
 import { sound } from "@fzlt/core/sound";
 import {
-  CARS, CAR_L, CAR_W, CROSS, DOG, DONE, E_AIR, E_BARK, E_BONUS, E_CRASH, E_END, E_GRUMP, E_HOP, E_RESPAWN, E_SPLASH, E_START, E_TRICK,
+  CARS, CAR_L, CAR_W, CROSS, DOG, DONE, E_AIR, E_BARK, E_BONUS, E_CRASH, E_END, E_GRUMP, E_HOP, E_RESPAWN, E_RESET, E_STUCK, E_SPLASH, E_START, E_TRICK,
   E_JUMP, E_LAND, E_TICKET, E_ESCAPE, E_STARS, E_UNIT, E_CLEAR, S_HOOD, S_FLY, S_JUMPS,
   FENCE, HOUSES, LAMPS, LINES, NCARS, NEIGH, NH, NN, NSP, READY, RUN, CRASH, SESSION, SPRINK, SP_REACH, TREES, cityRun, height,
 } from "./city.ts";
@@ -108,14 +108,21 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   play.setAttribute("aria-label", "Wheelie City: Space or J for gas, K or Shift to brake, W and S (or up and down) lean forward and back, A and D (or left and right) steer, L hops. V changes the view, M mutes, P or Escape pauses");
   const hud = L.add(document.createElement("div"));
   hud.className = "wc-hud";
-  hud.innerHTML = `<div class="wc-head"><p class="wc-top"><b class="wc-chip wc-time"><span>1:30</span></b><b class="wc-chip wc-score"><span>0</span><i>×1</i></b><b class="wc-chip wc-heat" hidden aria-label="Heat"><span></span><i hidden></i></b><b class="wc-chip wc-trick" hidden><span></span></b></p><p class="wc-hint"></p></div><p class="wc-toast" hidden></p><div class="wc-ticket" hidden><b>TICKET!</b><p>NEON PATROL · NOISE NOTICE</p><p class="wc-tline"></p></div><p class="wc-live" aria-live="polite"></p><p class="wc-keys"><button type="button" class="wc-key wc-view" aria-label="Camera view (V)">VIEW</button><button type="button" class="wc-key wc-mute" aria-label="Mute (M)" aria-pressed="true">♪</button><button type="button" class="wc-key wc-menu" aria-label="Pause (P)">❚❚</button></p>`;
+  hud.innerHTML = `<div class="wc-head"><p class="wc-top"><b class="wc-chip wc-time"><span>1:30</span></b><b class="wc-chip wc-score"><span>0</span><i>×1</i></b><b class="wc-chip wc-heat" hidden aria-label="Heat"><span></span><i hidden></i></b><b class="wc-chip wc-trick" hidden><span></span></b></p><p class="wc-hint"></p></div><p class="wc-toast" hidden></p><div class="wc-ticket" hidden><b>TICKET!</b><p>NEON PATROL · NOISE NOTICE</p><p class="wc-tline"></p></div><p class="wc-live" aria-live="polite"></p><p class="wc-keys"><button type="button" class="wc-key wc-reset" aria-label="Reset to the last good spot (R)">↺</button><button type="button" class="wc-key wc-view" aria-label="Camera view (V)">VIEW</button><button type="button" class="wc-key wc-mute" aria-label="Mute (M)" aria-pressed="true">♪</button><button type="button" class="wc-key wc-menu" aria-label="Pause (P)">❚❚</button></p>`;
   const head = hud.children[0] as HTMLElement, top = head.children[0] as HTMLElement, hintEl = head.children[1] as HTMLElement;
   const toastEl = hud.children[1] as HTMLElement, ticketEl = hud.children[2] as HTMLElement, live = hud.children[3] as HTMLElement, keysEl = hud.children[4] as HTMLElement;
   const timeEl = top.children[0]!.firstChild as HTMLElement, scoreEl = top.children[1]!.firstChild as HTMLElement, comboEl = top.children[1]!.lastChild as HTMLElement;
   const heatChip = top.children[2] as HTMLElement, heatEl = heatChip.firstChild as HTMLElement, riskEl = heatChip.lastChild as HTMLElement;
   const trickChip = top.children[3] as HTMLElement, trickEl = trickChip.firstChild as HTMLElement;
   const tlineEl = ticketEl.lastChild as HTMLElement;
-  const viewK = keysEl.children[0] as HTMLButtonElement, muteK = keysEl.children[1] as HTMLButtonElement;
+  const viewK = keysEl.children[1] as HTMLButtonElement, muteK = keysEl.children[2] as HTMLButtonElement;
+  // Unstuck: the prompt sticker.
+  const stuckEl = document.createElement("p");
+  stuckEl.className = "wc-stuck";
+  stuckEl.hidden = true;
+  stuckEl.textContent = "STUCK? Hold R / tap ↺ to reset";
+  hud.append(stuckEl);
+  let resetQ = 0;
   stage.append(canvas, play, hud);
   if (ctx.attract) hud.hidden = true;
   const snd = sound(engine, {
@@ -131,8 +138,8 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     volume: 0.1,
     on: ctx.sound && !ctx.attract,
   });
-  const c = controls(engine, { keys: { left: [], right: [], fwd: [], back: [], gas: [], brake: [], hop: [] }, target: play });
-  const GAS = c.id("gas"), BRAKE = c.id("brake"), HOPK = c.id("hop");
+  const c = controls(engine, { keys: { left: [], right: [], fwd: [], back: [], gas: [], brake: [], hop: [], reset: [] }, target: play });
+  const GAS = c.id("gas"), BRAKE = c.id("brake"), HOPK = c.id("hop"), RESETK = c.id("reset");
   const ICON_GAS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z" fill="currentColor"/></svg>';
   const ICON_BRAKE = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
   const ICON_HOP = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 5 12h4v6h6v-6h4z" fill="currentColor"/></svg>';
@@ -665,6 +672,10 @@ export function mountCity(ctx: ModeCtx): ModeRun {
         say(what);
       } else if (type === E_RESPAWN) {
         engine.events.emit("respawn");
+      } else if (type === E_STUCK) stuckEl.hidden = !val;
+      else if (type === E_RESET) {
+        stuckEl.hidden = true;
+        toast(val === 2 ? "UNSTUCK · BACK ON THE STREET" : "RESET", "go");
       } else if (type === E_GRUMP) {
         engine.events.emit("grump");
         const c2 = canvas.getContext("2d")!;
@@ -1018,7 +1029,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
 
   // ---- the loop ----
   // The gamepad (../../bike/kit.ts): [stick x, stick y, gas, brake, trick (our hop), start].
-  const GP = new Float64Array(6);
+  const GP = new Float64Array(7);
   engine.add({
     read() {
       if (V[1]) {
@@ -1056,7 +1067,9 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       }
       if (paused || ended) I[0] = I[1] = I[2] = I[3] = I[4] = 0;
       const ph = S[0]!;
-      let moving = run.step(dt, I[0]!, I[1]!, I[2]!, I[3]!, I[4]!);
+      const again = !auto && !paused && !ended && (resetQ === 1 || c.hit(RESETK) || GP[6]! > 0.5);
+      resetQ = 0;
+      let moving = run.step(dt, I[0]!, I[1]!, I[2]!, I[3]!, I[4]!, !auto && !paused && !ended, again);
       if (ph === RUN || ph === CRASH) m.tick(bike.b, dt);
       if (TF[0]) moving = true;
       if (run.n) events(), (moving = true);
@@ -1090,7 +1103,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   });
 
   // ---- input: keys on the stage, hold-to-gas on the play surface, the stickers ----
-  const MAP: Record<string, string> = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowUp: "fwd", KeyW: "fwd", ArrowDown: "back", KeyS: "back", Space: "gas", KeyJ: "gas", KeyK: "brake", ShiftLeft: "brake", ShiftRight: "brake", KeyL: "hop" };
+  const MAP: Record<string, string> = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowUp: "fwd", KeyW: "fwd", ArrowDown: "back", KeyS: "back", Space: "gas", KeyJ: "gas", KeyK: "brake", ShiftLeft: "brake", ShiftRight: "brake", KeyL: "hop", KeyR: "reset" };
   const wake = () => vox.wake(SPEC.power);
   stage.addEventListener("pointerdown", wake, sig);
   const src = (e: Event) => (e.composedPath?.()[0] ?? e.target) as Element | null;
@@ -1127,6 +1140,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   muteK.addEventListener("click", toggle, sig);
   viewK.addEventListener("click", () => setView(view ? 0 : 1), sig);
   keysEl.querySelector(".wc-menu")!.addEventListener("click", () => ctx.menu(), sig);
+  keysEl.querySelector(".wc-reset")!.addEventListener("click", () => ((resetQ = 1), (auto = false), engine.wake()), sig);
   thePad.el.addEventListener("pointerdown", () => ((auto = false), engine.wake()), sig);
 
   run.reset(0, startHood);

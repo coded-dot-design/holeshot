@@ -106,3 +106,41 @@ test("big air unstuck: wedged → the prompt → back to the run-in of the jump;
   I[5] = 0;
   assert.ok(ev2.some((e) => e[0] === A.E_RESET && e[1] === 1), "R resets");
 });
+
+const Wc = await import("../src/modes/wheelie/city.ts");
+
+test("wheelie city unstuck: wedged → the prompt → back to the last good spot on the street; R too", () => {
+  const run = Wc.cityRun(), I = new Float64Array(5), b = () => run.bike.b;
+  let hold = false;
+  const go = (n, person, pin = null, again = false) => {
+    const seen = [];
+    for (let i = 0; i < n; i++) {
+      if (!pin && !hold) run.autopilot(I);
+      run.step(1 / 60, I[0], I[1], I[2], I[3], I[4], person, again && i === 0);
+      for (let k = 0; k < run.n; k++) seen.push([run.ev[k * 2], run.ev[k * 2 + 1], i]);
+      run.clear();
+      // The trap holds it until the reset.
+      if (seen.some((e) => e[0] === Wc.E_RESET)) pin = null;
+      if (pin) (b().pos[0] = pin[0]), (b().pos[2] = pin[1]), (b().S[5] = 0);
+    }
+    return seen;
+  };
+  go(60 * 12, true);
+  for (let i = 0; i < 600 && (b().crashed || run.bike.air || run.S[Wc.S_FLY]); i++) go(1, true);
+  const pin = [b().pos[0], b().pos[2]];
+  I.fill(0); I[0] = 0.5; I[2] = 1;
+  hold = true;
+  const ev = go(60 * 5, true, pin);
+  hold = false;
+  const prompt = ev.find((e) => e[0] === Wc.E_STUCK && e[1] === 1), reset = ev.find((e) => e[0] === Wc.E_RESET);
+  assert.ok(prompt && reset && reset[1] === 2, "the prompt, then the automatic reset");
+  assert.ok(prompt[2] / 60 >= 1.9 && reset[2] / 60 >= 3.9 && reset[2] / 60 < 4.6, `prompt ${(prompt[2] / 60).toFixed(2)} s, reset ${(reset[2] / 60).toFixed(2)} s`);
+  const x = b().pos[0], z = b().pos[2];
+  assert.ok(Math.hypot(x - pin[0], z - pin[1]) >= 2, "never back into the trap");
+  assert.ok(Wc.streetClear(x, z, 0.4), "on the street, clear");
+  assert.ok(!b().crashed && Math.abs(b().rel) < 0.05, "upright");
+  go(60 * 3, true);
+  for (let i = 0; i < 600 && (b().crashed || run.bike.air || run.S[Wc.S_FLY]); i++) go(1, true);
+  const ev2 = go(1, true, null, true);
+  assert.ok(ev2.some((e) => e[0] === Wc.E_RESET && e[1] === 1), "R resets");
+});
