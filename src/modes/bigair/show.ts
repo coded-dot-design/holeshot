@@ -143,7 +143,9 @@ export function airShow(seed = 20261120, me: { power: Power; shape?: BikeShape }
   const t = arena();
   const freestyle = (p: Power): Power => ({ ...p, airPitch: AIR_PITCH * (p.gyr < 0.6 ? 1.12 : 1) });
   // Lighter gravity: the landings come in slower, so the case line scales with it.
-  const b: Bike = bike(t, freestyle(me.power), { ...me.shape, caseDrop: (me.shape?.caseDrop ?? 26) * Math.sqrt(GRAVITY / 20), gravity: GRAVITY });
+  // Walking the bike (../../bike/bike.ts `walk`): anywhere on the arena but off its edge.
+  const walkable = (p: Float64Array) => Math.abs(p[0]!) < HX - 0.6 && Math.abs(p[1]!) < HZ - 0.6;
+  const b: Bike = bike(t, freestyle(me.power), { ...me.shape, caseDrop: (me.shape?.caseDrop ?? 26) * Math.sqrt(GRAVITY / 20), gravity: GRAVITY, walk: walkable });
   const sc = tricks();
   // S: phase, clock (left), started, near index, trick id (−1 none), trick amount, last pitch, autopilot jump count, air flag, crash time.
   const S = new Float64Array(12);

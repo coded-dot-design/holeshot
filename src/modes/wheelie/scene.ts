@@ -13,6 +13,7 @@
 // Bricks: the kernel, diorama, drive (`chase`), input, pad, sound. The town and the session are
 // ./city.ts (the layouts ./hoods.ts, the patrol ./cops.ts), the scorer ./tricks.ts, all headless; the
 // ride is ./ride.ts on the shared bike.
+import { walkUi } from "../../bike/walk-ui.ts";
 import { createEngine, seeded } from "@fzlt/core/kernel";
 import { diorama, type DioramaObject, type DioramaObjectDef, type DioramaPoints } from "@fzlt/core/diorama";
 import { chase } from "@fzlt/core/drive";
@@ -160,6 +161,8 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   });
   thePad.el.classList.add("wc-pad");
   const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal });
+  // Walking the bike: the WALK chip, and on a touch screen the one-time "stick back" hint.
+  const coarse = matchMedia("(pointer: coarse)"), walkHud = walkUi(hud, () => coarse.matches && !ctx.attract);
   if (ctx.attract) thePad.el.hidden = true;
   // The motor's whine (../../bike/kit.ts): nothing is made until a gesture.
   const vox = voice();
@@ -767,6 +770,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     // seated on the e-bike and the mini, up in the attack position on the dirt bike.
     rigs[0]!.T[8] = DRAGA[0]!;
     rigs[0]!.pose(d, ctx.bike.cls === "ebike" ? 0.3 : 0.7);
+    walkHud.update(d);
     // The dog: along its fence; a hop when it barks.
     dog.pos[0] = run.DG[0]!;
     dog.pos[1] = CURB + (run.DG[2]! > 0 ? Math.abs(Math.sin(run.DG[2]! * 10)) * 0.12 : 0);

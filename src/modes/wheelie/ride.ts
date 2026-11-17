@@ -46,9 +46,10 @@ export const RIDES: RideSpec[] = [
 ];
 
 /** The rides on `ground` (one bike each, made once); `use` picks one, `step` drives it. */
-export function ride(ground: BikeGround, specs: RideSpec[] = RIDES) {
+export function ride(ground: BikeGround, specs: RideSpec[] = RIDES, walk?: (at: Float64Array) => boolean) {
   // (Past 12 o'clock, to about 1: the city's bikes loop out at LOOP_AT, not at the balance point's margin.)
-  const all: Bike[] = specs.map((r) => bike(ground, r.power, { ...r.shape, loop: LOOP_AT }));
+  // `walk`: where the rider may walk the bike (../../bike/bike.ts); left out, it never walks.
+  const all: Bike[] = specs.map((r) => bike(ground, r.power, { ...r.shape, loop: LOOP_AT, walk }));
   let k = all[0]!, sp = specs[0]!;
   // R: hop timer, the speed into the last wall, seconds sat still (in a typed array: a snapshot).
   const vel = new Float64Array(3), R = new Float64Array(3);

@@ -35,7 +35,9 @@ export function freeRun(track: Track | RideMap | (Track & EndlessTrack), me: { p
   if (Wd) Wd.follow(0, 0);
   const t = ground ?? (Wd ? Wd.t : map ? map.terrain : track.course());
   const SP = map ? map.SPAWN : null, POSTS = map ? map.POSTS : null, NP = map ? map.NP : 0, HALF = map ? map.def.width / 2 : 0;
-  const b: Bike = bike(t, me.power, me.shape);
+  // Walking the bike (../../bike/bike.ts `walk`): never into a post, a cactus, or off the table's edge.
+  const walkable = (p: Float64Array) => !anyPost(p[0]!, p[1]!, 0.3) && (Wd !== null || (Math.abs(p[0]!) < HX - 0.6 && Math.abs(p[1]!) < HZ - 0.6));
+  const b: Bike = bike(t, me.power, { ...me.shape, walk: walkable });
   const riders = [b];
   // S: phase, clock, started, near index, fall x, fall z, fall yaw, off the table, tricks, flips,
   // seconds still since the end.

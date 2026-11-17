@@ -30,6 +30,7 @@ import { mapLook, type MapLine } from "../freeride/scenery.ts";
 import { meter } from "../meter.ts";
 import type { ModeCtx, ModeRun } from "../mode.ts";
 import type { Ride } from "../../online/match.ts";
+import { walkUi } from "../../bike/walk-ui.ts";
 import type { RigHelmet, RigKind } from "../../bike/rig.ts";
 
 /** An online ride on this screen (../../online/match.ts steps the sim; the scene draws it, reads this
@@ -163,6 +164,8 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   });
   thePad.el.classList.add("mt-pad");
   const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal });
+  // Walking the bike: the WALK chip, and on a touch screen the one-time "stick back" hint.
+  const coarse = matchMedia("(pointer: coarse)"), walkHud = walkUi(hud, () => coarse.matches && !ctx.attract);
   if (ctx.attract) thePad.el.hidden = true;
   const paintMute = () => (muteK.textContent = snd.on ? "♪" : "×", muteK.setAttribute("aria-pressed", "" + snd.on));
   paintMute();
@@ -321,6 +324,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       const x = b.pos[0]!, z = b.pos[2]!, inside = Math.abs(x) < HX && Math.abs(z) < HZ, lift = inside ? b.pos[1]! - t.height(x, z) : 9;
       tv.shadow(r, x, z, 0.95, inside ? Math.max(0, 0.36 - lift * 0.09) : 0);
     }
+    walkHud.update(me);
     const drop = free ? 1 : Math.min(1, gateT / 0.28);
     for (const g of gateBars) g.rot[2] = -1.5 * drop * drop;
   }

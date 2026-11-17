@@ -8,6 +8,7 @@
 // bail. At the end five judges score the run, and the judges pay.
 // Bricks: the kernel, diorama, terrain, drive (`chase`), input, pad, sound. The run is ./show.ts and
 // the scorer ./tricks.ts, both headless.
+import { walkUi } from "../../bike/walk-ui.ts";
 import { createEngine, seeded } from "@fzlt/core/kernel";
 import { diorama } from "@fzlt/core/diorama";
 import { terrainView, type TerrainView } from "@fzlt/core/terrain";
@@ -97,6 +98,8 @@ export function mountAir(ctx: ModeCtx): ModeRun {
   });
   thePad.el.classList.add("ba-pad");
   const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal });
+  // Walking the bike: the WALK chip, and on a touch screen the one-time "stick back" hint.
+  const coarse = matchMedia("(pointer: coarse)"), walkHud = walkUi(hud, () => coarse.matches && !ctx.attract);
   if (ctx.attract) thePad.el.hidden = true;
   const paintMute = () => (muteK.textContent = snd.on ? "♪" : "×", muteK.setAttribute("aria-pressed", "" + snd.on));
   paintMute();
@@ -205,6 +208,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
     else if (id === 2) (T[2] = a), (T[1] = 0.25 * a), (T[4] = 0.45 * a);
     else if (id === 3) (T[7] = a), (T[4] = 0.15 * a);
     g.pose(me, me.air > 0 || Math.abs(me.speed) > 4 ? 0.9 : 0.4);
+    walkHud.update(me);
     const x = me.pos[0]!, z = me.pos[2]!, inside = Math.abs(x) < HX && Math.abs(z) < HZ, lift = inside ? me.pos[1]! - t.height(x, z) : 9;
     tv.shadow(0, x, z, 1.0, inside ? Math.max(0, 0.38 - lift * 0.06) : 0);
   }

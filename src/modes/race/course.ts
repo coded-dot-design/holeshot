@@ -354,7 +354,9 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
   const mine = (r: number) => (r ? opts.bikes?.[r] : me) ?? me;
   const POWERS: Power[] = [];
   for (let r = 0; r < RIDERS; r++) POWERS.push(r < H ? mine(r).power : rivals[r - H] ?? DEF[(r - H) % 3]!);
-  for (let r = 0; r < RIDERS; r++) riders.push(bike(t, POWERS[r]!, r < H ? mine(r).shape : {}));
+  // People can walk the bike (../../bike/bike.ts `walk`), never off the table's edge; rivals ride.
+  const walkable = (p: Float64Array) => Math.abs(p[0]!) < HX - 0.6 && Math.abs(p[1]!) < HZ - 0.6;
+  for (let r = 0; r < RIDERS; r++) riders.push(bike(t, POWERS[r]!, r < H ? { ...mine(r).shape, walk: walkable } : {}));
   // Per rider: near index, laps, progress (laps × LAP + s), lane, nerve (speed share), finish time,
   // crashes, place, last pitch (for the autopilot), respawn, best lap, lap start, finished.
   const R = new Float64Array(RIDERS * 16);

@@ -19,6 +19,15 @@ const flat = { sample(x, z, o) { o[0] = 0; o[1] = 0; o[2] = 1; o[3] = 0; return 
 const t = tune(newBike("buzzline", "b1"));
 const measure = async (work) => (work(), work(), minorGCs(work, 5));
 
+test("alloc: one bike walked about (stopped, the lean held: the push, the probe), 6,000 steps", async () => {
+  const b = B.bike(flat, t.power, { ...t.shape, walk: (p) => p[0] * p[0] + p[1] * p[1] < 400 });
+  const n = await measure(() => {
+    b.reset(0, 0, 0);
+    for (let i = 0; i < 6000; i++) (b.set(i % 600 > 500 ? 1 : 0, 0, i % 200 < 100 ? 1 : -1, Math.sin(i * 0.02)), b.step(1 / 60), b.clear());
+  });
+  assert.ok(n <= 1, `${n} young-generation GCs`);
+});
+
 test("alloc: one bike, 6,000 steps", async () => {
   const b = B.bike(flat, t.power, t.shape);
   const n = await measure(() => {

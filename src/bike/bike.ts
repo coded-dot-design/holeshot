@@ -119,9 +119,20 @@ export interface BikeShape {
   /** Loops out past this pitch off the ground (radians, absolute); default: the balance point + 0.62.
    *  Wheelie City sets it past vertical (the hand drag lives between 12 and 1 o'clock). */
   loop?: number;
+  /** Walk the bike (the modes where it roams): stopped, no gas, the lean held (forward or back), the
+   *  rider puts a foot down and pushes it at WALK_V that way, the steer turning the push. The
+   *  function says whether the centre of mass may stand at (at[0], at[1]) (an array, not two numbers:
+   *  doubles passed through a call are boxed) (the mode's posts, walls and table
+   *  edge: a push never goes through them). Left out, the bike never walks. */
+  walk?: (at: Float64Array) => boolean;
 }
 
-/** Bytes in a bike's `state`: 140 doubles, then 7 bytes (rounded up to 8). */
+/** Walking the bike: the push speed (units/s), the speed it starts under, the lean that asks for it,
+ *  the seconds the lean is held first (a lean set up before the gas never walks), the steepest
+ *  slope it pushes up (radians). */
+export const WALK_V = 1.25, WALK_START = 1.5, WALK_LEAN = 0.5, WALK_HOLD = 0.15, WALK_SLOPE = 0.42, WALK_PUSH = 10;
+
+/** Bytes in a bike's `state`: 140 doubles, then 8 bytes. */
 export const STATE_BYTES = 140 * 8 + 8;
 
 /** Events. */
@@ -166,9 +177,13 @@ class Ride {
   _n: Uint8Array;
   /** @internal The engine. */
   _pw: Power;
-  constructor(S: Float64Array, F: Uint8Array, input: Float64Array, ev: Float64Array, n: Uint8Array, pw: Power) {
-    this.S = S; this._f = F; this.input = input; this.ev = ev; this._n = n; this._pw = pw;
+  /** @internal Walking the bike: [0] 1 while the rider pushes it; the lean held (seconds) is MK[13]. */
+  _w: Uint8Array;
+  constructor(S: Float64Array, F: Uint8Array, input: Float64Array, ev: Float64Array, n: Uint8Array, pw: Power, w: Uint8Array) {
+    this.S = S; this._f = F; this.input = input; this.ev = ev; this._n = n; this._pw = pw; this._w = w;
   }
+  /** The rider is off the pegs, a foot down, walking the bike (`speed` is the push, + forward). */
+  get walking() { return this._w[0] === 1; }
   /** Set the inputs (the same as writing `input`). */
   set(gas: number, brake: number, lean: number, steer: number, trick = 0) {
     const i = this.input;
@@ -225,7 +240,7 @@ class Ride {
  *  fixed step, draw from `pos`, `rot`, `wheel`, `comp`, `spin`, `rider`. */
 export function bike(ground: BikeGround, power: Power, shape: BikeShape = {}) {
   const AR = shape.rear ?? -0.66, AF = shape.front ?? 0.84, AH = shape.drop ?? 0.42, R = shape.radius ?? 0.34, TRAV = shape.travel ?? 0.3, SAG = shape.sag ?? 0.09;
-  const LOOPAT = shape.loop ?? 0, DAMP = shape.damp ?? 0.62, CD = shape.caseDrop ?? 26, SH = shape.shift ?? 0.17, g = shape.gravity ?? 20, sub = shape.substeps ?? 4, BASE = AF - AR;
+  const WALKOK = shape.walk ?? null, LOOPAT = shape.loop ?? 0, DAMP = shape.damp ?? 0.62, CD = shape.caseDrop ?? 26, SH = shape.shift ?? 0.17, g = shape.gravity ?? 20, sub = shape.substeps ?? 4, BASE = AF - AR;
   // The chassis numbers the engine sets (mass, pitch inertia, spring rate, damping) and the engine's own (in a
   // typed array: doubles in closure variables that change are boxed).
   let pw = power;
@@ -261,7 +276,9 @@ export function bike(ground: BikeGround, power: Power, shape: BikeShape = {}) {
   // sin pitch, cos pitch, Ff, Fu, torque, contacts, slip, rear load, ground under the CoM, its normal
   // x, z, atan in ×3, atan out ×3].
   const X = f64(30);
-  const F = u8(4), contact = u8(2), NV = u8(1); // F: crashed, in the air, at rest, wheelie on
+  // WP: the walk's probe (scratch, outside the state).
+  const WP = new Float64Array(2);
+  const F = u8(4), contact = u8(2), NV = u8(1), WK = u8(1); // F: crashed, in the air, at rest, wheelie on; WK: walking
   const state = new Uint8Array(BUF);
   const XH = 0, XG = 1, XB = 2, XL = 3, XS = 4, XT = 5, SYW = 6, CYW = 7, SP = 8, CP = 9, QX = 28, QZ = 29, FF = 10, FU = 11, TQX = 12, NC = 13, SL = 14, NR = 15, GY = 16, GNX = 17, GNZ = 18, AI = 19, AO = 22;
   /** The inputs (clamped), the throttle and the weight eased, the heading's and pitch's sines. */
@@ -357,8 +374,20 @@ export function bike(ground: BikeGround, power: Power, shape: BikeShape = {}) {
 
   /** One substep of X[XH] seconds on the ground or in the air. */
   function sub1() {
-    const h = X[XH]!;
+    const h = X[XH]!, lean0 = S[LEAN]!;
     inputs();
+    // Walking the bike: on the ground, about level with it, stopped (or already walking), no gas, no
+    // brake, the lean held WALK_HOLD seconds. The push replaces the ride's speed below; the weight stays central.
+    let walk = 0;
+    if (WALKOK) {
+      const li = X[XL]!, al = li < 0 ? -li : li, v0 = S[VF]!, av0 = v0 < 0 ? -v0 : v0, r0 = S[P]! - S[SLOPE]!;
+      const can = !F[0] && !F[1] && (contact[0] || contact[1]) && X[XG]! === 0 && X[XB]! < 0.5 && al > WALK_LEAN && (r0 < 0 ? -r0 : r0) < 0.35 && av0 < (WK[0] ? WALK_START + 1 : WALK_START);
+      MK[13] = can ? MK[13]! + h : 0;
+      walk = can && MK[13]! >= WALK_HOLD ? (li > 0 ? -1 : 1) : 0;
+      // Let go while walking (no gas): the feet stop it (WK 2 until it is still).
+      WK[0] = walk ? 1 : WK[0] && !F[0] && X[XG]! === 0 && av0 > 0.05 ? 2 : 0;
+      if (walk) S[LEAN] = lean0 + (0 - lean0) * Math.min(1, 9 * h);
+    }
     const gas = X[XG]!, br = X[XB]!, stIn = X[XS]!, tk = X[XT]!, thr = S[THR]!, lean = S[LEAN]!, yaw = S[YAW]!, cy = X[CYW]!, sy = X[SYW]!, fx = cy, fz = -sy, th = S[P]!;
     let x = pos[0]!, y = pos[1]!, z = pos[2]!, vf = S[VF]!, vy = S[VY]!, w = S[W]!;
     const gears = pw.gears, ng = gears.length, avf = vf < 0 ? -vf : vf;
@@ -415,6 +444,19 @@ export function bike(ground: BikeGround, power: Power, shape: BikeShape = {}) {
     S[STEER] = delta;
     const lr = nc ? X[AO + 1]! : S[ROLL]! * (1 - 0.8 * h), lroll = lr < -0.85 ? -0.85 : lr > 0.85 ? 0.85 : lr;
     S[ROLL] = S[ROLL]! + (lroll - S[ROLL]!) * Math.min(1, 8 * h);
+    if (walk) {
+      // The push: toward walk × WALK_V, slower up a slope (nose up is uphill going forward), none past
+      // WALK_SLOPE (the feet hold it there); never into what the mode says it cannot stand in.
+      const up = walk * slope, k = up <= 0 ? 1 : up >= WALK_SLOPE ? 0 : 1 - up / WALK_SLOPE, want = walk * WALK_V * k;
+      const dv = want - vf, most = WALK_PUSH * h;
+      vf += dv > most ? most : dv < -most ? -most : dv;
+      // (Probed a step ahead the way it is pushed: walking away from what it stands by is always free.)
+      WP[0] = x + fx * walk * 0.35; WP[1] = z + fz * walk * 0.35;
+      if (!WALKOK!(WP)) vf = 0;
+    } else if (WK[0] === 2) {
+      const dv = -vf, most = WALK_PUSH * h;
+      vf += dv > most ? most : dv < -most ? -most : dv;
+    }
     x += fx * vf * h; z += fz * vf * h; y += vy * h;
     let th2 = th + w * h;
     const ny = yaw + yr * h;
@@ -465,7 +507,7 @@ export function bike(ground: BikeGround, power: Power, shape: BikeShape = {}) {
     const dz = slip * 0.9 + (avn / 16) * 0.45 + thr * 0.25;
     S[DUST] = contact[0] ? (dz > 1 ? 1 : dz) : 0;
     // At rest: still on both wheels, no gas: nothing moves (the engine settles).
-    const still = nc === 2 && gas === 0 && avn < 0.06 && !F[0];
+    const still = !walk && nc === 2 && gas === 0 && avn < 0.06 && !F[0];
     if (still) (vf = 0), (x = pos[0]!), (z = pos[2]!), (S[YR] = 0);
     F[2] = still && (vy < 0 ? -vy : vy) < 0.01 && (w < 0 ? -w : w) < 0.06 && S[RPM]! < 0.002 ? 1 : 0;
     if (F[2]) (vy = 0), (w = 0), (y = pos[1]!), (th2 = th);
@@ -553,7 +595,7 @@ export function bike(ground: BikeGround, power: Power, shape: BikeShape = {}) {
 
   /** Put it down at (x, z) facing `yaw`: on its wheels at sag, level with the ground, still, idle. */
   function reset(x: number, z: number, yaw = 0, speed = 0) {
-    S.fill(0); F.fill(0); TV.fill(0); RV.fill(0); spin.fill(0); input.fill(0);
+    S.fill(0); F.fill(0); WK[0] = 0; MK[13] = 0; TV.fill(0); RV.fill(0); spin.fill(0); input.fill(0);
     NV[0] = 0;
     S[YAW] = yaw;
     const fx = cos(yaw), fz = -sin(yaw);
@@ -579,7 +621,7 @@ export function bike(ground: BikeGround, power: Power, shape: BikeShape = {}) {
   }
   reset(0, 0, 0);
 
-  const ride = new Ride(S, F, input, ev, NV, pw);
+  const ride = new Ride(S, F, input, ev, NV, pw, WK);
   return Object.assign(ride, {
     step,
     reset,

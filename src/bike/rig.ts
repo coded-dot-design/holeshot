@@ -198,6 +198,8 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
 
   /** The hand drag now: how far (0..1), the road's direction in the bike's frame (x, y). */
   const DG = new Float64Array(3);
+  /** Walking the bike: on (0/1), the stride's phase, the ground's height in the rider's frame. */
+  const WALKP = new Float64Array(3);
   /** The trick pose (see TRICK_POSE), written by the game. */
   const T = new Float64Array(TRICK_POSE);
   let thrown = false;
@@ -229,6 +231,15 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
     if (thrown) (thrown = false), d.on(rider, id);
     rider.pos[0] = rider.pos[1] = rider.pos[2] = 0;
     rider.rot[0] = T[5]!; rider.rot[1] = rider.rot[2] = 0;
+    if (b.walking) {
+      // Walking it: off the seat and astride it, both boots on the ground beside it, striding with the
+      // rear wheel's roll (one foot planted, the other swinging), hands on the grips.
+      rider.pos[1] = -0.14;
+      WALKP[0] = 1; WALKP[1] = b.spin[0]! * 1.6; WALKP[2] = -b.drop - b.radius + b.comp[0]! + 0.14 + 0.04;
+      limbs(0, 0, 0, 0, 0.32, 0, 0, 0, false, 0);
+      WALKP[0] = 0;
+      return;
+    }
     // The hand drag: the road is "down" in the bike's frame (x forward, y up, pitched by rel).
     DG[0] = T[8]!; DG[1] = -Math.sin(b.pitch); DG[2] = -Math.cos(b.pitch);
     limbs(b.lean, stand, T[0]!, T[1]!, T[2]!, T[3]! + 0.5 * T[8]!, T[6]!, T[7]!, false, T[4]!);
@@ -246,7 +257,12 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
     for (let s = 0; s < 2; s++) {
       const side = s ? 1 : -1;
       // Legs: hip to peg (knee forward); feet off, the foot goes back and out (a plank, a split).
-      const px = PEG[0]! - feet * 0.85 + tuck * 0.35 + (loose ? 0.1 * side : 0), py = PEG[1]! + feet * 0.42 + tuck * 0.45 + (loose ? -0.2 : 0);
+      let px = PEG[0]! - feet * 0.85 + tuck * 0.35 + (loose ? 0.1 * side : 0), py = PEG[1]! + feet * 0.42 + tuck * 0.45 + (loose ? -0.2 : 0);
+      if (WALKP[0]) {
+        // A stride: the boots out of phase, forward and back of the hip, the swinging one lifted.
+        const ph = Math.sin(WALKP[1]! + side * PI / 2);
+        px = hx + 0.06 + ph * 0.2; py = WALKP[2]! + Math.max(0, Math.cos(WALKP[1]! + side * PI / 2)) * 0.07;
+      }
       ik(hx, hy, px, py, THIGH, SHIN, 1);
       const lz = side * (0.15 + spread * 0.55 + (loose ? 0.15 : 0));
       thigh[s]!.pos[0] = hx; thigh[s]!.pos[1] = hy; thigh[s]!.pos[2] = side * 0.15 + (lz - side * 0.15) * 0.5; thigh[s]!.rot[2] = J[0]!;

@@ -240,11 +240,11 @@ export function town(endless = false, seed = CITY_SEED) {
   };
   /** A spot a reset can use: on the street (road, drive, walk, plaza, boardwalk; never a lawn, sand or
    *  the water), inside its hood's fence, r clear of anything solid. */
-  function streetClear(x: number, z: number, r: number) {
+  function streetClear(x: number, z: number, r: number, solidOnly = false) {
     const h = locate(x, z), lx = x - LOC[1]!, lz = z - LOC[2]!;
     if ((lx < 0 ? -lx : lx) > HX - 0.5 - r || (lz < 0 ? -lz : lz) > HZ - 0.5 - r) return false;
     const k = kindAt(x, z);
-    if (k === K_LAWN || k === K_WATER || k === K_SAND) return false;
+    if (k === K_WATER || (!solidOnly && (k === K_LAWN || k === K_SAND))) return false;
     const B = SOL[h]!, C = PO[h]!;
     for (let o = 0; o < B.length; o += 4) if (lx > B[o]! - r - R_BIKE && lx < B[o + 2]! + r + R_BIKE && lz > B[o + 1]! - r - R_BIKE && lz < B[o + 3]! + r + R_BIKE) return false;
     for (let o = 0; o < C.length; o += 4) {
@@ -271,7 +271,8 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
   // slot it is in: HC, x and z per kind, which the patrol paths by too; OFF: each kind's move from
   // its place on the fixed table, for the world lists: neighbours, sprinklers, crosswalks, the dog).
   const T = endless ? town(true, citySeed) : FIXED, HC = endless ? Float64Array.from(FIXED_C) : FIXED_C, OFF = new Float64Array(8);
-  const bike = ride(T.ground, specs), sc = tricks(), cop = cops(seed, HC);
+  // Walking the bike: anywhere a bike can be but the water, never into a wall, a house, a post (the fence).
+  const bike = ride(T.ground, specs, (p: Float64Array) => T.streetClear(p[0]!, p[1]!, 0.05, true)), sc = tricks(), cop = cops(seed, HC);
   // Unstuck (a person riding): the ring of good spots on the street, the watch; US[0]: the prompt is up.
   const U = unstuck(T.ground, T.streetClear), US = new Float64Array(1);
   // Endless: the slot ridden, the start's x, the furthest along +x from it (the distance).
