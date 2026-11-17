@@ -14,7 +14,7 @@
 // hood's escape hump (the poster, the tests). Deterministic and seeded (../../math.ts, never the builtin
 // transcendentals); zero allocation per step.
 import { hypot } from "@fzlt/core/steer";
-import { ride, RIDES, type RideSpec } from "./ride.ts";
+import { ride, RIDES, TWELVE, type RideSpec } from "./ride.ts";
 import { B_CRASH, B_STOPPIE } from "../../bike/bike.ts";
 import { cos, sin } from "../../math.ts";
 import { unstuck, U_AUTO, U_PROMPT } from "../unstuck.ts";
@@ -32,7 +32,12 @@ export const READY = 0, RUN = 1, CRASH = 2, DONE = 3;
 export const E_START = 1, E_TRICK = 2, E_CRASH = 3, E_RESPAWN = 4, E_GRUMP = 5, E_BARK = 6, E_SPLASH = 7, E_BONUS = 8, E_END = 9, E_HOP = 10, E_AIR = 11,
   E_JUMP = 12, E_LAND = 13, E_TICKET = 14, E_ESCAPE = 15, E_STARS = 16, E_UNIT = 17, E_CLEAR = 18,
   /** Unstuck: the prompt (1 up, 0 down); a reset to the last good spot on the street (1 asked for, 2 automatic). */
-  E_STUCK = 19, E_RESET = 20;
+  E_STUCK = 19, E_RESET = 20,
+  /** The hand drag: it starts (value 1); banked (its points) when the nose comes back under 12; lost (the points it had) on a loop-out. */
+  E_DRAG = 21, E_BANKED = 22, E_LOST = 23;
+/** The hand drag: hold the nose past 12 o'clock HAND_T seconds and the rider drops a hand to the road;
+ *  while it drags it earns DRAG_RATE a second ×DRAG_X (× the combo), plus STREAK × seconds² when banked. */
+export const HAND_T = 1.5, DRAG_RATE = 40, DRAG_X = 10, STREAK = 120;
 const TAU = 6.283185307179586, CRASH_T = 1.8, R_BIKE = 0.45, BONK_V = 5;
 /** Over a hump: the least speed along it that flies, the flight's time, how far past the far lip it lands, the pitch it is held to. */
 export const FLY_V = 5, FLY_T = 1, LAND_AT = 2.4, FLY_PITCH = -0.08;
@@ -288,11 +293,16 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
   let n = 0;
   // Neighbours: timer (out while > 0), cooldown, line. Sprinklers: cooldown. Dog: x, bark timer, cooldown, hop.
   const NB = new Float64Array(NN * 3), SPC = new Float64Array(NSP), DG = new Float64Array(4);
+  /** The hand drag: seconds past 12 (charging), dragging (0/1), points pending (at risk), seconds dragging. */
+  const HD = new Float64Array(4);
   function emit(type: number, v: number) {
     if (n < 24) (ev[n * 2] = type), (ev[n * 2 + 1] = v), n++;
   }
   function crashed(why: number) {
     if (S[PH] !== RUN) return;
+    // A loop-out (any crash) mid-drag: the drag's points are lost.
+    if (HD[1] || HD[2]! > 0) emit(E_LOST, Math.round(HD[2]!));
+    HD.fill(0);
     S[PH] = CRASH; S[CT] = CRASH_T; S[WHY] = why;
     sc.drop();
     emit(E_CRASH, why);
@@ -302,7 +312,7 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
     S[CLOCK] = SESSION; S[RIDE] = which; S[HOOD] = hood; S[LEG] = START_LEG[hood]!; S[DIR] = 1; S[VISITED] = 1 << hood;
     sc.reset();
     cop.reset(seed);
-    NB.fill(0); SPC.fill(0); DG.fill(0);
+    NB.fill(0); SPC.fill(0); DG.fill(0); HD.fill(0);
     U.clear(); US[0] = 0;
     DG[0] = (DOG[0]! + DOG[1]!) / 2;
     n = 0;
@@ -433,6 +443,7 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
       if ((S[FLYT]! > 0.25 && !bike.air) || b.crashed || S[FLYT]! > 3) landed();
     } else if ((S[PH] === RUN || ph === READY) && !b.crashed) humps();
     const x = b.pos[0]!, z = b.pos[2]!, speed = b.speed < 0 ? -b.speed : b.speed;
+    if (S[PH] === RUN && !fly) drag(dt);
     if (endless && S[PH] !== READY && x - ES[1]! > ES[2]!) ES[2] = x - ES[1]!;
     if (S[PH] === RUN) {
       if (!endless) S[CLOCK] = Math.max(0, S[CLOCK]! - dt);
@@ -487,6 +498,26 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
     }
     cop.clear();
     return moving || S[PH] === RUN;
+  }
+  /** The hand drag: past 12 o'clock on the rear wheel, held HAND_T s, the hand goes down; back under
+   *  12, it banks (points, the streak bonus). */
+  function drag(dt: number) {
+    const b = bike.b, past = !bike.air && b.contact[0] === 1 && b.contact[1] === 0 && bike.nose > TWELVE;
+    if (past) {
+      HD[0] = HD[0]! + dt;
+      if (!HD[1] && HD[0]! >= HAND_T) (HD[1] = 1), (HD[3] = 0), emit(E_DRAG, 1);
+      if (HD[1]) (HD[3] = HD[3]! + dt), (HD[2] = HD[2]! + DRAG_RATE * DRAG_X * (1 + sc.S[T_CB]!) * dt);
+      return;
+    }
+    if (HD[1]) {
+      const pts = Math.round(HD[2]! + STREAK * HD[3]! * HD[3]!);
+      sc.S[SC] = sc.S[SC]! + pts;
+      sc.S[T_CB] = Math.min(MAXCB, sc.S[T_CB]! + 1);
+      sc.S[T_GAP] = 0;
+      cop.banked(pts);
+      emit(E_BANKED, pts);
+    }
+    HD.fill(0);
   }
   /** A trick banked: its event, its heat, its points at risk while the heat is on. */
   function bankedNow(type: number) {
@@ -653,12 +684,12 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
   // Every number the session keeps, as bytes (rollback, a desync hash): the session, the neighbours,
   // the sprinklers, the dog, the scorer, the patrol, the ride adapter and the bike ridden.
   const u8 = (a: Float64Array | Uint32Array) => new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
-  const bytes = [u8(S), u8(NB), u8(SPC), u8(DG), u8(sc.S), u8(cop.S), u8(cop.P), u8(cop.R), u8(bike.R), u8(bike.vel), u8(U.S), u8(U.R), u8(US), ...bike.all.map((b) => b.state)];
+  const bytes = [u8(S), u8(NB), u8(SPC), u8(DG), u8(HD), u8(sc.S), u8(cop.S), u8(cop.P), u8(cop.R), u8(bike.R), u8(bike.vel), u8(U.S), u8(U.R), u8(US), ...bike.all.map((b) => b.state)];
   if (endless) bytes.push(u8(ES), u8(HC), u8(OFF));
   return {
     S, ev, bike, sc, cop, NB, SPC, DG, bytes, unstuck: U,
     /** The ground ridden (the fixed table or the endless row), the hood kinds' centres and moves. */
-    town: T, HC, OFF, endless,
+    town: T, HC, OFF, endless, HD,
     /** Endless: the slot ridden, and how far it has gone along the town (world units). */
     get slot() { return ES[0]!; },
     get far() { return ES[2]!; },

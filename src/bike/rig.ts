@@ -39,8 +39,9 @@ const SEG = [0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f];
 
 /** The trick pose (0 = riding), written by a game before `pose()`: [hands off 0..1, feet off 0..1
  *  (legs back), legs spread 0..1 (sideways), body out over the back 0..1, body up off the seat 0..1,
- *  twist (radians, about the bike's long axis), arms spread 0..1, tuck 0..1 (knees to the bars)]. */
-export const TRICK_POSE = 8;
+ *  twist (radians, about the bike's long axis), arms spread 0..1, tuck 0..1 (knees to the bars),
+ *  hand drag 0..1 (the left hand off the bar and down to the road, the body back: Wheelie City)]. */
+export const TRICK_POSE = 9;
 
 const PI = Math.PI;
 // Bike-frame points (x forward, y up, from the centre of mass): the swingarm pivot, the steering head,
@@ -195,6 +196,8 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
     fore.push(fa);
   }
 
+  /** The hand drag now: how far (0..1), the road's direction in the bike's frame (x, y). */
+  const DG = new Float64Array(3);
   /** The trick pose (see TRICK_POSE), written by the game. */
   const T = new Float64Array(TRICK_POSE);
   let thrown = false;
@@ -226,7 +229,10 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
     if (thrown) (thrown = false), d.on(rider, id);
     rider.pos[0] = rider.pos[1] = rider.pos[2] = 0;
     rider.rot[0] = T[5]!; rider.rot[1] = rider.rot[2] = 0;
-    limbs(b.lean, stand, T[0]!, T[1]!, T[2]!, T[3]!, T[6]!, T[7]!, false, T[4]!);
+    // The hand drag: the road is "down" in the bike's frame (x forward, y up, pitched by rel).
+    DG[0] = T[8]!; DG[1] = -Math.sin(b.pitch); DG[2] = -Math.cos(b.pitch);
+    limbs(b.lean, stand, T[0]!, T[1]!, T[2]!, T[3]! + 0.5 * T[8]!, T[6]!, T[7]!, false, T[4]!);
+    DG[0] = 0;
   }
   /** The rider's body: weight (−1 forward .. 1 back), standing, hands and feet off, spread, out over the back. */
   function limbs(lean: number, stand: number, hands: number, feet: number, spread: number, back: number, arms: number, tuck: number, loose: boolean, up = 0) {
@@ -249,8 +255,10 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
       shin[s]!.rot[0] = -side * spread * 0.9;
       // Arms: shoulder to grip (elbow out and down); hands off, they go up and out.
       const gx = GRIP[0]! - hands * (0.55 + 0.25 * arms), gy = GRIP[1]! + hands * (0.65 + 0.2 * arms) + (loose ? 0.3 : 0);
-      ik(sx, sy, gx, gy, UPPER, FORE, -1);
-      const az = side * (0.2 + arms * 0.45 * hands + (loose ? 0.2 : 0));
+      // The hand drag: the left hand reaches down to the road (straight-armed, out from the bike).
+      const dr = s === 0 ? DG[0]! : 0, reach = (UPPER + FORE) * 0.98;
+      ik(sx, sy, gx + (sx + DG[1]! * reach - gx) * dr, gy + (sy + DG[2]! * reach - gy) * dr, UPPER, FORE, -1);
+      const az = side * (0.2 + arms * 0.45 * hands + (loose ? 0.2 : 0) + dr * 0.35);
       upper[s]!.pos[0] = sx; upper[s]!.pos[1] = sy; upper[s]!.pos[2] = side * 0.19; upper[s]!.rot[2] = J[0]!;
       fore[s]!.pos[0] = J[2]!; fore[s]!.pos[1] = J[3]!; fore[s]!.pos[2] = az; fore[s]!.rot[2] = J[1]!;
       upper[s]!.rot[0] = fore[s]!.rot[0] = -side * arms * hands * 0.8;

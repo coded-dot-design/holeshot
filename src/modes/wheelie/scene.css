@@ -91,3 +91,10 @@
 [data-fizlet-slot]:focus-within .wc-play:focus-visible{outline:3px solid #22e6ff}
 .wc~[data-fizlet-slot] .wc-stuck{position:absolute;left:50%;bottom:22%;translate:-50% 0;margin:0;padding:.4em .8em;background:#ffd166;color:#0b0a14;border:2px solid var(--rim);border-radius:8px;box-shadow:calc(3px * var(--bui-sx)) calc(3px * var(--bui-sy)) 0 var(--bui-shadow);font-weight:900;letter-spacing:.03em;white-space:nowrap}
 .wc~[data-fizlet-slot] .wc-stuck[hidden]{display:none}
+.wc~[data-fizlet-slot] .wc-drag[hidden]{display:none}
+.wc~[data-fizlet-slot] .wc-drag{display:inline-flex;align-items:center;gap:6px;background:#ffd166;color:#0b0a14}
+.wc~[data-fizlet-slot] .wc-ring{inline-size:14px;block-size:14px;border-radius:50%;background:conic-gradient(#0b0a14 var(--p,0%),#0b0a1433 0)}
+.wc~[data-fizlet-slot] .wc-drag.wc-dragging{background:#ff4fa8;color:#0b0a14;animation:wc-risk .45s ease-in-out infinite alternate}
+.wc~[data-fizlet-slot] .wc-drag.wc-dragging .wc-ring{display:none}
+@keyframes wc-risk{to{scale:1.08;background:#ffd166}}
+@media (prefers-reduced-motion:reduce){.wc~[data-fizlet-slot] .wc-drag.wc-dragging{animation:none}}

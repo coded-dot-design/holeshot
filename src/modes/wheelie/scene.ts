@@ -21,7 +21,7 @@ import { pad } from "@fzlt/core/pad";
 import { sound } from "@fzlt/core/sound";
 import {
   CARS, CAR_L, CAR_W, CROSS, DOG, DONE, E_AIR, E_BARK, E_BONUS, E_CRASH, E_END, E_GRUMP, E_HOP, E_RESPAWN, E_RESET, E_STUCK, E_SPLASH, E_START, E_TRICK,
-  E_JUMP, E_LAND, E_TICKET, E_ESCAPE, E_STARS, E_UNIT, E_CLEAR, S_HOOD, S_FLY, S_JUMPS,
+  E_JUMP, E_LAND, E_TICKET, E_ESCAPE, E_STARS, E_UNIT, E_CLEAR, S_HOOD, S_FLY, S_JUMPS, E_DRAG, E_BANKED, E_LOST, HAND_T, DRAG_X,
   FENCE, HOUSES, LAMPS, LINES, NCARS, NEIGH, NH, NN, NSP, READY, RUN, CRASH, SPRINK, SP_REACH, TREES, cityRun, height,
   CITY_SEED, PITCH, slotAt, slotKind,
 } from "./city.ts";
@@ -115,12 +115,13 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   play.setAttribute("aria-label", "Wheelie City: Space or J for gas, K or Shift to brake, W and S (or up and down) lean forward and back, A and D (or left and right) steer, L hops. V changes the view, M mutes, P or Escape pauses");
   const hud = L.add(document.createElement("div"));
   hud.className = "wc-hud";
-  hud.innerHTML = `<div class="wc-head"><p class="wc-top"><b class="wc-chip wc-time"><span>1:30</span></b><b class="wc-chip wc-score"><span>0</span><i>×1</i></b><b class="wc-chip wc-heat" hidden aria-label="Heat"><span></span><i hidden></i></b><b class="wc-chip wc-trick" hidden><span></span></b></p><p class="wc-hint"></p></div><p class="wc-toast" hidden></p><div class="wc-ticket" hidden><b>TICKET!</b><p>NEON PATROL · NOISE NOTICE</p><p class="wc-tline"></p></div><p class="wc-live" aria-live="polite"></p><p class="wc-keys"><button type="button" class="wc-key wc-end" aria-label="End the ride and bank it (E)">END</button><button type="button" class="wc-key wc-reset" aria-label="Reset to the last good spot (R)">↺</button><button type="button" class="wc-key wc-view" aria-label="Camera view (V)">VIEW</button><button type="button" class="wc-key wc-mute" aria-label="Mute (M)" aria-pressed="true">♪</button><button type="button" class="wc-key wc-menu" aria-label="Pause (P)">❚❚</button></p>`;
+  hud.innerHTML = `<div class="wc-head"><p class="wc-top"><b class="wc-chip wc-time"><span>1:30</span></b><b class="wc-chip wc-score"><span>0</span><i>×1</i></b><b class="wc-chip wc-heat" hidden aria-label="Heat"><span></span><i hidden></i></b><b class="wc-chip wc-trick" hidden><span></span></b><b class="wc-chip wc-drag" hidden aria-label="Hand drag"><i class="wc-ring" aria-hidden="true"></i><span></span></b></p><p class="wc-hint"></p></div><p class="wc-toast" hidden></p><div class="wc-ticket" hidden><b>TICKET!</b><p>NEON PATROL · NOISE NOTICE</p><p class="wc-tline"></p></div><p class="wc-live" aria-live="polite"></p><p class="wc-keys"><button type="button" class="wc-key wc-end" aria-label="End the ride and bank it (E)">END</button><button type="button" class="wc-key wc-reset" aria-label="Reset to the last good spot (R)">↺</button><button type="button" class="wc-key wc-view" aria-label="Camera view (V)">VIEW</button><button type="button" class="wc-key wc-mute" aria-label="Mute (M)" aria-pressed="true">♪</button><button type="button" class="wc-key wc-menu" aria-label="Pause (P)">❚❚</button></p>`;
   const head = hud.children[0] as HTMLElement, top = head.children[0] as HTMLElement, hintEl = head.children[1] as HTMLElement;
   const toastEl = hud.children[1] as HTMLElement, ticketEl = hud.children[2] as HTMLElement, live = hud.children[3] as HTMLElement, keysEl = hud.children[4] as HTMLElement;
   const timeEl = top.children[0]!.firstChild as HTMLElement, scoreEl = top.children[1]!.firstChild as HTMLElement, comboEl = top.children[1]!.lastChild as HTMLElement;
   const heatChip = top.children[2] as HTMLElement, heatEl = heatChip.firstChild as HTMLElement, riskEl = heatChip.lastChild as HTMLElement;
   const trickChip = top.children[3] as HTMLElement, trickEl = trickChip.firstChild as HTMLElement;
+  const dragChip = top.children[4] as HTMLElement, dragRing = dragChip.firstChild as HTMLElement, dragEl = dragChip.lastChild as HTMLElement;
   const tlineEl = ticketEl.lastChild as HTMLElement;
   const viewK = keysEl.querySelector(".wc-view") as HTMLButtonElement, muteK = keysEl.querySelector(".wc-mute") as HTMLButtonElement;
   // Unstuck: the prompt sticker.
@@ -738,6 +739,10 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   let view = 1, auto = !!ctx.auto || !!ctx.attract, dirty = true, hudDirty = true, shake = 0, toastT = 0, ticketT = 0, sirenT = 0, emitK = 0, crashT = 0, barkT = 0, crashes = 0, spin = 0, paused = false, ended = false, chaseSet = false, framed = -1;
   const TT = new Float64Array(4), TF = new Uint8Array(4);
   const was = new Float64Array(10).fill(-1);
+  /** The hand drag's pose, eased (0..1). */
+  const DRAGA = new Float64Array(1);
+  /** A burst of stars (a hand drag, a bank). */
+  const stars = (x: number, y: number, z: number) => spark.ring(rnd, x, y, z, 18, 2.5, 6, 1.1, 0.09, 1);
   const TABLE = { yaw: 0, pitch: 0.86, dist: 40, tx: 0, ty: 0, tz: 0.6, ox: 0, oy: 0, fov: 0.62 };
   // Fixed for the event (no zoom; set once from the stage shape at the start).
   const chaseO = { dist: 10.5, pitch: 0.6, lift: 0.8, ahead: 0.35, side: 0.8, rate: 3.4, turn: 2.4, snap: !!ctx.reduced };
@@ -761,6 +766,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     const d = bike.b;
     // The rig poses the bike from its centre of mass, the rider's weight and the crash (thrown clear);
     // seated on the e-bike and the mini, up in the attack position on the dirt bike.
+    rigs[0]!.T[8] = DRAGA[0]!;
     rigs[0]!.pose(d, ctx.bike.cls === "ebike" ? 0.3 : 0.7);
     // The dog: along its fence; a hop when it barks.
     dog.pos[0] = run.DG[0]!;
@@ -826,7 +832,14 @@ export function mountCity(ctx: ModeCtx): ModeRun {
         }
       }
     }
-    let any = dust.step(dt, -0.3, 0.3, 0.45);
+    // The hand drag: the hand goes down (eased; at once with reduced motion), sparks off the glove.
+    const dg = run.HD[1]! && ph === RUN ? 1 : 0, was0 = DRAGA[0]!;
+    DRAGA[0] = ctx.reduced ? dg : was0 + (dg - was0) * Math.min(1, dt * 10);
+    if (dg) {
+      const w = d.wheel, sy = Math.sin(d.yaw), cy = Math.cos(d.yaw);
+      for (let q = 0; q < 2; q++) spark.puff(w[0]! - sy * 0.45 + (rnd() - 0.5) * 0.2, w[1]! - 0.25, w[2]! - cy * 0.45 + (rnd() - 0.5) * 0.2, -v[0]! * 0.4 + (rnd() - 0.5) * 2, 1 + rnd() * 2, -v[2]! * 0.4 + (rnd() - 0.5) * 2, 0.25 + rnd() * 0.3, 0.04, 1);
+    }
+    let any = dust.step(dt, -0.3, 0.3, 0.45) || dg === 1 || Math.abs(DRAGA[0]! - dg) > 0.01;
     if (spark.step(dt, 14, -0.05, 1)) any = true;
     if (splash.step(dt, 9, -0.02, 0.9)) any = true;
     return any || on;
@@ -901,6 +914,21 @@ export function mountCity(ctx: ModeCtx): ModeRun {
         engine.events.emit("escape");
         toast(`LOST THEM! +${val.toLocaleString("en-US")} · COMBO ×${1 + sc[CB]!}`, "go");
         say(`Lost them: ${val} points, combo up`);
+      } else if (type === E_DRAG) {
+        engine.events.emit("cheer");
+        shake = 0.15;
+        spark.ring(rnd, d.wheel[0]!, d.wheel[1]! - 0.3, d.wheel[2]!, 26, 3.5, 4.5, 0.8, 0.07, 1);
+        stars(d.pos[0]!, d.pos[1]! + 1.2, d.pos[2]!);
+        toast(`HAND DRAG! ×${DRAG_X}`, "go");
+        say(`Hand drag! Times ${DRAG_X}. Bring it back under twelve to bank it`);
+      } else if (type === E_BANKED) {
+        engine.events.emit("cheer");
+        stars(d.pos[0]!, d.pos[1]! + 1.2, d.pos[2]!);
+        toast(`BANKED! +${val.toLocaleString("en-US")}`, "go");
+        say(`Banked ${val} points`);
+      } else if (type === E_LOST) {
+        toast(`LOOPED OUT — LOST ${val.toLocaleString("en-US")}`, "bad");
+        say(`Looped out. ${val} points lost`);
       } else if (type === E_TICKET) {
         engine.events.emit("ticket");
         shake = 0.3;
@@ -959,6 +987,15 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       heatEl.textContent = "★".repeat(st) + "☆".repeat(5 - st);
       heatChip.classList.toggle("wc-hot", chased === 1);
       heatChip.setAttribute("aria-label", `Heat: ${st} of 5 stars`);
+    }
+    // The hand drag: the charge ring while the nose is held past 12; then ×10 and the points at risk (pulsing).
+    const HDv = run.HD, dk = HDv[1] ? 1000 + Math.floor(HDv[2]! / 10) : HDv[0]! > 0 ? Math.min(99, Math.floor((HDv[0]! / HAND_T) * 100)) : -1;
+    if (was[7] !== dk) {
+      was[7] = dk;
+      dragChip.hidden = dk < 0;
+      dragChip.classList.toggle("wc-dragging", dk >= 1000);
+      if (dk >= 1000) dragEl.textContent = `HAND DRAG ×${DRAG_X} · ${Math.round(HDv[2]!).toLocaleString("en-US")} AT RISK`;
+      else if (dk >= 0) (dragEl.textContent = "PAST 12 · HOLD IT"), dragRing.style.setProperty("--p", dk + "%");
     }
     if (was[6] !== risk) (was[6] = risk), (riskEl.hidden = risk <= 0), (riskEl.textContent = `AT RISK ${risk.toLocaleString("en-US")}`);
     const g = chased, rideN = S[2]!;

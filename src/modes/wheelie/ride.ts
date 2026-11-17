@@ -19,6 +19,10 @@ export const E_MINI: Power = {
  *  gave nothing to hold a wheelie with at street speed. */
 export const E_BIKE_2: Power = { ...E_BIKE, gears: [5.8, 8.8, 12], up: 0.85, down: 0.5, gyr: 0.62, force: 12 };
 
+/** The hand drag's clock face (radians of the nose off the ground): 12 o'clock (vertical), and the
+ *  hard limit about 1 o'clock (30° past): past it, it loops out. */
+export const TWELVE = 1.5707963267948966, LOOP_AT = TWELVE + 0.52, PAST_BRAKE = 14;
+
 /** One ride: what the garage says, the engine, the chassis, the sweet spot, the hop. */
 export interface RideSpec {
   id: string;
@@ -43,7 +47,8 @@ export const RIDES: RideSpec[] = [
 
 /** The rides on `ground` (one bike each, made once); `use` picks one, `step` drives it. */
 export function ride(ground: BikeGround, specs: RideSpec[] = RIDES) {
-  const all: Bike[] = specs.map((r) => bike(ground, r.power, r.shape));
+  // (Past 12 o'clock, to about 1: the city's bikes loop out at LOOP_AT, not at the balance point's margin.)
+  const all: Bike[] = specs.map((r) => bike(ground, r.power, { ...r.shape, loop: LOOP_AT }));
   let k = all[0]!, sp = specs[0]!;
   // R: hop timer, the speed into the last wall, seconds sat still (in a typed array: a snapshot).
   const vel = new Float64Array(3), R = new Float64Array(3);
@@ -59,6 +64,10 @@ export function ride(ground: BikeGround, specs: RideSpec[] = RIDES) {
     R[0] = R[0]! - dt;
     k.set(gas, brake, -lean, steer, 0);
     const moving = k.step(dt);
+    // Past the balance point on the rear wheel (towards 12 o'clock and the hand drag), the rear brake
+    // gets PAST_BRAKE more say (the rider's weight over the bars as well): feathered, it holds the nose
+    // up there; let off, it keeps going over (it is not stable: it drifts towards the loop-out).
+    if (!k.crashed && k.contact[0] && !k.contact[1] && k.rel > k.bp && brake > 0) k.S[3] = k.S[3]! - brake * PAST_BRAKE * dt;
     vel[0] = k.cy * k.speed; vel[1] = 0; vel[2] = -k.sy * k.speed;
     return moving || R[0]! > 0;
   }

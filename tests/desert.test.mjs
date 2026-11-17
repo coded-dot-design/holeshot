@@ -129,12 +129,12 @@ test("unstuck: R resets the desert rider to the last good place, behind, upright
   void E_STUCK;
 });
 
-test("profile: best distance (v2 → v3 → v4) and apply keeps the best", () => {
-  assert.equal(VERSION, 4);
+test("profile: best distance (v2 → v3 → v4 → v5) and apply keeps the best", () => {
+  assert.equal(VERSION, 5);
   const v2 = { ...fresh(), v: 2, stats: { events: 4, wins: 1, earned: 900, best: { "race:moto": 80 } } };
   delete v2.stats.far;
   const p = migrate(v2);
-  assert.deepEqual([p.v, p.stats.far.desert, p.stats.far.city, p.stats.far.quarry, p.stats.best["race:moto"], p.stats.events], [4, 0, 0, 0, 80, 4]);
+  assert.deepEqual([p.v, p.stats.far.desert, p.stats.far.city, p.stats.far.quarry, p.stats.best["race:moto"], p.stats.events], [5, 0, 0, 0, 80, 4]);
   const ride = (far) => ({ ...blankStats("desert"), finished: true, seconds: 60, distance: far, far });
   const b = newBike("buzzline", "b1");
   let q = { ...p, bikes: [b] };

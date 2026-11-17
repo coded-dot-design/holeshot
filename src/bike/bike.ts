@@ -116,6 +116,9 @@ export interface BikeShape {
   gravity?: number;
   /** Steps per `step()` (4 keeps the springs stiff at 60 Hz). */
   substeps?: number;
+  /** Loops out past this pitch off the ground (radians, absolute); default: the balance point + 0.62.
+   *  Wheelie City sets it past vertical (the hand drag lives between 12 and 1 o'clock). */
+  loop?: number;
 }
 
 /** Bytes in a bike's `state`: 140 doubles, then 7 bytes (rounded up to 8). */
@@ -222,7 +225,7 @@ class Ride {
  *  fixed step, draw from `pos`, `rot`, `wheel`, `comp`, `spin`, `rider`. */
 export function bike(ground: BikeGround, power: Power, shape: BikeShape = {}) {
   const AR = shape.rear ?? -0.66, AF = shape.front ?? 0.84, AH = shape.drop ?? 0.42, R = shape.radius ?? 0.34, TRAV = shape.travel ?? 0.3, SAG = shape.sag ?? 0.09;
-  const DAMP = shape.damp ?? 0.62, CD = shape.caseDrop ?? 26, SH = shape.shift ?? 0.17, g = shape.gravity ?? 20, sub = shape.substeps ?? 4, BASE = AF - AR;
+  const LOOPAT = shape.loop ?? 0, DAMP = shape.damp ?? 0.62, CD = shape.caseDrop ?? 26, SH = shape.shift ?? 0.17, g = shape.gravity ?? 20, sub = shape.substeps ?? 4, BASE = AF - AR;
   // The chassis numbers the engine sets (mass, pitch inertia, spring rate, damping) and the engine's own (in a
   // typed array: doubles in closure variables that change are boxed).
   let pw = power;
@@ -454,7 +457,7 @@ export function bike(ground: BikeGround, power: Power, shape: BikeShape = {}) {
       if (contact[1] && !contact[0] && rel < -0.08 && vf > 0.8) S[ST] = S[ST]! + h;
       else if (S[ST]! > 0) (S[ST]! > 0.3 && emit(B_STOPPIE, S[ST]!)), (S[ST] = 0);
       // Over backwards on the rear wheel, or over the bars on the front.
-      if (!F[0] && contact[0] && rel > bpa + 0.62) crash(LOOP);
+      if (!F[0] && contact[0] && rel > (LOOPAT || bpa + 0.62)) crash(LOOP);
       else if (!F[0] && contact[1] && rel < -1.05) crash(ENDO);
     }
     // The frame on the ground (cased into a face, or bottomed out): a crash.

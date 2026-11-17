@@ -12,6 +12,17 @@
   is built before it moves to its slot, and the headless patrol and unstuck tests ride it). Golden:
   the four fixed-session hashes go, one "endless wheelie city ride" comes; every other hash is as it
   was.
+- **The hand drag (Endless Wheelie City).** The city's bikes now go back past 12 o'clock (vertical)
+  to about 1 (`LOOP_AT`: 30° past; `BikeShape.loop`, the shared bike's new option, default as
+  before so every other mode is bit for bit the same); past the balance point the rear brake has more
+  say (`PAST_BRAKE`), so feathered it holds the nose up there, but it drifts over if you let it. Hold
+  it past 12 for 1.5 s (`HAND_T`) and the rider drops the left hand to the road: HAND DRAG! (sparks
+  off the glove, a star burst, a cheer, a ×10 chip with the points AT RISK pulsing; a charge ring
+  while you hold). It earns 40 a second ×10 (× the combo); back under 12 it BANKS (plus a streak
+  bonus, 120 × seconds², the combo one up); loop out and the drag's points are LOST. The rig gets a
+  ninth trick-pose channel (the hand down to the road). Tests: `tests/handdrag.test.mjs` (past 12
+  reachable and the loop-out at the limit, the drag after 1.5 s held, ×10, banked on the way down,
+  lost on a loop-out, determinism, no allocation).
 - **The neon patrol's new rules (Endless Wheelie City).** A TICKET only when a unit catches you
   stopped (under 1 m/s for 1 s) or down after a crash, in range; ride on and you never get one,
   however close they are. Running heats it up: while a unit is on your tail (within 9 units) the heat
