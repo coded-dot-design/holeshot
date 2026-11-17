@@ -1,7 +1,7 @@
 // The built site (artifacts/pages, `npm run site:build` first) in Chromium, at 1440 and 390, dark and
 // light: the landing page's hero is the game's attract race (drawn, riding, its HUD hidden), with the
 // title, the hook and a PLAY link to /play/; the four sections (how to play, the events, the garage,
-// built on Fizlet with the measured size, by Chris Cooley); no sideways scroll. Reduced motion: the
+// built on Fizlet with the measured size, by David Cooley, linked); no sideways scroll. Reduced motion: the
 // still poster, no game. /play/ mounts the game with the first-run setup; once set up, ?mode=bigair
 // starts that event. SHOTS=<dir> saves a screenshot of each.
 import assert from "node:assert/strict";
@@ -40,7 +40,7 @@ try {
           sections: ["how", "modes", "garage", "fizlet"].every((id) => document.getElementById(id)),
           modes: document.querySelectorAll("#modes li").length,
           size: document.getElementById("fizlet").textContent.replace(/\s+/g, " "),
-          by: /by Chris Cooley/i.test(document.body.textContent),
+          by: /by David Cooley/i.test(document.body.textContent) && !!document.querySelector('a[href="https://fizlet.com/people/david-cooley/"]'),
           sideways: document.documentElement.scrollWidth > innerWidth,
         };
       });
@@ -48,7 +48,7 @@ try {
       assert.ok(m.drawn && m.hud, `${at}: the hero draws the race, no HUD over the copy`);
       assert.equal(m.h1, "Holeshot.One bike. Every kind of dirt.", `${at}: the title and hook`);
       assert.match(m.play, /\/play\/$/, `${at}: PLAY links to /play/`);
-      assert.ok(m.playSize && m.sections && m.modes === 5 && m.by, `${at}: PLAY ≥ 44 px, four sections, five ways to ride, by Chris Cooley`);
+      assert.ok(m.playSize && m.sections && m.modes === 5 && m.by, `${at}: PLAY ≥ 44 px, four sections, five ways to ride, by David Cooley (linked)`);
       assert.ok(m.size.includes(`${gz.toLocaleString("en-US")} bytes gzip`), `${at}: the measured size (${gz} B)`);
       assert.equal(m.sideways, false, `${at}: no sideways scroll`);
       if (SHOTS) {

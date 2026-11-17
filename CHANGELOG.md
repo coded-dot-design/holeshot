@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Credit: Holeshot is by David Cooley (game creator).** The landing (its eyebrow, the "by" panel
+  with one creator line, the meta description), the /play/ header (V0.x · BY DAVID COOLEY), the
+  footer, README, package.json's author and description; his name links to
+  https://fizlet.com/people/david-cooley/. "Built on Fizlet" stays. The LICENSE's copyright line and
+  the bundle's MIT banner are unchanged (a licence matter, not a credit), as is `site/game.json`
+  (generated from the factory's spec).
 - **One Wheelie City: Endless.** The fixed ninety-second Wheelie City (its tile, its landing entry,
   its online head-to-head) is gone; Endless Wheelie City stays, on the same four hoods. The RIDE menu
   and the landing derive from the mode list (five ways to ride). Online's score run is Big Air (the

@@ -5,7 +5,7 @@ import Base from '../layouts/Base.astro';
 import { base, GZIP, FIZLET, REPO } from '../site';
 import { CLASSES, MODELS, STARTERS } from '../../../src/data/roster.ts';
 import { MODES } from '../../../src/modes/index.ts';
-const description = 'Holeshot is a dirt bike game on a tabletop: one bike and a garage, races against rivals, a race series on a new track every round, five free-ride maps, Endless (the dunes, a quarry, woods and a night park that never end), a Big Air show and Endless Wheelie City. Earn credits, wear out tyres and top ends, rebuild, mod and paint. Free in the browser, by Chris Cooley, built on Fizlet.';
+const description = 'Holeshot is a dirt bike game on a tabletop: one bike and a garage, races against rivals, a race series on a new track every round, five free-ride maps, Endless (the dunes, a quarry, woods and a night park that never end), a Big Air show and Endless Wheelie City. Earn credits, wear out tyres and top ends, rebuild, mod and paint. Free in the browser, by David Cooley, built on Fizlet.';
 const kb = (GZIP / 1024).toFixed(1);
 const steps = [
   ['PICK YOUR BIKE', 'One bike to start: a peaky 2-stroke, a torquey 4-stroke, a light e-bike or an electric dirt bike. Paint it, number it, pick your jersey. That bike rides every event.'],
@@ -21,7 +21,7 @@ const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound'
     <div class="dt-stage" id="dt-hero" aria-label="Holeshot demo race"></div>
     <a class="dt-poster" href={base('play/')} hidden><img src={base('shots/hero.jpg')} alt="Holeshot: four dirt bikes racing at night on a neon-edged motocross track on a tabletop" width="1600" height="900" /></a>
     <div class="wrap dt-copy">
-      <p class="eyebrow"><span class="dot"></span> A DOM VIRUS GAME · BY CHRIS COOLEY</p>
+      <p class="eyebrow"><span class="dot"></span> A DOM VIRUS GAME · BY DAVID COOLEY</p>
       <h1 id="dt-title">Holeshot.<br /><em>One bike. Every kind of dirt.</em></h1>
       <p class="lead">A dirt bike game on a tabletop. Pick one bike, race it, fly it, wheelie it through town, and keep it alive in the garage: tyres, rebuilds, mods and paint, paid for with what you win.</p>
       <div class="dt-ctas">
@@ -78,10 +78,11 @@ const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound'
         <ul class="bricks">{bricks.map((b) => <li><code>@fzlt/core/{b}</code></li>)}</ul>
       </div>
       <div class="panel lit by">
-        <p class="eyebrow"><b>BY CHRIS COOLEY</b></p>
+        <p class="eyebrow"><b>BY DAVID COOLEY</b></p>
+        <p>Made by teen game creator <a href="https://fizlet.com/people/david-cooley/">David Cooley</a>, who loves doing wheelies on his gas and electric bikes.</p>
         <h3>It started as three tiny games.</h3>
         <p>Holeshot grew out of three pieces in Fizlet's Daily: Moto Track, Big Air and Wheelie City. They shared one bike; now they share one garage.</p>
-        <p><a href="https://coded.design/">coded.design</a> · <a href={REPO}>Source on GitHub (MIT)</a></p>
+        <p><a href={REPO}>Source on GitHub (MIT)</a></p>
         <a class="bui-key bui-arcade bui-go" href={base('play/')}>▶ Play Holeshot</a>
       </div>
     </div>

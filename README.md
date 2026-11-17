@@ -4,7 +4,7 @@
 wheelie it through town, and keep it alive in the garage with what you win. Tyres, rebuilds, mods,
 paint and a rider kit. Neon at night, pastel by day.
 
-By [Chris Cooley](https://coded.design/) · built on [Fizlet](https://github.com/coded-dot-design/fizlet) · MIT
+By [David Cooley](https://fizlet.com/people/david-cooley/) (game creator) · built on [Fizlet](https://github.com/coded-dot-design/fizlet) · MIT
 
 - **Play:** https://holeshot.domvirus.com/play/
 - **About:** https://holeshot.domvirus.com/

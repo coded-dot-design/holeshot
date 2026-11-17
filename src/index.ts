@@ -1,4 +1,4 @@
-// Holeshot: one dirt bike, one garage, every kind of riding, on a tabletop. Built on Fizlet, by Chris Cooley.
+// Holeshot: one dirt bike, one garage, every kind of riding, on a tabletop. Built on Fizlet, by David Cooley (game creator).
 //   createHoleshot({ host })                 mount in an element (the play page)
 //   createHoleshot({ host, attract: true })  the landing hero: a race on the autopilot
 //   createHoleshot()                         a layer over the whole page; Escape gives the page back

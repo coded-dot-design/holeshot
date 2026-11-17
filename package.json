@@ -3,9 +3,9 @@
   "version": "0.3.0",
   "private": true,
   "type": "module",
-  "description": "Holeshot: one dirt bike, one garage, every kind of riding, on a tabletop. Built on Fizlet, by Chris Cooley.",
+  "description": "Holeshot: one dirt bike, one garage, every kind of riding, on a tabletop. Built on Fizlet, by David Cooley.",
   "license": "MIT",
-  "author": "Chris Cooley (https://coded.design/)",
+  "author": "David Cooley (https://fizlet.com/people/david-cooley/)",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "npm run typecheck && node scripts/build.mjs",
