@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+- **Endless Wheelie City, a new mode.** The four hoods as reused SLOTS in a row along +x, canal to
+  canal: slot k sits at k × 106 units and its hood kind is `slotKind(k)` (pure, seeded: k + 2·bit, so
+  two neighbours are never the same kind and one built hood a kind is enough: only the slot you are
+  over and the one you near are drawn). Every slot has a hump at both ends of its south street, lined
+  up with the next slot's: the road runs to the hump on both sides of every join and the hump flies
+  the canal (the fixed city's flight, landing on the far ramp, the patrol lost). The neon patrol,
+  neighbours, sprinklers, crosswalks and the dog move with their hood. No clock: the HUD counts
+  kilometres, END banks it (Free Ride's pay with its per-km line), and the best is kept as
+  `stats.far.city`. A haze over the far ground and a distance fade on what stands up. The fixed
+  Wheelie City runs on the same code (`town(false)`: its four hoods at their table places) and every
+  golden hash is unchanged. Tests: `tests/endless.test.mjs` (the slots, seamless joins over 120 slots,
+  10 km on the autopilot: one hump a slot, no rescue, never off the row, determinism).
+- **ENDLESS** (the old ENDLESS DESERT tile): a picker card with the Dune Sea (default) and an endless
+  version of each other open Free Ride map, on the desert's streaming window and far ring: THE DEEP
+  QUARRY (terraced benches and faces), THE ENDLESS WOODS (wooded hills, log jumps, roots, trees you
+  can hit) and THE NIGHT PARK (flat, doubles and rollers, pylons, light towers), in their maps' colours,
+  each its own seed and its own best (`stats.far.quarry`, `.forest`, `.night-park`). One tile with a
+  picker rather than four: on a phone four near-identical tiles would push the rest of the menu down.
+  The Neon Loop has no endless version (it is a race loop, not a ground). The desert's ground is
+  bit-for-bit as it was.
+- Profile v4: the endless bests (v3 → v4 seeds them at 0; the desert's carries over).
+- Size: 170,188 B gzip (+4,124 B), budget 168,000 → 174,000 B (scripts/size.mjs has the reasons).
+- The town's ground now boxes fewer doubles a step (hypot's arithmetic inline in `roadGap`, the hump
+  height through the scratch array): the same bits, about half the young-generation GCs.
+
 - **Endless Desert to the horizon.** A far ring: the same `heightAt` on a coarse window (4-unit
   cells, 544 units a side, view only, sliding 16 units at a time) drawn as five bands of ridgelines
   from 34 to 250 units, each hazier than the last (the lit sand into the sky's horizon colour) with a

@@ -52,6 +52,9 @@ pick your jersey and a name. That bike rides every event.
   neighbour shaking a fist. Too loud and the heat rises: the neon patrol comes after you (comic, no
   weapons); a catch is a ticket (the combo and half the points at risk), a hump into the next hood
   loses them. Points and escapes pay; tickets cost a little.
+- **Endless Wheelie City**: the same four hoods as slots in a row that never ends, one canal and one
+  hump between each (the same row on every screen); no clock: how far across town? Kilometres on the
+  HUD, END banks it, the best is kept.
 - **Series**: three championship tiers (ROOKIE CUP, PRO CIRCUIT, NEON MASTERS) of four to six
   rounds; every round is a new generated track, harder round by round, against named rivals on
   modded bikes; points, prizes and a title bonus.
