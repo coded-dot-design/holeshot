@@ -278,3 +278,98 @@ test("snapshot: the session's bytes are the whole of it: restored mid-chase, it 
   assert.deepEqual(b, a);
   assert.ok(a.out.length > 10, "and something happened");
 });
+
+// ---- the patrol's rules (round 4): a ticket only when stopped or down; running heats it up; bound to its hood ----
+/** A cop with one unit parked `d` from a rider at a junction of hood 0 (the fixed table). */
+function adjacent(d = 0.5) {
+  const cop = C.cops(7), g = H.GRAPH[0], x = g.nodes[0] + H.CX[0], z = g.nodes[1] + H.CZ[0];
+  cop.heat(25);
+  for (let i = 0; i < 200 && cop.chasing === 0; i++) cop.step(DT, x, z, 0, false, true, 8), cop.clear();
+  const o = 0;
+  cop.P[o + C.P_X] = x + d; cop.P[o + C.P_Z] = z; cop.P[o + C.P_AGE] = 5;
+  return { cop, x, z };
+}
+const tickets = (cop) => cop.S[C.TIX];
+
+test("cops: no ticket while riding, even with a unit right alongside; a ticket when stopped (≥ SLOW_T) or down", () => {
+  // Riding at speed past a unit for five seconds: never a ticket.
+  let { cop, x, z } = adjacent();
+  for (let i = 0; i < 300; i++) (cop.P[C.P_X] = x + 0.5), (cop.P[C.P_Z] = z), cop.step(DT, x, z, 0, false, true, 8), cop.clear();
+  assert.equal(tickets(cop), 0, "at speed: no ticket");
+  // Slow but moving above SLOW_V: none either.
+  for (let i = 0; i < 300; i++) (cop.P[C.P_X] = x + 0.5), (cop.P[C.P_Z] = z), cop.step(DT, x, z, 0, false, true, C.SLOW_V + 0.2), cop.clear();
+  assert.equal(tickets(cop), 0, "rolling: no ticket");
+  // Stopped: the ticket comes once the rider has been stopped SLOW_T seconds, not before.
+  let at = -1;
+  for (let i = 0; i < 180 && at < 0; i++) {
+    cop.P[C.P_X] = x + 0.5; cop.P[C.P_Z] = z;
+    cop.step(DT, x, z, 0, false, true, 0);
+    for (let k = 0; k < cop.n; k++) if (cop.ev[k * 2] === C.C_TICKET) at = (i + 1) * DT;
+    cop.clear();
+  }
+  assert.ok(at >= C.SLOW_T - 1e-9 && at < C.SLOW_T + 0.1, `stopped: ticket after ${at.toFixed(2)} s`);
+  // Down (crashed) in range: at once, whatever the speed.
+  ({ cop, x, z } = adjacent());
+  cop.P[C.P_X] = x + 0.5; cop.P[C.P_Z] = z;
+  cop.step(DT, x, z, 0, false, true, 6, true), cop.clear();
+  assert.equal(tickets(cop), 1, "down in range: a ticket");
+  // Stopped but out of range: none.
+  ({ cop, x, z } = adjacent(5));
+  for (let i = 0; i < 30; i++) (cop.P[C.P_X] = x + 5), (cop.P[C.P_Z] = z), (cop.P[C.P_V] = 0), cop.step(DT, x, z, 0, false, true, 0), cop.clear();
+  assert.equal(tickets(cop), 0, "stopped, nobody close: no ticket yet");
+});
+
+test("cops: running heats it up: the longer they're on your tail, the more join (a bike, a cart, then drones), up to the cap", () => {
+  const cop = C.cops(3), g = H.GRAPH[0];
+  cop.heat(25);
+  let peak = 0, drones = 0, units = [];
+  const x = g.nodes[2] + H.CX[0], z = g.nodes[3] + H.CZ[0];
+  for (let i = 0; i < 60 * 90; i++) {
+    cop.step(DT, x, z, 0, false, true, 9); // riding (on the spot, as far as the patrol can tell), never stopped
+    for (let k = 0; k < cop.n; k++) if (cop.ev[k * 2] === C.C_UNIT) units.push(cop.ev[k * 2 + 1]);
+    cop.clear();
+    peak = Math.max(peak, cop.chasing);
+    let d = 0;
+    for (let u = 0; u < C.MAXP; u++) if (cop.P[u * C.PS + C.P_ON] === 1 && cop.P[u * C.PS + C.P_KIND] === C.U_DRONE) d++;
+    drones = Math.max(drones, d);
+    assert.ok(cop.chasing <= C.MAXP);
+  }
+  assert.equal(tickets(cop), 0, "riding: never a ticket");
+  assert.equal(cop.S[C.STARS], 5, "five stars");
+  assert.equal(peak, C.MAXP, `up to the cap (${peak})`);
+  assert.deepEqual(units.slice(0, 3), [C.U_BIKE, C.U_CART, C.U_DRONE], "a bike, a cart, then a drone");
+  assert.ok(drones >= 3, `drones join (${drones} at once)`);
+});
+
+test("cops (Endless Wheelie City): every unit stays in its hood's slot; a hump into the next hood ends the chase; the same bytes every time", () => {
+  const go = () => {
+    const run = W.cityRun([spec("sparkhound")], 11, true), I = new Float64Array(5);
+    let escapes = 0, worst = 0, crossed = 0;
+    for (let f = 0; f < 60 * 150; f++) {
+      if (f % 600 === 0) run.cop.heat(60);
+      const h0 = run.S[W.S_HOOD];
+      run.autopilot(I);
+      run.step(DT, I[0], I[1], I[2], I[3], I[4]);
+      for (let k = 0; k < run.n; k++) if (run.ev[k * 2] === W.E_ESCAPE) escapes++;
+      run.clear();
+      if (run.S[W.S_HOOD] !== h0) {
+        crossed++;
+        // Across the canal: every unit of the hood left behind peels off on its bank, and the new
+        // hood's own patrol takes NEW_HOOD seconds to come out.
+        for (let u = 0; u < C.MAXP; u++) assert.ok(!(run.cop.P[u * C.PS + C.P_ON] === 1 && run.cop.P[u * C.PS + C.P_HOOD] === h0), "the chase ends at the canal");
+        assert.equal(run.cop.chasing, 0, "nobody on the far bank yet");
+      }
+      for (let u = 0; u < C.MAXP; u++) {
+        const o = u * C.PS;
+        if (run.cop.P[o + C.P_ON] !== 1) continue;
+        const h = run.cop.P[o + C.P_HOOD], cx = run.HC[h * 2], cz = run.HC[h * 2 + 1];
+        worst = Math.max(worst, Math.abs(run.cop.P[o + C.P_X] - cx) - H.HX, Math.abs(run.cop.P[o + C.P_Z] - cz) - H.HZ);
+      }
+    }
+    return { escapes, worst, crossed, bytes: Buffer.concat(run.bytes.map((b) => Buffer.from(b))).toString("base64") };
+  };
+  const a = go(), b = go();
+  assert.ok(a.crossed >= 3 && a.escapes >= 1, `crossed ${a.crossed} canals, ${a.escapes} escapes`);
+  assert.ok(a.worst <= 1e-9, `no chasing unit ever left its hood (the canal is past the edge; closest: ${(-a.worst).toFixed(2)} inside)`);
+  assert.equal(a.bytes, b.bytes, "deterministic");
+});

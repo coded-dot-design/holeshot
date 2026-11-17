@@ -1,5 +1,5 @@
-// Wheelie City in Chromium (the built dist/holeshot.mjs), at 1440 (keyboard) and 390 (touch): each of
-// the four hoods starts, draws and rides (its own hood drawn, the others hidden but the next one over);
+// Endless Wheelie City in Chromium (the built dist/holeshot.mjs), at 1440 (keyboard) and 390 (touch):
+// it starts, draws and rides (the slot it is in drawn, the far hoods hidden);
 // the pad is unchanged (a stick and GAS, BRAKE, HOP); on the start line it settles; ridden by hand
 // (Space, or the pad's GAS) it never sleeps; on the autopilot the heat rises and the neon patrol comes
 // (the heat chip with its stars, the hint), the run turns for a hump and escapes into the next hood
@@ -17,7 +17,6 @@ const until = (p, fn, arg, what, timeout = 30000) => p.waitForFunction(fn, arg, 
 const frames = (p, n = 12) => p.evaluate(async (n) => { const f = () => game.engine.stats().frames + (game.run ? game.run.engine.stats().frames : 0), a = f(); for (let i = 0; i < n; i++) await new Promise((r) => requestAnimationFrame(r)); return f() - a; }, n);
 const hud = (p) => p.evaluate(() => { const r = document.querySelector("[data-fizlet-host]").shadowRoot, q = (s) => r.querySelector(s); return { heat: q(".wc-heat").hidden ? "" : q(".wc-heat span").textContent, hint: q(".wc-hint").textContent, ticket: !q(".wc-ticket").hidden }; });
 const VIEWS = [["desktop", { width: 1440, height: 900 }, false], ["phone", { width: 390, height: 844 }, true]];
-const HOODS = ["block", "hillcrest", "downtown", "marina"];
 
 try {
   for (const [name, viewport, touch] of VIEWS) {
@@ -26,24 +25,21 @@ try {
     p.on("pageerror", (e) => errs.push(e.message));
     await p.goto(server.url + "/");
     await until(p, () => window.game && game.getSnapshot().screen !== "setup", null, `${name}: mounts`);
-    // ---- each hood starts, draws and rides ----
-    for (const [k, id] of HOODS.entries()) {
-      await p.evaluate((id) => game.start("wheelie", { map: id }), id);
-      let s = (await snap(p)).run;
-      assert.deepEqual([s.phase, s.hood, s.units, s.stars], ["ready", id, 0, 0], `${name}: ${id}: on the start line`);
-      assert.ok(s.drawn & (1 << k), `${name}: ${id}: drawn`);
-      await until(p, () => game.run.engine.paused.includes("settled"), null, `${name}: ${id}: waiting, it settles`);
-      assert.equal(await frames(p), 0, `${name}: ${id}: no frames on the start line`);
-      await p.evaluate(() => (game.run.auto = true));
-      await until(p, () => game.getSnapshot().run.phase === "run" && game.getSnapshot().run.speed > 2, null, `${name}: ${id}: rides`);
-      await p.waitForTimeout(800);
-      s = (await snap(p)).run;
-      assert.ok(s.objects > 500 && s.faces > 300, `${name}: ${id}: the town is drawn (${s.objects} objects, ${s.faces} faces)`);
-      assert.notEqual(s.drawn, 15, `${name}: ${id}: the far hoods hidden`);
-      await p.evaluate(() => game.leave());
-    }
+    // ---- it starts, draws and rides ----
+    await p.evaluate(() => game.start("endcity"));
+    let s0 = (await snap(p)).run;
+    assert.deepEqual([s0.phase, s0.units, s0.stars], ["ready", 0, 0], `${name}: on the start line`);
+    await until(p, () => game.run.engine.paused.includes("settled"), null, `${name}: waiting, it settles`);
+    assert.equal(await frames(p), 0, `${name}: no frames on the start line`);
+    await p.evaluate(() => (game.run.auto = true));
+    await until(p, () => game.getSnapshot().run.phase === "run" && game.getSnapshot().run.speed > 2, null, `${name}: rides`);
+    await p.waitForTimeout(800);
+    s0 = (await snap(p)).run;
+    assert.ok(s0.objects > 500 && s0.faces > 300, `${name}: the town is drawn (${s0.objects} objects, ${s0.faces} faces)`);
+    assert.notEqual(s0.drawn, 15, `${name}: the far hoods hidden`);
+    await p.evaluate(() => game.leave());
     // ---- by hand: the keys or the pad (a stick and three keys, as ever) ----
-    await p.evaluate(() => game.start("wheelie"));
+    await p.evaluate(() => game.start("endcity"));
     if (touch) {
       const pad = await p.evaluate(() => { const r = document.querySelector("[data-fizlet-host]").shadowRoot, keys = [...r.querySelectorAll(".wc-pad .bui-pad-keys button")].map((b) => b.getAttribute("aria-label")); return { stick: !!r.querySelector(".wc-pad .bui-pad-stick, .wc-pad [class*=stick]"), keys }; });
       assert.ok(pad.stick && pad.keys.length === 3 && /gas/i.test(pad.keys[0]) && /brake/i.test(pad.keys[1]) && /hop/i.test(pad.keys[2]), `${name}: the pad: ${JSON.stringify(pad)}`);
@@ -72,15 +68,13 @@ try {
     assert.ok(s.jumps >= 1 && s.units === 0 && s.heat <= 8, `${name}: lost them: ${JSON.stringify({ hood: s.hood, jumps: s.jumps, units: s.units, heat: s.heat })}`);
     assert.ok(Math.abs(c1.dist - cam.dist) <= cam.dist * 0.08 && c1.fov === cam.fov, `${name}: the chase framing holds over the hump (${cam.dist} → ${c1.dist})`);
     h = await hud(p);
-    // ---- the result pays the escapes; it settles ----
+    // ---- END banks it (Free Ride's pay with its kilometres); the summary has the escapes; it settles ----
     await p.evaluate(() => game.finish());
     await until(p, () => game.getSnapshot().screen === "result", null, `${name}: the session ends`, 30000);
     const r = (await snap(p)).result;
     assert.ok(r.finished && r.credits > 0, `${name}: pays ${r.credits}`);
     const lines = await p.evaluate(() => [...document.querySelector("[data-fizlet-host]").shadowRoot.querySelectorAll(".dh-pay li span")].map((e) => e.textContent));
-    assert.ok(lines.some((l) => /ESCAPE/.test(l)), `${name}: the escape pays: ${lines.join(" · ")}`);
-    const tix = (await snap(p)).run.tickets;
-    if (tix) assert.ok(r.lines.some((l) => /TICKET/.test(l[0]) && l[1] <= 0), `${name}: the tickets cost`);
+    assert.ok(lines.some((l) => /KM/.test(l)), `${name}: the distance pays: ${lines.join(" · ")}`);
     const sub = await p.evaluate(() => document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".dh-result .dh-sub").textContent);
     assert.ok(/escape/.test(sub) && /hump/.test(sub), `${name}: the summary says it: ${sub}`);
     await until(p, () => game.run.engine.paused.includes("settled") && game.engine.paused.includes("settled"), null, `${name}: the result settles`, 30000);
@@ -88,7 +82,7 @@ try {
     assert.deepEqual(errs, [], `${name}: no page errors`);
     await ctx.close();
   }
-  console.log("Wheelie City: four hoods each start, draw and ride; the pad as ever; settles at the start; the heat, the neon patrol, a hump escape into the next hood with the camera held; the payout; the result settles; 1440 and 390.");
+  console.log("Endless Wheelie City: starts, draws and rides; the pad as ever; settles at the start; the heat, the neon patrol, a hump escape into the next hood with the camera held; the payout; the result settles; 1440 and 390.");
 } finally {
   await browser.close();
   await server.close();

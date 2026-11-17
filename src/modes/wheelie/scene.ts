@@ -22,10 +22,10 @@ import { sound } from "@fzlt/core/sound";
 import {
   CARS, CAR_L, CAR_W, CROSS, DOG, DONE, E_AIR, E_BARK, E_BONUS, E_CRASH, E_END, E_GRUMP, E_HOP, E_RESPAWN, E_RESET, E_STUCK, E_SPLASH, E_START, E_TRICK,
   E_JUMP, E_LAND, E_TICKET, E_ESCAPE, E_STARS, E_UNIT, E_CLEAR, S_HOOD, S_FLY, S_JUMPS,
-  FENCE, HOUSES, LAMPS, LINES, NCARS, NEIGH, NH, NN, NSP, READY, RUN, CRASH, SESSION, SPRINK, SP_REACH, TREES, cityRun, height,
+  FENCE, HOUSES, LAMPS, LINES, NCARS, NEIGH, NH, NN, NSP, READY, RUN, CRASH, SPRINK, SP_REACH, TREES, cityRun, height,
   CITY_SEED, PITCH, slotAt, slotKind,
 } from "./city.ts";
-import { HOODS, HOOD_NAMES, CX, CZ, HX, HZ, CURB, GAP, BANK, W, HUMPS, NHUMP, RAMP, DECK, LIP, HUMP_H, HUMP_W, K_PLAZA, K_BOARD, L_FLATS, L_STORE, L_TOWER, L_SHOP, L_SHACK, NHOOD } from "./hoods.ts";
+import { HOODS, HOOD_NAMES, CX, CZ, HX, HZ, CURB, GAP, BANK, W, RAMP, DECK, LIP, HUMP_H, HUMP_W, K_PLAZA, K_BOARD, L_FLATS, L_STORE, L_TOWER, L_SHOP, L_SHACK, NHOOD } from "./hoods.ts";
 import { HEAT, STARS, HOT, ESC, TIX, NEAR, MAXP, PS, P_ON, P_KIND, P_X, P_Z, P_YAW, P_FADE, U_CART, U_DRONE } from "./cops.ts";
 import type { RideSpec } from "./ride.ts";
 import { meter } from "../meter.ts";
@@ -34,7 +34,7 @@ import type { ModeCtx, ModeRun } from "../mode.ts";
 import { LOOP, ENDO, CASE, BAIL } from "../../bike/bike.ts";
 import { rig, type Rig } from "../../bike/rig.ts";
 import { pool, voice, gamepad, type Pool } from "../../bike/kit.ts";
-import { SC, CB, ON, DIST, TIME, SWEET, PTS, KIND, BEST_W, BEST_WS, BEST_M, HOPS, TOP, MANUAL, STOPPIE, F_CROSS, F_SPRINK } from "./tricks.ts";
+import { SC, CB, ON, DIST, TIME, SWEET, PTS, KIND, BEST_W, MANUAL, STOPPIE, F_CROSS, F_SPRINK } from "./tricks.ts";
 
 const TAU = 6.283185307179586;
 // Palettes by role: a neon night (dark) and a pastel day (light); each hood has its own ground and buildings over it.
@@ -43,7 +43,7 @@ const DARK = {
   sky0: "#06051a", sky1: "#1c0f3e", sky2: "#3b1660", star: "#cfd8ff", moon: "#e9e4ff",
   table: "#0c0b1a", plinth: "#15132a", rim: "#22e6ff", road: "#1a1930", walk: "#2b2848", lawn: "#18373a", drive: "#2f2b4c", curb: "#22e6ff", dash: "#ffd166", zebra: "#d8dcff", bump: "#ffd166", ply: "#8a6a4a",
   walls: ["#3b3466", "#2c3f6a", "#43305e", "#2a4058", "#2b2950", "#33284a"], roofs: ["#1e1a36", "#241c3c", "#1b2340", "#2a1838", "#191830", "#2b1a3a"], trim: "#ff4fa8",
-  win: "#ffd27a", win2: "#7cf6ff", door: "#141226", garage: "#272444", awning: ["#ff4fa8", "#22e6ff"], sign: "#ff4fa8",
+  win: "#ffd27a", win2: "#7cf6ff", door: "#141226", garage: "#272444", ghost: "#7cf6ff", beam: "#d8f6ff", awning: ["#ff4fa8", "#22e6ff"], sign: "#ff4fa8",
   trunk: "#2a2033", leaf: ["#1d5148", "#21604f", "#174039"], pole: "#3a3658", lampOn: "#fff1c2", glow: "#ffcf7a",
   cars: ["#ff4fa8", "#22e6ff", "#ffd166", "#9d7bff"], glass: "#0d1022", tyre: "#0e0e16", hub: "#8d92b4", tail: "#ff2e55", head: "#fff7d6",
   frame: ["#e8ecff", "#ff4fa8", "#ffd166"], accent: "#22e6ff", seat: "#141420", fork: "#9aa0c4",
@@ -69,7 +69,7 @@ const LIGHT: Pal = {
   sky0: "#bfe6ff", sky1: "#e4f4ff", sky2: "#fff3dc", star: "#ffffff", moon: "#fff6cc",
   table: "#c9a585", plinth: "#8a6448", rim: "#fff3dc", road: "#6b7088", walk: "#dcd6cc", lawn: "#8fd18a", drive: "#c8c0b4", curb: "#f4efe6", dash: "#fff3b0", zebra: "#ffffff", bump: "#ffd166", ply: "#d9a86c",
   walls: ["#ffd6a5", "#bde0fe", "#ffc8dd", "#caffbf", "#e9d8ff", "#ffe5b4"], roofs: ["#e76f51", "#577590", "#b5838d", "#6a994e", "#7d6b9e", "#d1495b"], trim: "#ffffff",
-  win: "#e8f6ff", win2: "#d7f3ff", door: "#6d4c41", garage: "#f1ece4", awning: ["#ef476f", "#ffffff"], sign: "#ef476f",
+  win: "#e8f6ff", win2: "#d7f3ff", door: "#6d4c41", garage: "#f1ece4", ghost: "#3d5a80", beam: "#fff7c2", awning: ["#ef476f", "#ffffff"], sign: "#ef476f",
   trunk: "#8d6748", leaf: ["#52b788", "#74c69d", "#40916c"], pole: "#7b8094", lampOn: "#fff6cc", glow: "#fff6cc",
   cars: ["#ef476f", "#118ab2", "#ffd166", "#8e7dbe"], glass: "#cfe8ff", tyre: "#26262e", hub: "#d9dbe6", tail: "#e63946", head: "#fffbe6",
   frame: ["#1c2a3c", "#ef476f", "#118ab2"], accent: "#06d6a0", seat: "#26262e", fork: "#4a5468",
@@ -89,14 +89,17 @@ const DUST = 70, SPARK = 40, DROPS = 18, WATER = NSP * DROPS, SPLASH = 40;
 const T_CARD = 1;
 /** Endless: the haze (units from the bike: what stands up fades from HAZE0, gone at HAZE1; the ground under the fog band). */
 const HAZE0 = 24, HAZE1 = 38;
+/** Occlusion: a building in front of the bike fades to GHOST over OCC_T seconds. */
+const GHOST = 0.16, OCC_T = 0.15;
 /** Start hoods by map id (the RIDE menu starts on THE BLOCK; a harness can start elsewhere). */
 const HOOD_IDS = HOODS.map((h) => h.id);
 
-/** Wheelie City; `endless`: Endless Wheelie City (the same hoods as slots in a row, no clock, how far). */
-export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
+/** Endless Wheelie City: the four hoods as slots in a row, no clock, how far. (The fixed table's
+ *  ninety-second Wheelie City is gone; its four hoods are what the row reuses.) */
+export function mountCity(ctx: ModeCtx): ModeRun {
   const stage = modeStage(ctx.host, "wc");
   const engine = createEngine({ root: stage, settle: 0.5, seed: ctx.seed });
-  const m = meter(endless ? "endcity" : "wheelie");
+  const m = meter("endcity");
   // The one ride: the player's bike, tuned (its balance window and hop from tune()).
   const SPEC: RideSpec = { id: ctx.bike.model.id, name: ctx.bike.model.name, kind: ctx.bike.power.name, blurb: "", bars: [3, 3, 3], power: ctx.bike.power, shape: ctx.bike.shape, sweet: ctx.bike.sweet, hop: ctx.bike.hop };
   const L = engine.ledger, sig = { signal: engine.signal };
@@ -112,7 +115,7 @@ export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
   play.setAttribute("aria-label", "Wheelie City: Space or J for gas, K or Shift to brake, W and S (or up and down) lean forward and back, A and D (or left and right) steer, L hops. V changes the view, M mutes, P or Escape pauses");
   const hud = L.add(document.createElement("div"));
   hud.className = "wc-hud";
-  hud.innerHTML = `<div class="wc-head"><p class="wc-top"><b class="wc-chip wc-time"><span>1:30</span></b><b class="wc-chip wc-score"><span>0</span><i>×1</i></b><b class="wc-chip wc-heat" hidden aria-label="Heat"><span></span><i hidden></i></b><b class="wc-chip wc-trick" hidden><span></span></b></p><p class="wc-hint"></p></div><p class="wc-toast" hidden></p><div class="wc-ticket" hidden><b>TICKET!</b><p>NEON PATROL · NOISE NOTICE</p><p class="wc-tline"></p></div><p class="wc-live" aria-live="polite"></p><p class="wc-keys">${endless ? `<button type="button" class="wc-key wc-end" aria-label="End the ride and bank it (E)">END</button>` : ""}<button type="button" class="wc-key wc-reset" aria-label="Reset to the last good spot (R)">↺</button><button type="button" class="wc-key wc-view" aria-label="Camera view (V)">VIEW</button><button type="button" class="wc-key wc-mute" aria-label="Mute (M)" aria-pressed="true">♪</button><button type="button" class="wc-key wc-menu" aria-label="Pause (P)">❚❚</button></p>`;
+  hud.innerHTML = `<div class="wc-head"><p class="wc-top"><b class="wc-chip wc-time"><span>1:30</span></b><b class="wc-chip wc-score"><span>0</span><i>×1</i></b><b class="wc-chip wc-heat" hidden aria-label="Heat"><span></span><i hidden></i></b><b class="wc-chip wc-trick" hidden><span></span></b></p><p class="wc-hint"></p></div><p class="wc-toast" hidden></p><div class="wc-ticket" hidden><b>TICKET!</b><p>NEON PATROL · NOISE NOTICE</p><p class="wc-tline"></p></div><p class="wc-live" aria-live="polite"></p><p class="wc-keys"><button type="button" class="wc-key wc-end" aria-label="End the ride and bank it (E)">END</button><button type="button" class="wc-key wc-reset" aria-label="Reset to the last good spot (R)">↺</button><button type="button" class="wc-key wc-view" aria-label="Camera view (V)">VIEW</button><button type="button" class="wc-key wc-mute" aria-label="Mute (M)" aria-pressed="true">♪</button><button type="button" class="wc-key wc-menu" aria-label="Pause (P)">❚❚</button></p>`;
   const head = hud.children[0] as HTMLElement, top = head.children[0] as HTMLElement, hintEl = head.children[1] as HTMLElement;
   const toastEl = hud.children[1] as HTMLElement, ticketEl = hud.children[2] as HTMLElement, live = hud.children[3] as HTMLElement, keysEl = hud.children[4] as HTMLElement;
   const timeEl = top.children[0]!.firstChild as HTMLElement, scoreEl = top.children[1]!.firstChild as HTMLElement, comboEl = top.children[1]!.lastChild as HTMLElement;
@@ -171,11 +174,11 @@ export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
   paintMute();
 
   // ---- the run and the diorama ----
-  const run = cityRun([SPEC], ctx.seed >>> 0 || 1, endless, CITY_SEED), bike = run.bike, S = run.S, sc = run.sc.S, cop = run.cop, hgt = run.town.height;
+  const run = cityRun([SPEC], ctx.seed >>> 0 || 1, true, CITY_SEED), bike = run.bike, S = run.S, sc = run.sc.S, cop = run.cop, hgt = run.town.height;
   // Endless: each hood kind is built once at its fixed-table place and moved to the slot it shows in
   // (VO: its move, x and z per kind: what the per-frame drawing adds to the world lists).
   const VO = new Float64Array(8);
-  const dio = diorama(canvas, { light: P.light, ambient: P.amb, background: () => (endless ? P.sky2 : P.table), overlay: drawOverlay, get shadowColor() { return P.shadow; }, maxVerts: 196608, maxFaces: 16384 });
+  const dio = diorama(canvas, { light: P.light, ambient: P.amb, background: () => P.sky2, overlay: drawOverlay, get shadowColor() { return P.shadow; }, maxVerts: 196608, maxFaces: 16384 });
   const rigs: Rig[] = [];
   const nbs: DioramaObject[] = [], arms: DioramaObject[] = [], sprHeads: DioramaObject[] = [];
   /** Per hood: its root objects (shown or hidden as the rider nears it), and those not on the ground (faded by distance, endless). */
@@ -183,8 +186,8 @@ export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
   /** Each hood's humps (world, on the fixed table): x, z, dir x, dir z (endless: both ends of the south street). */
   const HL: number[][] = [[], [], [], []];
   for (let k = 0; k < NHOOD; k++) {
-    if (!endless) { for (let i = 0; i < NHUMP; i++) if (HUMPS[i * 5 + 4] === k) HL[k]!.push(HUMPS[i * 5]!, HUMPS[i * 5 + 1]!, HUMPS[i * 5 + 2]!, HUMPS[i * 5 + 3]!); }
-    else { const U = run.town.HU[k]!; for (let o = 0; o < U.length; o += 5) HL[k]!.push(U[o + 1]! + CX[k]!, U[o + 2]! + CZ[k]!, U[o + 3]!, U[o + 4]!); }
+    const U = run.town.HU[k]!;
+    for (let o = 0; o < U.length; o += 5) HL[k]!.push(U[o + 1]! + CX[k]!, U[o + 2]! + CZ[k]!, U[o + 3]!, U[o + 4]!);
   }
   // Patrol units: per slot the group and each kind's group, and the two lights of each kind.
   const units: DioramaObject[] = [], kinds: DioramaObject[] = [], lites: DioramaObject[] = [];
@@ -217,30 +220,15 @@ export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
     const keep = (o: DioramaObject, flat = false) => (hk >= 0 && (HR[hk]!.push(o), flat || UP[hk]!.push(o)), o);
     const add = (d: DioramaObjectDef) => (d.on ? dio.add(d) : keep(dio.add(d), d.cluster === "ground"));
     const G = (size: number[], pos: number[], color: string, layer: number, emissive = false) => keep(dio.add({ size, pos, color, cluster: "ground", layer, emissive, pick: false }), true);
-    // The table under the town: the plinth, its neon rim, the canals (endless: each island's own water, below).
-    const TX = 2 * HX + GAP / 2 + BANK + 3, TZ = 2 * HZ + GAP / 2 + BANK + 3;
-    if (!endless) {
-    G([TX * 2 + 7, 0.5, TZ * 2 + 6], [0, -1.55, 0.6], P.table, 0);
-    G([TX * 2 + 0.5, 1.05, TZ * 2 + 0.5], [0, -1.6, 0], P.plinth, 1);
-    G([TX * 2 + 0.7, 0.1, TZ * 2 + 0.7], [0, -0.71, 0], P.rim, 2, true);
-    // The canals, in tiles (a face with a corner behind the camera is dropped: a small one goes, not the lot).
-    for (let x = -TX; x < TX - 0.01; x += 6) for (let z = -TZ; z < TZ - 0.01; z += 6) {
-      const x1 = Math.min(TX, x + 6), z1 = Math.min(TZ, z + 6), h = (z + z1 < 0 ? 0 : 2) + (x + x1 < 0 ? 0 : 1);
-      if (Math.abs(x - CX[h]!) < HX + BANK && Math.abs(x1 - CX[h]!) < HX + BANK && Math.abs(z - CZ[h]!) < HZ + BANK && Math.abs(z1 - CZ[h]!) < HZ + BANK) continue;
-      dio.add({ size: [x1 - x, 0.02, z1 - z], pos: [(x + x1) / 2, -0.55, (z + z1) / 2], color: P.canal, cluster: "ground", layer: 2.5, mask: 1, pick: false });
-    }
-    }
     for (let k = 0; k < NHOOD; k++) {
       hk = k;
       const hd = HOODS[k]!, cx = CX[k]!, cz = CZ[k]!, [lawn, walk, road] = P.hood[k]!;
-      if (endless) {
-        // The island's water: half the canal each side along the row, a wide band to the north and south (in tiles).
-        const ax = HX + GAP / 2, az = HZ + 40;
-        for (let x = -ax; x < ax - 0.01; x += 10.6) for (let z = -az; z < az - 0.01; z += 9) {
-          const x1 = Math.min(ax, x + 10.6), z1 = Math.min(az, z + 9);
-          if (x > -HX - BANK && x1 < HX + BANK && z > -HZ - BANK && z1 < HZ + BANK) continue;
-          G([x1 - x, 0.02, z1 - z], [cx + (x + x1) / 2, -0.55, cz + (z + z1) / 2], P.canal, 2.5);
-        }
+      // The island's water: half the canal each side along the row, a wide band to the north and south (in tiles).
+      const ax = HX + GAP / 2, az = HZ + 40;
+      for (let x = -ax; x < ax - 0.01; x += 10.6) for (let z = -az; z < az - 0.01; z += 9) {
+        const x1 = Math.min(ax, x + 10.6), z1 = Math.min(az, z + 9);
+        if (x > -HX - BANK && x1 < HX + BANK && z > -HZ - BANK && z1 < HZ + BANK) continue;
+        G([x1 - x, 0.02, z1 - z], [cx + (x + x1) / 2, -0.55, cz + (z + z1) / 2], P.canal, 2.5);
       }
       // The island: its wall down to the water, the lawn on top; the blocks' sidewalks; the roads, circles, drives and surfaces.
       // (The island's wall in lengths, like the canal tiles; its top is the bank.)
@@ -255,7 +243,7 @@ export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
       }
       // The outer sidewalks along the hood's edges.
       G([HX * 2, CURB + 0.01, 1.2], [cx, 0, cz - HZ + 2.9], walk!, 4); G([HX * 2, CURB + 0.01, 1.2], [cx, 0, cz + HZ - 2.9], walk!, 4);
-      const R = endless ? [...hd.roads, HX - 2, 6.5, HX, 10.5, -HX, 6.5, -HX + 2, 10.5] : hd.roads;
+      const R = [...hd.roads, HX - 2, 6.5, HX, 10.5, -HX, 6.5, -HX + 2, 10.5];
       for (let o = 0; o < R.length; o += 4) G([R[o + 2]! - R[o]!, 0.01, R[o + 3]! - R[o + 1]!], [(R[o]! + R[o + 2]!) / 2 + cx, -0.01, (R[o + 1]! + R[o + 3]!) / 2 + cz], road!, 5);
       for (let o = 0; o < hd.rings.length; o += 3) keep(dio.add({ shape: "cyl", sides: 18, size: [hd.rings[o + 2]! * 2, 0.01, hd.rings[o + 2]! * 2], pos: [hd.rings[o]! + cx, -0.01, hd.rings[o + 1]! + cz], color: road!, cluster: "ground", layer: 5, pick: false }));
       const F = hd.surf;
@@ -344,7 +332,7 @@ export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
     hk = -1;
     dio.decal("ground", 9, paintLines);
     dio.decal("ground", 9.5, paintShadow);
-    if (endless) dio.decal("ground", 9.8, paintFog);
+    dio.decal("ground", 9.8, paintFog);
     buildings();
     // Parked cars: body, cabin, glass, wheels, lights.
     for (let q = 0; q < NCARS; q++) {
@@ -468,7 +456,8 @@ export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
           y += base;
         }
         const wall = look === L_TOWER ? P.tower[h % 4]! : look === L_SHACK ? P.shack[h % 3]! : P.walls[look % 6]!, roof = P.roofs[look % 6]!;
-        add({ id, size: [w, ht, d], pos: [x, y, z], color: wall, pick: false });
+        HO[h] = add({ id, size: [w, ht, d], pos: [x, y, z], color: wall, pick: false });
+        HB[h] = base > 0 ? dio.get(id + "b") ?? null : null;
         const fz = (f * d) / 2 + f * 0.01, part = (size: number[], pos: number[], color: string, emissive = false) => dio.add({ size, pos, color, on: id, emissive, pick: false, layer: 6 });
         if (look < 4) {
           for (const s2 of [-1, 1]) dio.add({ shape: "wedge", size: [d / 2 + 0.25, 0.85, w + 0.3], pos: [0, 0, s2 * (d / 4 + 0.06)], rot: [0, s2 < 0 ? Math.PI / 2 : -Math.PI / 2, 0], on: id, color: roof, pick: false, layer: 5 });
@@ -539,6 +528,9 @@ export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
             // A patrol drone: a flat body, four rotors, the lights underneath.
             p([0.7, 0.18, 0.7], [0, 0, 0], P.unit); p([0.72, 0.05, 0.72], [0, 0.18, 0], P.unit2);
             for (const rx of [-0.5, 0.5]) for (const rz of [-0.5, 0.5]) p([0.5, 0.03, 0.5], [rx, 0.14, rz], P.pole, { shape: "cyl", sides: 8 });
+            // Its neon: a ring round the body and an eye at the front (a cyber cop, not a weapon).
+            p([1.0, 0.04, 1.0], [0, 0.09, 0], P.neon[1]!, { shape: "cyl", sides: 8, emissive: true });
+            p([0.12, 0.1, 0.3], [0.38, 0.02, 0], P.neon[0]!, { emissive: true });
             lh = -0.1;
           }
           for (const s of [-1, 1]) lites.push(p([0.26, 0.12, 0.22], [kd === 2 ? 0 : -0.15, lh, s * 0.16], P.lite[(s + 1) >> 1]!, { emissive: true }));
@@ -550,18 +542,12 @@ export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
   function show() {
     const d = bike.b, x = d.pos[0]!, z = d.pos[2]!;
     let v = 0;
-    if (endless) {
-      // The slot the bike is over, and the one it nears (never the same kind: one built hood each).
-      const k = slotAt(x), lx = x - k * PITCH, j = k + (lx > 0 ? 1 : -1), a = slotKind(k), b = slotKind(j);
-      moveHood(a, k);
-      v |= 1 << a;
-      if ((lx < 0 ? -lx : lx) > HX - 34) moveHood(b, j), (v |= 1 << b);
-      fade(x, z, v);
-    } else
-    for (let k = 0; k < NHOOD; k++) {
-      const dx = Math.max(0, Math.abs(x - CX[k]!) - HX), dz = Math.max(0, Math.abs(z - CZ[k]!) - HZ);
-      if (k === S[S_HOOD] || (dx < 34 && dz < 30)) v |= 1 << k;
-    }
+    // The slot the bike is over, and the one it nears (never the same kind: one built hood each).
+    const k = slotAt(x), lx = x - k * PITCH, j = k + (lx > 0 ? 1 : -1), a = slotKind(k), b = slotKind(j);
+    moveHood(a, k);
+    v |= 1 << a;
+    if ((lx < 0 ? -lx : lx) > HX - 34) moveHood(b, j), (v |= 1 << b);
+    fade(x, z, v);
     if (v === vis) return;
     vis = v;
     for (let k = 0; k < NHOOD; k++) {
@@ -595,6 +581,154 @@ export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
         o.alpha = dd < HAZE0 ? 1 : dd > HAZE1 ? 0 : 1 - (dd - HAZE0) / (HAZE1 - HAZE0);
       }
     }
+  }
+  // ---- occlusion: a building between the chase camera and the bike is ghosted ----
+  // The standard chase-camera pattern: each step, rays from the camera's eye to five points on the
+  // rider's silhouette (low, high, either side, the head) are tested against the boxes of the
+  // buildings in the hoods drawn (the broadphase: only those two slots, then a box-vs-box reject).
+  // A building a ray passes through fades to GHOST (and is outlined); one the eye is inside, or nearly
+  // touching, fades out completely. Fades take OCC_T seconds (reduced motion: at once). Render only:
+  // the run never reads it; no allocation (fixed arrays).
+  const HO: (DioramaObject | null)[] = new Array(NH).fill(null), HB: (DioramaObject | null)[] = new Array(NH).fill(null);
+  /** Per house: its ghost level now (0 solid, 1 ghosted, 2 gone) and the level it is heading for. */
+  const GH = new Float64Array(NH), GT = new Uint8Array(NH);
+  /** Per hood kind: its houses. */
+  const HIX: Int32Array[] = [];
+  for (let k = 0; k < NHOOD; k++) {
+    let n = 0;
+    for (let h = 0; h < NH; h++) if (W.hood[h] === k) n++;
+    const a = new Int32Array(n);
+    n = 0;
+    for (let h = 0; h < NH; h++) if (W.hood[h] === k) a[n++] = h;
+    HIX.push(a);
+  }
+  /** The eye, then the five silhouette points (x, y, z each). */
+  const OP = new Float64Array(18), BOX = new Float64Array(6), PJ = new Float64Array(3), OCN = new Float64Array(16);
+  /** House h's box (world, as drawn now): x0, y0, z0, x1, y1, z1 (roofs, masts and terraces in). */
+  function boxOf(h: number, o: DioramaObject, m: number) {
+    const w = HOUSES[h * 8 + 2]!, d = HOUSES[h * 8 + 3]!, ht = HOUSES[h * 8 + 4]!, look = HOUSES[h * 8 + 6]!;
+    const top = ht + (look === L_TOWER ? 1.5 : look < 4 ? 0.9 : look === L_SHACK ? 0.5 : 0.15);
+    BOX[0] = o.pos[0]! - w / 2 - 0.5 - m; BOX[3] = o.pos[0]! + w / 2 + 0.5 + m;
+    BOX[2] = o.pos[2]! - d / 2 - 0.45 - m; BOX[5] = o.pos[2]! + d / 2 + 0.45 + m;
+    BOX[1] = CURB - m; BOX[4] = o.pos[1]! + top + m;
+  }
+  /** Does the segment from the eye to silhouette point i pass through BOX? (slabs; t in [0, 1]). */
+  function crosses(i: number) {
+    let t0 = 0, t1 = 1;
+    for (let a = 0; a < 3; a++) {
+      const p = OP[a]!, dd = OP[i * 3 + a]! - p, lo = BOX[a]!, hi = BOX[a + 3]!;
+      if (Math.abs(dd) < 1e-9) { if (p < lo || p > hi) return false; continue; }
+      let u = (lo - p) / dd, v = (hi - p) / dd;
+      if (u > v) { const q = u; u = v; v = q; }
+      if (u > t0) t0 = u;
+      if (v < t1) t1 = v;
+      if (t0 > t1) return false;
+    }
+    return true;
+  }
+  /** The probe's x-ray (tests): 0 as drawn, 1 no ghosting (solid), 2 no buildings. */
+  let XR = 0;
+  /** Step the ghosts; true while one is still fading. */
+  function occlude(dt: number) {
+    const c = dio.cam, d = bike.b, cp = Math.cos(c.pitch), sp = Math.sin(c.pitch), cy = Math.cos(c.yaw), sy = Math.sin(c.yaw);
+    OP[0] = c.tx + c.dist * sy * cp; OP[1] = c.ty + c.dist * sp; OP[2] = c.tz + c.dist * cy * cp;
+    const bx = d.pos[0]!, by = Math.max(CURB, d.pos[1]!), bz = d.pos[2]!, rx = cy * 0.95, rz = -sy * 0.95;
+    OP[3] = bx; OP[4] = by + 0.35; OP[5] = bz;
+    OP[6] = bx; OP[7] = by + 1.65; OP[8] = bz;
+    OP[9] = bx + rx; OP[10] = by + 0.8; OP[11] = bz + rz;
+    OP[12] = bx - rx; OP[13] = by + 0.8; OP[14] = bz - rz;
+    OP[15] = bx; OP[16] = by + 1.0; OP[17] = bz;
+    // The segments' box (the broadphase).
+    let x0 = OP[0]!, x1 = x0, z0 = OP[2]!, z1 = z0;
+    for (let i = 1; i < 6; i++) (x0 = Math.min(x0, OP[i * 3]!)), (x1 = Math.max(x1, OP[i * 3]!)), (z0 = Math.min(z0, OP[i * 3 + 2]!)), (z1 = Math.max(z1, OP[i * 3 + 2]!));
+    const k = ctx.reduced ? 2 : dt / OCC_T;
+    let busy = false;
+    for (let hk2 = 0; hk2 < NHOOD; hk2++) {
+      const L = HIX[hk2]!, on = vis & (1 << hk2) && view;
+      for (let j = 0; j < L.length; j++) {
+        const h = L[j]!, o = HO[h];
+        if (!o) continue;
+        let t = 0;
+        if (on) {
+          boxOf(h, o, 0);
+          if (BOX[3]! >= x0 && BOX[0]! <= x1 && BOX[5]! >= z0 && BOX[2]! <= z1) {
+            for (let i = 1; i < 6 && !t; i++) if (crosses(i)) t = 1;
+            // The eye inside the building, or all but touching it: gone, not ghosted.
+            if (t) {
+              boxOf(h, o, 1.2);
+              if (OP[0]! > BOX[0]! && OP[0]! < BOX[3]! && OP[1]! > BOX[1]! && OP[1]! < BOX[4]! && OP[2]! > BOX[2]! && OP[2]! < BOX[5]!) t = 2;
+            }
+          }
+        }
+        GT[h] = t;
+        if (XR === 2) { o.alpha = 0; const b = HB[h]; if (b) b.alpha = 0; }
+        const g = GH[h]!;
+        if (g !== t) {
+          GH[h] = g < t ? Math.min(t, g + k) : Math.max(t, g - k);
+          busy = true;
+        }
+        const gh = GH[h]!;
+        if (gh > 0 && on) {
+          const f = gh <= 1 ? 1 - gh * (1 - GHOST) : GHOST * (2 - gh);
+          o.alpha *= XR === 1 ? 1 : f;
+          const b = HB[h];
+          if (b) b.alpha *= XR === 1 ? 1 : f;
+        }
+      }
+    }
+    if (busy) dirty = true;
+    return busy;
+  }
+  /** The drones' searchlights from three stars: a pale beam from each drone to the ground round the rider. */
+  function paintBeams(c2: CanvasRenderingContext2D) {
+    if (cop.S[STARS]! < 3 || S[0] !== RUN) return;
+    const Pt = cop.P, b = bike.b.pos;
+    c2.fillStyle = P.beam;
+    for (let i = 0; i < MAXP; i++) {
+      const o = i * PS, u = units[i]!;
+      if (Pt[o + P_ON] !== 1 || Pt[o + P_KIND] !== U_DRONE || u.alpha < 0.5) continue;
+      if (!dio.project(u.pos[0]!, u.pos[1]! - 0.1, u.pos[2]!, PJ)) continue;
+      const sx = PJ[0]!, sy = PJ[1]!;
+      // The spot: where the drone aims (the rider, lagging a little behind the unit's line).
+      const ax = b[0]! * 0.8 + u.pos[0]! * 0.2, az = b[2]! * 0.8 + u.pos[2]! * 0.2, gy = hgt(ax, az);
+      let ok = 0;
+      for (let q = 0; q < 4; q++) {
+        const a = (q * Math.PI) / 2 + engine.time * 0.6;
+        if (dio.project(ax + Math.cos(a) * 1.5, gy + 0.02, az + Math.sin(a) * 1.5, PJ)) (OCN[q * 2] = PJ[0]!), (OCN[q * 2 + 1] = PJ[1]!), ok++;
+      }
+      if (ok < 4) continue;
+      c2.globalAlpha = 0.16 + 0.05 * Math.sin(engine.time * 9 + i);
+      c2.beginPath();
+      c2.moveTo(sx, sy);
+      for (let q = 0; q < 4; q++) c2.lineTo(OCN[q * 2]!, OCN[q * 2 + 1]!);
+      c2.closePath();
+      c2.fill();
+    }
+    c2.globalAlpha = 1;
+  }
+  /** The ghosts' outlines (over the frame: where the building stands, a thin neon box). */
+  function paintGhosts(c2: CanvasRenderingContext2D) {
+    for (let h = 0; h < NH; h++) {
+      const g = GH[h]!, o = HO[h];
+      if (g < 0.02 || !o || !(vis & (1 << W.hood[h]!))) continue;
+      boxOf(h, o, -0.45);
+      let ok = 0;
+      for (let q = 0; q < 8; q++) {
+        if (dio.project(q & 1 ? BOX[3]! : BOX[0]!, q & 2 ? BOX[4]! : BOX[1]!, q & 4 ? BOX[5]! : BOX[2]!, PJ)) (OCN[q * 2] = PJ[0]!), (OCN[q * 2 + 1] = PJ[1]!), (ok |= 1 << q);
+      }
+      c2.globalAlpha = (g <= 1 ? g : 2 - g) * 0.7;
+      c2.strokeStyle = P.ghost;
+      c2.lineWidth = 1.5;
+      c2.beginPath();
+      for (let q = 0; q < 8; q++) for (let a = 1; a < 8; a <<= 1) {
+        const r = q | a;
+        if (r === q || !(ok & (1 << q)) || !(ok & (1 << r))) continue;
+        c2.moveTo(OCN[q * 2]!, OCN[q * 2 + 1]!);
+        c2.lineTo(OCN[r * 2]!, OCN[r * 2 + 1]!);
+      }
+      c2.stroke();
+    }
+    c2.globalAlpha = 1;
   }
   // ---- state ----
   const I = new Float64Array(5), tmp = new Float64Array(3), tmp2 = new Float64Array(3);
@@ -765,8 +899,8 @@ export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
         say(HOOD_NAMES[val]!);
       } else if (type === E_ESCAPE) {
         engine.events.emit("escape");
-        toast(`ESCAPED! +${val.toLocaleString("en-US")} · ${HOOD_NAMES[S[S_HOOD]!]}`, "go");
-        say(`Escaped the patrol, ${val} points`);
+        toast(`LOST THEM! +${val.toLocaleString("en-US")} · COMBO ×${1 + sc[CB]!}`, "go");
+        say(`Lost them: ${val} points, combo up`);
       } else if (type === E_TICKET) {
         engine.events.emit("ticket");
         shake = 0.3;
@@ -780,7 +914,7 @@ export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
       } else if (type === E_UNIT) {
         sirenT = 0;
         toast(`${UNIT[val]} ON YOUR TAIL!`, "bad");
-        say(`${UNIT[val]} on your tail. Jump a hump to lose it`);
+        say(`${UNIT[val]} on your tail. Keep riding: they only ticket you stopped. Jump a hump to lose them`);
       } else if (type === E_CLEAR) {
         if (val > 0) toast(`COOLED OFF · ${val.toLocaleString("en-US")} SAFE`, "clean");
         say("Cooled off");
@@ -804,11 +938,8 @@ export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
     live.textContent = said = s;
   }
   function hudWrite() {
-    const ph = S[0]!, secs = ph === READY ? SESSION : Math.ceil(S[1]!);
-    if (endless) {
-      const cm = Math.floor(run.far / 10);
-      if (was[0] !== cm) (was[0] = cm), (timeEl.textContent = `${(cm / 100).toFixed(2)} KM`), timeEl.parentElement!.classList.toggle("wc-hot", run.far > best && best > 0);
-    } else if (was[0] !== secs) (was[0] = secs), (timeEl.textContent = `${(secs / 60) | 0}:${("" + (secs % 60)).padStart(2, "0")}`), timeEl.parentElement!.classList.toggle("wc-hot", secs <= 10 && ph !== READY);
+    const ph = S[0]!, cm = Math.floor(run.far / 10);
+    if (was[0] !== cm) (was[0] = cm), (timeEl.textContent = `${(cm / 100).toFixed(2)} KM`), timeEl.parentElement!.classList.toggle("wc-hot", run.far > best && best > 0);
     const s = sc[SC]!;
     if (was[1] !== s) (was[1] = s), (scoreEl.textContent = s.toLocaleString("en-US"));
     const cb = sc[CB]!;
@@ -834,19 +965,20 @@ export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
     if (was[4] !== ph * 10 + g + rideN * 100) {
       was[4] = ph * 10 + g + rideN * 100;
       const touch = !!thePad.el.offsetParent;
-      hintEl.textContent = ph === READY && endless ? `BEST ${(best / 1000).toFixed(2)} KM · ${touch ? "hold ⚡: the town never ends · END banks it" : "Space to ride: the town never ends · END (or E) banks it"}` : ph === READY ? (touch ? `${SPEC.name} · hold ⚡ to go · stick back to lean back` : `${SPEC.name} · Space gas · K brake · W/S lean · A/D steer · L hop`) : g && ph === RUN ? "NEON PATROL ON YOU · JUMP A HUMP TO LOSE THEM" : "";
+      hintEl.textContent = ph === READY ? `BEST ${(best / 1000).toFixed(2)} KM · ${touch ? "hold ⚡: the town never ends · END banks it" : "Space to ride: the town never ends · END (or E) banks it"}` : g && ph === RUN ? "NEON PATROL ON YOU · KEEP RIDING (STOP AND IT'S A TICKET) · HUMP INTO THE NEXT HOOD TO LOSE THEM" : "";
     }
   }
   function stats() {
     const esc = cop.S[ESC]!, tix = cop.S[TIX]!;
-    if (endless) return m.stats({ finished: true, score: sc[SC]!, where: "city", farKey: "city", far: run.far, escapes: esc, tickets: tix, summary: `${(run.far / 1000).toFixed(2)} KM across town · ${run.slot} hoods along · longest wheelie ${sc[BEST_W]!.toFixed(1)} m · ${S[S_JUMPS]} humps · ${esc} ${esc === 1 ? "escape" : "escapes"} · ${tix} ${tix === 1 ? "ticket" : "tickets"}` });
-    return m.stats({ finished: S[0] === DONE, score: sc[SC]!, where: "city", escapes: esc, tickets: tix, summary: `longest wheelie ${sc[BEST_W]!.toFixed(1)} m (${sc[BEST_WS]!.toFixed(1)}s) · longest manual ${sc[BEST_M]!.toFixed(1)} m · ${sc[HOPS]} hops · top combo ×${1 + sc[TOP]!} · ${S[4]} grumpy neighbours · ${S[S_JUMPS]} humps · ${esc} ${esc === 1 ? "escape" : "escapes"} · ${tix} ${tix === 1 ? "ticket" : "tickets"}` });
+    return m.stats({ finished: true, score: sc[SC]!, where: "city", farKey: "city", far: run.far, escapes: esc, tickets: tix, summary: `${(run.far / 1000).toFixed(2)} KM across town · ${run.slot} hoods along · longest wheelie ${sc[BEST_W]!.toFixed(1)} m · ${S[S_JUMPS]} humps · ${esc} ${esc === 1 ? "escape" : "escapes"} · ${tix} ${tix === 1 ? "ticket" : "tickets"}` });
   }
   function end() {
     if (ended || ctx.attract) return;
     ended = true;
+    // Banked: the run is over (the patrol peels off, the bike rolls to a stop, then it settles).
+    S[0] = DONE;
     setView(0);
-    say(endless ? `${(run.far / 1000).toFixed(2)} kilometres` : `Time. ${sc[SC]} points`);
+    say(`${(run.far / 1000).toFixed(2)} kilometres`);
     ctx.end(stats());
   }
 
@@ -865,7 +997,7 @@ export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
     dio.fit(TABLE, pts, { x0: 8, y0: V[3]!, x1: Wd - 8, y1: H - V[4]! });
     framed = h;
     // (Endless: lower, to see down the row of hoods to the haze.)
-    if (!chaseSet) (chaseSet = true), (chaseO.dist = tall ? 12.5 : 10.5), (chaseO.pitch = endless ? (tall ? 0.46 : 0.36) : tall ? 0.7 : 0.6);
+    if (!chaseSet) (chaseSet = true), (chaseO.dist = tall ? 12.5 : 10.5), (chaseO.pitch = tall ? 0.46 : 0.36);
   }
   function stepCam(dt: number) {
     const cam = dio.cam, d = bike.b;
@@ -1064,6 +1196,8 @@ export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
     c2.fillText(text, bx, by - bh / 2 + 0.5);
   }
   function drawOverlay(c2: CanvasRenderingContext2D) {
+    paintGhosts(c2);
+    paintBeams(c2);
     // Neighbours' shouts and the dog's bark.
     for (let i = 0; i < NN; i++) {
       const t = run.NB[i * 3]!;
@@ -1169,6 +1303,7 @@ export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
       }
       if (stepFx(dt)) moving = true;
       if (stepCam(dt)) moving = true;
+      if (occlude(dt)) moving = true;
       if (shake > 0) (shake = Math.max(0, shake - dt)), (moving = true);
       if (barkT > 0) (barkT = Math.max(0, barkT - dt)), (moving = true);
       if (toastT > 0) (toastT = Math.max(0, toastT - dt)), (moving = true), toastT === 0 && (toastEl.hidden = true);
@@ -1198,7 +1333,7 @@ export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
     wake();
     if (e.code === "KeyM") return void (e.preventDefault(), toggle());
     if (e.code === "KeyV") return void (e.preventDefault(), setView(view ? 0 : 1));
-    if (endless && e.code === "KeyE" && S[0] !== READY) return void (e.preventDefault(), end());
+    if (e.code === "KeyE" && S[0] !== READY) return void (e.preventDefault(), end());
     const k = MAP[e.code];
     if (!k || src(e)?.closest?.(".bui-pad")) return;
     e.preventDefault();
@@ -1254,18 +1389,14 @@ export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
       const ph = S[0]!;
       return {
         phase: ph === READY ? "ready" : ph === RUN || ph === CRASH ? "run" : ph === DONE ? "done" : "idle", clock: S[1]!, score: sc[SC]!, combo: sc[CB]!, trick: sc[ON] === 1, nose: bike.nose, view: view ? "chase" : "table", speed: bike.b.speed, crashes, grumps: S[4]!, best: sc[BEST_W]!, ended,
-        hood: HOOD_IDS[S[S_HOOD]!], slot: run.slot, far: run.far, endless, near: cop.S[NEAR]!, flying: S[S_FLY] === 1, jumps: S[S_JUMPS]!, heat: cop.S[HEAT]!, stars: cop.S[STARS]!, units: cop.chasing, risk: cop.S[HOT]!, escapes: cop.S[ESC]!, tickets: cop.S[TIX]!, drawn: vis, objects: dio.stats.objects, faces: dio.stats.faces,
+        hood: HOOD_IDS[S[S_HOOD]!], slot: run.slot, far: run.far, endless: true, near: cop.S[NEAR]!, flying: S[S_FLY] === 1, jumps: S[S_JUMPS]!, heat: cop.S[HEAT]!, stars: cop.S[STARS]!, units: cop.chasing, risk: cop.S[HOT]!, escapes: cop.S[ESC]!, tickets: cop.S[TIX]!, drawn: vis, objects: dio.stats.objects, faces: dio.stats.faces,
       };
     },
     get camera() {
       return { dist: view ? dio.cam.dist : chaseO.dist, fov: dio.cam.fov, view: view ? "chase" : "table" };
     },
     finish() {
-      if (ended) return;
-      if (endless) return end();
-      if (S[0] === READY) S[0] = RUN;
-      S[1] = Math.min(S[1]!, 0.001);
-      engine.wake();
+      if (!ended) end();
     },
     stats,
     pause(on: boolean) {
@@ -1276,5 +1407,63 @@ export function mountCity(ctx: ModeCtx, endless = false): ModeRun {
       else engine.start();
     },
     destroy: () => engine.destroy(),
+    probe: {
+      /** Put the bike `back` units out from house h's front, facing away from it, in the first slot
+       *  (from `from`) that shows h's hood: the building stands between the chase camera and the bike. */
+      behind(h: number, back = 4, from = 0) {
+        const k0 = W.hood[h]!;
+        let k = from;
+        while (slotKind(k) !== k0) k++;
+        // Riding along the street (east, or west), the chase camera sits back and to one side
+        // (yaw − π/2 + side): put the bike on that line out from the tower's front.
+        const f = HOUSES[h * 8 + 5]!, yaw = f < 0 ? 0 : Math.PI, cy = yaw - Math.PI / 2 + chaseO.side, ux = Math.sin(cy), uz = Math.cos(cy);
+        const t = (HOUSES[h * 8 + 3]! / 2 + back) / Math.abs(uz), x = HOUSES[h * 8]! - CX[k0]! + k * PITCH - ux * t, z = HOUSES[h * 8 + 1]! - CZ[k0]! - uz * t;
+        run.place(x, z, yaw);
+        show();
+        CTP[0] = bike.b.pos[0]!; CTP[1] = Math.max(0, bike.b.pos[1]!); CTP[2] = bike.b.pos[2]!; target.yaw = bike.b.yaw;
+        chase(dio.cam, target, { ...chaseO, snap: true });
+        dirty = true;
+        engine.busy(1);
+        engine.wake();
+        return [x, z];
+      },
+      /** Draw now, x-rayed (see XR) and with the rider shown or not: the frame's pixels are the test's. */
+      draw(xr = 0, rider = 1) {
+        XR = xr;
+        show();
+        occlude(0);
+        pose();
+        rigs[0]!.root.alpha = rider;
+        dio.draw();
+        rigs[0]!.root.alpha = 1;
+        XR = 0;
+        dirty = true;
+        return dio.cam.dist;
+      },
+      /** The bike's box on screen (CSS px): x0, y0, x1, y1. */
+      bikeBox() {
+        const b = bike.b.pos, out = [1e9, 1e9, -1e9, -1e9];
+        for (let q = 0; q < 8; q++) if (dio.project(b[0]! + (q & 1 ? 1 : -1), Math.max(CURB, b[1]!) + (q & 2 ? 1.9 : 0), b[2]! + (q & 4 ? 1 : -1), PJ)) (out[0] = Math.min(out[0]!, PJ[0]!)), (out[1] = Math.min(out[1]!, PJ[1]!)), (out[2] = Math.max(out[2]!, PJ[0]!)), (out[3] = Math.max(out[3]!, PJ[1]!));
+        return out;
+      },
+      /** Houses ghosted now: [house, level ×100] pairs (level 1 ghosted, 2 gone). */
+      ghosts() {
+        const out: number[] = [];
+        for (let h = 0; h < NH; h++) if (GH[h]! > 0.01) out.push(h, Math.round(GH[h]! * 100));
+        return out;
+      },
+      /** The eye (from the last step) and house h's box as tested. */
+      eye(h: number) {
+        const o = HO[h];
+        if (o) boxOf(h, o, 0);
+        return [OP[0], OP[1], OP[2], dio.cam.yaw, bike.b.yaw, ...BOX];
+      },
+      /** The towers (house ids), for scripting a ride past one. */
+      towers() {
+        const out: number[] = [];
+        for (let h = 0; h < NH; h++) if (HOUSES[h * 8 + 6] === L_TOWER) out.push(h);
+        return out;
+      },
+    },
   };
 }

@@ -46,15 +46,14 @@ pick your jersey and a name. That bike rides every event.
   best distance is kept in the profile. END banks it (Free Ride's pay, plus 20 a km, under its cap).
 - **Big Air**: a minute in the arena, two steel kickers. Hold TRICK in the air and the stick picks
   one of four tricks; weight all the way back flips it. Five judges score the run and pay.
-- **Wheelie City**: ninety seconds across four neighbourhoods (the suburb block, a hillside of
-  cul-de-sacs, a downtown grid round a plaza, a boardwalk marina) linked by humps over the canals:
-  wheelies, manuals, hops and stoppies, bonuses across crosswalks, through sprinklers and past a
-  neighbour shaking a fist. Too loud and the heat rises: the neon patrol comes after you (comic, no
-  weapons); a catch is a ticket (the combo and half the points at risk), a hump into the next hood
-  loses them. Points and escapes pay; tickets cost a little.
-- **Endless Wheelie City**: the same four hoods as slots in a row that never ends, one canal and one
-  hump between each (the same row on every screen); no clock: how far across town? Kilometres on the
-  HUD, END banks it, the best is kept.
+- **Endless Wheelie City**: four neighbourhoods (the suburb block, a hillside of cul-de-sacs, a
+  downtown grid round a plaza, a boardwalk marina) as slots in a row that never ends, one canal and
+  one hump between each (the same row on every screen); wheelies, manuals, hops and stoppies, bonuses
+  across crosswalks, through sprinklers and past a neighbour shaking a fist. Too loud and the neon
+  patrol comes (comic, no weapons); a hump into the next hood loses them. No clock: how far across
+  town? Kilometres on the HUD, END banks it, the best is kept. A building between the chase camera
+  and the bike fades to a ghost (outlined) and comes back when the bike is clear; one the camera is
+  all but inside fades out completely.
 - **Series**: three championship tiers (ROOKIE CUP, PRO CIRCUIT, NEON MASTERS) of four to six
   rounds; every round is a new generated track, harder round by round, against named rivals on
   modded bikes; points, prizes and a title bonus.
@@ -62,7 +61,7 @@ pick your jersey and a name. That bike rides every event.
 - **Online**: up to four riders, each on their own garage bike (its mods, its wear, its paint and
   your kit travel to every screen). The host picks a **race** on a new generated track (ROOKIE, PRO
   or MASTERS; AI rivals fill the empty places), a **Free Ride jam** on any of the five maps (most
-  trick points in three minutes wins), or a **Big Air** or **Wheelie City** head-to-head (everyone
+  trick points in three minutes wins), or a **Big Air** head-to-head (everyone
   rides their own minute; the best score wins). HOST, pick, 2 / 3 / 4, SEND LINK: the link drops a
   friend straight into the room. Your bike answers your keys at once on a phone's network (each
   screen runs ahead on a guess of the others' inputs and quietly corrects). RIDE AGAIN starts the next

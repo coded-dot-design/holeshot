@@ -8,8 +8,13 @@
 // - Units: from one star a patrol bike, then a cart, a drone, another bike (`UNITS` by stars). They
 //   spawn at a junction of the rider's hood well away from the rider (picked by the seeded roll) and
 //   path on the hood's street graph (./hoods.ts `GRAPH`: all-pairs next hops) to the street the rider
-//   is on, then straight at the rider; the drone flies straight. Within CATCH of a rider who is on
-//   the ground: a ticket.
+//   is on, then straight at the rider; the drone flies straight. A ticket only when they catch a
+//   rider who is STOPPED (under SLOW_V for SLOW_T seconds) or down (crashed) within CATCH: a rider who
+//   keeps riding never gets one, however close they are.
+// - Running heats it up: while a unit is on the rider's tail (within TAIL) the heat climbs RUN_HEAT a
+//   second, so more units join (UNITS by stars: a bike, a cart, then neon drones, up to MAXP).
+// - Every unit is bound to its hood (its slot, endless): it never leaves the hood's rectangle, so it
+//   stops at the canal.
 // - A hump into another hood loses them (`escape`): they can't follow; the units peel off, the heat
 //   drops fast and the escape pays.
 // Deterministic: seeded xorshift, ../../math.ts's sine, cosine and arctangent, the state in typed
@@ -22,8 +27,10 @@ const sq = (v: number) => v * v;
 /** S: heat, stars, seconds clean, grace after a ticket, points at risk, escapes, tickets, spawn timer,
  *  fast cool after an escape, seconds of this chase, points lost to tickets, escape points, nearest unit. */
 export const HEAT = 0, STARS = 1, CALM = 2, GRACE = 3, HOT = 4, ESC = 5, TIX = 6, SPAWN = 7, FAST = 8, CHASE = 9, LOST = 10, BONUS = 11, NEAR = 12;
+/** S (cont.): seconds the rider has been stopped (under SLOW_V), the most units out in this chase. */
+export const SLOW = 13, PEAK = 14;
 /** Patrols: state (0 off, 1 chasing, 2 peeling off), kind, x, z, yaw, speed, from node, to node, age, hood, fade, straight at the rider. */
-export const MAXP = 4, PS = 12;
+export const MAXP = 6, PS = 12;
 export const P_ON = 0, P_KIND = 1, P_X = 2, P_Z = 3, P_YAW = 4, P_V = 5, P_FROM = 6, P_TO = 7, P_AGE = 8, P_HOOD = 9, P_FADE = 10, P_DIRECT = 11;
 /** Kinds: a patrol bike, a cart, a drone. */
 export const U_BIKE = 0, U_CART = 1, U_DRONE = 2;
@@ -32,8 +39,9 @@ export const U_BIKE = 0, U_CART = 1, U_DRONE = 2;
 export const C_STARS = 1, C_UNIT = 2, C_TICKET = 3, C_ESCAPE = 4, C_CLEAR = 5;
 /** The tuning: units out by stars, their order, top speed and turn rate by kind, how close is a
  *  catch, how close sees the rider, how near goes straight for the rider, the cool-down. */
-export const UNITS = [0, 1, 1, 2, 3, 4], ORDER = [U_BIKE, U_CART, U_DRONE, U_BIKE];
+export const UNITS = [0, 1, 2, 3, 4, 6], ORDER = [U_BIKE, U_CART, U_DRONE, U_BIKE, U_DRONE, U_DRONE];
 export const VMAX = [7.4, 6.2, 5.4], TURN = [3.8, 2.8, 4.5];
+export const SLOW_V = 1, SLOW_T = 1, TAIL = 9, RUN_HEAT = 3.2, NEW_HOOD = 3;
 export const CATCH = 0.95, SIGHT = 10, DIRECT = 5.5, SPAWN_GAP = 1.6, COOL_AFTER = 3.5, COOL = 6, TICKET_SHARE = 0.5, GRACE_T = 5, ESCAPE_PTS = 150;
 
 /** Heading from (dx, dz) in the bike's convention (forward is (cos, −sin)): atan2(−dz, dx), from ../../math.ts (the same bits on every engine). */
@@ -43,7 +51,7 @@ export const heading = (dx: number, dz: number) => atan2(-dz, dx);
  *  to the slot each hood kind is in (./city.ts). */
 export const FIXED_C = Float64Array.from([CX[0]!, CZ[0]!, CX[1]!, CZ[1]!, CX[2]!, CZ[2]!, CX[3]!, CZ[3]!]);
 export function cops(seed = 1, HC: Float64Array = FIXED_C) {
-  const S = new Float64Array(13), P = new Float64Array(MAXP * PS), R = new Uint32Array(1);
+  const S = new Float64Array(15), P = new Float64Array(MAXP * PS), R = new Uint32Array(1);
   const ev = new Float64Array(16);
   // E: the rider's street (nearest edge's ends and their distances), scratch.
   const E = new Float64Array(4);
@@ -89,7 +97,9 @@ export function cops(seed = 1, HC: Float64Array = FIXED_C) {
   function escape() {
     const chased = active() > 0;
     peel();
-    S[CHASE] = 0;
+    S[CHASE] = 0; S[PEAK] = 0;
+    // The next hood's own patrol takes a moment to hear about you.
+    S[SPAWN] = NEW_HOOD;
     if (!chased) {
       S[HEAT] = S[HEAT]! * 0.4;
       stars();
@@ -109,7 +119,7 @@ export function cops(seed = 1, HC: Float64Array = FIXED_C) {
     const lost = Math.round(S[HOT]! * TICKET_SHARE);
     S[TIX] = S[TIX]! + 1;
     S[LOST] = S[LOST]! + lost;
-    S[HOT] = 0; S[HEAT] = 0; S[GRACE] = GRACE_T; S[CHASE] = 0;
+    S[HOT] = 0; S[HEAT] = 0; S[GRACE] = GRACE_T; S[CHASE] = 0; S[PEAK] = 0;
     peel();
     stars();
     emit(C_TICKET, lost);
@@ -157,8 +167,9 @@ export function cops(seed = 1, HC: Float64Array = FIXED_C) {
     emit(C_UNIT, kind);
   }
   /** One step: the rider at (x, z) in hood h; `air` over a hump (out of reach); `live` while the
-   *  session runs. True while anything moves. */
-  function step(dt: number, x: number, z: number, h: number, air: boolean, live: boolean) {
+   *  session runs; its `speed` and whether it is `down` (crashed). True while anything moves. */
+  function step(dt: number, x: number, z: number, h: number, air: boolean, live: boolean, speed = 0, down = false) {
+    S[SLOW] = speed < SLOW_V && !air ? S[SLOW]! + dt : 0;
     let moving = false;
     if (S[GRACE]! > 0) S[GRACE] = Math.max(0, S[GRACE]! - dt);
     if (S[FAST]! > 0) S[FAST] = Math.max(0, S[FAST]! - dt);
@@ -176,7 +187,13 @@ export function cops(seed = 1, HC: Float64Array = FIXED_C) {
     if (!live) {
       if (active()) peel();
     } else {
-      if (active()) S[CHASE] = S[CHASE]! + dt;
+      const out = active();
+      if (out) {
+        S[CHASE] = S[CHASE]! + dt;
+        if (out > S[PEAK]!) S[PEAK] = out;
+        // On its tail and still running: the heat climbs (more units join).
+        if (near < TAIL && !air && S[GRACE] === 0) (S[HEAT] = Math.min(100, S[HEAT]! + RUN_HEAT * dt)), (S[CALM] = 0), stars();
+      }
       // Cooling: a few seconds clean and out of sight; fast after an escape.
       if (S[HEAT]! > 0 && ((S[CALM]! > COOL_AFTER && near > SIGHT) || S[FAST]! > 0)) {
         S[HEAT] = Math.max(0, S[HEAT]! - (S[FAST]! > 0 ? 30 : COOL) * dt);
@@ -212,7 +229,7 @@ export function cops(seed = 1, HC: Float64Array = FIXED_C) {
         continue;
       }
       chase(o, h, x, z, lx, lz, dt);
-      if (S[GRACE] === 0 && !air && P[o + P_AGE]! > 1 && Math.sqrt(sq(P[o + P_X]! - x) + sq(P[o + P_Z]! - z)) < CATCH) {
+      if (S[GRACE] === 0 && !air && (down || S[SLOW]! >= SLOW_T) && P[o + P_AGE]! > 1 && Math.sqrt(sq(P[o + P_X]! - x) + sq(P[o + P_Z]! - z)) < CATCH) {
         ticket();
         break;
       }

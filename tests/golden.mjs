@@ -1,5 +1,5 @@
 // The golden cases (tests/golden.test.mjs in Node, tests/golden.browser.mjs in a browser): generated
-// tracks at three difficulties, the race loop, the four open maps, and fixed rides, each hashed.
+// tracks at three difficulties, the race loop, the four open maps, and fixed rides (Endless Wheelie City's among them), each hashed.
 // Imports only the game's headless modules, so it bundles for any browser.
 import { hash32 } from "@fzlt/core/presence";
 import * as C from "../src/modes/race/course.ts";
@@ -71,13 +71,11 @@ export function compute() {
     out["big air run"] = h(sh.S, sh.b.state, Float64Array.of(sh.sc.JD[5], sh.S[0]));
   }
   {
-    const t = bikes[2], run = W.cityRun([{ id: "x", name: "x", kind: "", blurb: "", bars: [3, 3, 3], power: t.power, shape: t.shape, sweet: t.sweet, hop: t.hop }]), I = new Float64Array(5);
-    // A whole session in each hood (the heat, the patrol, its tickets and the humps included): every byte the session keeps.
-    for (let hood = 0; hood < 4; hood++) {
-      run.reset(0, hood);
-      for (let f = 0; f < 60 * (W.SESSION + 2) && run.S[0] !== W.DONE; f++) (run.autopilot(I), run.step(1 / 60, I[0], I[1], I[2], I[3], I[4]), run.clear());
-      out[hood ? `wheelie city session, hood ${hood}` : "wheelie city session"] = h(...run.bytes);
-    }
+    const t = bikes[2];
+    // Endless Wheelie City: two minutes on the autopilot (the heat, the patrol, the humps, the tricks): every byte the run keeps.
+    const run = W.cityRun([{ id: "x", name: "x", kind: "", blurb: "", bars: [3, 3, 3], power: t.power, shape: t.shape, sweet: t.sweet, hop: t.hop }], 9, true), I = new Float64Array(5);
+    for (let f = 0; f < 60 * 120; f++) (run.autopilot(I), run.step(1 / 60, I[0], I[1], I[2], I[3], I[4]), run.clear());
+    out["endless wheelie city ride"] = h(...run.bytes);
   }
   return out;
 }

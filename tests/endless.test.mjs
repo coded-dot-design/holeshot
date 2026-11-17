@@ -117,11 +117,25 @@ test("endless grounds: pure, each its own, and 10 km with no edge", () => {
 test("profile: a best per endless ground and the city's (v3 → v4), apply keeps the best", () => {
   const v3 = { ...fresh(), v: 3, stats: { events: 2, wins: 0, earned: 10, best: {}, far: { desert: 4100 } } };
   const p = migrate(v3);
-  assert.deepEqual([p.v, p.stats.far.desert, p.stats.far.city, p.stats.far.forest], [4, 4100, 0, 0]);
+  assert.deepEqual([p.v, p.stats.far.desert, p.stats.far.city, p.stats.far.forest], [5, 4100, 0, 0]);
   const b = newBike("buzzline", "b1");
   let q = { ...p, bikes: [b] };
   q = apply(q, settle({ ...blankStats("endcity"), finished: true, seconds: 60, distance: 2400, far: 2400, farKey: "city" }, b));
   q = apply(q, settle({ ...blankStats("desert"), finished: true, seconds: 60, distance: 900, far: 900, farKey: "forest" }, q.bikes[0]));
   q = apply(q, settle({ ...blankStats("endcity"), finished: true, seconds: 60, distance: 800, far: 800, farKey: "city" }, q.bikes[0]));
   assert.deepEqual([q.stats.far.city, q.stats.far.forest, q.stats.far.desert], [2400, 900, 4100]);
+});
+
+test("profile: the fixed Wheelie City's save (v4 → v5): its best score carries into Endless Wheelie City's when higher; the old key stays", () => {
+  const v4 = (best) => ({ ...fresh(), v: 4, stats: { events: 9, wins: 1, earned: 500, best, far: { ...fresh().stats.far, city: 1300 } } });
+  let p = migrate(v4({ "wheelie:city": 4200, "bigair:arena": 71 }));
+  assert.deepEqual([p.v, p.stats.best["endcity:city"], p.stats.best["wheelie:city"], p.stats.best["bigair:arena"], p.stats.far.city, p.stats.events], [5, 4200, 4200, 71, 1300, 9]);
+  p = migrate(v4({ "wheelie:city": 4200, "endcity:city": 9000 }));
+  assert.equal(p.stats.best["endcity:city"], 9000, "a higher endless best is kept");
+  p = migrate(v4({}));
+  assert.equal(p.stats.best["endcity:city"], undefined, "nothing to carry");
+  // And the game still settles an Endless Wheelie City ride on the migrated profile (its best goes up).
+  const b = newBike("buzzline", "b1");
+  const q = apply({ ...migrate(v4({ "wheelie:city": 4200 })), bikes: [b] }, settle({ ...blankStats("endcity"), finished: true, seconds: 60, distance: 900, far: 900, farKey: "city", where: "city", score: 5000 }, b));
+  assert.equal(q.stats.best["endcity:city"], 5000);
 });

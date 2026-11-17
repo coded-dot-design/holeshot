@@ -5,12 +5,12 @@ import Base from '../layouts/Base.astro';
 import { base, GZIP, FIZLET, REPO } from '../site';
 import { CLASSES, MODELS, STARTERS } from '../../../src/data/roster.ts';
 import { MODES } from '../../../src/modes/index.ts';
-const description = 'Holeshot is a dirt bike game on a tabletop: one bike and a garage, races against rivals, a race series on a new track every round, five free-ride maps, Endless (the dunes, a quarry, woods and a night park that never end), a Big Air show, Wheelie City and Endless Wheelie City. Earn credits, wear out tyres and top ends, rebuild, mod and paint. Free in the browser, by Chris Cooley, built on Fizlet.';
+const description = 'Holeshot is a dirt bike game on a tabletop: one bike and a garage, races against rivals, a race series on a new track every round, five free-ride maps, Endless (the dunes, a quarry, woods and a night park that never end), a Big Air show and Endless Wheelie City. Earn credits, wear out tyres and top ends, rebuild, mod and paint. Free in the browser, by Chris Cooley, built on Fizlet.';
 const kb = (GZIP / 1024).toFixed(1);
 const steps = [
   ['PICK YOUR BIKE', 'One bike to start: a peaky 2-stroke, a torquey 4-stroke, a light e-bike or an electric dirt bike. Paint it, number it, pick your jersey. That bike rides every event.'],
   ['RIDE IT', 'Space is the gas, K the brake, W and S your weight (back lifts the front; in the air it pitches the bike), A and D steer. On a phone: the stick leans and steers, GAS and BRAKE under the right thumb.'],
-  ['EARN', 'Races and series rounds pay by place, Big Air by the judges, Wheelie City by points, Free Ride a little for saddle time. Crash and you tumble, get back up, and keep riding.'],
+  ['EARN', 'Races and series rounds pay by place, Big Air by the judges, Endless Wheelie City by points, Free Ride a little for saddle time. Crash and you tumble, get back up, and keep riding.'],
   ['WRENCH', 'Every lap wears the bike: tyres lose grip, a 2-stroke\'s top end loses pull, seals blow and it cases sooner. Buy new tyres, rebuild the motor, add mods, change the paint and the kit.'],
 ];
 const classes = Object.values(CLASSES).map((c) => ({ ...c, models: MODELS.filter((m) => m.cls === c.id), starter: STARTERS.find((m) => m.cls === c.id)! }));

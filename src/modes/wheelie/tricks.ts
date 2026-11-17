@@ -17,7 +17,8 @@ export const WHEELIE = 1, MANUAL = 2, HOP = 3, STOPPIE = 4;
 export const F_CROSS = 1, F_SPRINK = 2, F_GRUMP = 4, F_HOP = 8;
 /** Returns of `step`: nothing, banked, dropped. */
 export const NONE = 0, BANKED = 1;
-const UP = 0.14, HOLD = 0.25, COMBO_GAP = 2.5, MAXCB = 5;
+const UP = 0.14, HOLD = 0.25, COMBO_GAP = 2.5;
+export const MAXCB = 5;
 
 export function tricks() {
   // (S[UPT]: seconds the nose has been up: every number in S, a snapshot.)

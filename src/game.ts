@@ -159,7 +159,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   }
   const garageCard = () => garageView(profile, gui, head(), tabs("garage"), note);
   function rideCard() {
-    return `<div class="dh-card dh-ridec" data-screen="ride">${head()}${tabs("ride")}<p class="dh-sub">On your ${bikeLine()}.</p><ul class="dh-modes">${MODES.map((md) => `<li><button type="button" class="bui-key dh-modek" data-mode="${md.id}"><b>${md.name}</b><small>${md.blurb}</small><em>${md.maps.length > 1 ? `${md.maps.length} MAPS` : md.maps[0]!.name}</em></button></li>`).join("")}<li class="ol-tile"><button type="button" class="bui-key dh-modek ol-open"><b>ONLINE</b><small>Up to four riders, each on their own garage bike: race, a Free Ride jam, Big Air, Wheelie City. Online pays more.</small><em>ONLINE ×1.5 · BEAT A RIDER +75</em></button></li></ul>${note ? `<p class="dh-sub dh-note" role="status">${esc(note)}</p>` : ""}</div>`;
+    return `<div class="dh-card dh-ridec" data-screen="ride">${head()}${tabs("ride")}<p class="dh-sub">On your ${bikeLine()}.</p><ul class="dh-modes">${MODES.map((md) => `<li><button type="button" class="bui-key dh-modek" data-mode="${md.id}"><b>${md.name}</b><small>${md.blurb}</small><em>${md.maps.length > 1 ? `${md.maps.length} MAPS` : md.maps[0]!.name}</em></button></li>`).join("")}<li class="ol-tile"><button type="button" class="bui-key dh-modek ol-open"><b>ONLINE</b><small>Up to four riders, each on their own garage bike: race, a Free Ride jam, Big Air. Online pays more.</small><em>ONLINE ×1.5 · BEAT A RIDER +75</em></button></li></ul>${note ? `<p class="dh-sub dh-note" role="status">${esc(note)}</p>` : ""}</div>`;
   }
   const seriesCard = () => seriesScreen(profile, head(), tabs("series"), note);
   /** A mode's name for the cards (a series round is a race on the series' track). */
@@ -610,7 +610,9 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       runMode = r.race ? "race" : "freeride";
       run = mountTrack(ctx, r.track!, !!r.jam, [], {}, view);
     } else {
-      runMode = r.kind === K_AIR ? "bigair" : "wheelie";
+      // (Online offers Big Air as its score run: Wheelie City's ninety-second session went with the
+      // fixed city; Endless Wheelie City has no clock to race to.)
+      runMode = "bigair";
       run = modeOf(runMode).start(ctx);
     }
     runMap = undefined;

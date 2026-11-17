@@ -9,7 +9,7 @@ import { PARTS, START_CREDITS, GARAGE_SLOTS, MODS, SETUPS, TYRES, LOG_MAX, ONLIN
 import { PAINTS, SWATCHES, HELMETS, VISORS, PATTERNS, GRAPHICS, PLASTICS, PLATES } from "../data/looks.ts";
 import { freshSeries, normSeries, type SeriesSave } from "./series.ts";
 
-export const VERSION = 4;
+export const VERSION = 5;
 /** The endless bests a profile keeps (world units): the ENDLESS grounds and Endless Wheelie City. */
 export const FAR_KEYS = ["desert", "quarry", "forest", "night-park", "city"];
 const farZero = () => Object.fromEntries(FAR_KEYS.map((k) => [k, 0])) as Record<string, number>;
@@ -186,7 +186,10 @@ export type Migration = (old: Record<string, unknown>) => Record<string, unknown
  *  2 → 3: Endless Desert. Best distances get their own record (`stats.far`, by mode); a v2 save
  *  starts it at 0 for the desert, and its other stats carry over untouched.
  *  3 → 4: Endless Wheelie City and the endless grounds. Each gets its own best (`stats.far.city`,
- *  `.quarry`, `.forest`, `.night-park`), from 0; the desert's best carries over as it was. */
+ *  `.quarry`, `.forest`, `.night-park`), from 0; the desert's best carries over as it was.
+ *  4 → 5: the fixed Wheelie City is gone (Endless Wheelie City stays). Its best score
+ *  (`stats.best["wheelie:city"]`) carries into Endless Wheelie City's (`"endcity:city"`) when
+ *  higher; the old key is kept as it was (read only: nothing writes it now). */
 export const MIGRATIONS: Record<number, Migration> = {
   1: (o) => {
     const wins = typeof (o.stats as { wins?: unknown } | undefined)?.wins === "number" ? ((o.stats as { wins: number }).wins) : 0;
@@ -199,6 +202,11 @@ export const MIGRATIONS: Record<number, Migration> = {
   3: (o) => {
     const st = obj(o.stats);
     return { ...o, stats: { ...st, far: { ...farZero(), ...obj(st.far) } } };
+  },
+  4: (o) => {
+    const st = obj(o.stats), best = { ...obj(st.best) }, w = best["wheelie:city"], e = best["endcity:city"];
+    if (typeof w === "number" && isFinite(w) && w > 0 && !(typeof e === "number" && e >= w)) best["endcity:city"] = w;
+    return { ...o, stats: { ...st, best } };
   },
 };
 

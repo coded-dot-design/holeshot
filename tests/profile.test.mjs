@@ -94,7 +94,7 @@ test("profile: the export code goes round; a typo is caught", () => {
   p = buyBike(p, "razorhive").profile;
   p = choose(p, 0);
   const code = P.exportCode(p);
-  assert.match(code, /^HS4-[A-Za-z0-9_-]+-[0-9A-Z]{6}$/);
+  assert.match(code, /^HS5-[A-Za-z0-9_-]+-[0-9A-Z]{6}$/);
   assert.deepEqual(P.importCode(code).profile, p);
   assert.deepEqual(P.importCode("DH2" + code.slice(3)).profile, p, "a code from before the rename (DH2-) still imports");
   assert.ok("error" in P.importCode("XX2" + code.slice(3)), "any other prefix does not");

@@ -109,8 +109,8 @@ test("big air unstuck: wedged → the prompt → back to the run-in of the jump;
 
 const Wc = await import("../src/modes/wheelie/city.ts");
 
-test("wheelie city unstuck: wedged → the prompt → back to the last good spot on the street; R too", () => {
-  const run = Wc.cityRun(), I = new Float64Array(5), b = () => run.bike.b;
+test("endless wheelie city unstuck: wedged → the prompt → back to the last good spot on the street; R too", () => {
+  const run = Wc.cityRun(undefined, 1, true), I = new Float64Array(5), b = () => run.bike.b;
   let hold = false;
   const go = (n, person, pin = null, again = false) => {
     const seen = [];
@@ -137,7 +137,7 @@ test("wheelie city unstuck: wedged → the prompt → back to the last good spot
   assert.ok(prompt[2] / 60 >= 1.9 && reset[2] / 60 >= 3.9 && reset[2] / 60 < 4.6, `prompt ${(prompt[2] / 60).toFixed(2)} s, reset ${(reset[2] / 60).toFixed(2)} s`);
   const x = b().pos[0], z = b().pos[2];
   assert.ok(Math.hypot(x - pin[0], z - pin[1]) >= 2, "never back into the trap");
-  assert.ok(Wc.streetClear(x, z, 0.4), "on the street, clear");
+  assert.ok(run.town.streetClear(x, z, 0.4), "on the street, clear");
   assert.ok(!b().crashed && Math.abs(b().rel) < 0.05, "upright");
   go(60 * 3, true);
   for (let i = 0; i < 600 && (b().crashed || run.bike.air || run.S[Wc.S_FLY]); i++) go(1, true);

@@ -3,7 +3,7 @@
 // tests/golden.mjs: generated tracks at three difficulties, the race loop, the four open maps (their
 // centre lines, headings, spawns, posts and every terrain height), then fixed rides: a race of four on
 // the autopilot on generated tracks, an online race of four people and two Free Ride jams of four on
-// scripted inputs, a Big Air run and a Wheelie City session in each of its four hoods. Each is hashed and compared to
+// scripted inputs, a Big Air run and two minutes of Endless Wheelie City. Each is hashed and compared to
 // tests/golden.json (written on Node, V8, and committed): a different engine, or a change to the
 // maths, shows up here. tests/golden.browser.mjs runs the same cases in a browser (Chromium here; with
 // --serve, any phone on the network). Every number on these paths comes from + − × ÷, square roots

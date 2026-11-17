@@ -3,7 +3,7 @@
 // key 44 px or more), picks a bike with clicks and lands in the garage with the bike drawn; RIDE →
 // RACE starts the gate on that bike; the keys (Space) or the pad's GAS ride it; P or ❚❚ pauses (the
 // clock holds) and RESUME goes on; the autopilot finishes the race and the result pays and wears the
-// bike; NEW SET in the garage buys tyres; Free Ride (END banks it), Big Air and Wheelie City each
+// bike; NEW SET in the garage buys tyres; Free Ride (END banks it), Big Air and Endless Wheelie City each
 // start and end on the same bike and pay; leaving mid-event pays nothing and still wears; a reload
 // keeps the garage; the export code moves it to a fresh device. The camera: fixed chase framing,
 // and at 390 a phone's URL bar coming and going (height-only resizes) never refits it; a double tap
@@ -90,7 +90,7 @@ try {
     assert.equal(s.bike.parts.tyres, 1, `${name}: NEW SET`);
     assert.ok(s.credits < before.credits, `${name}: paid for`);
     // ---- the other modes, each on the same bike ----
-    for (const id of ["freeride", "bigair", "wheelie"]) {
+    for (const id of ["freeride", "bigair", "endcity"]) {
       const pre = await snap(p);
       await p.evaluate((id) => game.start(id, { auto: true }), id);
       await until(p, () => game.getSnapshot().run && game.getSnapshot().run.speed > 2, null, `${name}: ${id} rides`);
@@ -212,7 +212,7 @@ try {
     assert.equal(after, html.replace(/<script type="module">[\s\S]*?<\/script>/g, ""), "the page comes back byte for byte");
     await p.close();
   }
-  console.log("Holeshot: setup, garage, a race by keys and touch, pause, the payout and the wear, tyres, Free Ride, Big Air, Wheelie City on the same bike, the map picker and each open map (rides, holds its camera, banks, pays), leaving, reload and the export code, a fixed camera through URL-bar resizes, no page zoom, reduced motion, Recall; 1440 and 390.");
+  console.log("Holeshot: setup, garage, a race by keys and touch, pause, the payout and the wear, tyres, Free Ride, Big Air, Endless Wheelie City on the same bike, the map picker and each open map (rides, holds its camera, banks, pays), leaving, reload and the export code, a fixed camera through URL-bar resizes, no page zoom, reduced motion, Recall; 1440 and 390.");
 } finally {
   await browser.close();
   await server.close();

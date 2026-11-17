@@ -18,7 +18,7 @@ import { ride, RIDES, type RideSpec } from "./ride.ts";
 import { B_CRASH, B_STOPPIE } from "../../bike/bike.ts";
 import { cos, sin } from "../../math.ts";
 import { unstuck, U_AUTO, U_PROMPT } from "../unstuck.ts";
-import { tricks, ON, SC, PTS, F_CROSS, F_SPRINK, F_GRUMP, BANKED } from "./tricks.ts";
+import { tricks, ON, SC, PTS, F_CROSS, F_SPRINK, F_GRUMP, BANKED, MAXCB, CB as T_CB, GAP as T_GAP } from "./tricks.ts";
 import {
   HOODS, CX, CZ, HX, HZ, GAP, CURB, W, HUMPS, NHUMP, ENTRY, BRANCH, hoodAt, NHOOD,
   K_ROAD, K_WALK, K_LAWN, K_DRIVE, K_WATER, K_SAND, RAMP, DECK, LIP, HUMP_H, HUMP_W, BANK, CANAL,
@@ -393,7 +393,8 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
     S[VISITED] = S[VISITED]! | (1 << h);
     emit(E_LAND, h);
     const pts = cop.escape();
-    if (pts > 0) (sc.S[SC] = sc.S[SC]! + pts), emit(E_ESCAPE, pts);
+    // LOST THEM: the points, and the combo kept and one up (the clock on it starts again).
+    if (pts > 0) (sc.S[SC] = sc.S[SC]! + pts), (sc.S[T_CB] = Math.min(MAXCB, sc.S[T_CB]! + 1)), (sc.S[T_GAP] = 0), emit(E_ESCAPE, pts);
   }
   /** Advance dt. `person`: a person is riding (the unstuck watch runs); `again`: the reset input (R). */
   function step(dt: number, gas: number, brake: number, lean: number, steer: number, hop: number, person = false, again = false) {
@@ -471,7 +472,7 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1, endless = false, ci
     }
     const on = S[PH] === RUN || S[PH] === CRASH;
     if (on && world(dt, x, z, speed)) moving = true;
-    if (cop.step(dt, x, z, S[HOOD]!, S[FLY] === 1, on)) moving = true;
+    if (cop.step(dt, x, z, S[HOOD]!, S[FLY] === 1, on, speed, S[PH] === CRASH)) moving = true;
     for (let k = 0; k < cop.n; k++) {
       const t = cop.ev[k * 2]!, v = cop.ev[k * 2 + 1]!;
       if (t === C_TICKET) {

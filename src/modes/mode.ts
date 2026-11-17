@@ -99,6 +99,8 @@ export interface ModeRun {
   stats(): RunStats;
   pause(on: boolean): void;
   destroy(): void;
+  /** Test and harness hooks a mode may offer (render probes, placing the bike). */
+  probe?: Record<string, (...a: number[]) => unknown>;
 }
 
 export interface Mode {

@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+- **One Wheelie City: Endless.** The fixed ninety-second Wheelie City (its tile, its landing entry,
+  its online head-to-head) is gone; Endless Wheelie City stays, on the same four hoods. The RIDE menu
+  and the landing derive from the mode list (five ways to ride). Online's score run is Big Air (the
+  endless city has no clock to race to). Profile v5: the fixed city's best score
+  (`best["wheelie:city"]`) carries into Endless Wheelie City's (`"endcity:city"`) when higher; the
+  old key loads and is kept as it was. The scene's fixed-table drawing (the plinth, the table
+  framing, the session clock on the HUD) is gone; the sim's fixed table stays (it is where each hood
+  is built before it moves to its slot, and the headless patrol and unstuck tests ride it). Golden:
+  the four fixed-session hashes go, one "endless wheelie city ride" comes; every other hash is as it
+  was.
+- **The neon patrol's new rules (Endless Wheelie City).** A TICKET only when a unit catches you
+  stopped (under 1 m/s for 1 s) or down after a crash, in range; ride on and you never get one,
+  however close they are. Running heats it up: while a unit is on your tail (within 9 units) the heat
+  climbs 3.2 a second, so more join: a patrol bike, a cart, then neon DRONE cops (a neon ring and
+  eye), up to six units at five stars; from three stars the drones put a searchlight on you. Every
+  unit is bound to its hood's slot: it never leaves the hood's rectangle, so the chase ends at the
+  canal; a hump into the next hood is LOST THEM! (+150 a star, the combo kept and one up), and the
+  next hood's own patrol takes 3 s to come out. END now stops the run (the bike rolls to a stop, the
+  patrol peels off, the result settles: it kept riding before). Tests (`tests/cops.test.mjs`): no
+  ticket at speed with a unit alongside, a ticket stopped (after 1 s) or down, heat and units rising
+  with the chase to the cap (bike, cart, drone order), no chasing unit ever past its hood's edge over
+  150 s of endless riding, the chase over at every canal, determinism. The headless alloc and unstuck
+  tests ride the endless city now.
+- **See-through buildings (Endless Wheelie City).** The chase camera's occlusion pattern: each step
+  the segments from the eye to five points on the rider's silhouette are tested against the
+  buildings' boxes in the two hoods drawn (a box-vs-box reject first); a building in the way fades
+  to a ghost (alpha 0.16 with a thin outline over the frame) in 0.15 s and back when clear; one the
+  eye is inside or all but touching fades out completely. Reduced motion: at once. Render only (the
+  run never reads it), no allocation per step. Test: `tests/occlusion.browser.mjs` reproduces the
+  owner's case (a downtown tower filling the screen in front of the camera, the bike hidden behind
+  it): drawn solid the tower covers 99 % of the bike's pixels; ghosted ≥ 80 % of them read as the
+  bike (measured 100 %), at 1440 and 390, and solid again when clear.
+
 - **Endless Wheelie City, a new mode.** The four hoods as reused SLOTS in a row along +x, canal to
   canal: slot k sits at k × 106 units and its hood kind is `slotKind(k)` (pure, seeded: k + 2·bit, so
   two neighbours are never the same kind and one built hood a kind is enough: only the slot you are

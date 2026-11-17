@@ -53,14 +53,9 @@ export const MODES: Mode[] = [
     start: (ctx) => mountAir(ctx),
   },
   {
-    id: "wheelie", name: "WHEELIE CITY", blurb: "Four hoods, ninety seconds: wheelies, manuals, hops. Too loud and the neon patrol comes; jump a hump to lose them.",
-    maps: [{ id: "city", name: "FOUR HOODS" }],
-    start: (ctx) => mountCity(ctx),
-  },
-  {
     id: "endcity", name: "ENDLESS WHEELIE CITY", blurb: "The four hoods, on and on: hump the canal into the next one, wheelie its streets, lose the neon patrol. No clock. How far across town?",
     maps: [{ id: "city", name: "THE ROW OF HOODS" }],
-    start: (ctx) => mountCity(ctx, true),
+    start: (ctx) => mountCity(ctx),
   },
 ];
 export const mode = (id: string) => MODES.find((m) => m.id === id) ?? MODES[0]!;
