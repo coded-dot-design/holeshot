@@ -305,7 +305,7 @@ export const GRAPH = HOODS.map((h) => {
     const v = D[i * n + k]! + D[k * n + j]!;
     if (v < D[i * n + j]!) (D[i * n + j] = v), (NX[i * n + j] = NX[i * n + k]!);
   }
-  return { n, nodes: Float64Array.from(h.nodes), edges: Int16Array.from(h.edges), D, NX };
+  return { n, m: h.edges.length / 2, nodes: Float64Array.from(h.nodes), edges: Int16Array.from(h.edges), D, NX };
 });
 
 // ---------------------------------------------------------------- world tables (the scene, the sim)

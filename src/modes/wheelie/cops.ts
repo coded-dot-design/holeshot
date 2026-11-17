@@ -13,8 +13,9 @@
 //   keeps riding never gets one, however close they are.
 // - Running heats it up: while a unit is on the rider's tail (within TAIL) the heat climbs RUN_HEAT a
 //   second, so more units join (UNITS by stars: a bike, a cart, then neon drones, up to MAXP).
-// - Every unit is bound to its hood (its slot, endless): it never leaves the hood's rectangle, so it
-//   stops at the canal.
+// - Every unit is bound to its hood: it never leaves the hood's rectangle, so it stops at the canal.
+//   Endless Wheelie City's open world binds them to a town instead (`bound`: a radius round the
+//   town's junction, the graph its streets: ./open.ts `townGraph`); out of town none spawn.
 // - A hump into another hood loses them (`escape`): they can't follow; the units peel off, the heat
 //   drops fast and the escape pays.
 // Deterministic: seeded xorshift, ../../math.ts's sine, cosine and arctangent, the state in typed
@@ -47,10 +48,14 @@ export const CATCH = 0.95, SIGHT = 10, DIRECT = 5.5, SPAWN_GAP = 1.6, COOL_AFTER
 /** Heading from (dx, dz) in the bike's convention (forward is (cos, −sin)): atan2(−dz, dx), from ../../math.ts (the same bits on every engine). */
 export const heading = (dx: number, dz: number) => atan2(-dz, dx);
 
-/** The hoods' centres (x, z per hood) on the fixed table; Endless Wheelie City passes its own, moved
- *  to the slot each hood kind is in (./city.ts). */
+/** The hoods' centres (x, z per hood) on the fixed table; Endless Wheelie City passes its own (the
+ *  town's junction, hood 0). */
 export const FIXED_C = Float64Array.from([CX[0]!, CZ[0]!, CX[1]!, CZ[1]!, CX[2]!, CZ[2]!, CX[3]!, CZ[3]!]);
-export function cops(seed = 1, HC: Float64Array = FIXED_C) {
+/** A street graph: nodes (local x, z), m edges (node pairs), all-pairs distance and next hop (n × n). */
+export interface StreetGraph { n: number; m: number; nodes: Float64Array; edges: Int16Array; D: Float64Array; NX: Int16Array }
+/** `graphs`: per hood its streets (default the hoods'); `bound`: 0 keeps a unit in its hood's
+ *  rectangle, else within that radius of its centre (a town's limits). */
+export function cops(seed = 1, HC: Float64Array = FIXED_C, graphs: StreetGraph[] = GRAPH, bound = 0) {
   const S = new Float64Array(15), P = new Float64Array(MAXP * PS), R = new Uint32Array(1);
   const ev = new Float64Array(16);
   // E: the rider's street (nearest edge's ends and their distances), scratch.
@@ -126,9 +131,9 @@ export function cops(seed = 1, HC: Float64Array = FIXED_C) {
   }
   /** The rider's street: the graph edge nearest (lx, lz) in hood h, into E (its ends and their distances). */
   function street(h: number, lx: number, lz: number) {
-    const g = GRAPH[h]!, N = g.nodes, Ed = g.edges;
+    const g = graphs[h]!, N = g.nodes, Ed = g.edges;
     let best = 1e18;
-    for (let o = 0; o < Ed.length; o += 2) {
+    for (let o = 0; o < g.m * 2; o += 2) {
       const a = Ed[o]!, b = Ed[o + 1]!, ax = N[a * 2]!, az = N[a * 2 + 1]!, ex = N[b * 2]! - ax, ez = N[b * 2 + 1]! - az, L = ex * ex + ez * ez;
       let t = L > 0 ? ((lx - ax) * ex + (lz - az) * ez) / L : 0;
       t = t < 0 ? 0 : t > 1 ? 1 : t;
@@ -144,7 +149,7 @@ export function cops(seed = 1, HC: Float64Array = FIXED_C) {
     let slot = -1;
     for (let i = 0; i < MAXP; i++) if (P[i * PS + P_ON] === 0) { slot = i; break; }
     if (slot < 0) return;
-    const g = GRAPH[h]!, N = g.nodes;
+    const g = graphs[h]!, N = g.nodes;
     // A junction well away from the rider (the roll picks among them), else the farthest.
     let far = 0, fd = -1, cnt = 0;
     for (let i = 0; i < g.n; i++) {
@@ -167,8 +172,9 @@ export function cops(seed = 1, HC: Float64Array = FIXED_C) {
     emit(C_UNIT, kind);
   }
   /** One step: the rider at (x, z) in hood h; `air` over a hump (out of reach); `live` while the
-   *  session runs; its `speed` and whether it is `down` (crashed). True while anything moves. */
-  function step(dt: number, x: number, z: number, h: number, air: boolean, live: boolean, speed = 0, down = false) {
+   *  session runs; its `speed` and whether it is `down` (crashed); `away`: out of every hood (out of
+   *  town: no unit spawns). True while anything moves. */
+  function step(dt: number, x: number, z: number, h: number, air: boolean, live: boolean, speed = 0, down = false, away = false) {
     S[SLOW] = speed < SLOW_V && !air ? S[SLOW]! + dt : 0;
     let moving = false;
     if (S[GRACE]! > 0) S[GRACE] = Math.max(0, S[GRACE]! - dt);
@@ -206,7 +212,7 @@ export function cops(seed = 1, HC: Float64Array = FIXED_C) {
       }
       // More units as the stars climb (one at a time).
       if (S[SPAWN]! > 0) S[SPAWN] = S[SPAWN]! - dt;
-      else if (!air && active() < UNITS[S[STARS]!]!) (spawn(h, lx, lz), (S[SPAWN] = SPAWN_GAP));
+      else if (!air && !away && active() < UNITS[S[STARS]!]!) (spawn(h, lx, lz), (S[SPAWN] = SPAWN_GAP));
       if (active()) street(h, lx, lz);
     }
     for (let i = 0; i < MAXP; i++) {
@@ -238,7 +244,7 @@ export function cops(seed = 1, HC: Float64Array = FIXED_C) {
   }
   /** One unit after the rider: along the graph to the rider's street, then straight at the rider. */
   function chase(o: number, h: number, x: number, z: number, lx: number, lz: number, dt: number) {
-    const g = GRAPH[h]!, N = g.nodes, kind = P[o + P_KIND]!, cx = HC[h * 2]!, cz = HC[h * 2 + 1]!;
+    const g = graphs[h]!, N = g.nodes, kind = P[o + P_KIND]!, cx = HC[h * 2]!, cz = HC[h * 2 + 1]!;
     P[o + P_AGE] = P[o + P_AGE]! + dt;
     const px = P[o + P_X]!, pz = P[o + P_Z]!, d = Math.sqrt(sq(px - x) + sq(pz - z));
     let tx = x, tz = z;
@@ -277,8 +283,14 @@ export function cops(seed = 1, HC: Float64Array = FIXED_C) {
     P[o + P_V] = P[o + P_V]! + (dv > acc ? acc : dv < -acc * 2 ? -acc * 2 : dv);
     const yaw = P[o + P_YAW]!;
     let nx = px + cos(yaw) * P[o + P_V]! * dt, nz = pz - sin(yaw) * P[o + P_V]! * dt;
-    nx = Math.max(cx - HX + 0.6, Math.min(cx + HX - 0.6, nx));
-    nz = Math.max(cz - HZ + 0.6, Math.min(cz + HZ - 0.6, nz));
+    if (bound > 0) {
+      // At the town's limits: held on the line (it stops there, lights going).
+      const ox = nx - cx, oz = nz - cz, r = Math.sqrt(ox * ox + oz * oz);
+      if (r > bound) (nx = cx + (ox / r) * bound), (nz = cz + (oz / r) * bound);
+    } else {
+      nx = Math.max(cx - HX + 0.6, Math.min(cx + HX - 0.6, nx));
+      nz = Math.max(cz - HZ + 0.6, Math.min(cz + HZ - 0.6, nz));
+    }
     P[o + P_X] = nx; P[o + P_Z] = nz;
   }
   reset(seed);
