@@ -829,7 +829,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     engine,
     get state() {
       const ph = sim.phase;
-      return { phase: ph === GRID ? (free && !jam ? "ready" : "grid") : ph === RACE ? "run" : ph === DONE ? "done" : "idle", speed: me.speed, clock: sim.clock, lap: race ? race.lap(seat) : 0, place: race ? race.place(seat) : jam ? jam.place(seat) : 0, crashes: m.M[5]!, air: me.air, wheelie: me.wheelie, view: view ? "chase" : "table", count: race ? race.count : jam ? jam.count : 0, ended, riders: RIDERS, map: track.id, tricks: fr ? fr.tricks : jam ? jam.tricks(seat) : 0, seat, points: jam ? jam.points(seat) : 0, steer: I[3]!, steerAngle: me.steerAngle, x: me.pos[0]!, z: me.pos[2]!, y: me.pos[1]!, distance: fr ? fr.distance : 0, stuck: fr ? fr.stuck : false, upright: !me.crashed && Math.abs(me.rel) < 0.5, tiles: dv ? endless!.world.stats[0]! : 0, faces: tv.stats.faces };
+      return { phase: ph === GRID ? (free && !jam ? "ready" : "grid") : ph === RACE ? "run" : ph === DONE ? "done" : "idle", speed: me.speed, walking: me.walking, clock: sim.clock, lap: race ? race.lap(seat) : 0, place: race ? race.place(seat) : jam ? jam.place(seat) : 0, crashes: m.M[5]!, air: me.air, wheelie: me.wheelie, view: view ? "chase" : "table", count: race ? race.count : jam ? jam.count : 0, ended, riders: RIDERS, map: track.id, tricks: fr ? fr.tricks : jam ? jam.tricks(seat) : 0, seat, points: jam ? jam.points(seat) : 0, steer: I[3]!, steerAngle: me.steerAngle, x: me.pos[0]!, z: me.pos[2]!, y: me.pos[1]!, distance: fr ? fr.distance : 0, stuck: fr ? fr.stuck : false, upright: !me.crashed && Math.abs(me.rel) < 0.5, tiles: dv ? endless!.world.stats[0]! : 0, faces: tv.stats.faces };
     },
     get auto() {
       return auto;

@@ -1428,7 +1428,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     get state() {
       const ph = S[0]!;
       return {
-        phase: ph === READY ? "ready" : ph === RUN || ph === CRASH ? "run" : ph === DONE ? "done" : "idle", clock: S[1]!, score: sc[SC]!, combo: sc[CB]!, trick: sc[ON] === 1, nose: bike.nose, view: view ? "chase" : "table", speed: bike.b.speed, crashes, grumps: S[4]!, best: sc[BEST_W]!, ended,
+        phase: ph === READY ? "ready" : ph === RUN || ph === CRASH ? "run" : ph === DONE ? "done" : "idle", walking: bike.b.walking, clock: S[1]!, score: sc[SC]!, combo: sc[CB]!, trick: sc[ON] === 1, nose: bike.nose, view: view ? "chase" : "table", speed: bike.b.speed, crashes, grumps: S[4]!, best: sc[BEST_W]!, ended,
         gas: I[0]!, brake: I[1]!, drag: run.HD[1]!, hold: run.HD[0]!,
         hood: HOOD_IDS[S[S_HOOD]!], slot: run.slot, far: run.far, endless: true, near: cop.S[NEAR]!, flying: S[S_FLY] === 1, jumps: S[S_JUMPS]!, heat: cop.S[HEAT]!, stars: cop.S[STARS]!, units: cop.chasing, risk: cop.S[HOT]!, escapes: cop.S[ESC]!, tickets: cop.S[TIX]!, drawn: vis, objects: dio.stats.objects, faces: dio.stats.faces,
       };

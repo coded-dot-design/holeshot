@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Walk the bike.** Stopped (under 1.5 m/s), no gas, no brake, the weight held (W/S, ↑/↓, the pad's
+  stick) for 0.15 s: the rider puts a foot down and pushes the bike at 1.25 m/s that way, backwards
+  too, the steer turning the push; let go and the feet stop it, the gas rides on at once. Slower up a
+  slope, none past 0.42 rad; never through a post, a wall or off the table (each mode's own check). In
+  Free Ride, Endless, the jam, Endless Wheelie City, Race and Big Air (people only). Its numbers live
+  in the bike's state (a spare slot and the spare byte: the state size is unchanged), so it is
+  deterministic online and after a rollback; every golden hash is unchanged (no golden case walks).
+  The rig walks astride it, boots on the ground; a WALK chip; a one-time phone hint. Tests:
+  `tests/walk.test.mjs`, `tests/walk.browser.mjs`, an alloc case.
+
 - **Credit: Holeshot is by David Cooley (game creator).** The landing (its eyebrow, the "by" panel
   with one creator line, the meta description), the /play/ header (V0.x · BY DAVID COOLEY), the
   footer, README, package.json's author and description; his name links to

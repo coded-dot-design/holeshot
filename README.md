@@ -90,6 +90,14 @@ air it pitches the bike), A/D or ←/→ steer, L trick (Big Air) or hop (Wheeli
 sound, P or Escape pause, R reset (every mode you ride yourself; the ↺ key on the HUD, a gamepad's
 Back/Select).
 
+**Walk the bike.** Stopped (under 1.5 m/s) with no gas and no brake, hold W/S or ↑/↓ (on a phone,
+the pad's stick forward or back) and the rider puts a foot down and walks the bike that way at about
+1.25 m/s, backwards too; A/D steer the push. Let go and it stops; the gas rides on at once. It works
+on slopes up to about 24° (no further up a cliff), never through trees, posts, walls or off the table,
+in every mode you ride yourself (Free Ride, Endless, the jam, Endless Wheelie City, Race and Big Air;
+rivals never walk). A WALK chip shows while you push; a phone shows "No gas? Stick back to walk it
+out" once. It is the first way out; the reset below is still there.
+
 **Stuck?** In Free Ride and Endless Desert the game keeps the last good places you rode (on the
 ground, upright, moving, clear of trees, cactus and rocks; one a second). Barely moving for two
 seconds with your hands on the controls brings up "STUCK? Hold R / tap ↺ to reset"; four seconds

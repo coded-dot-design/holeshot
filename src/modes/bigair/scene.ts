@@ -574,7 +574,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
     },
     get state() {
       const S = sc.S, ph = show.phase;
-      return { phase: ph === READY ? "ready" : ph === RUN ? "run" : ph === DONE ? "done" : "idle", speed: me.speed, clock: show.clock, score: S[SC]!, combo: S[CB]!, trick: show.trick, air: me.air, crashes: S[CRASHES]!, jumps: S[JUMPS]!, view: view ? "chase" : "arena", judges: sc.JD[5]!, ended };
+      return { phase: ph === READY ? "ready" : ph === RUN ? "run" : ph === DONE ? "done" : "idle", speed: me.speed, walking: me.walking, clock: show.clock, score: S[SC]!, combo: S[CB]!, trick: show.trick, air: me.air, crashes: S[CRASHES]!, jumps: S[JUMPS]!, view: view ? "chase" : "arena", judges: sc.JD[5]!, ended };
     },
     get camera() {
       return { dist: view ? dio.cam.dist : chaseO.dist, fov: dio.cam.fov, view: view ? "chase" : "table" };
