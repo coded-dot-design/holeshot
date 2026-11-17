@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- **Endless Desert to the horizon.** A far ring: the same `heightAt` on a coarse window (4-unit
+  cells, 544 units a side, view only, sliding 16 units at a time) drawn as five bands of ridgelines
+  from 34 to 250 units, each hazier than the last (the lit sand into the sky's horizon colour) with a
+  lighter crest line, and each only above the near sand's silhouette (sampled down the same screen
+  column), so a near dune always stands in front. The near haze now runs 20 to 35 units and fades into
+  the first band. LOD [14, 30] (was [14, 26]): the coarsest stride only inside the haze. Light-mode
+  grid a darker coral (#c8431f) at 0.62 (was #ff7a59 at 0.4). The palette, dunes, handling and camera
+  are round 1's. Measured in headless Chromium (autopilot, 8 s from 4 s in, dpr 1): faces a frame p50
+  2,888 → 3,078 at 1440 and 2,005 → 2,120 at 390; frames in 8 s 400 → 370 at 1440, 481 → 481 at 390.
+- Size: 166,062 B gzip (+2,425 B: the far ring and its painter, unstuck in three more modes), under the 168,000 B budget.
+- **Unstuck in Race, Big Air and Wheelie City** (the same watch and timings as Free Ride: the prompt
+  at 2 s, an automatic reset at 4 s, R / ↺ / a gamepad's Back). Race: back on the line behind where
+  you were, the progress taken back, held 1.2 s; it never gains a place (tested). Big Air: the run-in
+  of the current jump. Wheelie City: the last good spot on the street. Tests: `tests/unstuck.test.mjs`.
+- The golden file: the online race of four (its people's watch is in the race's bytes) and the four
+  Wheelie City sessions (the ring is in the session's bytes) change; every other hash is unchanged.
 - **Endless Desert, a new mode.** A dune sea that never ends: big ridged dunes across the wind, a
   second smaller set, ripples, witches'-hat peaks and bowls on a 72-unit lattice, and sparse
   features on a 40-unit lattice (half the cells are open sand; the rest a kicker, a whoop section, a
