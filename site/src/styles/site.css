@@ -68,7 +68,7 @@ html.bui[data-theme="light"] .panel{box-shadow:5px 5px 0 var(--ink)}
 .head-handle{position:fixed;top:0;left:50%;translate:-50% 0;z-index:2147483002;min-height:24px;padding:2px 14px 4px;border:2px solid var(--rim);border-top:0;border-radius:0 0 10px 10px;background:var(--surface);color:var(--muted);font:800 11px/1 var(--round);letter-spacing:.08em;cursor:pointer;opacity:.8}
 .head-handle:hover,.head-handle:focus-visible{opacity:1;color:var(--ink)}
 .head-handle[aria-expanded="true"]{top:66px}.head-handle[aria-expanded="true"] span{display:inline-block;rotate:180deg}
-.play-host{position:absolute;inset:0;--dh-top:28px}
+.play-host{position:absolute;inset:0;--dh-top:48px}
 /* (--dh-top: the game keeps its cards clear of the header handle above; no handle on touch phones.) */
 [data-app] .site-nav{display:none}
 @media (max-width:1000px){.cards,.modes{grid-template-columns:repeat(2,minmax(0,1fr))}.cards.three{grid-template-columns:repeat(2,minmax(0,1fr))}.split{grid-template-columns:1fr}.site-nav{display:none}.head-keys{margin-left:auto}}
