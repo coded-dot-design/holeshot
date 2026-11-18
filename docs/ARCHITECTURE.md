@@ -149,13 +149,17 @@ row in the garage UI and a test in `tests/tune.test.mjs`.
 
 ## The roster, the garage, the rider kit
 
-`data/roster.ts` holds 16 models in 4 classes from six original makers (`MAKERS`, each with factory
-colours: YAMADA and KAWAZAKURA 2-strokes, HONDO and KAWAZAKURA 4-strokes, MAKFOX e-bikes, SURGE-ON
-and STARKWOLF electric dirt bikes; `makerOf(model)`), with their Power, suspension, price, `upkeep`
+`data/roster.ts` holds the models from nine maker ids (`MAKERS`, each with factory colours;
+`makerOf(model)`), with their Power, suspension, price, `upkeep`
 (wear and cost multipliers) and Wheelie City feel; e-bikes have a shorter `frame`. The cheapest of
 each class is a starter. The showroom sells all 16: tiers 1–2 always, tiers 3–4 once `UNLOCK`
 (events ridden or credits earned) says so; a new bike comes in its maker's factory paint. The garage holds `GARAGE_SLOTS` (3) bikes; each
 keeps its own parts, mods and paint; `profile.ride` is the one that rides next.
+
+Names come in three tiers (`data/names.ts`, [names.md](names.md)): the data holds the SAFE names,
+`data/names/nod.ts` (the default build) and `data/names/real.ts` (only `?names=real` or
+`?money=inf`, never saved) dress the same records by id, and `HOLESHOT_NAMES=safe` builds without
+either table. Display names only: ids, saves and the net are the same in every tier.
 
 The rider kit (`profile.kit`: helmet shape, helmet paint, visor, jersey, pants, pattern, boots,
 gloves) and bike paint come from `data/looks.ts`; prices by tier are `COSMETIC` in

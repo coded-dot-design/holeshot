@@ -1,6 +1,7 @@
 // Cosmetics, as data: bike paint schemes and the rider's kit (helmet shape, helmet paint and visor,
 // jersey and pants colours and a pattern, boots, gloves). Prices are in ./economy.ts (COSMETIC), by
 // kind and tier. Flat neon colours that read on both the night table and the day table.
+import { wear } from "./names.ts";
 
 /** A colour the kit can wear. `tier` 0 is in the starter kit (free at first run). */
 export interface Swatch { id: string; name: string; hex: string; tier: number }
@@ -34,15 +35,16 @@ export const PAINTS: Paint[] = [
   { id: "ultra", name: "ULTRAVIOLET", plastic: "#b18cff", plastic2: "#1b1a2c", plate: "#ffd166", ink: "#0b0a14", tier: 1 },
   { id: "blackout", name: "BLACKOUT", plastic: "#24223a", plastic2: "#ff4fa8", plate: "#24223a", ink: "#eef0ff", tier: 1 },
   // Each maker's factory colours (a new bike from the showroom comes in them; ../data/roster.ts MAKERS).
-  { id: "f-yamada", name: "YAMADA BLUE", plastic: "#2b6bff", plastic2: "#eef0ff", plate: "#2b6bff", ink: "#eef0ff", tier: 0 },
-  { id: "f-hondo", name: "HONDO RED", plastic: "#ff3b4f", plastic2: "#eef0ff", plate: "#eef0ff", ink: "#ff3b4f", tier: 0 },
-  { id: "f-kawazakura", name: "KAWAZAKURA LIME", plastic: "#b6ff3b", plastic2: "#1b1a2c", plate: "#b6ff3b", ink: "#0b0a14", tier: 0 },
-  { id: "f-starkwolf", name: "STARKWOLF GREY", plastic: "#8a8fa8", plastic2: "#ff8a3d", plate: "#1b1a2c", ink: "#ff8a3d", tier: 0 },
-  { id: "f-surgeon", name: "SURGE-ON STING", plastic: "#1b1a2c", plastic2: "#b6ff3b", plate: "#b6ff3b", ink: "#0b0a14", tier: 0 },
-  { id: "f-makfox", name: "MAKFOX ORANGE", plastic: "#ff8a3d", plastic2: "#eef0ff", plate: "#eef0ff", ink: "#ff8a3d", tier: 0 },
-  { id: "f-curbcat", name: "CURBCAT RED", plastic: "#ff3b4f", plastic2: "#eef0ff", plate: "#1b1a2c", ink: "#eef0ff", tier: 0 },
-  { id: "f-nightglass", name: "NIGHTGLASS BLUE", plastic: "#2b6bff", plastic2: "#eef0ff", plate: "#eef0ff", ink: "#2b6bff", tier: 0 },
-  { id: "f-ironjaw", name: "IRONJAW LIME", plastic: "#b6ff3b", plastic2: "#1b1a2c", plate: "#1b1a2c", ink: "#b6ff3b", tier: 0 },
+  // Their names are the SAFE tier's; the tier shown dresses them (./names.ts, docs/names.md).
+  { id: "f-yamada", name: "BLUEWAKE BLUE", plastic: "#2b6bff", plastic2: "#eef0ff", plate: "#2b6bff", ink: "#eef0ff", tier: 0 },
+  { id: "f-hondo", name: "EMBERLINE RED", plastic: "#ff3b4f", plastic2: "#eef0ff", plate: "#eef0ff", ink: "#ff3b4f", tier: 0 },
+  { id: "f-kawazakura", name: "LIMEJET LIME", plastic: "#b6ff3b", plastic2: "#1b1a2c", plate: "#b6ff3b", ink: "#0b0a14", tier: 0 },
+  { id: "f-starkwolf", name: "VOLTHOWL GREY", plastic: "#8a8fa8", plastic2: "#ff8a3d", plate: "#1b1a2c", ink: "#ff8a3d", tier: 0 },
+  { id: "f-surgeon", name: "BUZZWORKS BLACK", plastic: "#1b1a2c", plastic2: "#b6ff3b", plate: "#b6ff3b", ink: "#0b0a14", tier: 0 },
+  { id: "f-makfox", name: "TRAILKIT ORANGE", plastic: "#ff8a3d", plastic2: "#eef0ff", plate: "#eef0ff", ink: "#ff8a3d", tier: 0 },
+  { id: "f-curbcat", name: "EMBERLINE STREET RED", plastic: "#ff3b4f", plastic2: "#eef0ff", plate: "#1b1a2c", ink: "#eef0ff", tier: 0 },
+  { id: "f-nightglass", name: "BLUEWAKE STREET BLUE", plastic: "#2b6bff", plastic2: "#eef0ff", plate: "#eef0ff", ink: "#2b6bff", tier: 0 },
+  { id: "f-ironjaw", name: "IRONJAW RED", plastic: "#d4202c", plastic2: "#1b1a2c", plate: "#1b1a2c", ink: "#eef0ff", tier: 0 },
   { id: "tron", name: "GRID RUNNER", plastic: "#14122a", plastic2: "#22e6ff", plate: "#22e6ff", ink: "#0b0a14", tier: 1 },
   { id: "sunset", name: "SUNSET STRIP", plastic: "#ff8a3d", plastic2: "#ff4fa8", plate: "#ffd166", ink: "#0b0a14", tier: 1 },
   { id: "toxic", name: "TOXIC", plastic: "#5dffc8", plastic2: "#1b1a2c", plate: "#1b1a2c", ink: "#5dffc8", tier: 1 },
@@ -51,6 +53,7 @@ export const PAINTS: Paint[] = [
   { id: "magma", name: "MAGMA", plastic: "#ff3b4f", plastic2: "#ffd166", plate: "#1b1a2c", ink: "#ffd166", tier: 2 },
   { id: "synth", name: "SYNTHWAVE", plastic: "#b18cff", plastic2: "#22e6ff", plate: "#ff4fa8", ink: "#0b0a14", tier: 2 },
 ];
+wear(PAINTS, (s, p) => s.paints[p.id], ["name"]);
 export const paint = (id: string) => PAINTS.find((p) => p.id === id) ?? PAINTS[0]!;
 
 /** Helmet shapes the rig draws (../bike/rig.ts RigHelmet): a motocross peak, a long duck-bill peak,

@@ -8,8 +8,8 @@
 //   its glow strip, the motor at the swingarm pivot, a flat cover where a tank would be.
 // - Street bikes: a mini (a chunky backbone, a fat little tank, a stubby upswept can, a headlight
 //   cowl), a supersport (a full fairing with a screen and twin lamps, clip-ons, a high tail cowl, an
-//   under-belly can) and a naked superbike (a trellis frame round a big twin, a muscled tank, a round
-//   lamp, wide bars, a short side can).
+//   under-belly can) and a naked superbike (a frame round a V4: two banks of two cylinders and four
+//   headers, side wings, a muscled tank, a slim lamp, wide bars, a short side can).
 // - Upgrades (`extras`): a wheelie bar off the back (the mini), a bigger motor and battery (an
 //   electric's motor swap), cylinder fins (a gas bike's big bore kit), a charger and its intake (a
 //   street bike's turbo). Original shapes, no badges. Cosmetic: builtin maths is fine here.
@@ -134,21 +134,30 @@ export function body(kind: BodyKind, k: BodyKit): Built {
     part([0.36, 0.14, 0.14], [-0.14, -0.5, xz(0.14)], C.pipe, { ...x, shape: "cyl", sides: 8, rot: [0, 0, PI / 2 + 0.08] });
     return { fender, plates: [-0.44, 0.0] };
   }
-  // The naked superbike: a trellis frame round a big twin, a muscled tank, a round lamp, wide bars.
+  // The naked superbike: a frame round a V4 (two banks of two cylinders, side by side, and four
+  // headers sweeping down the front), a muscled tank with side wings, a slim twin lamp, wide bars.
   t(0.5, 0.12, -0.08, -0.26, 0.05, C.plastic2);
   t(0.5, 0.0, 0.12, -0.36, 0.05, C.plastic2);
   t(0.22, -0.1, -0.08, -0.06, 0.05, C.plastic2);
   t(-0.08, -0.3, -0.36, 0.0, 0.05, C.plastic2);
   part([0.46, 0.3, 0.28], [0.06, -0.5, 0], C.metal, B);
-  part([0.16, 0.26, 0.2], [0.24, -0.32, 0], C.metal, { ...B, shape: "cyl", sides: 8, rot: [0, 0, -0.55], layer: k.body + 0.05 });
-  part([0.16, 0.26, 0.2], [-0.1, -0.3, 0], C.metal, { ...B, shape: "cyl", sides: 8, rot: [0, 0, 0.5], layer: k.body + 0.05 });
+  for (const z of [-0.07, 0.07]) {
+    part([0.13, 0.24, 0.12], [0.24, -0.32, z], C.metal, { ...B, shape: "cyl", sides: 8, rot: [0, 0, -0.55], layer: k.body + 0.05 });
+    part([0.13, 0.24, 0.12], [-0.1, -0.3, z], C.metal, { ...B, shape: "cyl", sides: 8, rot: [0, 0, 0.5], layer: k.body + 0.05 });
+  }
+  // Four headers from the front bank down under the motor, on the exhaust side.
+  for (let i = 0; i < 4; i++) {
+    const [s, p, r] = tube(0.4 - i * 0.045, -0.22, 0.26 - i * 0.045, -0.6, 0.03, xz(0.09 + i * 0.022));
+    part(s, p, C.pipe, { ...x, rot: r, layer: k.near + i * 0.01 });
+  }
   part([0.52, 0.24, 0.42], [0.16, -0.02, 0], C.plastic, { ...B, shape: "wedge", rot: [0, PI, 0], layer: k.body + 0.1 });
   part([0.2, 0.16, 0.44], [0.36, -0.08, 0], C.plastic2, { ...B, shape: "wedge", rot: [0, PI, 0], layer: k.body + 0.1 });
+  for (const z of [-0.23, 0.23]) part([0.18, 0.03, 0.06], [0.42, -0.06, z], C.plastic, { ...B, shape: "wedge", rot: [0, PI, -0.25], layer: k.body + 0.12 });
   part([0.5, 0.08, 0.24], [-0.24, 0.06, 0], C.seat, B);
   part([0.42, 0.1, 0.18], [-0.56 + e, 0.06, 0], C.plastic, { ...R, shape: "wedge", rot: [0, 0, -0.1] });
   const fender = part([0.3, 0.05, 0.18], [0.86 - e, -0.1, 0], C.plastic, { ...F, shape: "wedge", rot: [0, PI, 0.1] });
   part([0.2, 0.08, 0.2], [0.62, 0.02, 0], C.frame, { ...B, shape: "cyl", sides: 10, rot: [0, 0, PI / 2] });
-  part([0.16, 0.02, 0.16], [0.67, 0.04, 0], LAMP, { ...B, shape: "cyl", sides: 10, rot: [0, 0, PI / 2], emissive: true, layer: k.body + 0.1 });
+  for (const z of [-0.05, 0.05]) part([0.02, 0.03, 0.07], [0.71, 0.0 + Math.abs(z) * 0.4, z], LAMP, { ...B, emissive: true, layer: k.body + 0.1 });
   part([0.06, 0.06, 0.72], [0.42, 0.3, 0], C.frame, B);
   part([0.42, 0.07, 0.07], [0.1, -0.54, xz(0.15)], C.pipe, { ...x, rot: [0, 0, -0.1] });
   part([0.16, 0.36, 0.16], [-0.24, -0.38, xz(0.16)], C.pipe, { ...x, shape: "cyl", sides: 8, rot: [0, 0, PI / 2 + 0.3], layer: k.near + 0.1 });

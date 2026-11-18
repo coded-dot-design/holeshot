@@ -3,7 +3,7 @@
 // view; reduced motion shows a still poster that links to /play/.
 import Base from '../layouts/Base.astro';
 import { base, GZIP, FIZLET, REPO } from '../site';
-import { CLASSES, MODELS, STARTERS } from '../../../src/data/roster.ts';
+import { CLASSES, MODELS, STARTERS, makerOf } from '../../../src/data/roster.ts';
 import { MODES } from '../../../src/modes/index.ts';
 const description = 'Holeshot is a dirt bike game on a tabletop: one bike and a garage, races against rivals, a race series on a new track every round, five free-ride maps, Endless (the dunes, a quarry, woods and a night park that never end), a Big Air show and Endless Wheelie City (an open world of roads, towns and fields that never ends). Earn credits, wear out tyres and top ends, rebuild, mod and paint. Free in the browser, by David Cooley, built on Fizlet.';
 const kb = (GZIP / 1024).toFixed(1);
@@ -14,6 +14,7 @@ const steps = [
   ['WRENCH', 'Every lap wears the bike: tyres lose grip, a 2-stroke\'s top end loses pull, seals blow and it cases sooner. Buy new tyres, rebuild the motor, add mods, change the paint and the kit.'],
 ];
 const classes = Object.values(CLASSES).map((c) => ({ ...c, models: MODELS.filter((m) => m.cls === c.id), starter: STARTERS.find((m) => m.cls === c.id) }));
+const words = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
 const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound', 'ui'];
 ---
 <Base title="Holeshot · one bike, every kind of dirt" description={description}>
@@ -61,7 +62,7 @@ const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound'
   <section class="section" id="garage">
     <div class="wrap">
       <p class="eyebrow"><span class="index">03</span> THE GARAGE</p>
-      <h2>Six makers. Sixteen bikes. Room for three.</h2>
+      <h2>{words[new Set(MODELS.map((m) => makerOf(m).name)).size]} makers. {MODELS.length} bikes. Room for three.</h2>
       <ul class="cards">
         {classes.map((c) => <li class="panel"><p class="meta">{c.name}</p><h3>{c.maker}</h3><p>{c.motto}</p><p class="meta">{c.starter ? `Starter: ${c.starter.name} · ` : 'In the showroom: '}{c.models.map((m) => m.name).join(' · ')}</p></li>)}
       </ul>
