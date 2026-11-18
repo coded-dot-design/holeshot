@@ -40,8 +40,9 @@ const SEG = [0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f];
 /** The trick pose (0 = riding), written by a game before `pose()`: [hands off 0..1, feet off 0..1
  *  (legs back), legs spread 0..1 (sideways), body out over the back 0..1, body up off the seat 0..1,
  *  twist (radians, about the bike's long axis), arms spread 0..1, tuck 0..1 (knees to the bars),
- *  hand drag 0..1 (the left hand off the bar and down to the road, the body back: Wheelie City)]. */
-export const TRICK_POSE = 9;
+ *  hand drag 0..1 (the left hand off the bar and down to the road, the body back: Wheelie City),
+ *  the right hand down too 0..1 (the double hand drag: ../modes/stunts.ts)]. */
+export const TRICK_POSE = 10;
 
 const PI = Math.PI;
 // Bike-frame points (x forward, y up, from the centre of mass): the swingarm pivot, the steering head,
@@ -281,7 +282,7 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
       // Arms: shoulder to grip (elbow out and down); hands off, they go up and out.
       const gx = GRIP[0]! - hands * (0.55 + 0.25 * arms), gy = GRIP[1]! + hands * (0.65 + 0.2 * arms) + (loose ? 0.3 : 0);
       // The hand drag: the left hand reaches down to the road (straight-armed, out from the bike).
-      const dr = s === 0 ? DG[0]! : 0, reach = (UPPER + FORE) * 0.98;
+      const dr = s === 0 ? DG[0]! : DG[0]! * T[9]!, reach = (UPPER + FORE) * 0.98;
       ik(sx, sy, gx + (sx + DG[1]! * reach - gx) * dr, gy + (sy + DG[2]! * reach - gy) * dr, UPPER, FORE, -1);
       const az = side * (0.2 + arms * 0.45 * hands + (loose ? 0.2 : 0) + dr * 0.35);
       upper[s]!.pos[0] = sx; upper[s]!.pos[1] = sy; upper[s]!.pos[2] = side * 0.04; upper[s]!.rot[2] = J[0]!;

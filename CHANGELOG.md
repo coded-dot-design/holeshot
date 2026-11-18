@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- **Tricks everywhere, new tricks, the COMBO button (R8).** Both endless modes (the ENDLESS grounds:
+  dune sea, quarry, woods, night park; and Endless Wheelie City) now ride the same trick set
+  (`src/modes/stunts.ts`, on top of the city's ground-trick scorer): wheelies, manuals, hops and
+  stoppies with the combo, and past 12 o'clock the **drag ladder**: the hand drag (×10), held 1.5 s
+  more the **double hand drag** (both hands down, ×20), and leaned on to about 2 o'clock the **fender
+  drag** (the rear fender on the road, sparks, ×40; the fender props the bike, but on the gas it still
+  goes over). Banked back under 12, lost on a loop-out; the loop-out moved from about 1 o'clock to just
+  past the fender drag (about a quarter past 2). **Whip:** left or right in the air kicks the bike
+  sideways; back to straight it counts, chained whips are each worth more; landed still kicked out it
+  is a crash. **COMBO button** (C on a keyboard, LB on a gamepad; on a touch screen it slides out of
+  the throttle rocker's gas side while the gas is held, at 10 to 12 o'clock, tap it or slide the gas
+  thumb onto it and the gas stays on): SEAT TAP, KNEE KNOCKER, SIDE KICK, CAN-CAN, then at random
+  NAC-NAC, HEEL CLICKER, SKY DIVER, STARFISH (seeded); held longer pays more, ×2 in a wheelie, ×3 in
+  the air (banked on a clean landing; still out at the landing it is a bail). A big trick-name callout
+  pops with the points. The ENDLESS HUD gains a points chip and an at-risk drag chip; Endless trick
+  points pay inside Free Ride's session cap. Size budget 184,000 → 188,000 B gzip (+5,355 B
+  measured). Tests: `tests/stunts.test.mjs`; golden: the Endless Wheelie City ride's hash (its
+  loop-out moved).
+
 - **Miles by default, km as a setting.** SETTINGS → UNITS: Imperial (miles, mph; the default) or
   Metric (km, km/h), saved in the profile (schema v6: every existing save migrates to Imperial).
   Applied wherever a distance shows: the Endless Wheelie City and endless-ground HUD chips (e.g.

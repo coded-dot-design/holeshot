@@ -4,6 +4,7 @@
 // jump of its own: brick candidate), lean as "+1 forward" like the rest of the piece, a velocity
 // for the chase camera, and a bump off a wall (speed along the heading turned back). Zero
 // allocation per step. Once at rest it stays parked until the rider does something.
+import { assist, FENDER_LOOP, PAST_BRAKE as PB } from "../stunts.ts";
 import { bike, E_BIKE, E_MOTO, STRIKE, type Bike, type BikeGround, type BikeShape, type Power } from "../../bike/bike.ts";
 
 /** A fat-tyre mini e-moto: low and heavy, a soft pull, slow to rotate (long, steady manuals). */
@@ -20,8 +21,8 @@ export const E_MINI: Power = {
 export const E_BIKE_2: Power = { ...E_BIKE, gears: [5.8, 8.8, 12], up: 0.85, down: 0.5, gyr: 0.62, force: 12 };
 
 /** The hand drag's clock face (radians of the nose off the ground): 12 o'clock (vertical), and the
- *  hard limit about 1 o'clock (30° past): past it, it loops out. */
-export const TWELVE = 1.5707963267948966, LOOP_AT = TWELVE + 0.52, PAST_BRAKE = 14;
+ *  hard limit just past the fender drag (about a quarter past 2: ../stunts.ts): past it, it loops out. */
+export const TWELVE = 1.5707963267948966, LOOP_AT = FENDER_LOOP, PAST_BRAKE = PB;
 
 /** One ride: what the garage says, the engine, the chassis, the sweet spot, the hop. */
 export interface RideSpec {
@@ -47,14 +48,15 @@ export const RIDES: RideSpec[] = [
 
 /** The rides on `ground` (one bike each, made once); `use` picks one, `step` drives it. */
 export function ride(ground: BikeGround, specs: RideSpec[] = RIDES, walk?: (at: Float64Array) => boolean) {
-  // (Past 12 o'clock, to about 1: the city's bikes loop out at LOOP_AT, not at the balance point's margin.)
+  // (Past 12 o'clock, to about 2: the city's bikes loop out at LOOP_AT, not at the balance point's margin.)
   // `walk`: where the rider may walk the bike (../../bike/bike.ts); left out, it never walks.
   const all: Bike[] = specs.map((r) => bike(ground, r.power, { ...r.shape, loop: LOOP_AT, walk }));
   let k = all[0]!, sp = specs[0]!;
   // R: hop timer, the speed into the last wall, seconds sat still (in a typed array: a snapshot).
   const vel = new Float64Array(3), R = new Float64Array(3);
-  /** One step: gas, brake 0..1, lean −1 (back) .. 1 (forward), steer −1..1 (+ right), hop (a press). */
-  function step(dt: number, gas: number, brake: number, lean: number, steer: number, hop: number) {
+  /** One step: gas, brake 0..1, lean −1 (back) .. 1 (forward), steer −1..1 (+ right), hop (a press),
+   *  trick 0..1 (a combo trick out: landed like that, it is a bail). */
+  function step(dt: number, gas: number, brake: number, lean: number, steer: number, hop: number, trick = 0) {
     // Parked: once the shared bike has come to rest (or has sat all but still for a moment: against a
     // curb or a wall its springs can creep for ever), it stays parked, not stepped, until the gas, a
     // lean or a hop, so the page can settle.
@@ -63,12 +65,11 @@ export function ride(ground: BikeGround, specs: RideSpec[] = RIDES, walk?: (at: 
     if (idle && (k.resting || R[2]! > 0.8)) return false;
     if (hop > 0 && R[0]! <= 0 && !k.crashed && k.contact[0] && k.contact[1]) (k.S[6] = k.S[6]! + sp.hop), (R[0] = 0.4);
     R[0] = R[0]! - dt;
-    k.set(gas, brake, -lean, steer, 0);
+    k.set(gas, brake, -lean, steer, trick);
     const moving = k.step(dt);
-    // Past the balance point on the rear wheel (towards 12 o'clock and the hand drag), the rear brake
-    // gets PAST_BRAKE more say (the rider's weight over the bars as well): feathered, it holds the nose
-    // up there; let off, it keeps going over (it is not stable: it drifts towards the loop-out).
-    if (!k.crashed && k.contact[0] && !k.contact[1] && k.rel > k.bp && brake > 0) k.S[3] = k.S[3]! - brake * PAST_BRAKE * dt;
+    // Past the balance point on the rear wheel (towards 12 o'clock and the drags): the rear brake's
+    // extra say, and the fender on the road (../stunts.ts `assist`).
+    assist(k, brake, dt);
     vel[0] = k.cy * k.speed; vel[1] = 0; vel[2] = -k.sy * k.speed;
     return moving || R[0]! > 0;
   }

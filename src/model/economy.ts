@@ -63,6 +63,8 @@ export function payout(s: RunStats, units: Units = "imperial"): [string, number]
     const fl = s.flips ?? 0, tr = Math.max(0, (s.tricks ?? 0) - fl);
     add(`${tr} BIG ${tr === 1 ? "AIR" : "AIRS"}`, tr * P.perTrick);
     add(`${fl} ${fl === 1 ? "FLIP" : "FLIPS"}`, fl * P.perFlip);
+    // Endless: the trick points (wheelies, drags, whips, combo tricks), inside the same cap.
+    if (s.score) add(`${Math.round(s.score).toLocaleString("en-US")} PTS`, Math.round(s.score * P.perPoint));
   }
   return L;
 }

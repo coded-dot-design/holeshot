@@ -12,7 +12,7 @@ rmSync("dist", { recursive: true, force: true });
 mkdirSync("dist");
 const css = async (file) => (await transform(readFileSync(file, "utf8"), { loader: "css", minify: true })).code.trim();
 // The game's CSS: the shell's, the garage's, the series', then each mode scene's (and the map picker).
-const game = (await Promise.all(["src/game.css", "src/garage/garage.css", "src/series.css", "src/modes/race/scene.css", "src/modes/bigair/scene.css", "src/modes/wheelie/scene.css", "src/modes/freeride/picker.css", "src/online/online.css"].map(css))).join("");
+const game = (await Promise.all(["src/game.css", "src/garage/garage.css", "src/series.css", "src/modes/race/scene.css", "src/modes/bigair/scene.css", "src/modes/wheelie/scene.css", "src/modes/freeride/picker.css", "src/online/online.css", "src/modes/stunts.css"].map(css))).join("");
 const kit = await css(require.resolve("@fzlt/core/ui/board-ui.css"));
 const common = {
   define: { __KIT_CSS__: JSON.stringify(kit), __GAME_CSS__: JSON.stringify(game) },
