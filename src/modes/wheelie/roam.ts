@@ -50,7 +50,7 @@ export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEE
   // The town patrol: hood 0 is the town the rider is in (its junction in HC, its streets in W.graph).
   const HC = new Float64Array(2), G = [W.graph];
   // SG: what was gathered round GC (the state's centre: x, z) when SGC said; scratch for a probe.
-  const SG = new Float64Array(GCAP * IS), GC = new Float64Array(2), SGC = new Float64Array(3), PG = new Float64Array(64 * IS);
+  const SG = new Float64Array(GCAP * IS), GC = new Float64Array(4), SGC = new Float64Array(3), PG = new Float64Array(64 * IS);
   let sn = 0;
   const GT = new Float64Array(3);
   function streetClear(x: number, z: number, r: number, solidOnly = false) {
@@ -93,38 +93,48 @@ export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEE
   /** Gather round (x, z) (the state's centre) and remap the live neighbours, sprinklers and the dog. */
   function regather(x: number, z: number) {
     GC[0] = x; GC[1] = z;
+    // (The live lists are remapped on every regather, never only when the gather moved: GC[2..3]
+    // say which gather they were last mapped for, in the state, so a rollback restores that too.)
+    GC[2] = NaN;
     sync();
   }
-  /** SG from GC (after a regather, or a rollback put GC back). */
+  /** SG from GC (after a regather, or a rollback put GC back); the live lists (neighbours, sprinklers,
+   *  the dog: state) remapped onto it only on a regather, their indices into SG (not state) always. */
   function sync() {
-    if (SGC[2] === 1 && SGC[0] === GC[0] && SGC[1] === GC[1]) return;
-    SGC[0] = GC[0]!; SGC[1] = GC[1]!; SGC[2] = 1;
-    sn = W.gather(GC[0]!, GC[1]!, GR, SG, GCAP);
+    const fresh = !(SGC[2] === 1 && SGC[0] === GC[0] && SGC[1] === GC[1]), remap = !(GC[2] === GC[0] && GC[3] === GC[1]);
+    if (!fresh && !remap) return;
+    if (fresh) {
+      SGC[0] = GC[0]!; SGC[1] = GC[1]!; SGC[2] = 1;
+      sn = W.gather(GC[0]!, GC[1]!, GR, SG, GCAP);
+    }
+    GC[2] = GC[0]!; GC[3] = GC[1]!;
     // Neighbours: the houses in reach, the state kept for any already live (by key).
     let a = 0;
     for (let q = 0; q < sn && a < NNB; q++) {
       const k = SG[q * IS]!;
       if (k !== I_HOUSE && k !== I_HOUSE2) continue;
       const key = SG[q * IS + 9]!;
-      let from = -1;
-      for (let b = 0; b < NNB; b++) if (NB[b * 4] === key && NB[b * 4 + 1]! + NB[b * 4 + 2]! > 0) from = b;
-      if (from >= a) for (let c = 0; c < 4; c++) { const v = NB[a * 4 + c]!; NB[a * 4 + c] = NB[from * 4 + c]!; NB[from * 4 + c] = v; }
-      else if (from < 0) (NB[a * 4] = key), (NB[a * 4 + 1] = 0), (NB[a * 4 + 2] = 0), (NB[a * 4 + 3] = 0);
+      if (remap) {
+        let from = -1;
+        for (let b = 0; b < NNB; b++) if (NB[b * 4] === key && NB[b * 4 + 1]! + NB[b * 4 + 2]! > 0) from = b;
+        if (from >= a) for (let c = 0; c < 4; c++) { const v = NB[a * 4 + c]!; NB[a * 4 + c] = NB[from * 4 + c]!; NB[from * 4 + c] = v; }
+        else if (from < 0) (NB[a * 4] = key), (NB[a * 4 + 1] = 0), (NB[a * 4 + 2] = 0), (NB[a * 4 + 3] = 0);
+      }
       NI[a++] = q;
     }
-    for (; a < NNB; a++) (NI[a] = -1), (NB[a * 4] = -1), (NB[a * 4 + 1] = NB[a * 4 + 2] = 0);
+    for (; a < NNB; a++) (NI[a] = -1), remap && ((NB[a * 4] = -1), (NB[a * 4 + 1] = NB[a * 4 + 2] = 0));
     a = 0;
     for (let q = 0; q < sn && a < NSPK; q++) {
       if (SG[q * IS] !== I_SPRINK) continue;
       const key = SG[q * IS + 9]!;
-      if (SPK[a * 2] !== key) (SPK[a * 2] = key), (SPK[a * 2 + 1] = 0);
+      if (remap && SPK[a * 2] !== key) (SPK[a * 2] = key), (SPK[a * 2 + 1] = 0);
       SPI[a++] = q;
     }
-    for (; a < NSPK; a++) (SPI[a] = -1), (SPK[a * 2] = -1);
+    for (; a < NSPK; a++) (SPI[a] = -1), remap && (SPK[a * 2] = -1);
     DI[0] = -1;
     for (let q = 0; q < sn; q++) if (SG[q * IS] === I_DOG) {
       DI[0] = q;
-      if (DG[0] !== SG[q * IS + 9]) (DG[0] = SG[q * IS + 9]!), (DG[1] = 0), (DG[2] = DG[3] = 0);
+      if (remap && DG[0] !== SG[q * IS + 9]) (DG[0] = SG[q * IS + 9]!), (DG[1] = 0), (DG[2] = DG[3] = 0);
       break;
     }
   }

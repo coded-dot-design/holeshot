@@ -13,12 +13,15 @@
   trick, combo points, hand drags) is the same on every screen, fed through one scoring door
   (`src/online/board.ts` `feed`) that new tricks plug into; friends' tricks show as callouts over
   their heads. END banks your ride; the room's result comes when everyone has. Deterministic and
-  rollback-identical: two and four headless screens ride each endless mode for three minutes over a
+  rollback-identical: two and four headless screens ride each endless mode for three minutes (90 s for four in `npm test`) over a
   jittery link and end byte for byte on the no-latency run (`tests/online-endless.test.mjs`); the
   browser test joins a room in every endless mode (`tests/online-endless.browser.mjs`). The open
   world's window now slides with a little give (a rider weaving on a slide line, a crash, a
   rollback's frames run again no longer slide it back and forth: 625 → 69 slides on a weaving
-  minute). The host's pick byte is now kind (3 bits) and sub (3 bits). Size budget 184,000 → 190,000
+  minute). Its gather now records, in the state, which gather the live neighbours, sprinklers and
+  dog were mapped onto, so a rollback that lands on a gather a guessed future already made can't
+  leave them mapped for a moment that never happened (the offline ride is byte for byte as before;
+  the golden hash moves only for the two new numbers). The host's pick byte is now kind (3 bits) and sub (3 bits). Size budget 184,000 → 190,000
   B gzip (186,581 B measured, +4,794 B).
 - **Miles by default, km as a setting.** SETTINGS → UNITS: Imperial (miles, mph; the default) or
   Metric (km, km/h), saved in the profile (schema v6: every existing save migrates to Imperial).

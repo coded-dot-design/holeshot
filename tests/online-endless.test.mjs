@@ -85,6 +85,32 @@ for (const P of [2, 4])
       assert.ok(Array.from({ length: P }, (_, p) => B[p * SB_N + SB_DIST]).every((d) => d > 100), "the board has everyone's distance");
     });
 
+// The rollback's hardest case, by hand: every frame a guessed future (1 to 13 frames of another
+// rider's stale input) is run and undone before the true frame, across regroups (a teleport and a
+// regather where the guessed future already gathered), crashes and the patrol: Endless Wheelie City's
+// caches (its window, its gather and the live neighbours, sprinklers and dog mapped onto it) never
+// leak a guessed future into the state.
+test("Endless Wheelie City, a guessed future run and undone every frame (6,000 frames, regroups and all): identical to the straight run", () => {
+  const a = cityJam(tuned(2).map(spec), 99), b = cityJam(tuned(2).map(spec), 99);
+  const one = (s, f, wrong) => {
+    for (let p = 0; p < 2; p++) {
+      const bits = wrong && p === 1 ? drive(f - 9, p) : drive(f, p);
+      N.decode(bits, p, s.IN, s.AUTO);
+      s.CMD[p] = N.cmdOf(bits);
+    }
+    s.step(1 / 60);
+    s.clear();
+  };
+  for (let f = 0; f < 6000; f++) {
+    one(a, f, false);
+    const keep = b.bytes.map((v) => v.slice());
+    for (let g = 0; g <= f % 13; g++) one(b, f + g, true);
+    b.bytes.forEach((v, i) => v.set(keep[i]));
+    one(b, f, false);
+    if (f % 60 === 59) b.bytes.forEach((v, i) => assert.ok(eq(v, a.bytes[i]), `frame ${f}: byte view ${i} identical`));
+  }
+});
+
 function online(P, mode, { latency = 0, jitter = 0, seed = 3, input = drive, ticks = 1e6, until, hold } = {}) {
   const hub = memory({ peers: P, latency, jitter, seed, cap: 4096 });
   const runs = Array.from({ length: P }, (_, s) => {
@@ -100,10 +126,13 @@ function online(P, mode, { latency = 0, jitter = 0, seed = 3, input = drive, tic
   }
   return { runs, hub };
 }
-const MIN = Number(process.env.ENDLESS_MINUTES ?? 3), FRAMES = Math.round(MIN * 3600);
+// Minutes ridden: three for two screens, ninety seconds for four by default (four screens with
+// corrections every few frames cost minutes of CPU each); ENDLESS_MINUTES=<n> rides n for both.
+const MINS = { 2: Number(process.env.ENDLESS_MINUTES ?? 3), 4: Number(process.env.ENDLESS_MINUTES ?? 1.5) };
 for (const [mode, name] of MODES)
-  test(`${name} online: two and four screens ride ${MIN} minutes with latency and jitter, byte for byte the no-latency run; everyone's END ends it on one frame`, () => {
+  test(`${name} online: two and four screens ride ${MINS[2]} and ${MINS[4]} minutes with latency and jitter, byte for byte the no-latency run; everyone's END ends it on one frame`, () => {
     for (const P of [2, 4]) {
+      const MIN = MINS[P], FRAMES = Math.round(MIN * 3600);
       const t0 = performance.now(), input = (f, s) => drive(f, s, FRAMES);
       const base = online(P, mode, { input, until: (runs) => runs.every((r) => r.over.length) });
       const at = base.runs[0].over[0].f, res = base.runs[0].over[0].res;
