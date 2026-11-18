@@ -14,7 +14,7 @@ import { diorama } from "@fzlt/core/diorama";
 import { terrainView, type TerrainView } from "@fzlt/core/terrain";
 import { chase } from "@fzlt/core/drive";
 import { controls } from "@fzlt/core/input";
-import { rocker } from "../../bike/rocker.ts";
+import { rocker, B_TRICK } from "../../bike/rocker.ts";
 import { pad } from "@fzlt/core/pad";
 import { sound } from "@fzlt/core/sound";
 import { LOOP, ENDO, CASE, BAIL } from "../../bike/bike.ts";
@@ -26,7 +26,7 @@ import { pool, voice, gamepad, type Pool } from "../../bike/kit.ts";
 import { TRICKS, CLEAN, SC, CB, PTS, LFLIPS, AIRT, BEST, FLIPS, CLEANS, CRASHES, JUMPS, SEEN } from "./tricks.ts";
 import { DONE, E_CRASH, E_END, E_LAND, E_RESPAWN, E_RESET, E_STUCK, E_START, E_TRICK, HX, HZ, KICK, KICK_L, LAP, NT, READY, RUN, RUN_T, TRACK, TRACK_W, TURN, YAW, airShow, trackEdges } from "./show.ts";
 import { speedo } from "../speedo.ts";
-import { keysHTML, paintMute as paintMuteK, paintView } from "../keys.ts";
+import { keysHTML, menuKeys, paintMute as paintMuteK, paintView } from "../keys.ts";
 
 const TAU = 6.283185307179586;
 type Kit = Omit<RigColors, "plastic" | "plastic2" | "jersey" | "pants" | "helmet" | "stripe" | "plate" | "ink">;
@@ -94,14 +94,12 @@ export function mountAir(ctx: ModeCtx): ModeRun {
   const ICON_TRICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 3 7 7 .6-5.4 4.6 1.7 7.3L12 17.6 5.7 21.5l1.7-7.3L2 9.6 9 9z" fill="currentColor"/></svg>';
   const thePad = pad(engine, c, {
     scheme: "stick",
-    // Gas and brake on the throttle rocker (../../bike/rocker.ts); TRICK an icon key beside it.
-    actions: [
-      { intent: "trick", label: "", icon: ICON_TRICK, name: "Trick (L)", key: "L", role: "flag", hold: true },
-    ],
+    // Gas and brake on the throttle rocker (../../bike/rocker.ts); the TRICK a bubble out of it in the air.
+    actions: [],
     host: stage,
   });
   thePad.el.classList.add("ba-pad");
-  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal });
+  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal, bubbles: [{ intent: "trick", slot: 0, icon: ICON_TRICK, word: "TRICK", name: "Trick: slide the gas thumb onto it, or tap it; hold it in the air (L)" }] });
   // Walking the bike: the WALK chip, and on a touch screen the one-time "stick back" hint.
   const coarse = matchMedia("(pointer: coarse)"), walkHud = walkUi(hud, () => coarse.matches && !ctx.attract);
   if (ctx.attract) thePad.el.hidden = true;
@@ -476,6 +474,9 @@ export function mountAir(ctx: ModeCtx): ModeRun {
           V[7] = cr.width || 1;
           V[3] = Math.max(8, hr.bottom - sr.top + 8);
           V[4] = 10;
+          // A phone in landscape: the stick sits over the canvas; the tach sticker goes above it.
+          const sk = thePad.el.offsetParent ? thePad.el.querySelector(".bui-stick")?.getBoundingClientRect() : null;
+          if (sk && sk.height && sk.top < cr.bottom) V[4] = Math.max(10, cr.bottom - sk.top + 4);
           frameTable();
           if (!view) Object.assign(dio.cam, TABLE);
         }
@@ -506,6 +507,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
       if (moving) e.busy(), (dirty = true), (hudDirty = true);
     },
     render() {
+      rock.want(show.phase === RUN && me.air > 0.12 && !me.crashed && !paused && !ended ? B_TRICK : 0);
       if (hudDirty) (hudDirty = false), hudWrite();
       vox.set(me.rpm, me.throttle, (show.phase === RUN || show.phase === READY) && !me.crashed && !paused && !ended, me.gear, me.speed);
       if (!dirty) return;
@@ -554,6 +556,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
   muteK.addEventListener("click", toggle, sig);
   viewK.addEventListener("click", () => setView(view ? 0 : 1), sig);
   keysEl.querySelector(".ba-menu")!.addEventListener("click", () => ctx.menu(), sig);
+  menuKeys(keysEl, engine.signal);
   keysEl.querySelector(".ba-reset")!.addEventListener("click", () => ((resetQ = 1), (auto = false), engine.wake()), sig);
   keysEl.querySelector(".ba-theme")?.addEventListener("click", () => ctx.theme?.(), sig);
   thePad.el.addEventListener("pointerdown", () => ((auto = false), wake(), engine.wake()), sig);

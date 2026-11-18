@@ -20,7 +20,7 @@ import { terrainView, type TerrainView } from "@fzlt/core/terrain";
 import { roadRibbons } from "./ribbons.ts";
 import { chase } from "@fzlt/core/drive";
 import { controls } from "@fzlt/core/input";
-import { rocker } from "../../bike/rocker.ts";
+import { rocker, ICON_TRICK, ICON_HOP, B_TRICK, B_HOP } from "../../bike/rocker.ts";
 import { pad } from "@fzlt/core/pad";
 import { sound } from "@fzlt/core/sound";
 import {
@@ -47,7 +47,7 @@ import { callout, stuntCalls, friendStunt } from "../callout.ts";
 import { pool, voice, gamepad, type Pool } from "../../bike/kit.ts";
 import { SC, CB, ON, DIST, TIME, SWEET, PTS, KIND, BEST_W, MANUAL, STOPPIE, F_CROSS, F_SPRINK } from "./tricks.ts";
 import { speedo } from "../speedo.ts";
-import { keysHTML, paintMute as paintMuteK, paintView } from "../keys.ts";
+import { keysHTML, menuKeys, paintMute as paintMuteK, paintView } from "../keys.ts";
 
 const TAU = 6.283185307179586;
 // Palettes by role: a neon night (dark) and a pastel day (light); each hood has its own ground and buildings over it.
@@ -185,10 +185,18 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
   });
   const c = controls(engine, { keys: { left: [], right: [], fwd: [], back: [], gas: [], brake: [], hop: [], reset: [], combo: [] }, target: play });
   const GAS = c.id("gas"), BRAKE = c.id("brake"), HOPK = c.id("hop"), RESETK = c.id("reset"), COMBOK = c.id("combo");
-  const ICON_HOP = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 5 12h4v6h6v-6h4z" fill="currentColor"/></svg>';
-  const thePad = pad(engine, c, { scheme: "stick", actions: [{ intent: "hop", label: "", icon: ICON_HOP, name: "Hop (L)", key: "L", role: "aim" }], host: stage });
+  // No pad keys: the TRICK (the combo button) and the HOP are bubbles out of the rocker, each only when it is any use.
+  const thePad = pad(engine, c, { scheme: "stick", actions: [], host: stage });
   thePad.el.classList.add("wc-pad");
-  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal, combo: "combo" });
+  const rock = rocker(c, thePad.el, {
+    reduced: ctx.reduced,
+    signal: engine.signal,
+    bubbles: [
+      { intent: "combo", slot: 0, icon: ICON_TRICK, word: "TRICK", name: "Trick: slide the gas thumb onto it, or tap it; hold for more points (C)" },
+      { intent: "hop", slot: 1, icon: ICON_HOP, word: "HOP", name: "Hop: slide the gas thumb onto it, or tap it (L)" },
+    ],
+  });
+  let trickOut = false;
   const coarse = matchMedia("(pointer: coarse)"), walkHud = walkUi(hud, () => coarse.matches && !ctx.attract);
   if (ctx.attract) thePad.el.hidden = true;
   const vox = voice();
@@ -1432,6 +1440,10 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
       if (moving) e.busy(), (dirty = true), (hudDirty = true);
     },
     render() {
+      // The rocker's bubbles: TRICK in the air or in a wheelie past 10 o'clock, HOP on the ground otherwise.
+      const live = S[0] === RUN && !bike.b.crashed && !paused && !ended && !ctx.attract;
+      trickOut = live && (bike.air || bike.nose > (trickOut ? 0.4 : 0.52));
+      rock.want(trickOut ? B_TRICK : live ? B_HOP : 0);
       if (hudDirty) (hudDirty = false), hudWrite();
       if (!dirty) return;
       dirty = false;
@@ -1483,6 +1495,7 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
   muteK.addEventListener("click", toggle, sig);
   viewK.addEventListener("click", () => setView(view ? 0 : 1), sig);
   keysEl.querySelector(".wc-menu")!.addEventListener("click", () => ctx.menu(), sig);
+  menuKeys(keysEl, engine.signal);
   keysEl.querySelector(".wc-theme")?.addEventListener("click", () => ctx.theme?.(), sig);
   keysEl.querySelector(".wc-regroup")?.addEventListener("click", () => ((CMDQ[1] = 8), engine.wake()), sig);
   keysEl.querySelector(".wc-reset")!.addEventListener("click", () => ((resetQ = 1), (auto = false), engine.wake()), sig);
@@ -1516,7 +1529,7 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
       const ph = S[0]!;
       return {
         phase: ph === READY ? "ready" : ph === RUN || ph === CRASH ? "run" : ph === DONE ? "done" : "idle", walking: bike.b.walking, clock: S[1]!, score: sc[SC]!, combo: sc[CB]!, trick: sc[ON] === 1, nose: bike.nose, view: view ? "chase" : "map", speed: bike.b.speed, crashes, grumps: S[4]!, best: sc[BEST_W]!, ended,
-        gas: I[0]!, brake: I[1]!, drag: run.HD[1]!, hold: run.HD[0]!, stunt: run.st.trick, whip: run.st.whip,
+        gas: I[0]!, brake: I[1]!, air: bike.air, drag: run.HD[1]!, hold: run.HD[0]!, stunt: run.st.trick, whip: run.st.whip,
         far: run.far, endless: true, towns: S[S_TOWNS]!, inTown: run.inTown, near: cop.S[NEAR]!, heat: cop.S[HEAT]!, stars: cop.S[STARS]!, units: cop.chasing, risk: cop.S[HOT]!, escapes: cop.S[ESC]!, tickets: cop.S[TIX]!, x: bike.b.pos[0]!, z: bike.b.pos[2]!, objects: dio.stats.objects, faces: dio.stats.faces, ground: tv.stats.faces, ribbons: rib.stats.quads, tiles: run.win.stats[0]!,
       };
     },

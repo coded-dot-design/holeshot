@@ -85,13 +85,19 @@ try {
     const cam0 = (await snap(p)).camera;
     await p.evaluate(() => (game.run.auto = true));
     // The HUD: the speed chip (mph by default) next to the lap; the corner keys icon only, each named,
-    // in one row that fits; no END key; mute and the map view press in (no drop shadow) when on.
+    // in one row that fits (on a phone the row is ☰ and PAUSE; the rest open from ☰ as a column); no
+    // END key; mute and the map view press in (no drop shadow) when on.
     await until(p, () => /^\d+MPH$/.test(document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".mt-speed")?.textContent ?? "") && +document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".mt-speed span").textContent > 3, null, `${name}: the speed chip reads mph`);
     const keys = await p.evaluate(() => {
-      const r = document.querySelector("[data-fizlet-host]").shadowRoot, ks = [...r.querySelectorAll(".mt-keys button")].filter((k) => !k.hidden), boxes = ks.map((k) => k.getBoundingClientRect());
+      const r = document.querySelector("[data-fizlet-host]").shadowRoot, ks = [...r.querySelectorAll(".mt-keys button")].filter((k) => !k.hidden && k.getClientRects().length > 0), boxes = ks.map((k) => k.getBoundingClientRect());
       return { labels: ks.map((k) => k.getAttribute("aria-label")), text: ks.map((k) => k.textContent.trim()).join(""), svg: ks.every((k) => k.querySelector("svg")), end: !!r.querySelector(".mt-end"), row: new Set(ks.map((k) => k.offsetTop)).size, inside: boxes.every((b) => b.left >= 0 && b.right <= innerWidth), small: boxes.some((b) => Math.min(b.width, b.height) < 43.5), lap: r.querySelector(".mt-lap").nextElementSibling.classList.contains("mt-speed") };
     });
-    assert.deepEqual(keys, { labels: ["Reset to the last good spot (R)", "Map view (V)", "Mute (M)", "Pause (P)"], text: "", svg: true, end: false, row: 1, inside: true, small: false, lap: true }, `${name}: the corner keys`);
+    assert.deepEqual(keys, { labels: touch ? ["Ride settings", "Pause (P)"] : ["Reset to the last good spot (R)", "Map view (V)", "Mute (M)", "Pause (P)"], text: "", svg: true, end: false, row: 1, inside: true, small: false, lap: true }, `${name}: the corner keys`);
+    if (touch) {
+      await click(p, ".hs-more");
+      const col = await p.evaluate(() => [...document.querySelector("[data-fizlet-host]").shadowRoot.querySelectorAll(".hs-keyset button")].filter((k) => !k.hidden && k.getClientRects().length > 0).map((k) => k.getAttribute("aria-label")));
+      assert.deepEqual(col, ["Reset to the last good spot (R)", "Map view (V)", "Mute (M)"], `${name}: ☰ opens the column`);
+    }
     const press = (sel) => p.evaluate((s) => { const k = document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(s); return { pressed: k.getAttribute("aria-pressed"), shadow: getComputedStyle(k).boxShadow }; }, sel);
     // (These pages start with sound off: the mute key starts pressed in.)
     for (let i = 0; i < 2; i++) {

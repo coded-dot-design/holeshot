@@ -15,7 +15,7 @@ import { diorama, type DioramaObject } from "@fzlt/core/diorama";
 import { terrainView, type TerrainView } from "@fzlt/core/terrain";
 import { chase } from "@fzlt/core/drive";
 import { controls } from "@fzlt/core/input";
-import { rocker } from "../../bike/rocker.ts";
+import { rocker, ICON_TRICK, B_TRICK } from "../../bike/rocker.ts";
 import { pad } from "@fzlt/core/pad";
 import { sound } from "@fzlt/core/sound";
 import { LOOP, ENDO, CASE, BAIL, type Power } from "../../bike/bike.ts";
@@ -39,7 +39,7 @@ import type { Ride } from "../../online/match.ts";
 import { walkUi } from "../../bike/walk-ui.ts";
 import type { RigHelmet, RigKind } from "../../bike/rig.ts";
 import { speedo } from "../speedo.ts";
-import { keysHTML, paintMute as paintMuteK, paintView } from "../keys.ts";
+import { keysHTML, menuKeys, paintMute as paintMuteK, paintView } from "../keys.ts";
 import { rigOfPower } from "../../bike/bodies.ts";
 
 /** An online ride on this screen (../../online/match.ts steps the sim; the scene draws it, reads this
@@ -186,7 +186,9 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     host: stage,
   });
   thePad.el.classList.add("mt-pad");
-  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal, combo: endless ? "combo" : "" });
+  // Endless: the TRICK bubble (the combo button) pops out of the rocker in the air and in a wheelie past 10 o'clock.
+  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal, bubbles: endless ? [{ intent: "combo", slot: 0, icon: ICON_TRICK, word: "TRICK", name: "Trick: slide the gas thumb onto it, or tap it; hold for more points (C)" }] : [] });
+  let trickOut = false;
   // Walking the bike: the WALK chip, and on a touch screen the one-time "stick back" hint.
   const coarse = matchMedia("(pointer: coarse)"), walkHud = walkUi(hud, () => coarse.matches && !ctx.attract);
   if (ctx.attract) thePad.el.hidden = true;
@@ -807,6 +809,9 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
           V[7] = cr.width || 1;
           V[3] = Math.max(8, hr.bottom - sr.top + 8);
           V[4] = 10;
+          // A phone in landscape: the stick sits over the canvas; the tach sticker goes above it.
+          const sk = thePad.el.offsetParent ? thePad.el.querySelector(".bui-stick")?.getBoundingClientRect() : null;
+          if (sk && sk.height && sk.top < cr.bottom) V[4] = Math.max(10, cr.bottom - sk.top + 4);
           frameTable();
           if (!view) Object.assign(dio.cam, TABLE);
         }
@@ -840,6 +845,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       if (moving) e.busy(), (dirty = true), (hudDirty = true);
     },
     render() {
+      if (endless) (trickOut = sim.phase === RACE && !me.crashed && !paused && !ended && (me.air > 0.05 || me.rel > (trickOut ? 0.4 : 0.52))), rock.want(trickOut ? B_TRICK : 0);
       if (hudDirty) (hudDirty = false), hudWrite();
       vox.set(me.rpm, me.throttle, (sim.phase === RACE || sim.phase === GRID) && !me.crashed && !paused && !ended, me.gear, me.speed);
       if (!dirty) return;
@@ -897,6 +903,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   muteK.addEventListener("click", toggle, sig);
   viewK.addEventListener("click", () => setView(view ? 0 : 1), sig);
   keysEl.querySelector(".mt-menu")!.addEventListener("click", () => ctx.menu(), sig);
+  menuKeys(keysEl, engine.signal);
   keysEl.querySelector(".mt-reset")!.addEventListener("click", () => ((resetQ = 1), (auto = false), engine.wake()), sig);
   keysEl.querySelector(".mt-theme")?.addEventListener("click", () => ctx.theme?.(), sig);
   keysEl.querySelector(".mt-regroup")?.addEventListener("click", () => ((CMDQ[1] = 8), engine.wake()), sig);
@@ -918,7 +925,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     engine,
     get state() {
       const ph = sim.phase;
-      return { phase: ph === GRID ? (free && !jam ? "ready" : "grid") : ph === RACE ? "run" : ph === DONE ? "done" : "idle", speed: me.speed, walking: me.walking, clock: sim.clock, lap: race ? race.lap(seat) : 0, place: race ? race.place(seat) : jam ? jam.place(seat) : 0, crashes: m.M[5]!, air: me.air, wheelie: me.wheelie, view: view ? "chase" : "table", count: race ? race.count : jam ? jam.count : 0, ended, riders: RIDERS, map: track.id, tricks: fr ? fr.tricks : jam ? jam.tricks(seat) : 0, seat, points: jam ? jam.points(seat) : 0, steer: I[3]!, steerAngle: me.steerAngle, x: me.pos[0]!, z: me.pos[2]!, y: me.pos[1]!, distance: fr ? fr.distance : 0, stuck: fr ? fr.stuck : false, upright: !me.crashed && Math.abs(me.rel) < 0.5, tiles: dv ? endless!.world.stats[0]! : 0, faces: tv.stats.faces, score: tsc ? tsc[T_SC]! : 0, drag: st ? st.HD[1]! : 0, stunt: st ? st.trick : -1, whip: st ? st.whip : 0 };
+      return { phase: ph === GRID ? (free && !jam ? "ready" : "grid") : ph === RACE ? "run" : ph === DONE ? "done" : "idle", speed: me.speed, walking: me.walking, clock: sim.clock, lap: race ? race.lap(seat) : 0, place: race ? race.place(seat) : jam ? jam.place(seat) : 0, crashes: m.M[5]!, air: me.air, gas: I[0]!, brake: I[1]!, wheelie: me.wheelie, view: view ? "chase" : "table", count: race ? race.count : jam ? jam.count : 0, ended, riders: RIDERS, map: track.id, tricks: fr ? fr.tricks : jam ? jam.tricks(seat) : 0, seat, points: jam ? jam.points(seat) : 0, steer: I[3]!, steerAngle: me.steerAngle, x: me.pos[0]!, z: me.pos[2]!, y: me.pos[1]!, distance: fr ? fr.distance : 0, stuck: fr ? fr.stuck : false, upright: !me.crashed && Math.abs(me.rel) < 0.5, tiles: dv ? endless!.world.stats[0]! : 0, faces: tv.stats.faces, score: tsc ? tsc[T_SC]! : 0, drag: st ? st.HD[1]! : 0, stunt: st ? st.trick : -1, whip: st ? st.whip : 0 };
     },
     get auto() {
       return auto;

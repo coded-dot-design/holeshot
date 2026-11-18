@@ -24,6 +24,11 @@ const description = 'Play Holeshot: pick your one starter bike, then race, free 
     <h1 id="play-title" class="sr">Play Holeshot</h1>
     <div id="game" class="play-host" data-rooms={ROOMS}></div>
   </section>
+  <aside class="pwa-tip" hidden aria-label="Add Holeshot to your Home Screen">
+    <p><b>For the best ride, add HOLESHOT to your Home Screen</b><span class="pwa-how"></span></p>
+    <button type="button" class="bui-key bui-go pwa-install" hidden>INSTALL</button>
+    <button type="button" class="bui-key pwa-x" aria-label="Dismiss the tip">✕</button>
+  </aside>
 </Base>
 
 <script>
@@ -34,4 +39,27 @@ const description = 'Play Holeshot: pick your one starter bike, then race, free 
   const want = new URLSearchParams(location.search).get("mode");
   if (want && MODES.some((m: { id: string }) => m.id === want) && game.profile.bikes.length) game.start(want);
   (window as unknown as { game: unknown }).game = game;
+
+  // A phone in landscape in a browser tab: a one-time tip to add the game to the Home Screen (it then
+  // launches full screen, no browser bars). Platform-detected how-to; never on desktop, never once it
+  // is installed; remembered per browser once shown.
+  const TIP = "holeshot:pwa-tip", tip = document.querySelector<HTMLElement>(".pwa-tip")!;
+  const how = tip.querySelector<HTMLElement>(".pwa-how")!, inst = tip.querySelector<HTMLButtonElement>(".pwa-install")!;
+  const nav = navigator as Navigator & { standalone?: boolean };
+  const ios = /iPhone|iPad|iPod/.test(nav.userAgent) || (nav.platform === "MacIntel" && nav.maxTouchPoints > 1);
+  how.textContent = ios ? "Tap Share, then Add to Home Screen." : "Open the browser menu ⋮, then Install app (or Add to Home screen).";
+  const installed = () => nav.standalone === true || matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches;
+  const seen = () => { try { return localStorage.getItem(TIP) === "1"; } catch { return false; } };
+  const land = matchMedia("(pointer: coarse) and (orientation: landscape)");
+  let deferred: (Event & { prompt(): Promise<void> }) | null = null;
+  addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferred = e as typeof deferred; inst.hidden = false; });
+  const maybe = () => {
+    if (!tip.hidden || !land.matches || installed() || seen()) return;
+    tip.hidden = false;
+    try { localStorage.setItem(TIP, "1"); } catch { /* private mode: it may show again */ }
+  };
+  inst.addEventListener("click", () => { deferred?.prompt(); tip.hidden = true; });
+  tip.querySelector(".pwa-x")!.addEventListener("click", () => (tip.hidden = true));
+  land.addEventListener("change", maybe);
+  maybe();
 </script>

@@ -78,6 +78,36 @@ try {
       assert.deepEqual(errs, [], `${at}: no page errors`);
       await ctx.close();
     }
+  // The Home Screen tip and the PWA bits: the manifest (full screen, start at /play/, icons), shown
+  // once in a phone's landscape only (never portrait, never desktop), remembered.
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const p = await ctx.newPage();
+    await p.goto(`${server.url}${BASE}/play/`);
+    await until(p, () => window.game, null, "desktop: /play/");
+    const man = await p.evaluate(async () => { const l = document.querySelector('link[rel="manifest"]'); const m = await (await fetch(l.href)).json(); const ok = await Promise.all(m.icons.map(async (i) => (await fetch(new URL(i.src, l.href))).ok)); return { display: m.display, start: new URL(m.start_url, l.href).pathname, icons: m.icons.length, ok: ok.every(Boolean), apple: !!document.querySelector('link[rel="apple-touch-icon"]'), theme: document.querySelector('meta[name="theme-color"]')?.content }; });
+    assert.ok(man.display === "fullscreen" && man.start === `${BASE}/play/` && man.icons >= 3 && man.ok && man.apple && man.theme, `the manifest: ${JSON.stringify(man)}`);
+    assert.equal(await p.evaluate(() => document.querySelector(".pwa-tip").hidden), true, "desktop: no Home Screen tip");
+    await ctx.close();
+    for (const [w, h, show] of [[390, 844, false], [844, 390, true]]) {
+      const c2 = await browser.newContext({ viewport: { width: w, height: h }, hasTouch: true, isMobile: true });
+      const q = await c2.newPage();
+      await q.goto(`${server.url}${BASE}/play/`);
+      await until(q, () => window.game, null, `${w}: /play/`);
+      const tip = await q.evaluate(() => { const t = document.querySelector(".pwa-tip"); return { shown: !t.hidden, text: t.textContent.replace(/\s+/g, " ").trim() }; });
+      assert.equal(tip.shown, show, `${w}×${h}: the Home Screen tip ${show ? "shown" : "not shown"}`);
+      if (show) {
+        assert.match(tip.text, /add HOLESHOT to your Home Screen/i);
+        if (SHOTS) await q.screenshot({ path: `${SHOTS}/play-pwa-tip-${w}.png` });
+        await q.click(".pwa-x");
+        assert.equal(await q.evaluate(() => document.querySelector(".pwa-tip").hidden), true, "dismissed");
+        await q.reload();
+        await until(q, () => window.game, null, `${w}: /play/ again`);
+        assert.equal(await q.evaluate(() => document.querySelector(".pwa-tip").hidden), true, "once: remembered");
+      }
+      await c2.close();
+    }
+  }
   // Reduced motion: the still poster; no game loads.
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
   const p = await ctx.newPage();
@@ -85,7 +115,7 @@ try {
   await until(p, () => document.querySelector(".dt-poster img")?.complete, null, "reduced motion: the poster");
   assert.deepEqual(await p.evaluate(() => ({ poster: !document.querySelector(".dt-poster").hidden, game: !!document.querySelector("[data-fizlet-host]") })), { poster: true, game: false }, "reduced motion: a still poster, no game");
   await ctx.close();
-  console.log("Holeshot site: the hero races, the title, PLAY to /play/, four sections, the measured size, no sideways scroll, /play/ setup (the header handle clear of the card) and ?mode=, the reduced-motion poster; 1440 and 390, dark and light.");
+  console.log("Holeshot site: the hero races, the title, PLAY to /play/, four sections, the measured size, no sideways scroll, /play/ setup (the header handle clear of the card) and ?mode=, the reduced-motion poster; 1440 and 390, dark and light; the manifest and the one-time Home Screen tip (phone landscape only).");
 } finally {
   await browser.close();
   await server.close();

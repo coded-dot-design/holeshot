@@ -70,7 +70,12 @@ import { readdirSync, readFileSync } from "node:fs";
 // r6-r9: r11's endless rides together, and their wiring to r8's tricks: the COMBO bit, the board's
 // trick feeds and names, friends' trick callouts and poses, END & BANK in the online pause), plus
 // about 2.9 KB of room.
-const BUDGET = 203_000;
+// 0.5.0, r12 + r13 + r14 integrated: 205,280 B measured (holeshot.js; +5,217 B over 0.4.0's 200,063:
+// r12's TRICK/HOP bubbles and tether, the ☰ menu column, the controls' CSS and the Home Screen tip
+// +1,627 on its own; r13's NOD and REAL name tables and the dressing +1,196; r14's garage dock, live
+// preview with BUY/APPLY/CANCEL and pace deltas, the plinth and the card layout +2,246), plus about
+// 2 KB of room.
+const BUDGET = 207_300;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

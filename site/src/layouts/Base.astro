@@ -25,6 +25,13 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <meta property="og:image" content={new URL(base('shots/og.jpg'), Astro.site)} />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href={base('icon.svg')} type="image/svg+xml" />
+    <!-- Add to Home Screen: launches /play/ full screen (manifest), with its own icon on iOS. -->
+    <link rel="manifest" href={base('manifest.webmanifest')} />
+    <link rel="apple-touch-icon" href={base('apple-touch-icon.png')} />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Holeshot" />
     <script is:inline>
       try {
         var t = localStorage.getItem("dom-virus:theme");

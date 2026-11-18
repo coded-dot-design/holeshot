@@ -114,11 +114,16 @@ Wheelie City: a race reset puts you back on the line behind where you were (the 
 that progress back and holds you 1.2 s while the field rides on, so it can never gain a place; Big Air
 puts you at the run-in of the current jump; Wheelie City at the last good spot (never a
 lawn, the sand or the water). A mouse: hold the track for gas, drag to steer and lean. Phones: the stick
-under the left thumb leans and steers; under the right, the **throttle rocker**, one tall pill: slide
-the thumb up for gas, down for brake, and onto the middle seam for both at once (the wheelie and the
-feather), never lifting; a second finger on the pill adds the brake too. TRICK (Big Air) and HOP
-(Wheelie City) are icon keys beside it; every touch key is an icon with a spoken label. A gamepad
-works too. The look follows the page's `<html data-theme>`.
+under the left thumb leans and steers (the same size in portrait and landscape); under the right,
+the **throttle rocker**, one pill with square GAS and BRAKE zones: slide the thumb up for gas, down
+for brake, and onto the middle seam for both at once (the wheelie and the feather), never lifting; a
+second finger on the pill adds the brake too. A held zone presses in. There are no other touch keys
+over the ride: the **TRICK** bubble (in the air, or in a wheelie past 10 o'clock) and the **HOP**
+bubble (Wheelie City, on the ground) pop out of the rocker's side on a slime tether only when they
+are any use; slide the thumb out onto one without lifting and the zone it left (gas, brake or both)
+stays on while it is there, then slide back. The corner keys fold into one ☰ key beside PAUSE; a card
+over the ride (pause, the result) hides the touch controls. In a phone browser held sideways, a
+one-time tip offers to add Holeshot to the Home Screen (it launches full screen). A gamepad works too. The look follows the page's `<html data-theme>`.
 
 **Camera.** The chase camera's framing is set once at the start of an event and never zooms: not
 with speed, not in the air. Resizes are debounced and only a change of width refits the framing; a
