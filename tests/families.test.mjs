@@ -39,8 +39,9 @@ test("families: every class and model has one; bodies follow the family; street 
   }
   assert.equal(STARTERS.length, 4);
   assert.ok(STARTERS.every((m) => familyOf(m) !== "street"));
-  // No real brand or model names (a short denylist of the ones a kid would know).
-  const real = /honda|hondo|yamaha|yamada|kawasaki|kawazakura|suzuki|ducati|ktm|triumph|aprilia|bmw|harley|grom|ninja|panigale|duke|gsx|cbr|monster|\br1\b|\br6\b/i;
+  // No real brand or model names by default (a short denylist of the ones a kid would know; the
+  // street bikes nod to a Grom, an R6 and a Streetfighter V4 only in the NOD tier's near-names).
+  const real = /honda|yamaha|kawasaki|suzuki|ducati|ktm|triumph|aprilia|bmw|harley|grom|ninja|panigale|duke|gsx|cbr|monster|streetfighter|\br1\b|\br6\b/i;
   for (const m of street) assert.ok(!real.test(m.name + " " + m.blurb + " " + m.id + " " + makerOf(m).name + " " + makerOf(m).motto), m.name);
 });
 

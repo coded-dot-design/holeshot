@@ -14,11 +14,12 @@ shared one bike. Now they share one garage.
 
 ## The game
 
-**Your bike.** At the first run you pick one starter, the cheapest of each class: the **YAMADA
-YX-125 2T** (a blue 2-stroke: light, little down low, a hard hit up top), the **HONDO REDLINE 150F**
-(a red 4-stroke: heavy and torquey, slow to rotate), the **MAKFOX KIT FOX** (an orange e-bike:
-light, quick to lift) or the **SURGE-ON LIGHT HORNET** (a light electric dirt bike: every newton at
-once). Six makers in all (YAMADA, HONDO, KAWAZAKURA, STARKWOLF, SURGE-ON, MAKFOX), our own names. Paint it, number it,
+**Your bike.** At the first run you pick one starter, the cheapest of each class: the **YAMORI
+YOWLER 125 2T** (a blue 2-stroke: light, little down low, a hard hit up top), the **HONZO CRIMSON 150F**
+(a red 4-stroke: heavy and torquey, slow to rotate), the **MACVIX KIT FOX** (an orange e-bike:
+light, quick to lift) or the **SURGE-ON LIGHT BUZZ** (a light electric dirt bike: every newton at
+once). Seven makers in all (YAMORI, HONZO, KAWAZAKURA, STARHOWL, SURGE-ON, MACVIX, DUCELLI), our own
+names: near-names on the web, fully original ones in an app-store build ([docs/names.md](docs/names.md)). Paint it, number it,
 pick your jersey and a name. That bike rides every event.
 
 **Events** (RIDE on the menu), all on your bike:

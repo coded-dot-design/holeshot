@@ -231,17 +231,17 @@ test("balance: the reference player affords the first real mod after 3-4 events;
   }
 });
 
-test("roster: six original dirt makers (each a nod, none the real thing) and three street makers of the city's own; a new bike comes in its maker's colours", async () => {
+test("roster: nine maker ids (six dirt, three street), shown in the default build's NOD names (near-names, none the real thing; docs/names.md); a new bike comes in its maker's colours", async () => {
   const { MAKERS, makerOf } = await import("../src/data/roster.ts");
   const { PAINTS } = await import("../src/data/looks.ts");
-  assert.deepEqual(Object.values(MAKERS).map((m) => m.name), ["YAMADA", "HONDO", "KAWAZAKURA", "STARKWOLF", "SURGE-ON", "MAKFOX", "CURBCAT", "NIGHTGLASS", "IRONJAW"]);
-  // The street bikes' makers are not the dirt makers (no nod to a real maker at all).
+  assert.deepEqual(Object.keys(MAKERS), ["yamada", "hondo", "kawazakura", "starkwolf", "surgeon", "makfox", "curbcat", "nightglass", "ironjaw"], "the ids never change");
+  assert.deepEqual(Object.values(MAKERS).map((m) => m.name), ["YAMORI", "HONZO", "KAWAZAKURA", "STARHOWL", "SURGE-ON", "MACVIX", "HONZO", "YAMORI", "DUCELLI"]);
   for (const m of MODELS.filter((x) => x.cls === "street")) assert.ok(["curbcat", "nightglass", "ironjaw"].includes(m.maker), m.id);
-  // No real maker names or model codes, as words, anywhere a player reads.
-  const text = [...Object.values(MAKERS).flatMap((m) => [m.name, m.motto]), ...MODELS.flatMap((m) => [m.name, m.blurb])].join(" ").toUpperCase();
-  for (const w of ["YAMAHA", "HONDA", "KAWASAKI", "BETA", "STARK", "VARG", "SUR-RON", "SURRON", "ULTRA BEE", "MAC FOX", "MACFOX", "YZ", "CRF", "KX", "RR"]) assert.ok(!new RegExp(`(^|[^A-Z])${w}([^A-Z]|$)`).test(text), w);
-  assert.equal(MODELS.find((m) => m.id === "hivequeen").name, "YX-250 2T");
-  // The YX-250 has the class's sharpest 2-stroke hit.
+  // No real maker names or model codes, as words, anywhere a player reads (by default).
+  const text = [...Object.values(MAKERS).flatMap((m) => [m.name, m.motto]), ...MODELS.flatMap((m) => [m.name, m.blurb]), ...PAINTS.map((p) => p.name)].join(" ").toUpperCase();
+  for (const w of ["YAMAHA", "HONDA", "KAWASAKI", "DUCATI", "BETA", "STARK", "VARG", "SUR-RON", "SURRON", "ULTRA BEE", "LIGHT BEE", "MAC FOX", "MACFOX", "TALARIA", "STING", "YZ", "CRF", "KX", "RR", "R6", "GROM", "STREETFIGHTER"]) assert.ok(!new RegExp(`(^|[^A-Z])${w}([^A-Z]|$)`).test(text), w);
+  assert.equal(MODELS.find((m) => m.id === "hivequeen").name, "YOWLER 250 2T");
+  // The 250 2-stroke has the class's sharpest 2-stroke hit.
   const twos = MODELS.filter((m) => m.cls === "2t");
   assert.equal(Math.max(...twos.map((m) => m.power.curve[6] * m.power.force)), MODELS.find((m) => m.id === "hivequeen").power.force * MODELS.find((m) => m.id === "hivequeen").power.curve[6]);
   for (const m of MODELS) assert.ok(PAINTS.some((x) => x.id === "f-" + m.maker && x.plastic === makerOf(m).colors[0]), `${m.id}: factory paint`);
