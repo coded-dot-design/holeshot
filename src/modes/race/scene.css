@@ -16,6 +16,7 @@
 .mt-head{position:absolute;left:8px;top:8px;right:150px;display:grid;gap:6px}
 .mt-top{display:flex;flex-wrap:wrap;gap:6px 8px;margin:0}
 .mt~[data-fizlet-slot] .mt-chip{display:inline-flex;align-items:center;gap:.4em;padding:.4em .7em;background:var(--surface);color:var(--ink);border:2px solid var(--rim);border-radius:8px;box-shadow:calc(3px * var(--bui-sx)) calc(3px * var(--bui-sy)) 0 var(--bui-shadow);white-space:nowrap;font-variant-numeric:tabular-nums}
+.mt~[data-fizlet-slot] .mt-speed{gap:.3em}.mt~[data-fizlet-slot] .mt-speed span{min-width:2ch;text-align:right}.mt~[data-fizlet-slot] .mt-speed i{font-style:normal;font-size:.72em;opacity:.75}
 .mt~[data-fizlet-slot] .mt-pos{rotate:-1.5deg}
 .mt-pos i{font-style:normal;opacity:.6}
 .mt~[data-fizlet-slot] .mt-ride{rotate:1deg;background:var(--k-go);color:var(--rim)}
@@ -31,6 +32,7 @@
 .mt-live{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);margin:0}
 .mt-keys{position:absolute;right:8px;top:8px;display:flex;gap:6px;margin:0}
 .mt~[data-fizlet-slot] .mt-key{min-width:44px;height:44px;padding:0 .7em;font:inherit;cursor:pointer;pointer-events:auto;background:var(--surface);color:var(--ink);border:2px solid var(--rim);border-radius:22px;box-shadow:calc(3px * var(--bui-sx)) calc(3px * var(--bui-sy)) 0 var(--bui-shadow)}
+.mt~[data-fizlet-slot] .mt-key{width:44px;padding:0;display:inline-grid;place-items:center;transition:transform 80ms,box-shadow 80ms}.mt~[data-fizlet-slot] .mt-key:is(:active,[aria-pressed="true"]){box-shadow:none;transform:translate(calc(3px * var(--bui-sx)),calc(3px * var(--bui-sy)))}.mt~[data-fizlet-slot] .mt-view[aria-pressed="true"]{background:color-mix(in srgb,var(--cy,#22e6ff) 34%,var(--surface));border-color:var(--cy,#22e6ff)}.mt~[data-fizlet-slot] .mt-key svg{display:block}
 .mt~[data-fizlet-slot] .mt-card{position:absolute;left:50%;top:46%;translate:-50% -50%;rotate:-1.5deg;display:grid;justify-items:center;gap:.4em;width:min(84%,24em);padding:.9em 1.1em 1em;background:var(--surface);color:var(--ink);border:2.5px solid var(--rim);border-radius:12px;box-shadow:calc(6px * var(--bui-sx)) calc(6px * var(--bui-sy)) 0 var(--bui-shadow);text-align:center;pointer-events:auto}
 .mt-card>b{font-size:2em;letter-spacing:.06em}
 .mt-card p{margin:0}

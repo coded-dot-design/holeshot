@@ -28,3 +28,24 @@ jobs:
       # The site (landing, /play/), built for github.io; pages.yml deploys it.
       - run: npm run site:build
       - run: npm run test:site
+  # A release: when main's package.json version has no tag yet (it was just bumped), tag that commit
+  # vX.Y.Z once every check above is green. A version already tagged does nothing, so every other push
+  # to main is a no-op here. How to cut a release: CONTRIBUTING.md.
+  tag-version:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: |
+          tag="v$(node -p 'require("./package.json").version')"
+          git fetch origin --tags
+          if git show-ref --verify --quiet "refs/tags/$tag"; then echo "$tag is already tagged"; exit 0; fi
+          git tag "$tag"
+          git push origin "$tag"
+          echo "Tagged $tag at $(git rev-parse --short HEAD)"

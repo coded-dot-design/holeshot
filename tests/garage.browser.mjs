@@ -5,7 +5,7 @@
 // service log shows each; PAINT & KIT: a paint scheme is tried on first (the preview changes, the
 // credits don't), BUY pays and owns it, switching back is free; graphics and a plate decal; a helmet
 // shape; an outfit; the SHOWROOM: tier 3-4 locked, buy a bike, sell one. Every key 44 px or more,
-// no sideways scroll. With MEDIA set, screenshots of each step go there.
+// no sideways scroll. The preview's turntable turns by drag, swipe and the arrow keys. With MEDIA set, screenshots of each step go there.
 import assert from "node:assert/strict";
 import { mkdirSync } from "node:fs";
 import { chromium } from "playwright";
@@ -53,6 +53,24 @@ try {
     await click(p, ".dh-risk [data-go=garage]");
     await until(p, "game.getSnapshot().screen === 'garage'", `${name}: to the garage`);
     await until(p, "root.querySelector('.dh-preview').width > 50", `${name}: the preview draws`);
+    // ---- the turntable: drag (mouse) or swipe (touch) turns the bike; ← → with focus; Home resets ----
+    {
+      const turnAt = () => $(p, "+root.querySelector('.dh-preview').getAttribute('aria-valuenow')");
+      const a0 = await turnAt(), i0 = await ink(p);
+      const box = await $(p, "(() => { const r = root.querySelector('.dh-preview').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()");
+      if (touch) await $(p, "(() => { const c = root.querySelector('.dh-preview'); const ev = (t, x) => c.dispatchEvent(new PointerEvent(t, { pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: x, clientY: arg.y, bubbles: true })); ev('pointerdown', arg.x); for (let i = 1; i <= 8; i++) ev('pointermove', arg.x - i * 15); ev('pointerup', arg.x - 120); })()", box);
+      else await p.mouse.move(box.x, box.y), await p.mouse.down(), await p.mouse.move(box.x - 120, box.y, { steps: 8 }), await p.mouse.up();
+      await until(p, `+root.querySelector('.dh-preview').getAttribute('aria-valuenow') !== ${a0}`, `${name}: a drag turns the turntable`);
+      const a1 = await turnAt();
+      assert.notEqual(await ink(p), i0, `${name}: the turned bike is drawn`);
+      await $(p, "root.querySelector('.dh-preview').focus()");
+      await p.keyboard.press("ArrowRight");
+      assert.equal((((await turnAt()) - a1 + 15) % 360 + 360) % 360, 0, `${name}: → turns it 15°`);
+      await p.keyboard.press("Home");
+      assert.equal(await turnAt(), a0, `${name}: Home faces it front-quarter again`);
+      assert.equal((await p.evaluate(() => game.getSnapshot())).screen, "garage", `${name}: still in the garage`);
+      await shot(p, `${name}-0-turntable`);
+    }
     assert.match(await $(p, "root.querySelector('.dh-alert').textContent"), /may fail next event/);
     assert.equal(await $(p, "root.querySelector('[data-part=chain] .dh-tag').dataset.state"), "risk");
     assert.equal(await $(p, "root.querySelector('[data-part=tyres] .dh-tag').dataset.state"), "worn");

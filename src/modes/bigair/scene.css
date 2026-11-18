@@ -16,6 +16,7 @@
 .ba-head{position:absolute;left:8px;top:8px;right:150px;display:grid;gap:6px}
 .ba-top{display:flex;flex-wrap:wrap;gap:6px 8px;margin:0}
 .ba~[data-fizlet-slot] .ba-chip{display:inline-flex;align-items:center;gap:.4em;padding:.4em .7em;background:var(--surface);color:var(--ink);border:2px solid var(--rim);border-radius:8px;box-shadow:calc(3px * var(--bui-sx)) calc(3px * var(--bui-sy)) 0 var(--bui-shadow);white-space:nowrap;font-variant-numeric:tabular-nums}
+.ba~[data-fizlet-slot] .ba-speed{gap:.3em}.ba~[data-fizlet-slot] .ba-speed span{min-width:2ch;text-align:right}.ba~[data-fizlet-slot] .ba-speed i{font-style:normal;font-size:.72em;opacity:.75}
 .ba~[data-fizlet-slot] .ba-score{rotate:-1.5deg}
 .ba~[data-fizlet-slot] .ba-ride{rotate:1deg;background:var(--k-go);color:var(--rim)}
 .ba~[data-fizlet-slot] .ba-time span{min-width:5.2ch}
@@ -30,6 +31,7 @@
 .ba-live{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);margin:0}
 .ba-keys{position:absolute;right:8px;top:8px;display:flex;gap:6px;margin:0}
 .ba~[data-fizlet-slot] .ba-key{min-width:44px;height:44px;padding:0 .7em;font:inherit;cursor:pointer;pointer-events:auto;background:var(--surface);color:var(--ink);border:2px solid var(--rim);border-radius:22px;box-shadow:calc(3px * var(--bui-sx)) calc(3px * var(--bui-sy)) 0 var(--bui-shadow)}
+.ba~[data-fizlet-slot] .ba-key{width:44px;padding:0;display:inline-grid;place-items:center;transition:transform 80ms,box-shadow 80ms}.ba~[data-fizlet-slot] .ba-key:is(:active,[aria-pressed="true"]){box-shadow:none;transform:translate(calc(3px * var(--bui-sx)),calc(3px * var(--bui-sy)))}.ba~[data-fizlet-slot] .ba-view[aria-pressed="true"]{background:color-mix(in srgb,var(--cy,#22e6ff) 34%,var(--surface));border-color:var(--cy,#22e6ff)}.ba~[data-fizlet-slot] .ba-key svg{display:block}
 .ba~[data-fizlet-slot] .ba-card{position:absolute;left:50%;top:46%;translate:-50% -50%;rotate:-1.5deg;display:grid;justify-items:center;gap:.4em;width:min(84%,24em);padding:.9em 1.1em 1em;background:var(--surface);color:var(--ink);border:2.5px solid var(--rim);border-radius:12px;box-shadow:calc(6px * var(--bui-sx)) calc(6px * var(--bui-sy)) 0 var(--bui-shadow);text-align:center;pointer-events:auto}
 .ba-card>b{font-size:2em;letter-spacing:.06em}
 .ba-card p{margin:0}

@@ -25,6 +25,8 @@ import { rig, type Rig, type RigColors } from "../../bike/rig.ts";
 import { pool, voice, gamepad, type Pool } from "../../bike/kit.ts";
 import { TRICKS, CLEAN, SC, CB, PTS, LFLIPS, AIRT, BEST, FLIPS, CLEANS, CRASHES, JUMPS, SEEN } from "./tricks.ts";
 import { DONE, E_CRASH, E_END, E_LAND, E_RESPAWN, E_RESET, E_STUCK, E_START, E_TRICK, HX, HZ, KICK, KICK_L, LAP, NT, READY, RUN, RUN_T, TRACK, TRACK_W, TURN, YAW, airShow, trackEdges } from "./show.ts";
+import { speedo } from "../speedo.ts";
+import { keysHTML, paintMute as paintMuteK, paintView } from "../keys.ts";
 
 const TAU = 6.283185307179586;
 type Kit = Omit<RigColors, "plastic" | "plastic2" | "jersey" | "pants" | "helmet" | "stripe" | "plate" | "ink">;
@@ -68,11 +70,13 @@ export function mountAir(ctx: ModeCtx): ModeRun {
   play.setAttribute("aria-label", "Big Air: Space or J for gas, K or Shift to brake, W and S (or up and down) shift your weight (in the air: pitch, all the way back for a flip), A and D steer; in the air hold L or E for a trick, the stick picks which. V changes the view, M mutes, P or Escape pauses");
   const hud = L.add(document.createElement("div"));
   hud.className = "ba-hud";
-  hud.innerHTML = `<div class="ba-head"><p class="ba-top"><b class="ba-chip ba-score"><span>0</span><i>×1</i></b><b class="ba-chip ba-time"><span>1:00</span></b><b class="ba-chip ba-ride"><span>#${ctx.number} ${ctx.bike.model.name}</span></b></p><p class="ba-hint"></p></div><p class="ba-toast" hidden></p><p class="ba-live" aria-live="polite"></p><p class="ba-keys"><button type="button" class="ba-key ba-reset" aria-label="Back to the run-in (R)">↺</button><button type="button" class="ba-key ba-view" aria-label="Camera view (V)">VIEW</button><button type="button" class="ba-key ba-mute" aria-label="Mute (M)" aria-pressed="true">♪</button><button type="button" class="ba-key ba-menu" aria-label="Pause (P)">❚❚</button></p>`;
+  hud.innerHTML = `<div class="ba-head"><p class="ba-top"><b class="ba-chip ba-score"><span>0</span><i>×1</i></b><b class="ba-chip ba-time"><span>1:00</span></b><b class="ba-chip ba-ride"><span>#${ctx.number} ${ctx.bike.model.name}</span></b></p><p class="ba-hint"></p></div><p class="ba-toast" hidden></p><p class="ba-live" aria-live="polite"></p><p class="ba-keys">${keysHTML("ba", { reset: "Back to the run-in (R)", theme: !!ctx.theme })}</p>`;
   const head = hud.children[0] as HTMLElement, top = head.children[0] as HTMLElement, hintEl = head.children[1] as HTMLElement;
   const toastEl = hud.children[1] as HTMLElement, live = hud.children[2] as HTMLElement, keysEl = hud.children[3] as HTMLElement;
   const scoreEl = top.children[0]!.firstChild as HTMLElement, comboEl = top.children[0]!.lastChild as HTMLElement, timeEl = top.children[1]!.firstChild as HTMLElement;
-  const viewK = keysEl.children[1] as HTMLButtonElement, muteK = keysEl.children[2] as HTMLButtonElement;
+  // The speed, next to the clock (Big Air has no distance).
+  const speedW = speedo(top.children[1]!, "ba", ctx.units);
+  const viewK = keysEl.querySelector(".ba-view") as HTMLButtonElement, muteK = keysEl.querySelector(".ba-mute") as HTMLButtonElement;
   // Unstuck: the prompt (the race scene's sticker, ../race/scene.css).
   const stuckEl = document.createElement("p");
   stuckEl.className = "ba-stuck";
@@ -101,7 +105,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
   // Walking the bike: the WALK chip, and on a touch screen the one-time "stick back" hint.
   const coarse = matchMedia("(pointer: coarse)"), walkHud = walkUi(hud, () => coarse.matches && !ctx.attract);
   if (ctx.attract) thePad.el.hidden = true;
-  const paintMute = () => (muteK.textContent = snd.on ? "♪" : "×", muteK.setAttribute("aria-pressed", "" + snd.on));
+  const paintMute = () => paintMuteK(muteK, snd.on);
   paintMute();
   const toggle = () => {
     snd.on = vox.on = !snd.on;
@@ -290,6 +294,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
     const S = sc.S, ph = show.phase;
     if (was[0] !== S[SC]) (was[0] = S[SC]!), (scoreEl.textContent = S[SC]!.toLocaleString("en-US"));
     if (was[1] !== S[CB]) (was[1] = S[CB]!), (comboEl.textContent = "×" + (1 + S[CB]!)), comboEl.classList.toggle("ba-hot", S[CB]! > 0);
+    speedW(me.speed);
     const secs = Math.ceil(show.clock);
     if (was[2] !== secs) (was[2] = secs), (timeEl.textContent = `${(secs / 60) | 0}:${("" + (secs % 60)).padStart(2, "0")}`), timeEl.parentElement!.classList.toggle("ba-low", secs <= 10 && ph === RUN);
     const touch = !!thePad.el.offsetParent;
@@ -347,7 +352,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
   }
   function setView(n: number) {
     view = n;
-    viewK.textContent = n ? "VIEW · CHASE" : "VIEW · ARENA";
+    paintView(viewK, !n);
     dirty = true;
     engine.busy(2.5);
     engine.wake();
@@ -550,6 +555,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
   viewK.addEventListener("click", () => setView(view ? 0 : 1), sig);
   keysEl.querySelector(".ba-menu")!.addEventListener("click", () => ctx.menu(), sig);
   keysEl.querySelector(".ba-reset")!.addEventListener("click", () => ((resetQ = 1), (auto = false), engine.wake()), sig);
+  keysEl.querySelector(".ba-theme")?.addEventListener("click", () => ctx.theme?.(), sig);
   thePad.el.addEventListener("pointerdown", () => ((auto = false), wake(), engine.wake()), sig);
 
   buildScene();

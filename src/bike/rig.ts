@@ -47,9 +47,15 @@ const PI = Math.PI;
 // Bike-frame points (x forward, y up, from the centre of mass): the swingarm pivot, the steering head,
 // the grips, the pegs, the seat.
 const PIVOT = [-0.08, -0.3], HEAD = [0.5, 0.14], GRIP = [0.42, 0.33], PEG = [-0.06, -0.33], SEAT = [-0.22, 0.12];
-/** Layers a side's leg and arm drop by on the far side of the bike: from 7 (over the bike's parts,
- *  5 and 6) to 0.5 (under all of them, the wheels' rims at 1 included). */
+/** Layers a side's leg and arm drop by on the far side of the bike: from 7 (over the bike's parts)
+ *  to 0.5 (under all of them, the far-side parts and the wheels included). */
 const SIDE_DROP = 6.5;
+/** The bike's layers (see "the bike" in `rig`): a wheel at the near end, the body, near-side parts. */
+const WHEEL = 4.5, BODY = 4, NEAR = 6;
+/** A wheel's level drops by END_DROP per group facing away (4.5 → 3 → 1.5); a side's parts by FAR_DROP (6 → 1). */
+const END_DROP = 1.5, FAR_DROP = 5;
+/** The level and side groups' offset (only its direction counts; the parts make up for it). */
+const END = 1e-3;
 const THIGH = 0.4, SHIN = 0.42, UPPER = 0.29, FORE = 0.29, TORSO = 0.46;
 
 /** Bones and the solved joints, reused (no allocation per pose). */
@@ -87,90 +93,114 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
   };
 
   // ---- the bike ----
-  const hubs: DioramaObject[] = [];
+  // Layers inside the bike's cluster (the painter sorts by layer, then by depth inside a layer):
+  //   0.5      the rider's far-side leg and arm (SIDE_DROP)
+  //   1–1.4    far-side parts (FAR_DROP from 6–6.4): the far fork leg, swingarm arm, exhaust, side plate
+  //   1.5–2.1  a wheel and its fender at the far end of the bike (the eye is past the other end)
+  //   3–3.6    a wheel and its fender seen from the side
+  //   4–4.3    the body on the centre plane: frame, engine, tank and shrouds, seat, side panels, plate,
+  //            bars, then their graphics
+  //   4.5–5.1  a wheel and its fender at the near end (within 45° of straight ahead or behind)
+  //   6–6.4    near-side parts: the near fork leg, swingarm arm, exhaust, side plate
+  //   7        the rider (near-side leg and arm, torso, helmet)
+  // A wheel's level comes from two nested groups with `behind`, pointing out of its end of the bike
+  // and 45° to each side: both face the eye (the near end), one does (the side), neither (the far end).
+  // A side's parts hang from a group just off the centre plane (x 0: only which side the eye is on counts).
+  const hubs: DioramaObject[] = [], ends: DioramaObject[] = [];
   for (let i = 0; i < 2; i++) {
-    const hid = id + ":w" + i, hub = group(hid, id);
-    part([0.68, 0.15, 0.68], [0, 0, -0.075], C.tyre, { shape: "cyl", sides: 14, rot: [PI / 2, 0, 0], on: hid });
-    part([0.5, 0.16, 0.5], [0, 0, -0.08], C.rim, { shape: "cyl", sides: 14, rot: [PI / 2, 0, 0], on: hid, layer: 1 });
-    part([0.44, 0.17, 0.44], [0, 0, -0.085], C.tyre, { shape: "cyl", sides: 12, rot: [PI / 2, 0, 0], on: hid, layer: 2 });
+    const hid = id + ":w" + i, f = i ? 1 : -1;
+    const a = d.add({ id: hid + "a", shape: "group", size: [0.2, 0, 0.2], pos: [f * END, 0, END], on: id, behind: END_DROP, pick: false });
+    d.add({ id: hid + "b", shape: "group", size: [0.2, 0, 0.2], pos: [f * END, 0, -END], on: hid + "a", behind: END_DROP, pick: false });
+    const hub = group(hid, hid + "b");
+    part([0.68, 0.15, 0.68], [0, 0, -0.075], C.tyre, { shape: "cyl", sides: 14, rot: [PI / 2, 0, 0], on: hid, layer: WHEEL });
+    part([0.5, 0.16, 0.5], [0, 0, -0.08], C.rim, { shape: "cyl", sides: 14, rot: [PI / 2, 0, 0], on: hid, layer: WHEEL + 0.1 });
+    part([0.44, 0.17, 0.44], [0, 0, -0.085], C.tyre, { shape: "cyl", sides: 12, rot: [PI / 2, 0, 0], on: hid, layer: WHEEL + 0.2 });
     // Spokes: two bars across the rim that turn with the wheel; the hub.
-    part([0.44, 0.03, 0.18], [0, -0.015, 0], C.metal, { on: hid, layer: 3 });
-    part([0.03, 0.44, 0.18], [0, -0.22, 0], C.metal, { on: hid, layer: 3 });
-    part([0.12, 0.2, 0.12], [0, 0, -0.1], C.metal, { shape: "cyl", sides: 8, rot: [PI / 2, 0, 0], on: hid, layer: 4 });
+    part([0.44, 0.03, 0.18], [0, -0.015, 0], C.metal, { on: hid, layer: WHEEL + 0.3 });
+    part([0.03, 0.44, 0.18], [0, -0.22, 0], C.metal, { on: hid, layer: WHEEL + 0.3 });
+    part([0.12, 0.2, 0.12], [0, 0, -0.1], C.metal, { shape: "cyl", sides: 8, rot: [PI / 2, 0, 0], on: hid, layer: WHEEL + 0.4 });
     hubs.push(hub);
+    ends.push(d.get(hid + "b")!);
   }
-  // The swingarm (from the pivot to the rear axle) and the fork (upper tubes from the head, sliders from the axle).
+  /** A side's group (`s` −1 left, +1 right) on `on`, for that side's parts: layer NEAR on the near side. */
+  const sideOf = (gid: string, on: string, s: number) => (d.add({ id: gid, shape: "group", size: [0.2, 0, 0.2], pos: [0, 0, s * END], on, behind: FAR_DROP, pick: false }), gid);
+  // The swingarm (from the pivot to the rear axle) and the fork (upper tubes from the head, sliders from
+  // the axle): one arm and one fork leg per side.
   const arm = group(id + ":arm", id);
-  part([0.66, 0.08, 0.06], [0.33, -0.04, -0.12], C.metal, { on: id + ":arm" });
-  part([0.66, 0.08, 0.06], [0.33, -0.04, 0.12], C.metal, { on: id + ":arm" });
   const fork = group(id + ":fk", id), slider = group(id + ":sl", id);
   for (const z of [-0.12, 0.12]) {
-    part([0.38, 0.07, 0.07], [0.19, -0.035, z], C.metal, { on: id + ":fk" });
-    part([0.36, 0.09, 0.09], [0.18, -0.045, z], C.frame, { on: id + ":sl" });
+    const s = Math.sign(z), k = s < 0 ? "L" : "R";
+    part([0.66, 0.08, 0.06], [0.33, -0.04, z - s * END], C.metal, { on: sideOf(id + ":arm" + k, id + ":arm", s), layer: NEAR });
+    part([0.38, 0.07, 0.07], [0.19, -0.035, z - s * END], C.metal, { on: sideOf(id + ":fk" + k, id + ":fk", s), layer: NEAR });
+    part([0.36, 0.09, 0.09], [0.18, -0.045, z - s * END], C.frame, { on: sideOf(id + ":sl" + k, id + ":sl", s), layer: NEAR + 0.1 });
   }
+  // The exhaust runs down the right side.
+  const ex = sideOf(id + ":ex", id, 1), xo = { on: ex, layer: NEAR }, xz = (z: number) => z - END;
   // Frame, engine, exhaust.
-  part([0.62, 0.07, 0.1], [0.12, -0.02, 0], C.frame, { rot: [0, 0, -0.45] });
-  part([0.42, 0.3, 0.26], [0.06, -0.42, 0], kind === "e" ? C.frame : C.metal);
+  part([0.62, 0.07, 0.1], [0.12, -0.02, 0], C.frame, { rot: [0, 0, -0.45], layer: BODY });
+  part([0.42, 0.3, 0.26], [0.06, -0.42, 0], kind === "e" ? C.frame : C.metal, { layer: BODY });
   if (kind === "2t") {
     // The expansion chamber: fat under the engine on the right, tapering back to a silencer.
-    part([0.22, 0.42, 0.22], [0.26, -0.36, 0.17], C.pipe, { shape: "cyl", sides: 8, top: 0.7, rot: [0, 0, PI / 2 + 0.2] });
-    part([0.4, 0.1, 0.1], [-0.36, -0.05, 0.15], C.pipe, { rot: [0, 0, 0.3] });
-    part([0.32, 0.12, 0.12], [-0.52, 0.02, 0.15], C.metal, { shape: "cyl", sides: 8, rot: [0, 0, PI / 2 + 0.3] });
+    part([0.22, 0.42, 0.22], [0.26, -0.36, xz(0.17)], C.pipe, { ...xo, shape: "cyl", sides: 8, top: 0.7, rot: [0, 0, PI / 2 + 0.2] });
+    part([0.4, 0.1, 0.1], [-0.36, -0.05, xz(0.15)], C.pipe, { ...xo, rot: [0, 0, 0.3] });
+    part([0.32, 0.12, 0.12], [-0.52, 0.02, xz(0.15)], C.metal, { ...xo, shape: "cyl", sides: 8, rot: [0, 0, PI / 2 + 0.3], layer: NEAR + 0.1 });
   } else if (kind === "4t") {
     // A header round the front, a big silencer up high.
-    part([0.08, 0.32, 0.08], [0.26, -0.44, 0.15], C.pipe, { rot: [0, 0, 0.6] });
-    part([0.5, 0.08, 0.08], [-0.12, -0.32, 0.15], C.pipe, { rot: [0, 0, 0.32] });
-    part([0.2, 0.42, 0.2], [-0.5, 0.0, 0.15], C.metal, { shape: "cyl", sides: 8, rot: [0, 0, PI / 2 + 0.28] });
-    part([0.1, 0.12, 0.26], [0.02, -0.2, 0], C.metal);
+    part([0.08, 0.32, 0.08], [0.26, -0.44, xz(0.15)], C.pipe, { ...xo, rot: [0, 0, 0.6] });
+    part([0.5, 0.08, 0.08], [-0.12, -0.32, xz(0.15)], C.pipe, { ...xo, rot: [0, 0, 0.32] });
+    part([0.2, 0.42, 0.2], [-0.5, 0.0, xz(0.15)], C.metal, { ...xo, shape: "cyl", sides: 8, rot: [0, 0, PI / 2 + 0.28], layer: NEAR + 0.1 });
+    part([0.1, 0.12, 0.26], [0.02, -0.2, 0], C.metal, { layer: BODY });
   } else {
     // The battery (a box with a glowing strip) and the motor at the pivot.
-    part([0.5, 0.26, 0.24], [0.1, -0.32, 0], C.frame);
-    part([0.42, 0.04, 0.25], [0.1, -0.12, 0], C.glow, { emissive: true, layer: 6 });
-    part([0.2, 0.2, 0.2], [-0.12, -0.32, 0], C.metal, { shape: "cyl", sides: 10, rot: [PI / 2, 0, 0] });
+    part([0.5, 0.26, 0.24], [0.1, -0.32, 0], C.frame, { layer: BODY });
+    part([0.42, 0.04, 0.25], [0.1, -0.12, 0], C.glow, { emissive: true, layer: BODY + 0.2 });
+    part([0.2, 0.2, 0.2], [-0.12, -0.32, 0], C.metal, { shape: "cyl", sides: 10, rot: [PI / 2, 0, 0], layer: BODY });
   }
   // Plastics: tank and shrouds, seat, rear fender (the tail), side panel, front fender, plate, bars.
-  part([0.5, 0.22, 0.4], [0.26, -0.08, 0], C.plastic, { shape: "wedge", rot: [0, PI, 0] });
-  part([0.34, 0.1, 0.42], [0.24, 0.1, 0], C.plastic2);
-  part([0.78, 0.08, 0.22], [-0.2, 0.08, 0], C.seat);
-  part([0.55, 0.07, 0.2], [-0.62, 0.06, 0], C.plastic, { shape: "wedge", rot: [0, 0, -0.12] });
-  part([0.36, 0.2, 0.3], [-0.36, -0.14, 0], C.plastic2);
-  const fender = part([0.44, 0.05, 0.17], [0.86, -0.1, 0], C.plastic, { shape: "wedge", rot: [0, PI, 0.1] });
-  part([0.05, 0.26, 0.28], [0.62, 0.08, 0], C.plate, { rot: [0, 0, -0.35] });
-  part([0.06, 0.06, 0.64], [GRIP[0]!, GRIP[1]! - 0.03, 0], C.frame, { rot: [0.22 * (C.bend ?? 0), 0.3 * (C.bend ?? 0), 0] });
+  // The fenders (and the tail light) ride with their wheel's level, always just over its tyre.
+  const rearEnd = ends[0]!.id!, frontEnd = ends[1]!.id!, eo = 2 * END;
+  part([0.5, 0.22, 0.4], [0.26, -0.08, 0], C.plastic, { shape: "wedge", rot: [0, PI, 0], layer: BODY });
+  part([0.34, 0.1, 0.42], [0.24, 0.1, 0], C.plastic2, { layer: BODY + 0.05 });
+  part([0.78, 0.08, 0.22], [-0.2, 0.08, 0], C.seat, { layer: BODY });
+  part([0.55, 0.07, 0.2], [-0.62 + eo, 0.06, 0], C.plastic, { shape: "wedge", rot: [0, 0, -0.12], on: rearEnd, layer: WHEEL + 0.5 });
+  part([0.36, 0.2, 0.3], [-0.36, -0.14, 0], C.plastic2, { layer: BODY });
+  const fender = part([0.44, 0.05, 0.17], [0.86 - eo, -0.1, 0], C.plastic, { shape: "wedge", rot: [0, PI, 0.1], on: frontEnd, layer: WHEEL + 0.5 });
+  part([0.05, 0.26, 0.28], [0.62, 0.08, 0], C.plate, { rot: [0, 0, -0.35], layer: BODY + 0.05 });
+  part([0.06, 0.06, 0.64], [GRIP[0]!, GRIP[1]! - 0.03, 0], C.frame, { rot: [0.22 * (C.bend ?? 0), 0.3 * (C.bend ?? 0), 0], layer: BODY });
   // The garage's extras: a graphics kit, the side plates and their number, a crack.
   const G2 = C.graphic ?? C.plastic2;
   if (C.gfx === "bolt") {
-    part([0.2, 0.035, 0.44], [0.32, -0.02, 0], G2, { rot: [0, 0, 0.7], layer: 5 });
-    part([0.2, 0.035, 0.44], [0.2, 0.0, 0], G2, { rot: [0, 0, -0.5], layer: 5 });
+    part([0.2, 0.035, 0.44], [0.32, -0.02, 0], G2, { rot: [0, 0, 0.7], layer: BODY + 0.1 });
+    part([0.2, 0.035, 0.44], [0.2, 0.0, 0], G2, { rot: [0, 0, -0.5], layer: BODY + 0.1 });
   } else if (C.gfx === "chevron") {
-    for (let i = 0; i < 3; i++) part([0.05, 0.12, 0.44], [0.08 + i * 0.1, -0.06, 0], G2, { shape: "wedge", rot: [0, PI, 0], layer: 5 });
+    for (let i = 0; i < 3; i++) part([0.05, 0.12, 0.44], [0.08 + i * 0.1, -0.06, 0], G2, { shape: "wedge", rot: [0, PI, 0], layer: BODY + 0.1 });
   } else if (C.gfx === "rally") {
-    part([1.2, 0.03, 0.07], [-0.12, 0.12, 0], G2, { layer: 6 });
+    part([1.2, 0.03, 0.07], [-0.12, 0.12, 0], G2, { layer: BODY + 0.2 });
   } else if (C.gfx === "circuit") {
-    part([0.46, 0.02, 0.43], [0.22, -0.02, 0], G2, { layer: 5, emissive: true });
-    part([0.02, 0.12, 0.43], [0.4, -0.08, 0], G2, { layer: 5, emissive: true });
-    part([0.3, 0.02, 0.31], [-0.4, -0.02, 0], G2, { layer: 6, emissive: true });
+    part([0.46, 0.02, 0.43], [0.22, -0.02, 0], G2, { layer: BODY + 0.1, emissive: true });
+    part([0.02, 0.12, 0.43], [0.4, -0.08, 0], G2, { layer: BODY + 0.1, emissive: true });
+    part([0.3, 0.02, 0.31], [-0.4, -0.02, 0], G2, { layer: BODY + 0.2, emissive: true });
   }
-  if (C.cracks && C.cracks > 0.3) part([0.3, 0.015, 0.43], [0.26, -0.04, 0], "#0b0a14", { rot: [0, 0, 0.9], layer: 6 });
+  if (C.cracks && C.cracks > 0.3) part([0.3, 0.015, 0.43], [0.26, -0.04, 0], "#0b0a14", { rot: [0, 0, 0.9], layer: BODY + 0.2 });
   if (C.num) {
-    // Side plates with the rider's number, one per side, in seven-segment bars; each side is a group
-    // that drops under the bodywork when it faces away (`behind`), and reads the right way round.
+    // Side plates with the rider's number, one per side, in seven-segment bars; each side hangs from a
+    // side group (it drops under the bodywork and the wheels on the far side), and reads the right way round.
     const n = Math.max(1, Math.min(99, C.num | 0)), ds = n > 9 ? [(n / 10) | 0, n % 10] : [n], ink = C.sideInk ?? C.ink;
     const W = 0.075, H = 0.12, T = 0.018;
     for (let side = -1; side <= 1; side += 2) {
       const gid = id + ":np" + side;
-      d.add({ id: gid, shape: "group", size: [0.2, 0, 0.2], pos: [-0.36, -0.13, side * 0.156], on: id, behind: 3, pick: false });
-      part([0.3, 0.17, 0.01], [0, 0, 0], C.side ?? C.plate, { on: gid, layer: 5 });
+      d.add({ id: gid, shape: "group", size: [0.2, 0, 0.2], pos: [-0.36, -0.13, side * (0.156 - END)], on: sideOf(gid + "s", id, side), pick: false });
+      part([0.3, 0.17, 0.01], [0, 0, 0], C.side ?? C.plate, { on: gid, layer: NEAR });
       ds.forEach((dg, i) => {
         const cx = ds.length > 1 ? (i ? 0.05 : -0.05) : 0, bits = SEG[dg]!, f = side;
-        const bar = (on: number, x: number, y: number, w: number, h: number) => bits & on && part([w, h, 0.012], [(cx + x) * f, 0.025 + y, 0], ink, { on: gid, layer: 6 });
+        const bar = (on: number, x: number, y: number, w: number, h: number) => bits & on && part([w, h, 0.012], [(cx + x) * f, 0.025 + y, 0], ink, { on: gid, layer: NEAR + 0.1 });
         bar(1, 0, H - T, W, T); bar(64, 0, H / 2 - T / 2, W, T); bar(8, 0, 0, W, T);
         bar(2, W / 2 - T / 2, H / 2, T, H / 2); bar(4, W / 2 - T / 2, 0, T, H / 2);
         bar(32, -W / 2 + T / 2, H / 2, T, H / 2); bar(16, -W / 2 + T / 2, 0, T, H / 2);
       });
     }
   }
-  part([0.05, 0.05, 0.05], [-0.9, 0.08, 0], C.glow, { emissive: true });
+  part([0.05, 0.05, 0.05], [-0.9 + eo, 0.08, 0], C.glow, { emissive: true, on: rearEnd, layer: WHEEL + 0.6 });
 
   // ---- the rider (on the bike, or thrown clear after a crash) ----
   const torso = group(id + ":t", rid);
@@ -219,8 +249,8 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
     const R = b.radius, rx = b.rear, fx = b.front, dy = -b.drop;
     // Wheels on their springs, spinning; the swingarm to the rear axle; the fork to the front.
     const ry = dy + b.comp[0]!, fy = dy + b.comp[1]!;
-    hubs[0]!.pos[0] = rx; hubs[0]!.pos[1] = ry; hubs[0]!.rot[2] = -b.spin[0]!;
-    hubs[1]!.pos[0] = fx; hubs[1]!.pos[1] = fy; hubs[1]!.rot[2] = -b.spin[1]!;
+    hubs[0]!.pos[0] = rx + 2 * END; hubs[0]!.pos[1] = ry; hubs[0]!.rot[2] = -b.spin[0]!;
+    hubs[1]!.pos[0] = fx - 2 * END; hubs[1]!.pos[1] = fy; hubs[1]!.rot[2] = -b.spin[1]!;
     hubs[1]!.rot[1] = b.contact[1] || b.air > 0 ? -b.steerAngle * 0.6 : 0;
     arm.pos[0] = PIVOT[0]!; arm.pos[1] = PIVOT[1]!;
     arm.rot[2] = Math.atan2(ry - PIVOT[1]!, rx - PIVOT[0]!);

@@ -1,5 +1,5 @@
 ---
-// Holeshot, the game: the stage fills the screen under the header. ?mode=<id> starts that event at
+// Holeshot, the game: the stage fills the screen (the header tucked away behind a handle). ?mode=<id> starts that event at
 // once (once the first-run setup is done); ?mode=online&room=N&code=… opens the online room card and
 // joins that room (the code is taken out of the address bar first).
 import Base from '../../layouts/Base.astro';
@@ -28,8 +28,9 @@ const description = 'Play Holeshot: pick your one starter bike, then race, free 
 
 <script>
   import { createHoleshot, MODES } from "../../../../dist/holeshot.mjs";
+  import { toggleTheme } from "../../theme";
   const host = document.getElementById("game")!;
-  const game = createHoleshot({ host, rooms: host.dataset.rooms });
+  const game = createHoleshot({ host, rooms: host.dataset.rooms, onTheme: toggleTheme });
   const want = new URLSearchParams(location.search).get("mode");
   if (want && MODES.some((m: { id: string }) => m.id === want) && game.profile.bikes.length) game.start(want);
   (window as unknown as { game: unknown }).game = game;

@@ -85,6 +85,8 @@ export interface ModeCtx {
   quit(stats: RunStats): void;
   /** Open the shell's pause card (the ❚❚ key, Escape, P). */
   menu(): void;
+  /** The page's light/dark switch, when it gave the game one (a theme key joins the corner keys). */
+  theme?: () => void;
 }
 
 /** A running mode, for the shell and the tests. */

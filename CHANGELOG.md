@@ -38,6 +38,33 @@
   256 at the start, about 14,000 on screen over 3 km), no outline without its building, every
   placed object at its world record, every solid within 12 units drawn, drawn building heights =
   world heights, the frame's pixels the same with every unplaced object forced out.
+- **The bike draws in the right order.** Every part has its layer: a wheel sits under the body from
+  the side, over it at its own end of the bike and under it at the far end (two nested `behind`
+  groups per wheel); each fender rides with its wheel's level, always over its tyre; the fork legs,
+  swingarm arms, exhaust and side number plates hang from near/far side groups (from 6 over
+  everything to 1 under everything), so the far plate and far parts never show through. The rims and
+  spokes show again (the tyres used to cover them). Measured by `tests/layers.browser.mjs`: all 16
+  bikes × 16 yaws × 2 pitches × 4 poses (seated, wheelie, steered, squashed): fenders 100 % over their
+  tyres (2,604 cases), far-side parts 0.0 % over the bike (1,792), near-side parts 100 % over the
+  wheels (1,792). The far leg test still holds (168 cases, 0.0 %).
+- **The garage turntable turns.** Drag or swipe the bike preview sideways; with focus, ← and → turn
+  it 15° and Home faces it front-quarter again (a slider for assistive tech, in degrees). Tested in
+  `tests/garage.browser.mjs` (mouse at 1440, touch at 390, keys).
+- **Speed on the HUD.** A small chip next to the distance (lap, points, air; next to the clock in Big
+  Air) shows your speed in mph, or km/h with Metric (the UNITS setting, `src/model/units.ts`).
+- **In-game keys, icon only.** One corner row in every mode: reset, the view (a chase-cam icon,
+  pressed in and lit with the map icon while the map view is on), mute (raised while the sound is
+  on, pressed in with no drop shadow while muted), light/dark (on /play/), pause; each with an
+  aria-label, 44 px, one row at 390. The END key is gone: pause has END & BANK in Free Ride, ENDLESS
+  and Endless Wheelie City (E still banks from the keyboard). `onTheme` in `createHoleshot()` options
+  adds the theme key (in the menus' header too).
+- **/play/ is all game.** The site header is tucked away behind a small HOLESHOT handle at the top
+  (desktop; phones already hid it), and on /play/ it has no GitHub, Play or theme keys: the theme
+  key is in the game.
+- **Release tags.** CI tags `vX.Y.Z` on `main` when `package.json`'s version has no tag yet (the
+  `tag-version` job, after the checks); how to cut a release and the commands that backfill v0.1.0 to
+  v0.3.0 are in CONTRIBUTING.md.
+
 - **Test credits: `/play/?credits=inf` (or `?money=inf`).** For trying every bike: the garage shows
   ◈ ∞ and a TEST CREDITS ∞ chip, the showroom sells every bike (unlocks open), every part, mod, tune
   and cosmetic is free (buying never subtracts). The session plays a copy of the saved profile in
