@@ -73,6 +73,9 @@ try {
       assert.equal((await snap(p)).screen, "ride", `${name}: the room card stays shut`);
       // A ride banks, and still nothing is saved.
       await p.evaluate(() => game.start("freeride"));
+      // (The last bike bought is a street bike: on the dirt it asks first. RIDE ANYWAY.)
+      assert.match(await $(p, "root.querySelector('.dh-risk')?.textContent ?? ''"), /Street bike on dirt\? It won't perform well\./, `${name}: the street bike's warning`);
+      await click(p, ".dh-risk-go");
       await until(p, "game.getSnapshot().screen === 'event'", `${name}: ride`);
       await p.waitForTimeout(400);
       await p.evaluate(() => game.finish());

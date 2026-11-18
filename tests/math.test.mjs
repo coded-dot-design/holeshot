@@ -18,6 +18,7 @@ const SRC = new URL("../src/", import.meta.url).pathname;
 const RENDER = {
   "bike/rig.ts": "draws the bike and rider",
   "bike/kit.ts": "particles, the engine's voice, the gamepad",
+  "bike/bodies.ts": "draws the electric and street bikes' bodies and the upgrades",
   "modes/race/scene.ts": "the track scene: camera, FX, stickers",
   "modes/bigair/scene.ts": "the arena scene",
   "modes/wheelie/scene.ts": "the town scene",

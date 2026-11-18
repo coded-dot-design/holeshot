@@ -67,7 +67,7 @@ function partsTab(p: Profile, b: BikeSave) {
   const mods = (Object.keys(MODS) as ModId[]).filter((k) => fits(b, k)).map((k) => {
     const M = MODS[k], lv = b.mods[k] ?? 0, price = modPrice(b, k);
     // A family upgrade: its pace before → after, measured on the sim for this bike as it is now.
-    const pc = UPGRADES.includes(k) ? `<small class="dh-pace-up" aria-label="Pace before and after">${paceLine(paceOf(tune({ ...b, mods: { ...b.mods, [k]: 0 } })))} → <b>${paceLine(paceOf(tune({ ...b, mods: { ...b.mods, [k]: 1 } })))}</b></small>` : "";
+    const pc = UPGRADES.includes(k) ? `<small class="dh-pace-up" aria-label="Pace before and after">${paceLine(paceOf(tune({ ...b, mods: { ...b.mods, [k]: 0 } })), p.settings.units)} → <b>${paceLine(paceOf(tune({ ...b, mods: { ...b.mods, [k]: 1 } })), p.settings.units)}</b></small>` : "";
     return `<li><span class="dh-mod"><b>${modName(b, k)}</b><small>${esc(M.blurb)}</small>${pc}<i aria-label="Level ${lv} of ${M.max}">${"◆".repeat(lv)}${"◇".repeat(M.max - lv)}</i></span><button type="button" class="bui-key dh-buy" data-mod="${k}" ${price ? "" : "disabled"}>${price ? (lv || M.max === 1 ? (M.max === 1 ? "FIT" : "UPGRADE") : "STAGE 1") + cost(price, cr >= price) : M.max === 1 ? "FITTED" : "MAXED"}</button></li>`;
   }).join("");
   const log = b.log.length ? `<ol class="dh-log">${b.log.slice(0, 8).map(([e, w, c]) => `<li><small>EVENT ${e}</small><span>${logLine(b, w)}</span><b>${c ? "◈" + num(c) : ""}</b></li>`).join("")}</ol>` : `<p class="dh-sub">Nothing yet. Every service, mod and fix lands here.</p>`;

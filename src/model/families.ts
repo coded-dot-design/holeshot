@@ -9,6 +9,7 @@ import { CLASSES, model, type FamilyId, type Model } from "../data/roster.ts";
 import type { ModeId } from "../modes/mode.ts";
 import type { Tuned } from "./tune.ts";
 import { bike } from "../bike/bike.ts";
+import { MI_PER_KM, speed, type Units } from "./units.ts";
 
 /** The modes on asphalt (everything else is dirt, sand or a jump yard). */
 export const STREET_MODES: readonly ModeId[] = ["wheelie", "endcity"];
@@ -49,11 +50,11 @@ const memo = new Map<string, Pace>();
  *  forward), at the game's 60 Hz step, to 0–20, 0–30 and 0–60 mph (seconds; null if it never gets
  *  there) and its top speed (mph). Deterministic; kept per engine and chassis. (The garage's upgrade
  *  rows show it before → after; tests/families.test.mjs prints the table.) */
-export interface Pace { t20: number | null; t30: number | null; t60: number | null; top: number }
+export interface Pace { t20: number | null; t30: number | null; t60: number | null; top: number; /** 0–50 and 0–100 km/h (Metric). */ k50: number | null; k100: number | null; ups: number }
 export function paceOf(t: Pick<Tuned, "power" | "shape">): Pace {
   const key = JSON.stringify([t.power, t.shape]), hit = memo.get(key);
   if (hit) return hit;
-  const b = bike(FLAT, t.power, t.shape), at: (number | null)[] = [null, null, null], marks = [20, 30, 60];
+  const b = bike(FLAT, t.power, t.shape), at: (number | null)[] = [null, null, null, null, null], marks = [20, 30, 60, 50 * MI_PER_KM, 100 * MI_PER_KM];
   b.reset(0, 0, 0);
   let top = 0, still = 0;
   for (let i = 0; i < 30 * 60; i++) {
@@ -62,14 +63,17 @@ export function paceOf(t: Pick<Tuned, "power" | "shape">): Pace {
     b.clear();
     if (b.crashed) break;
     const v = b.speed * MPH;
-    for (let k = 0; k < 3; k++) if (at[k] === null && v >= marks[k]!) at[k] = (i + 1) / 60;
+    for (let k = 0; k < 5; k++) if (at[k] === null && v >= marks[k]!) at[k] = (i + 1) / 60;
     if (b.speed > top * 1.001) (top = b.speed), (still = 0);
     else if (++still > 120) break;
   }
-  const out = { t20: at[0]!, t30: at[1]!, t60: at[2]!, top: top * MPH };
+  const out = { t20: at[0]!, t30: at[1]!, t60: at[2]!, k50: at[3]!, k100: at[4]!, top: top * MPH, ups: top };
   if (memo.size > 64) memo.clear();
   memo.set(key, out);
   return out;
 }
-/** A pace as the garage says it: "0–30 1.47 S · 0–60 — · 50 MPH". */
-export const paceLine = (p: Pace) => `0–30 ${p.t30 === null ? "—" : p.t30.toFixed(2) + " S"} · 0–60 ${p.t60 === null ? "—" : p.t60.toFixed(2) + " S"} · ${Math.round(p.top)} MPH`;
+/** A pace as the garage says it, in the rider's units: "0–30 1.47 S · 0–60 — · 50 MPH" (Metric: 0–50 and 0–100 km/h). */
+export function paceLine(p: Pace, units: Units = "imperial") {
+  const s = (v: number | null) => (v === null ? "—" : v.toFixed(2) + " S"), m = units === "metric";
+  return `${m ? "0–50" : "0–30"} ${s(m ? p.k50 : p.t30)} · ${m ? "0–100" : "0–60"} ${s(m ? p.k100 : p.t60)} · ${speed(p.ups, units)}`;
+}
