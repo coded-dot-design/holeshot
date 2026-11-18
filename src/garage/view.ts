@@ -18,8 +18,10 @@ export interface GarageUI {
   look: "bike" | "rider" | "outfit";
   /** A cosmetic being tried on (shown on the preview, not bought yet). */
   trial: [Slot, string] | null;
+  /** Test credits (../model/testcredits.ts): the showroom sells every bike, unlocks or not. */
+  all: boolean;
 }
-export const garageUI = (): GarageUI => ({ tab: "bike", look: "bike", trial: null });
+export const garageUI = (all = false): GarageUI => ({ tab: "bike", look: "bike", trial: null, all });
 
 const isE = (b: BikeSave) => CLASSES[modelOf(b.model).cls].motor === "battery";
 const partName = (b: BikeSave, k: PartId) => (k === "motor" ? MOTOR_NAME[modelOf(b.model).cls] : PART_NAME[k]);
@@ -96,11 +98,11 @@ function nameOf(slot: Slot, id: string) {
   return (L[slot] ?? SWATCHES).find((x) => x.id === id)?.name ?? id;
 }
 
-function showroomTab(p: Profile) {
+function showroomTab(p: Profile, all: boolean) {
   const full = p.bikes.length >= GARAGE_SLOTS, me = riding(p), trade = tradeValue(me), cr = p.credits;
   const mine = p.bikes.map((x, i) => { const m = modelOf(x.model), v = tradeValue(x); return `<li><span class="dh-mod"><small>${CLASSES[m.cls].name} · #${x.look.number}${i === p.ride ? " · RIDES NEXT" : ""}</small><b>${makerOf(m).name} ${m.name}</b><small>Trade-in ◈ ${num(v)} · ${x.events} events</small></span><button type="button" class="bui-key dh-buy" data-sell="${i}" ${p.bikes.length > 1 ? "" : "disabled"}>SELL<small class="dh-price">+◈ ${num(v)}</small></button></li>`; }).join("");
   const cls = (Object.keys(CLASSES) as (keyof typeof CLASSES)[]).map((c) => `<li class="dh-class"><b class="dh-h2">${CLASSES[c].name} · ${CLASSES[c].maker}</b><ul class="dh-list dh-show">${MODELS.filter((x) => x.cls === c).map((x) => {
-    const open = unlocked(p, x), u = UNLOCK[x.tier], net = full ? Math.max(0, x.price - trade) : x.price, t = tune({ ...me, ...blank(x.id) });
+    const open = all || unlocked(p, x), u = UNLOCK[x.tier], net = full ? Math.max(0, x.price - trade) : x.price, t = tune({ ...me, ...blank(x.id) });
     const btn = !open ? `<button type="button" class="bui-key dh-buy" disabled>LOCKED<small class="dh-price">${u!.events} EVENTS or ◈${num(u!.earned)} EARNED</small></button>`
       : full ? `<button type="button" class="bui-key dh-buy" data-bike="${x.id}" data-trade="${p.ride}">TRADE IN${cost(net, cr >= net)}</button>`
       : `<button type="button" class="bui-key dh-buy" data-bike="${x.id}">BUY${cost(x.price, cr >= x.price)}</button>`;
@@ -116,7 +118,7 @@ const blank = (id: string) => ({ model: id, parts: { tyres: 1, chain: 1, motor: 
 export function garageCard(p: Profile, ui: GarageUI, head: string, tabs: string, note: string) {
   const b = riding(p), m = modelOf(b.model);
   const bikes = p.bikes.map((x, i) => { const mm = modelOf(x.model), w = atRisk(x).length || x.fail; return `<button type="button" class="bui-key dh-slot-k" data-ride="${i}" aria-pressed="${i === p.ride}"><small>${CLASSES[mm.cls].name}${w ? ' <em class="dh-warn">⚠</em>' : ""}</small><b>${mm.name}</b><small>#${x.look.number}</small></button>`; }).join("") + (p.bikes.length < GARAGE_SLOTS ? `<button type="button" class="bui-key dh-slot-k dh-empty" data-gtab="showroom"><small>EMPTY BAY</small><b>+ BIKE</b></button>` : "");
-  const body = ui.tab === "bike" ? partsTab(p, b) : ui.tab === "look" ? lookTab(p, b, ui) : showroomTab(p);
+  const body = ui.tab === "bike" ? partsTab(p, b) : ui.tab === "look" ? lookTab(p, b, ui) : showroomTab(p, ui.all);
   return `<div class="dh-card dh-garage" data-screen="garage">${head}${tabs}<div class="dh-bay"><canvas-slot></canvas-slot><div><small>${CLASSES[m.cls].name} · ${makerOf(m).name}</small><b class="dh-big">${m.name} <i>#${b.look.number}</i></b><p class="dh-sub">${esc(m.blurb)}</p><div class="dh-slots" role="group" aria-label="Your bikes">${bikes}</div></div></div><nav class="dh-seg" aria-label="Garage">${([["bike", "PARTS & MODS"], ["look", "PAINT & KIT"], ["showroom", "SHOWROOM"]] as const).map(([v, tx]) => `<button type="button" class="bui-key" data-gtab="${v}" aria-pressed="${v === ui.tab}">${tx}</button>`).join("")}</nav>${body}<p class="dh-sub dh-note" role="status">${esc(note)}</p></div>`;
 }
 
@@ -141,7 +143,7 @@ export function garageClick(p: Profile, ui: GarageUI, t: HTMLElement, root: Pare
   if (d.buytrial !== undefined && ui.trial) { const [s, id] = ui.trial; ui.trial = null; return { buy: [dress(p, s, id), "Bought"] }; }
   if (d.untry !== undefined) return (ui.trial = null), {};
   if (d.number !== undefined) return { buy: [dress(p, "number", root.querySelector<HTMLInputElement>(".dh-numin")!.value), "Number set"] };
-  if (d.bike) return { buy: [buyBike(p, d.bike, false, d.trade !== undefined ? +d.trade : undefined), d.trade !== undefined ? "Traded in" : "Bought"] };
+  if (d.bike) return { buy: [buyBike(p, d.bike, ui.all, d.trade !== undefined ? +d.trade : undefined), d.trade !== undefined ? "Traded in" : "Bought"] };
   if (d.sell) {
     if (d.sure === undefined) return (d.sure = ""), (t.firstChild!.textContent = "SURE? TAP AGAIN"), null;
     return { buy: [sell(p, +d.sell), "Sold"] };

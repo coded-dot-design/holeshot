@@ -19,6 +19,7 @@ import { mapsCard, paintMaps } from "./modes/freeride/picker.ts";
 import { BIOMES } from "./modes/desert/track.ts";
 import { FREE_MAPS } from "./modes/index.ts";
 import { exportCode, importCode, load, local, newBike, ready, riding, save, setup, fresh, type Profile, type Store, type RiderKit } from "./model/profile.ts";
+import { testCredits, topUp } from "./model/testcredits.ts";
 import { tune } from "./model/tune.ts";
 import { apply, pitFix, pitReady, settle, type ModeResult } from "./model/economy.ts";
 import type { Buy } from "./model/garage.ts";
@@ -79,10 +80,16 @@ export function createHoleshot(o: HoleshotOptions = {}) {
 
   // ---- the profile ----
   const loaded = o.attract ? { profile: fresh(), newer: false } : load(store);
-  let profile = loaded.profile;
   const newer = loaded.newer;
+  // Test credits (?credits=inf or ?money=inf: ./model/testcredits.ts): the session plays a copy of
+  // the saved profile with its credits topped up after every change, and nothing is saved; the
+  // export code stays the real profile's. Online is off with it.
+  const inf = !o.attract && testCredits(typeof location === "object" ? location.search : "");
+  const real = inf ? structuredClone(loaded.profile) : null;
+  let profile = inf ? topUp(loaded.profile) : loaded.profile;
   if (o.attract) profile = setup(profile, { starter: STARTERS[0]!.id, paint: "pinkout", number: 7, name: "DEMO" });
-  const keep = () => !o.attract && save(profile, store, newer);
+  const keep = () => (inf ? void (profile = topUp(profile)) : !o.attract && save(profile, store, newer));
+  const code = () => exportCode(real ?? profile);
 
   // ---- the layers: the mode (an event), the cards over it ----
   const modeEl = document.createElement("div");
@@ -96,7 +103,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   const say = (s: string) => (live.textContent = s === live.textContent ? s + " " : s);
 
   let screen: Screen = "menu", run: ModeRun | null = null, runMode: ModeId = "race", runMap: string | undefined, paused = false, result: ModeResult | null = null, note = "";
-  const gui = garageUI();
+  const gui = garageUI(inf);
   let pending: [ModeId, { map?: string; seed?: number; auto?: boolean }] | null = null, sure = false, runSeed = 0;
 
   // ---- the garage's bike preview: the rig on a turntable, drawn on change (no loop) ----
@@ -130,7 +137,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   engine.signal.addEventListener("abort", () => pro.disconnect(), { once: true });
 
   // ---- rendering the cards ----
-  const head = () => `<header class="dh-top"><b class="dh-logo">HOLESHOT</b><span class="dh-chip dh-cr" title="Credits">◈ ${num(profile.credits)}</span>${profile.name ? `<span class="dh-chip">${esc(profile.name)}</span>` : ""}</header>`;
+  const head = () => `<header class="dh-top"><b class="dh-logo">HOLESHOT</b>${inf ? `<span class="dh-chip dh-cr" title="Test credits: nothing is saved">◈ ∞</span><span class="dh-chip dh-test" title="?credits=inf: nothing is saved, online is off">TEST CREDITS ∞</span>` : `<span class="dh-chip dh-cr" title="Credits">◈ ${num(profile.credits)}</span>`}${profile.name ? `<span class="dh-chip">${esc(profile.name)}</span>` : ""}</header>`;
   const tabs = (on: Screen) => `<nav class="dh-tabs" aria-label="Menu">${([["garage", "GARAGE"], ["ride", "RIDE"], ["series", "SERIES"], ["settings", "SETTINGS"]] as const).map(([s, t]) => `<button type="button" class="bui-key" data-go="${s}" aria-pressed="${s === on}">${t}</button>`).join("")}</nav>`;
   const bikeLine = () => {
     const b = riding(profile), m = modelOf(b.model);
@@ -159,7 +166,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   }
   const garageCard = () => garageView(profile, gui, head(), tabs("garage"), note);
   function rideCard() {
-    return `<div class="dh-card dh-ridec" data-screen="ride">${head()}${tabs("ride")}<p class="dh-sub">On your ${bikeLine()}.</p><ul class="dh-modes">${MODES.map((md) => `<li><button type="button" class="bui-key dh-modek" data-mode="${md.id}"><b>${md.name}</b><small>${md.blurb}</small><em>${md.maps.length > 1 ? `${md.maps.length} MAPS` : md.maps[0]!.name}</em></button></li>`).join("")}<li class="ol-tile"><button type="button" class="bui-key dh-modek ol-open"><b>ONLINE</b><small>Up to four riders, each on their own garage bike: race, a Free Ride jam, Big Air. Online pays more.</small><em>ONLINE ×1.5 · BEAT A RIDER +75</em></button></li></ul>${note ? `<p class="dh-sub dh-note" role="status">${esc(note)}</p>` : ""}</div>`;
+    return `<div class="dh-card dh-ridec" data-screen="ride">${head()}${tabs("ride")}<p class="dh-sub">On your ${bikeLine()}.</p><ul class="dh-modes">${MODES.map((md) => `<li><button type="button" class="bui-key dh-modek" data-mode="${md.id}"><b>${md.name}</b><small>${md.blurb}</small><em>${md.maps.length > 1 ? `${md.maps.length} MAPS` : md.maps[0]!.name}</em></button></li>`).join("")}<li class="ol-tile"><button type="button" class="bui-key dh-modek ol-open"${inf ? " disabled" : ""}><b>ONLINE</b><small>${inf ? "Off with test credits: take ?credits=inf off the address to ride online." : "Up to four riders, each on their own garage bike: race, a Free Ride jam, Big Air. Online pays more."}</small><em>${inf ? "TEST CREDITS ∞" : "ONLINE ×1.5 · BEAT A RIDER +75"}</em></button></li></ul>${note ? `<p class="dh-sub dh-note" role="status">${esc(note)}</p>` : ""}</div>`;
   }
   const seriesCard = () => seriesScreen(profile, head(), tabs("series"), note);
   /** A mode's name for the cards (a series round is a race on the series' track). */
@@ -174,8 +181,8 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   const modeName = (id: ModeId) => (id === "series" ? seriesName(profile) : modeOf(id).name);
   function settingsCard() {
     return `<div class="dh-card dh-set" data-screen="settings">${head()}${tabs("settings")}<p class="dh-row"><button type="button" class="bui-key dh-sound" aria-pressed="${profile.settings.sound}">SOUND ${profile.settings.sound ? "ON" : "OFF"}</button></p>
-      <b class="dh-h2">MOVE YOUR PROFILE</b><p class="dh-sub">Your garage lives on this device. Copy the code to carry it to another one; nothing leaves the device unless you do.</p>
-      <label class="dh-field">EXPORT CODE<textarea class="dh-code" readonly rows="3">${exportCode(profile)}</textarea></label><p class="dh-row"><button type="button" class="bui-key dh-copy">COPY CODE</button></p>
+      <b class="dh-h2">MOVE YOUR PROFILE</b><p class="dh-sub">Your garage lives on this device. Copy the code to carry it to another one; nothing leaves the device unless you do.</p>${inf ? `<p class="dh-sub dh-warn">Test credits are on: nothing here is saved, and the code is your saved profile, as it was.</p>` : ""}
+      <label class="dh-field">EXPORT CODE<textarea class="dh-code" readonly rows="3">${code()}</textarea></label><p class="dh-row"><button type="button" class="bui-key dh-copy">COPY CODE</button></p>
       <label class="dh-field">IMPORT A CODE<textarea class="dh-codein" rows="3" spellcheck="false" placeholder="DH1-…"></textarea></label><p class="dh-row"><button type="button" class="bui-key dh-import">LOAD IT</button><button type="button" class="bui-key dh-reset">START OVER</button></p><p class="dh-sub dh-note" role="status">${esc(note)}</p></div>`;
   }
   function pauseCard() {
@@ -318,8 +325,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     if (t.classList.contains("dh-pit")) return (profile = pitFix(profile)), keep(), say("The pit crew fixed it up"), show(screen === "result" ? "result" : "menu");
     if (t.classList.contains("dh-sound")) return (profile = { ...profile, settings: { ...profile.settings, sound: !profile.settings.sound } }), keep(), show("settings");
     if (t.classList.contains("dh-copy")) {
-      const code = exportCode(profile);
-      void navigator.clipboard?.writeText(code).then(() => say("Copied"), () => {});
+      void navigator.clipboard?.writeText(code()).then(() => say("Copied"), () => {});
       (cards.querySelector(".dh-code") as HTMLTextAreaElement | null)?.select();
       return;
     }
@@ -413,6 +419,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     linkJoin = qs.get("mode") === "online" && qs.has("room") && !!linked;
   }
   function openRoom() {
+    if (inf) return say("Online is off with test credits"), show("ride");
     if (!ready(profile)) return show("setup");
     show("online");
     roomStep("pick");
@@ -816,7 +823,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       keep();
       show("menu");
     },
-    exportCode: () => exportCode(profile),
+    exportCode: code,
     importCode(code: string) {
       const r = importCode(code);
       if ("profile" in r) (profile = r.profile), keep(), show(ready(profile) ? "menu" : "setup");
@@ -830,6 +837,8 @@ export function createHoleshot(o: HoleshotOptions = {}) {
         run: run ? run.state : null,
         camera: run ? run.camera : null,
         credits: profile.credits,
+        /** ?credits=inf: the session's copy, never saved. */
+        testCredits: inf,
         bike: b ? { model: b.model, parts: { ...b.parts }, mods: { ...b.mods }, number: b.look.number } : null,
         bikes: profile.bikes.length,
         series: profile.series.run ? { tier: profile.series.run.tier, round: profile.series.run.round, points: [...profile.series.run.points] } : null,

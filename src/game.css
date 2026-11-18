@@ -21,6 +21,7 @@
 .dh-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .dh-logo{font:900 26px/1 ui-rounded,system-ui,sans-serif;letter-spacing:.06em;color:var(--hot);text-shadow:3px 3px 0 var(--rim);rotate:-2deg;margin-right:auto}
 .dh-chip{display:inline-flex;align-items:center;gap:.35em;padding:.35em .65em;border:2px solid var(--rim);border-radius:8px;background:var(--raised);font-variant-numeric:tabular-nums;white-space:nowrap}
+.dh-test{border-color:var(--hot);color:var(--hot);font-size:.8em;letter-spacing:.04em}
 .dh-cr{background:var(--k-go);color:var(--rim)}
 .dh-h{font-size:24px;letter-spacing:.05em}
 .dh-h2{display:block;font-size:13px;letter-spacing:.12em;color:var(--muted);margin:6px 0 4px}

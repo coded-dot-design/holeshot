@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Test credits: `/play/?credits=inf` (or `?money=inf`).** For trying every bike: the garage shows
+  ◈ ∞ and a TEST CREDITS ∞ chip, the showroom sells every bike (unlocks open), every part, mod, tune
+  and cosmetic is free (buying never subtracts). The session plays a copy of the saved profile in
+  memory and saves nothing, so taking the param off loads the real profile exactly as it was (the
+  export code stays the real one). ONLINE is off while it is on, so a free-bought bike never rides
+  against other people. No effect without the param; rides unchanged (`src/model/testcredits.ts`;
+  tests: `tests/testcredits.test.mjs`, `tests/testcredits.browser.mjs`).
 - **Clean road edges in Endless Wheelie City.** The asphalt, the gravel shoulder, the sidewalk and
   the roundabouts' rings and islands were coloured onto the ground's triangles, so their edges
   zigzagged along the grid (worst far off, where the ground is drawn coarser). They are ribbons now

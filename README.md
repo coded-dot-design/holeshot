@@ -143,6 +143,10 @@ createHoleshot();                            // a layer over the whole page; Esc
 must list the site's origin (https://holeshot.domvirus.com) in its `ALLOWED_ORIGINS`. An invite code
 gets you in. `createHoleshot({ rooms })` takes the URL when you mount the game yourself.
 
+## Testing
+
+**Infinite money:** open `/play/?credits=inf` (or `?money=inf`): ◈ ∞ and a TEST CREDITS ∞ chip, every bike, part and upgrade free and unlocked, nothing saved (take the param off and your real profile is back exactly), online off.
+
 ## Size
 
 The whole game, its Fizlet bricks (kernel, diorama, terrain, drive, input, pad, sound, ui, presence) and the
