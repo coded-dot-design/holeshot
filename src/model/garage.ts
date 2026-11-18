@@ -7,6 +7,7 @@ import { GRAPHICS, HELMETS, OUTFITS, PAINTS, PATTERNS, PLASTICS, PLATES, SWATCHE
 import { CLASSES, model, MODELS, type Model } from "../data/roster.ts";
 import { newBike, normalize, riding, type BikeSave, type Profile } from "./profile.ts";
 import { logIt } from "./upkeep.ts";
+import { fitsWhere } from "./families.ts";
 
 export type Buy = { ok: true; profile: Profile; spent: number } | { ok: false; why: string };
 const no = (why: string): Buy => ({ ok: false, why });
@@ -34,8 +35,9 @@ export function service(p: Profile, part: PartId, tyre?: TyreId): Buy {
   logIt(b, `svc:${part}${part === "tyres" ? ":" + b.tyre : ""}`, cost);
   return { ok: true, profile: n, spent: cost };
 }
-/** Whether `mod` fits the bike (a battery pack only on an electric). */
-export const fits = (bike: BikeSave, mod: ModId) => !MODS[mod].only || (MODS[mod].only === "e") === isE(bike);
+/** Whether `mod` fits the bike (a battery pack or a motor swap only on an electric, a big bore kit on
+ *  a gas dirt bike, a turbo on a street bike, a wheelie bar on the mini: ./families.ts). */
+export const fits = (bike: BikeSave, mod: ModId) => fitsWhere(MODS[mod].only, model(bike.model));
 /** The next level's price of `mod` on the riding bike, or 0 at the top (or when it doesn't fit). */
 export function modPrice(bike: BikeSave, mod: ModId) {
   const lv = bike.mods[mod] ?? 0, M = MODS[mod];

@@ -72,7 +72,8 @@ export function hello(p: Profile, out = new Uint8Array(HELLO)) {
   const M = b.mods;
   out[14] = (M.power & 3) | ((M.brakes & 3) << 2) | ((M.weight & 3) << 4) | ((M.travel & 1) << 6);
   out[15] = (M.cells & 3) | ((TYRE_IDS.indexOf(b.tyre) & 3) << 2) | ((optIdx("gearing", b.gearing) & 3) << 4) | ((optIdx("spring", b.spring) & 3) << 6);
-  out[16] = optIdx("map", b.map) & 3;
+  // (Bits 2-5: the family upgrades, one bit each: every screen tunes the same bike.)
+  out[16] = (optIdx("map", b.map) & 3) | ((M.wbar & 1) << 2) | ((M.swap & 1) << 3) | ((M.bore & 1) << 4) | ((M.boost & 1) << 5);
   out[17] = q255(b.dmg.bars);
   out[18] = q255(b.dmg.plastics);
   out[19] = b.look.number;
@@ -112,7 +113,7 @@ export function readHello(h: Uint8Array, seat: number): Rider {
   if (ok) {
     PARTS.forEach((pt, i) => (b.parts[pt] = h[9 + i]! / 255));
     const lv = (k: ModId, v: number) => Math.min(MODS[k].max, v);
-    b.mods = { power: lv("power", h[14]! & 3), brakes: lv("brakes", (h[14]! >> 2) & 3), weight: lv("weight", (h[14]! >> 4) & 3), travel: lv("travel", (h[14]! >> 6) & 1), cells: lv("cells", h[15]! & 3) };
+    b.mods = { power: lv("power", h[14]! & 3), brakes: lv("brakes", (h[14]! >> 2) & 3), weight: lv("weight", (h[14]! >> 4) & 3), travel: lv("travel", (h[14]! >> 6) & 1), cells: lv("cells", h[15]! & 3), wbar: (h[16]! >> 2) & 1, swap: (h[16]! >> 3) & 1, bore: (h[16]! >> 4) & 1, boost: (h[16]! >> 5) & 1 };
     b.tyre = TYRE_IDS[(h[15]! >> 2) & 3] ?? "med";
     b.gearing = SETUPS.gearing.opts[(h[15]! >> 4) & 3]?.id ?? "stock";
     b.spring = SETUPS.spring.opts[(h[15]! >> 6) & 3]?.id ?? "stock";

@@ -9,6 +9,7 @@ import { model, STARTERS } from "../data/roster.ts";
 import { PARTS, START_CREDITS, GARAGE_SLOTS, MODS, SETUPS, TYRES, LOG_MAX, ONLINE, type PartId, type ModId, type TyreId } from "../data/economy.ts";
 import { PAINTS, SWATCHES, HELMETS, VISORS, PATTERNS, GRAPHICS, PLASTICS, PLATES } from "../data/looks.ts";
 import { freshSeries, normSeries, type SeriesSave } from "./series.ts";
+import { fitsWhere } from "./families.ts";
 
 export const VERSION = 6;
 /** The endless bests a profile keeps (world units): the ENDLESS grounds and Endless Wheelie City. */
@@ -89,7 +90,7 @@ export const STARTER_KIT: RiderKit = { helmet: "peak", helmetPaint: "white", vis
 /** A new bike of `modelId`: every part new, no mods. */
 export function newBike(modelId: string, uid: string, paint = "gridline", number = 7): BikeSave {
   return {
-    uid, model: model(modelId).id, parts: { tyres: 1, chain: 1, motor: 1, susp: 1, brakes: 1 }, mods: { power: 0, brakes: 0, weight: 0, travel: 0, cells: 0 },
+    uid, model: model(modelId).id, parts: { tyres: 1, chain: 1, motor: 1, susp: 1, brakes: 1 }, mods: { power: 0, brakes: 0, weight: 0, travel: 0, cells: 0, wbar: 0, swap: 0, bore: 0, boost: 0 },
     look: { paint, number, graphics: "none", plastics: "scheme", plate: "scheme" }, odo: 0, events: 0,
     tyre: "med", gearing: "stock", spring: "stock", map: "std", setups: [], dmg: { bars: 0, plastics: 0 }, fail: "", log: [],
   };
@@ -114,7 +115,8 @@ function normBike(b: unknown, i: number): BikeSave | null {
   const parts = obj(o.parts), mods = obj(o.mods), look = obj(o.look);
   const out = newBike(o.model, typeof o.uid === "string" && o.uid ? o.uid.slice(0, 16) : "b" + (i + 1));
   for (const k of PARTS) out.parts[k] = clamp01(parts[k], 1);
-  for (const k of Object.keys(MODS) as ModId[]) out.mods[k] = int(mods[k], 0, 0, MODS[k].max);
+  // (A mod that doesn't fit this bike's family, from an old or hand-made save, comes off: ./families.ts.)
+  for (const k of Object.keys(MODS) as ModId[]) out.mods[k] = fitsWhere(MODS[k].only, model(out.model)) ? int(mods[k], 0, 0, MODS[k].max) : 0;
   out.look.paint = oneOf(look.paint, PAINTS.map((p) => p.id), "gridline");
   out.look.number = int(look.number, 7, 1, 99);
   out.look.graphics = oneOf(look.graphics, GRAPHICS.map((g) => g.id), "none");

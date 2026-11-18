@@ -25,6 +25,7 @@ import { freeJam, type FreeJam } from "../modes/freeride/jam.ts";
 import { makeMap, RIDE_MAPS, type RideMap } from "../modes/freeride/maps.ts";
 import { meter, type Meter } from "../modes/meter.ts";
 import { tune, type Tuned } from "../model/tune.ts";
+import { onGround } from "../model/families.ts";
 import { difficulty, rivals as seriesRivals } from "../model/series.ts";
 import { TIERS } from "../data/series.ts";
 import type { Profile } from "../model/profile.ts";
@@ -159,7 +160,7 @@ export function match(e: Engine, o: MatchOptions) {
   const mine = helloOf(o.profile), hellos = Array.from({ length: P }, (_, p) => (p === me ? mine.slice() : new Uint8Array(HELLO)));
   // Results ring (outside the arena): the frame a ride ended and each seat's numbers then.
   const RT = new Int32Array(128).fill(-1), RV = new Float64Array(128 * 64);
-  let ride: Ride | null = null, views: Uint8Array[] = [], riders: Rider[] = [], tuned: Tuned[] = [];
+  let ride: Ride | null = null, views: Uint8Array[] = [], riders: Rider[] = [], tunedAll: Tuned[] = [];
   let ready = false;
   const pack = () => {
     let at = HEAD;
@@ -173,8 +174,10 @@ export function match(e: Engine, o: MatchOptions) {
 
   /** Build ride `round` (on a final frame): the same on every screen. */
   function build(round: number) {
-    if (!riders.length) (riders = hellos.map((h, p) => readHello(h, p))), (tuned = riders.map((r) => tune(r.bike)));
+    if (!riders.length) (riders = hellos.map((h, p) => readHello(h, p))), (tunedAll = riders.map((r) => tune(r.bike)));
     const seed = rideSeed(o.seed, round), kind = pick.kind;
+    // Each bike as it rides this kind's ground (a street bike on the dirt: ../model/families.ts), the same on every screen.
+    const tuned = tunedAll.map((t) => onGround(t, kind === K_CITY ? "wheelie" : kind === K_JAM ? "freeride" : kind === K_AIR ? "bigair" : "race"));
     let race: MotoRace | null = null, jam: FreeJam | null = null, score: ScoreSim | null = null, track: Track | RideMap | null = null, ai: Ride["ai"] = [];
     const meters: Meter[] = [];
     if (kind === K_RACE) {

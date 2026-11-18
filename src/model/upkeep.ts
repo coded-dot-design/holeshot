@@ -9,7 +9,7 @@
 // seed (the same event fails the same way), grows from 0 at the line to FAIL.max at 0, and at most
 // one part goes per event. A failure costs part of that event's payout and leaves the part at 0 until
 // it is replaced; if the rider can't pay, the pit crew helps at once (../model/economy.ts pitReady).
-import { DAMAGE, FAIL, FAIL_NAME, LOG_MAX, MOD_FX, PARTS, SETUP_FX, TYRES, WARN, type DamageId, type PartId } from "../data/economy.ts";
+import { DAMAGE, FAIL, FAIL_NAME, FAMILY_FX, LOG_MAX, MOD_FX, PARTS, SETUP_FX, TYRES, WARN, type DamageId, type PartId } from "../data/economy.ts";
 import { CLASSES, model } from "../data/roster.ts";
 import { normalize, riding, type BikeSave, type Profile } from "./profile.ts";
 import type { ModeResult } from "./economy.ts";
@@ -57,7 +57,7 @@ export function ride(r: ModeResult, b: BikeSave, seed: number): GarageResult {
   const wear = { ...r.wear };
   wear.tyres = Math.round(wear.tyres * (TYRES[b.tyre] ?? TYRES.med).wear * 1e4) / 1e4;
   if (e) {
-    const heat = (SETUP_FX.map[b.map as keyof typeof SETUP_FX.map] ?? SETUP_FX.map.std).heat * (1 - MOD_FX.cells.heat * (b.mods.cells ?? 0));
+    const heat = (SETUP_FX.map[b.map as keyof typeof SETUP_FX.map] ?? SETUP_FX.map.std).heat * (1 - MOD_FX.cells.heat * (b.mods.cells ?? 0)) * (b.mods.swap ? FAMILY_FX.swap.heat : 1);
     wear.motor = Math.round(wear.motor * heat * 1e4) / 1e4;
   }
   const dmg = { bars: s.crashes * DAMAGE.crash.bars + s.hard * DAMAGE.hard.bars, plastics: s.crashes * DAMAGE.crash.plastics + s.hard * DAMAGE.hard.plastics };

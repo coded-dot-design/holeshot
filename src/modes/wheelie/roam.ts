@@ -317,7 +317,7 @@ export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEE
     if (past) {
       HD[0] = HD[0]! + dt;
       if (!HD[1] && HD[0]! >= HAND_T) (HD[1] = 1), (HD[3] = 0), emit(E_DRAG, 1);
-      if (HD[1]) (HD[3] = HD[3]! + dt), (HD[2] = HD[2]! + DRAG_RATE * DRAG_X * (1 + sc.S[T_CB]!) * dt);
+      if (HD[1]) (HD[3] = HD[3]! + dt), (HD[2] = HD[2]! + DRAG_RATE * (bike.spec.bar ? bike.spec.bar.dragX : DRAG_X) * (1 + sc.S[T_CB]!) * dt);
       return;
     }
     if (HD[1]) {

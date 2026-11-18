@@ -125,7 +125,9 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   const stage = modeStage(ctx.host, "wc");
   const engine = createEngine({ root: stage, settle: 0.5, seed: ctx.seed });
   const m = meter("endcity");
-  const SPEC: RideSpec = { id: ctx.bike.model.id, name: ctx.bike.model.name, kind: ctx.bike.power.name, blurb: "", bars: [3, 3, 3], power: ctx.bike.power, shape: ctx.bike.shape, sweet: ctx.bike.sweet, hop: ctx.bike.hop };
+  const SPEC: RideSpec = { id: ctx.bike.model.id, name: ctx.bike.model.name, kind: ctx.bike.power.name, blurb: "", bars: [3, 3, 3], power: ctx.bike.power, shape: ctx.bike.shape, sweet: ctx.bike.sweet, hop: ctx.bike.hop, bar: ctx.bike.bar };
+  /** The hand drag's multiplier on this bike (a wheelie bar lowers it). */
+  const DX = SPEC.bar ? SPEC.bar.dragX : DRAG_X;
   const L = engine.ledger, sig = { signal: engine.signal };
   let P: Pal = document.documentElement.dataset.theme === "light" ? LIGHT : DARK, F: FPal = P.night ? FIELD_DARK : FIELD_LIGHT;
   const best = ctx.best ?? 0;
@@ -814,8 +816,8 @@ export function mountCity(ctx: ModeCtx): ModeRun {
         shake = 0.15;
         spark.ring(rnd, d.wheel[0]!, d.wheel[1]! - 0.3, d.wheel[2]!, 26, 3.5, 4.5, 0.8, 0.07, 1);
         stars(d.pos[0]!, d.pos[1]! + 1.2, d.pos[2]!);
-        toast(`HAND DRAG! ×${DRAG_X}`, "go");
-        say(`Hand drag! Times ${DRAG_X}. Bring it back under twelve to bank it`);
+        toast(`HAND DRAG! ×${DX}`, "go");
+        say(`Hand drag! Times ${DX}. Bring it back under twelve to bank it`);
       } else if (type === E_BANKED) {
         engine.events.emit("cheer");
         stars(d.pos[0]!, d.pos[1]! + 1.2, d.pos[2]!);
@@ -886,7 +888,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       was[7] = dk;
       dragChip.hidden = dk < 0;
       dragChip.classList.toggle("wc-dragging", dk >= 1000);
-      if (dk >= 1000) dragEl.textContent = `HAND DRAG ×${DRAG_X} · ${Math.round(HDv[2]!).toLocaleString("en-US")} AT RISK`;
+      if (dk >= 1000) dragEl.textContent = `HAND DRAG ×${DX} · ${Math.round(HDv[2]!).toLocaleString("en-US")} AT RISK`;
       else if (dk >= 0) (dragEl.textContent = "PAST 12 · HOLD IT"), dragRing.style.setProperty("--p", dk + "%");
     }
     if (was[6] !== risk) (was[6] = risk), (riskEl.hidden = risk <= 0), (riskEl.textContent = `AT RISK ${risk.toLocaleString("en-US")}`);

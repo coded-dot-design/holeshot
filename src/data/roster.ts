@@ -1,11 +1,16 @@
-// The bike roster, as data: four classes, six makers, four models per class (sixteen in all). Every model is an engine and chassis for ../bike/bike.ts (`power`), a suspension, its price
+// The bike roster, as data: three families (gas dirt bikes, electric bikes, street bikes), five
+// classes, six makers, four models per dirt class and three street bikes (nineteen in all). Every model is an engine and chassis for ../bike/bike.ts (`power`), a suspension, its price
 // and its upkeep (how fast its parts wear and what a rebuild costs, as multipliers on the economy's
 // rates). The first model of each class is the cheapest: the four starter choices at first run.
 // The makers are our own, each a nod (by sound, meaning and colour) to a maker riders love, in a
 // neon city: YAMADA (harbour-blue 2-strokes), HONDO (red thumpers), KAWAZAKURA (lime-green
 // bruisers), STARKWOLF (a grey wolf of an electric racer), SURGE-ON (light electric
-// hornets) and MAKFOX (fox-orange e-bikes). No real names, model codes or logos.
+// hornets) and MAKFOX (fox-orange e-bikes). No real names, model codes or logos. Each model's
+// look (its `body`: ../bike/bodies.ts) follows its family: gas bikes the rig's own tank, shrouds and
+// pipe; electrics no tank and no pipe, a battery box and their own frame; street bikes on asphalt
+// rubber with bodywork of their own (a mini, a fully faired supersport, a naked superbike).
 import type { Power } from "../bike/bike.ts";
+import type { BodyKind } from "../bike/bodies.ts";
 
 /** The makers: a name, a one-line voice, and the factory colours (flat, our palette). */
 export type MakerId = "yamada" | "hondo" | "kawazakura" | "starkwolf" | "surgeon" | "makfox";
@@ -19,8 +24,10 @@ export const MAKERS: Record<MakerId, Maker> = {
   makfox: { id: "makfox", name: "MAKFOX", motto: "Fox-orange e-bikes for the alley lines. Quick, light, sly.", colors: ["#ff8a3d", "#eef0ff"] },
 };
 
-/** The four classes. */
-export type ClassId = "2t" | "4t" | "ebike" | "emoto";
+/** The five classes. */
+export type ClassId = "2t" | "4t" | "ebike" | "emoto" | "street";
+/** The three families: what a bike is built for, how it looks and which upgrade it takes. */
+export type FamilyId = "gas" | "electric" | "street";
 
 export interface BikeClass {
   id: ClassId;
@@ -30,17 +37,21 @@ export interface BikeClass {
   maker: string;
   /** The class's voice, one line. */
   motto: string;
-  /** How the rig draws it: a 2-stroke's chamber, a 4-stroke's silencer, an e-motor's battery. */
-  rig: "2t" | "4t" | "e";
+  /** Its family (gas dirt, electric, street). */
+  family: FamilyId;
+  /** How the rig draws it: a 2-stroke's chamber, a 4-stroke's silencer, or a body of its own
+   *  (../bike/bodies.ts; a model can name another with `Model.body`). */
+  rig: "2t" | "4t" | BodyKind;
   /** The motor part this class wears: a top end (2-stroke), an engine (4-stroke) or a battery. */
   motor: "topend" | "engine" | "battery";
 }
 
 export const CLASSES: Record<ClassId, BikeClass> = {
-  "2t": { id: "2t", name: "2-STROKE", maker: "YAMADA · KAWAZAKURA", motto: "Ring-ding smoke under neon. Light, loud, peaky: cheap rebuilds, often.", rig: "2t", motor: "topend" },
-  "4t": { id: "4t", name: "4-STROKE", maker: "HONDO · KAWAZAKURA", motto: "Thumpers. Heavy, torquey, slow to wear and dear to fix.", rig: "4t", motor: "engine" },
-  ebike: { id: "ebike", name: "E-BIKE", maker: "MAKFOX", motto: "Pedal-assist alley bikes. Light, quick to lift, slow on a race track.", rig: "e", motor: "battery" },
-  emoto: { id: "emoto", name: "ELECTRIC DIRT", maker: "STARKWOLF · SURGE-ON", motto: "Volt-motos. Every newton at once, one gear, a battery to look after.", rig: "e", motor: "battery" },
+  "2t": { id: "2t", name: "2-STROKE", maker: "YAMADA · KAWAZAKURA", motto: "Ring-ding smoke under neon. Light, loud, peaky: cheap rebuilds, often.", family: "gas", rig: "2t", motor: "topend" },
+  "4t": { id: "4t", name: "4-STROKE", maker: "HONDO · KAWAZAKURA", motto: "Thumpers. Heavy, torquey, slow to wear and dear to fix.", family: "gas", rig: "4t", motor: "engine" },
+  ebike: { id: "ebike", name: "E-BIKE", maker: "MAKFOX", motto: "Pedal-assist alley bikes. Light, quick to lift, slow on a race track.", family: "electric", rig: "ebike", motor: "battery" },
+  emoto: { id: "emoto", name: "ELECTRIC DIRT", maker: "STARKWOLF · SURGE-ON", motto: "Volt-motos. Every newton at once, one gear, a battery to look after.", family: "electric", rig: "emoto", motor: "battery" },
+  street: { id: "street", name: "STREET", maker: "HONDO · YAMADA · KAWAZAKURA", motto: "Asphalt bikes. Sticky road rubber, short springs, long legs: kings of Wheelie City, lost on the dirt.", family: "street", rig: "naked", motor: "engine" },
 };
 
 export interface Model {
@@ -62,6 +73,8 @@ export interface Model {
   susp: { travel: number; sag: number; damp: number; caseDrop: number };
   /** The frame, if not a full-size motocross bike's (axles, drop, wheel radius; bike.ts BikeShape). */
   frame?: { rear: number; front: number; drop: number; radius: number };
+  /** Its look, when not its class's (a street class's mini, supersport or naked: ../bike/bodies.ts). */
+  body?: BodyKind;
   /** Wheelie City's feel: half the sweet spot round the balance point (rad), the hop speed. */
   sweet: number;
   hop: number;
@@ -93,6 +106,21 @@ const emoto = (force: number, mass: number, top: number): Power => ({
   gears: [15.5 * top], launch: 0, rev: 30, roll: 10, up: 1.1, down: 0,
   airPitch: 6.5, grip: 1.12, brake: 20, voice: VM,
 });
+/** Street bikes: road tyres (grip on the asphalt), five or six gears, a long top gear, short stiff
+ *  springs (a dirt landing cases them: ../model/families.ts takes more off on the dirt). The voice
+ *  per body: a mini's buzzy single, a supersport's howl, a naked big twin's bark. */
+const street = (name: string, force: number, mass: number, top: number, gyr: number, voice: Power["voice"]): Power => ({
+  name, mass, gyr, force,
+  curve: [0.5, 0.62, 0.74, 0.86, 0.95, 1, 0.98, 0.9, 0.72],
+  gears: [6.6 * top, 10 * top, 13.4 * top, 16.6 * top, 19.4 * top, 21.8 * top], launch: 0.42, rev: 7.5, roll: 7, up: 0.92, down: 0.58,
+  airPitch: 5, grip: 1.34, brake: 26, voice,
+});
+const VMINI: Power["voice"] = [70, 260, "square"], VSPORT: Power["voice"] = [88, 420, "sawtooth"], VNAKED: Power["voice"] = [52, 210, "sawtooth"];
+/** A mini street bike's short, low frame (quick to lift, easy to hold up). */
+const MINI = { rear: -0.56, front: 0.6, drop: 0.38, radius: 0.34 };
+/** A big street bike's long, low wheelbase (stable at speed, slower to lift). */
+const BIG = { rear: -0.7, front: 0.86, drop: 0.4, radius: 0.33 };
+const R = (travel: number, damp = 0.72, caseDrop = 20) => ({ travel, sag: 0.08, damp, caseDrop });
 /** A pedal e-bike's shorter frame (quick to lift). */
 const EB = { rear: -0.6, front: 0.6, drop: 0.4, radius: 0.34 };
 const S = (travel: number, damp = 0.62, caseDrop = 26) => ({ travel, sag: 0.09, damp, caseDrop });
@@ -118,14 +146,24 @@ export const MODELS: Model[] = [
   { id: "gridrat", cls: "emoto", maker: "surgeon", name: "ULTRA HORNET", blurb: "Bigger cells, longer legs, the same sting. Rides the city's spare current.", price: 3900, tier: 2, upkeep: { wear: 0.9, cost: 1.05 }, power: emoto(14.6, 0.82, 1.03), susp: S(0.3, 0.64, 27), sweet: 0.07, hop: 5.8 },
   { id: "overcharge", cls: "emoto", maker: "starkwolf", name: "GREYWOLF MX", blurb: "A wolf's motor and the cooling to keep it. Pulls to the far fence.", price: 6000, tier: 3, upkeep: { wear: 0.95, cost: 1.15 }, power: emoto(16, 0.86, 1.06), susp: S(0.32, 0.66, 28), sweet: 0.075, hop: 5.8 },
   { id: "feral-coil", cls: "emoto", maker: "starkwolf", name: "ALPHA WOLF", blurb: "The pack leader. Brutal on the gas, silent, gentle on nothing.", price: 8600, tier: 4, upkeep: { wear: 1.05, cost: 1.3 }, power: emoto(17.4, 0.84, 1.1), susp: S(0.34, 0.68, 30), sweet: 0.07, hop: 6 },
+  // Street bikes: HONDO's mini, YAMADA's supersport, KAWAZAKURA's naked. Built for Wheelie City's
+  // asphalt; on the dirt they slide and case (../model/families.ts). Never a starter.
+  { id: "curb-pup", cls: "street", body: "mini", maker: "hondo", name: "BLOCK PUP 125", blurb: "A little red street mini with fat tyres. Low, light, wheelies all day down the avenue.", price: 2400, tier: 1, upkeep: { wear: 0.6, cost: 0.8 }, power: street("MINI", 15, 0.82, 0.62, 0.56, VMINI), frame: MINI, susp: R(0.16, 0.7, 19), sweet: 0.12, hop: 5.6 },
+  { id: "tidebreaker", cls: "street", body: "sport", maker: "yamada", name: "TIDEBREAKER 600", blurb: "Harbour-blue and fully faired. Screams to the far end of the boulevard; hates a rut.", price: 9800, tier: 3, upkeep: { wear: 0.9, cost: 1.5 }, power: street("SUPERSPORT", 20.5, 1.12, 1.02, 0.7, VSPORT), frame: BIG, susp: R(0.18, 0.74, 20), sweet: 0.075, hop: 4.8 },
+  { id: "bare-knuckle", cls: "street", body: "naked", maker: "kawazakura", name: "BARE KNUCKLE 900", blurb: "A lime-green naked superbike: no fairing, a big twin, torque for every gear. Lifts the front on a thought.", price: 12500, tier: 4, upkeep: { wear: 0.95, cost: 1.7 }, power: street("NAKED", 22.5, 1.16, 1.06, 0.66, VNAKED), frame: BIG, susp: R(0.2, 0.72, 21), sweet: 0.085, hop: 4.9 },
 ];
 
+
+/** A model's family (gas, electric, street). */
+export const familyOf = (m: Model): FamilyId => CLASSES[m.cls].family;
+/** A model's look (its body, else its class's). */
+export const bodyOf = (m: Model): BikeClass["rig"] => m.body ?? CLASSES[m.cls].rig;
 
 /** A model's maker. */
 export const makerOf = (m: Model): Maker => MAKERS[m.maker];
 /** A model by id (the first starter if unknown). */
 export const model = (id: string): Model => MODELS.find((m) => m.id === id) ?? MODELS[0]!;
-/** The four starter choices: the cheapest model in each class. */
-export const STARTERS: Model[] = (Object.keys(CLASSES) as ClassId[]).map((c) => MODELS.filter((m) => m.cls === c).sort((a, b) => a.price - b.price)[0]!);
+/** The four starter choices: the cheapest model in each dirt class (street bikes are bought). */
+export const STARTERS: Model[] = (Object.keys(CLASSES) as ClassId[]).filter((c) => CLASSES[c].family !== "street").map((c) => MODELS.filter((m) => m.cls === c).sort((a, b) => a.price - b.price)[0]!);
 /** What the v1 shop sells new (a subset; the data holds the full roster). */
 export const SHOP_MODELS: string[] = MODELS.filter((m) => m.tier <= 2).map((m) => m.id);

@@ -9,6 +9,8 @@
 // rider leaves the bike and tumbles where bike.ts throws them. Cosmetic: builtin maths is fine here.
 import type { Diorama, DioramaObject } from "@fzlt/core/diorama";
 import type { Bike } from "./bike.ts";
+import { body, extras, type BodyKind, type BodyKit, type ShownUpgrade } from "./bodies.ts";
+export type { ShownUpgrade };
 
 /** The colours of one bike and rider (`#rrggbb`). */
 export interface RigColors {
@@ -26,10 +28,13 @@ export interface RigColors {
    *  the plastics in `graphic`; the side plates (`side`, `sideInk`) with the rider's number `num`
    *  drawn on them; crash damage: `bend` (bent bars, 0..1) and `cracks` (cracked plastics, 0..1). */
   gfx?: string; graphic?: string; side?: string; sideInk?: string; num?: number; bend?: number; cracks?: number;
+  /** A family upgrade that shows (a wheelie bar, a motor swap, a big bore, a turbo: ./bodies.ts). */
+  up?: ShownUpgrade;
 }
 
-/** Which engine the bike shows. */
-export type RigKind = "2t" | "4t" | "e";
+/** Which bike it draws: a gas dirt bike's engine (a 2-stroke, a 4-stroke) on the rig's own body, or
+ *  an electric or street bike's body (./bodies.ts). */
+export type RigKind = "2t" | "4t" | BodyKind;
 /** The helmet's shape: a motocross peak, a long duck-bill peak, a round street dome (no peak), an
  *  open-face shell with goggles, a peak with a fin on top, a peak with a row of spikes. */
 export type RigHelmet = "peak" | "duck" | "dome" | "retro" | "fin" | "spike";
@@ -108,25 +113,26 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
     part([0.38, 0.07, 0.07], [0.19, -0.035, z], C.metal, { on: id + ":fk" });
     part([0.36, 0.09, 0.09], [0.18, -0.045, z], C.frame, { on: id + ":sl" });
   }
+  // An electric or street bike: its own body (./bodies.ts), on the same layers as the gas bike's.
+  const kit: BodyKit = { part, C, body: 5, near: 5, fender: 5, side: () => id, inset: 0, rear: id, front: id, eo: 0 };
+  const gas = kind === "2t" || kind === "4t", built = gas ? null : body(kind, kit);
+  extras(kind, C.up, kit);
+  let fender = built?.fender;
+  if (gas) {
   // Frame, engine, exhaust.
   part([0.62, 0.07, 0.1], [0.12, -0.02, 0], C.frame, { rot: [0, 0, -0.45] });
-  part([0.42, 0.3, 0.26], [0.06, -0.42, 0], kind === "e" ? C.frame : C.metal);
+  part([0.42, 0.3, 0.26], [0.06, -0.42, 0], C.metal);
   if (kind === "2t") {
     // The expansion chamber: fat under the engine on the right, tapering back to a silencer.
     part([0.22, 0.42, 0.22], [0.26, -0.36, 0.17], C.pipe, { shape: "cyl", sides: 8, top: 0.7, rot: [0, 0, PI / 2 + 0.2] });
     part([0.4, 0.1, 0.1], [-0.36, -0.05, 0.15], C.pipe, { rot: [0, 0, 0.3] });
     part([0.32, 0.12, 0.12], [-0.52, 0.02, 0.15], C.metal, { shape: "cyl", sides: 8, rot: [0, 0, PI / 2 + 0.3] });
-  } else if (kind === "4t") {
+  } else {
     // A header round the front, a big silencer up high.
     part([0.08, 0.32, 0.08], [0.26, -0.44, 0.15], C.pipe, { rot: [0, 0, 0.6] });
     part([0.5, 0.08, 0.08], [-0.12, -0.32, 0.15], C.pipe, { rot: [0, 0, 0.32] });
     part([0.2, 0.42, 0.2], [-0.5, 0.0, 0.15], C.metal, { shape: "cyl", sides: 8, rot: [0, 0, PI / 2 + 0.28] });
     part([0.1, 0.12, 0.26], [0.02, -0.2, 0], C.metal);
-  } else {
-    // The battery (a box with a glowing strip) and the motor at the pivot.
-    part([0.5, 0.26, 0.24], [0.1, -0.32, 0], C.frame);
-    part([0.42, 0.04, 0.25], [0.1, -0.12, 0], C.glow, { emissive: true, layer: 6 });
-    part([0.2, 0.2, 0.2], [-0.12, -0.32, 0], C.metal, { shape: "cyl", sides: 10, rot: [PI / 2, 0, 0] });
   }
   // Plastics: tank and shrouds, seat, rear fender (the tail), side panel, front fender, plate, bars.
   part([0.5, 0.22, 0.4], [0.26, -0.08, 0], C.plastic, { shape: "wedge", rot: [0, PI, 0] });
@@ -134,9 +140,11 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
   part([0.78, 0.08, 0.22], [-0.2, 0.08, 0], C.seat);
   part([0.55, 0.07, 0.2], [-0.62, 0.06, 0], C.plastic, { shape: "wedge", rot: [0, 0, -0.12] });
   part([0.36, 0.2, 0.3], [-0.36, -0.14, 0], C.plastic2);
-  const fender = part([0.44, 0.05, 0.17], [0.86, -0.1, 0], C.plastic, { shape: "wedge", rot: [0, PI, 0.1] });
+  fender = part([0.44, 0.05, 0.17], [0.86, -0.1, 0], C.plastic, { shape: "wedge", rot: [0, PI, 0.1] });
   part([0.05, 0.26, 0.28], [0.62, 0.08, 0], C.plate, { rot: [0, 0, -0.35] });
   part([0.06, 0.06, 0.64], [GRIP[0]!, GRIP[1]! - 0.03, 0], C.frame, { rot: [0.22 * (C.bend ?? 0), 0.3 * (C.bend ?? 0), 0] });
+  }
+  const NP = built?.plates ?? [-0.36, -0.13];
   // The garage's extras: a graphics kit, the side plates and their number, a crack.
   const G2 = C.graphic ?? C.plastic2;
   if (C.gfx === "bolt") {
@@ -159,7 +167,7 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
     const W = 0.075, H = 0.12, T = 0.018;
     for (let side = -1; side <= 1; side += 2) {
       const gid = id + ":np" + side;
-      d.add({ id: gid, shape: "group", size: [0.2, 0, 0.2], pos: [-0.36, -0.13, side * 0.156], on: id, behind: 3, pick: false });
+      d.add({ id: gid, shape: "group", size: [0.2, 0, 0.2], pos: [NP[0], NP[1], side * 0.156], on: id, behind: 3, pick: false });
       part([0.3, 0.17, 0.01], [0, 0, 0], C.side ?? C.plate, { on: gid, layer: 5 });
       ds.forEach((dg, i) => {
         const cx = ds.length > 1 ? (i ? 0.05 : -0.05) : 0, bits = SEG[dg]!, f = side;
@@ -227,7 +235,7 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
     const fa = Math.atan2(fy - HEAD[1]!, fx - HEAD[0]!);
     fork.pos[0] = HEAD[0]!; fork.pos[1] = HEAD[1]!; fork.rot[2] = fa;
     slider.pos[0] = fx; slider.pos[1] = fy; slider.rot[2] = fa + PI;
-    fender.pos[1] = fy + R + 0.02;
+    fender!.pos[1] = fy + R + 0.02;
     void R;
     if (b.crashed) {
       if (!thrown) (thrown = true), d.on(rider, null);

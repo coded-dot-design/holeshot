@@ -33,6 +33,7 @@ import type { ModeCtx, ModeRun } from "../mode.ts";
 import type { Ride } from "../../online/match.ts";
 import { walkUi } from "../../bike/walk-ui.ts";
 import type { RigHelmet, RigKind } from "../../bike/rig.ts";
+import { rigOfPower } from "../../bike/bodies.ts";
 
 /** An online ride on this screen (../../online/match.ts steps the sim; the scene draws it, reads this
  *  screen's input for it and plays the first run of each frame's events). */
@@ -187,7 +188,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   let sky: CanvasGradient | null = null;
   const STARS = new Float32Array(120);
   for (let i = 0; i < 120; i++) STARS[i] = rnd();
-  const rigKind = (p: Power) => (p.name === "2-STROKE" ? "2t" : p.name === "4-STROKE" ? "4t" : "e") as "2t" | "4t" | "e";
+  const rigKind = (p: Power) => rigOfPower(p.name);
 
   function buildScene() {
     dio.clear();

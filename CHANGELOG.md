@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+- **Bike families: gas dirt, electric, street.** Every class belongs to a family and every bike
+  looks like its family (`src/bike/bodies.ts`): electrics lose the tank and the exhaust (an e-bike is
+  a pedal bike with thin tubes, a battery on the down tube, cranks and a saddle; an electric dirt bike
+  is a moto frame round a big glowing battery box, the motor at the pivot). Three original **street
+  bikes** in a new STREET class: HONDO BLOCK PUP 125 (a red street mini), YAMADA TIDEBREAKER 600 (a
+  fully faired supersport) and KAWAZAKURA BARE KNUCKLE 900 (a naked superbike). Road tyres, short
+  stiff springs, five-plus gears: the fastest bikes on the flat (measured: 50–52 mph stock against
+  42 mph for the best dirt bike) and best in Endless Wheelie City. On the dirt they slide and case
+  (grip ×0.72, travel ×0.8, case line ×0.85, brakes ×0.8: `src/model/families.ts`), and picking one
+  for a dirt mode asks first: "Street bike on dirt? It won't perform well." (RIDE ANYWAY / PICK
+  ANOTHER). Online rides use the same rules. Never a starter; the showroom sells them (the mini from
+  day one, the big two with the tier 3-4 unlocks).
+- **Family upgrades, the late-game goals** (one per family, the dearest things in the shop): a
+  WHEELIE BAR for the street mini (◈ 5,200: past 12 it sits on its bar and never loops out, the
+  balance window ×1.6; the trade: the hand drag pays ×5, not ×10), a MOTOR SWAP for the electrics
+  (◈ 7,400: +30 % drive, +14 % top gear, the battery heats 1.6× faster), a BIG BORE KIT for the gas
+  dirt bikes (◈ 7,800: +12 % drive, +3.5 % top gear, a deeper note) and a TURBO for the street bikes
+  (◈ 24,000, dearer than any bike: +22 % drive with boost from the middle revs, +16 % top gear). Each
+  shows on the bike (a bar with two little wheels, a bigger motor and a second battery, deep cylinder
+  fins, a charger and intake on the right), is saved with the bike, rides the online hello (one bit
+  each) and shows its measured pace before → after in the garage. Measured (full gas on the flat,
+  60 Hz; `tests/families.test.mjs` prints the table): YX-250 2T big bore 0–30 1.13 → 1.05 s, top 42.3
+  → 44.0 mph; REDLINE 450 WORKS 1.42 → 1.27 s, 40.7 → 42.2 mph; LIGHT HORNET motor swap 1.15 → 0.87 s,
+  35.1 → 40.0 mph; KIT FOX 0–20 0.98 → 0.70 s, 28.8 → 32.8 mph; TIDEBREAKER turbo 1.47 → 1.07 s, 50.2 →
+  58.5 mph; BARE KNUCKLE turbo 1.35 → 1.00 s, 52.2 → 60.8 mph (0–60 in 3.30 s, the only bike that gets
+  there). Sound hooks for the voice code: a big bore lowers the voice's pitch (in `power.voice`),
+  `tuned.sound.whistle` marks a turbo for a boost whistle and blow-off (not voiced yet).
+
 - **Miles by default, km as a setting.** SETTINGS → UNITS: Imperial (miles, mph; the default) or
   Metric (km, km/h), saved in the profile (schema v6: every existing save migrates to Imperial).
   Applied wherever a distance shows: the Endless Wheelie City and endless-ground HUD chips (e.g.

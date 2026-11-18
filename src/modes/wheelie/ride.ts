@@ -37,6 +37,10 @@ export interface RideSpec {
   sweet: number;
   /** Hop speed, units/s. */
   hop: number;
+  /** A wheelie bar (the mini street bike's upgrade: ../../model/tune.ts): the nose angle past 12 it
+   *  holds the bike at (its little wheels on the road: it never loops out), and the hand drag's
+   *  multiplier with it (lower than DRAG_X: the trade). */
+  bar?: { at: number; dragX: number } | null;
 }
 
 export const RIDES: RideSpec[] = [
@@ -49,7 +53,8 @@ export const RIDES: RideSpec[] = [
 export function ride(ground: BikeGround, specs: RideSpec[] = RIDES, walk?: (at: Float64Array) => boolean) {
   // (Past 12 o'clock, to about 1: the city's bikes loop out at LOOP_AT, not at the balance point's margin.)
   // `walk`: where the rider may walk the bike (../../bike/bike.ts); left out, it never walks.
-  const all: Bike[] = specs.map((r) => bike(ground, r.power, { ...r.shape, loop: LOOP_AT, walk }));
+  // (A wheelie bar holds the nose at its angle, so the loop-out line moves out of reach.)
+  const all: Bike[] = specs.map((r) => bike(ground, r.power, { ...r.shape, loop: r.bar ? LOOP_AT + 1.5 : LOOP_AT, walk }));
   let k = all[0]!, sp = specs[0]!;
   // R: hop timer, the speed into the last wall, seconds sat still (in a typed array: a snapshot).
   const vel = new Float64Array(3), R = new Float64Array(3);
@@ -69,6 +74,10 @@ export function ride(ground: BikeGround, specs: RideSpec[] = RIDES, walk?: (at: 
     // gets PAST_BRAKE more say (the rider's weight over the bars as well): feathered, it holds the nose
     // up there; let off, it keeps going over (it is not stable: it drifts towards the loop-out).
     if (!k.crashed && k.contact[0] && !k.contact[1] && k.rel > k.bp && brake > 0) k.S[3] = k.S[3]! - brake * PAST_BRAKE * dt;
+    // The wheelie bar: past its angle on the rear wheel, its wheels meet the road; the nose stops
+    // there (pitch held, the rate going over taken out), so it sits on the bar instead of looping.
+    const bar = sp.bar;
+    if (bar && !k.crashed && k.contact[0] && k.rel > bar.at) (k.S[2] = k.S[2]! - (k.rel - bar.at)), k.S[3]! > 0 && (k.S[3] = 0);
     vel[0] = k.cy * k.speed; vel[1] = 0; vel[2] = -k.sy * k.speed;
     return moving || R[0]! > 0;
   }
