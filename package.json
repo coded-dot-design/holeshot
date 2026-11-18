@@ -13,7 +13,7 @@
     "check": "npm run build && npm run size",
     "test": "node --expose-gc --test --test-concurrency=1 tests/*.test.mjs",
     "test:settle": "node tests/settle.mjs",
-    "test:browser": "node tests/browser.mjs && node tests/series.browser.mjs && node tests/garage.browser.mjs && node tests/online.browser.mjs && node tests/golden.browser.mjs && node tests/wheelie.browser.mjs && node tests/occlusion.browser.mjs && node tests/rocker.browser.mjs && node tests/walk.browser.mjs && node tests/legs.browser.mjs && node tests/ground.browser.mjs && node tests/roads.browser.mjs && node tests/testcredits.browser.mjs",
+    "test:browser": "node tests/browser.mjs && node tests/series.browser.mjs && node tests/garage.browser.mjs && node tests/online.browser.mjs && node tests/golden.browser.mjs && node tests/wheelie.browser.mjs && node tests/occlusion.browser.mjs && node tests/rocker.browser.mjs && node tests/walk.browser.mjs && node tests/legs.browser.mjs && node tests/ground.browser.mjs && node tests/roads.browser.mjs && node tests/testcredits.browser.mjs && node tests/artifacts.browser.mjs",
     "test:net": "node tests/netlag.mjs",
     "site:dev": "astro dev --config site/astro.config.mjs",
     "site:build": "astro build --config site/astro.config.mjs && node scripts/pages.mjs",

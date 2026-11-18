@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- **No more stray miniature buildings in Endless Wheelie City.** Out in the fields a tiny gas
+  station (a canopy, pumps, a sign; roofs and windows too) floated near the start and never grew as
+  the bike rode at it. The scenery pool hid an object it had not placed with diorama's `hidden`,
+  which hides only the object itself, never its parts: every pool object never placed drew its
+  parts in a heap 50 units under the start (seen from above as a miniature), and a tower or silo let
+  go half in the haze left its parts standing. A pool object let go now goes to alpha 0 (the whole
+  of it) and back to its hide spot, and a slot that takes another item starts unghosted; a building
+  the bike is up against is never faded out completely by the occlusion ghost (at most ghosted and
+  outlined), so the bike is never stuck on nothing. Render only; riding unchanged. Test
+  `tests/artifacts.browser.mjs`: a 20 km seeded autopilot ride (65+ towns, 21 hops into the fields
+  at new headings, 1440 dark and 390 light, on `?money=inf`) audits every frame: no strays (before:
+  256 at the start, about 14,000 on screen over 3 km), no outline without its building, every
+  placed object at its world record, every solid within 12 units drawn, drawn building heights =
+  world heights, the frame's pixels the same with every unplaced object forced out.
 - **Test credits: `/play/?credits=inf` (or `?money=inf`).** For trying every bike: the garage shows
   ◈ ∞ and a TEST CREDITS ∞ chip, the showroom sells every bike (unlocks open), every part, mod, tune
   and cosmetic is free (buying never subtracts). The session plays a copy of the saved profile in

@@ -115,6 +115,8 @@ const POOL = new Int32Array(NITEM);
 [[I_HOUSE, 20], [I_HOUSE2, 16], [I_SHOP, 10], [I_DINER, 2], [I_STORE, 5], [I_GAS, 2], [I_FLATS, 7], [I_TOWER, 5], [I_WARE, 4], [I_BARN, 3], [I_SILO, 3], [I_TREE, 44], [I_PINE, 24], [I_ROCK, 14], [I_HAY, 14], [I_LAMP, 40], [I_SIGN, 8], [I_MAIL, 18], [I_BENCH, 10], [I_CAR, 14], [I_FENCE, 28], [I_CONE, 8], [I_ISLE, 3], [I_DOG, 2], [I_KICK, 3]].forEach(([k, v]) => (POOL[k!] = v!));
 /** Occlusion: a building in front of the bike fades to GHOST over OCC_T seconds. */
 const GHOST = 0.1, OCC_T = 0.15;
+/** Within this of a building's footprint the bike is up against it (its radius 0.45 and a margin). */
+const TOUCH = 1;
 const B_TOP = [0.9, 0.9, 0.15, 0.6, 0.15, 0.9, 0.15, 1.5, 0.25, 1.6, 0.5];
 
 /** Endless Wheelie City: the open world, no clock, how far. */
@@ -272,11 +274,12 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     sky = null;
     VC[2] = 0;
     stream();
+    fade(bike.b.pos[0]!, bike.b.pos[2]!);
     pose();
   }
   /** One pool object of item kind k (hidden; `place` puts it down). Fronts face local +z (the road). */
   function make(k: number, n: number): DioramaObject {
-    const id = "o" + n, hide = { pos: [0, -50, 0], pick: false, hidden: true };
+    const id = "o" + n, hide = { pos: [0, -50, 0], pick: false, hidden: true, alpha: 0 };
     const part = (size: number[], pos: number[], color: string, emissive = false, o2: { shape?: "box" | "wedge" | "cyl"; rot?: number[]; sides?: number; top?: number; layer?: number } = {}) =>
       dio.add({ shape: o2.shape ?? "box", size, pos, rot: o2.rot, sides: o2.sides, top: o2.top, on: id, color, emissive, pick: false, layer: o2.layer ?? 6 });
     if (k < I_PROP) {
@@ -439,13 +442,18 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       if (k === I_ISLE) (ob.size[0] = ob.size[2] = VG[o + 5]! * 2), (ob.pos[1] = VG[o + 10]!);
       if (k === I_KICK) ob.pos[1] = VG[o + 10]!;
       ob.hidden = false;
-      ON_[i] = 1;
       const r = i * 9;
+      // A slot that takes another item starts it unghosted (the fade is that item's own).
+      if (!ON_[i] || OI[r + 8] !== VG[o + 9] || OI[r + 7] !== k) GH[i] = 0;
+      ON_[i] = 1;
       OI[r] = VG[o + 1]!; OI[r + 1] = VG[o + 2]!; OI[r + 2] = ux; OI[r + 3] = uz; OI[r + 4] = VG[o + 5]!; OI[r + 5] = VG[o + 6]!; OI[r + 6] = VG[o + 7]!; OI[r + 7] = k; OI[r + 8] = VG[o + 9]!;
     }
     for (let k = 0; k < NITEM; k++) for (let q = UC[k]!; q < POOL[k]!; q++) {
       const i = P0[k]! + q;
-      if (ON_[i]) (ON_[i] = 0), (OBJ[i]!.hidden = true), (GH[i] = 0);
+      // Let go: diorama's `hidden` hides only the object itself, never its parts (a canopy, a roof,
+      // windows), so alpha 0 takes the whole of it out (alpha multiplies down), and it goes back
+      // to the hide spot: nothing of it is left standing where it was.
+      if (ON_[i]) (ON_[i] = 0), (OBJ[i]!.hidden = true), (OBJ[i]!.alpha = 0), (OBJ[i]!.pos[0] = 0), (OBJ[i]!.pos[1] = -50), (OBJ[i]!.pos[2] = 0), (GH[i] = 0);
     }
     return true;
   }
@@ -516,6 +524,11 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     }
     return true;
   }
+  /** Is (x, z) within reach of pool object i's footprint (the bike's radius and a little)? */
+  function touching(i: number, x: number, z: number) {
+    const r = i * 9, ux = OI[r + 2]!, uz = OI[r + 3]!, dx = x - OI[r]!, dz = z - OI[r + 1]!, lx = dx * ux + dz * uz, lz = -dx * uz + dz * ux, a = OI[r + 4]! / 2 + TOUCH, b = OI[r + 5]! / 2 + TOUCH;
+    return lx > -a && lx < a && lz > -b && lz < b;
+  }
   let XR = 0, BARE = 0;
   function occlude(dt: number) {
     const cm = dio.cam, d = bike.b, cp = Math.cos(cm.pitch), sp = Math.sin(cm.pitch), cy = Math.cos(cm.yaw), sy = Math.sin(cm.yaw);
@@ -545,6 +558,9 @@ export function mountCity(ctx: ModeCtx): ModeRun {
           }
         }
       }
+      // The bike up against it (it can hit it): never gone, at most ghosted and outlined, so what
+      // stops the bike is always seen (the eye inside it would have it vanish: stuck on nothing).
+      if (tt === 2 && touching(i, bx, bz)) tt = 1;
       if (XR === 2) o.alpha = 0;
       const g = GH[i]!;
       if (g !== tt) {
@@ -1457,6 +1473,76 @@ export function mountCity(ctx: ModeCtx): ModeRun {
         const b = bike.b.pos, out = [1e9, 1e9, -1e9, -1e9], gy = hgt(b[0]!, b[2]!);
         for (let q = 0; q < 8; q++) if (dio.project(b[0]! + (q & 1 ? 1 : -1), Math.max(gy, b[1]!) + (q & 2 ? 1.9 : 0), b[2]! + (q & 4 ? 1 : -1), PJ)) (out[0] = Math.min(out[0]!, PJ[0]!)), (out[1] = Math.min(out[1]!, PJ[1]!)), (out[2] = Math.max(out[2]!, PJ[0]!)), (out[3] = Math.max(out[3]!, PJ[1]!));
         return out;
+      },
+      /** The pool against the world, as of now (the ride audit): [strays, strays on screen, outlines
+       *  without their building, placed objects off their record, solids within `near` of the bike
+       *  that are not placed, one item placed twice, buildings the bike is up against that are gone]. A stray is a pool object not placed
+       *  whose parts would still draw (diorama's `hidden` hides only the object itself). */
+      audit(near = 12) {
+        const out = new Int32Array(7), x = bike.b.pos[0]!, z = bike.b.pos[2]!;
+        for (let i = 0; i < OBJ.length; i++) {
+          const o = OBJ[i]!, r = i * 9;
+          if (!ON_[i]) {
+            if (o.alpha > 0.01) {
+              out[0] = out[0]! + 1;
+              if (dio.project(o.pos[0]!, o.pos[1]!, o.pos[2]!, PJ) && PJ[0]! > 0 && PJ[1]! > 0 && PJ[0]! < dio.width && PJ[1]! < dio.height) out[1] = out[1]! + 1;
+            }
+            if (GH[i]! > 0.02) out[2] = out[2]! + 1;
+            continue;
+          }
+          if (o.hidden || Math.abs(o.pos[0]! - OI[r]!) > 1e-6 || Math.abs(o.pos[2]! - OI[r + 1]!) > 1e-6 || (OI[r + 7]! < I_PROP && OI[r + 7] !== I_SILO && (Math.abs(o.size[0]! - OI[r + 4]!) > 1e-6 || Math.abs(o.size[2]! - OI[r + 5]!) > 1e-6))) out[3] = out[3]! + 1;
+          for (let j = i + 1; j < OBJ.length; j++) if (ON_[j] && OI[j * 9 + 7] === OI[r + 7] && Math.abs(OI[j * 9]! - OI[r]!) < 1e-6 && Math.abs(OI[j * 9 + 1]! - OI[r + 1]!) < 1e-6) out[5] = out[5]! + 1;
+          if (i < P0[I_PROP]! && GH[i]! > 1.05 && touching(i, x, z)) out[6] = out[6]! + 1;
+        }
+        const A = run.SG;
+        for (let q = 0; q < run.sn; q++) {
+          const o = q * IS, k = A[o]!, dx = A[o + 1]! - x, dz = A[o + 2]! - z;
+          if (dx * dx + dz * dz > near * near) continue;
+          if (!(k < I_PROP || k === I_CAR || k === I_FENCE || k === I_BENCH || k === I_TREE || k === I_PINE || k === I_ROCK || k === I_HAY || k === I_LAMP || k === I_SIGN || k === I_MAIL)) continue;
+          let seen = false;
+          for (let i = P0[k]!; i < P0[k + 1]! && !seen; i++) if (ON_[i] && OI[i * 9 + 8] === A[o + 9] && Math.abs(OI[i * 9]! - A[o + 1]!) < 1e-6 && Math.abs(OI[i * 9 + 1]! - A[o + 2]!) < 1e-6) seen = true;
+          if (!seen) out[4] = out[4]! + 1;
+        }
+        return Array.from(out);
+      },
+      /** Each placed building in front of the eye, as last drawn: [key, its drawn height on screen (from
+       *  the matrix it was drawn with), the height its world record gives at its depth (px)]. */
+      heights() {
+        const out: number[] = [];
+        for (let i = 0; i < P0[I_PROP]!; i++) {
+          const o = OBJ[i]!, r = i * 9, m = o.M, k = OI[r + 7]!;
+          if (!ON_[i] || o.alpha < 0.05 || k === I_SILO) continue;
+          if (!dio.project(m[9]!, m[10]!, m[11]!, PJ) || PJ[2]! < 2) continue;
+          const y0 = PJ[1]!, x0 = PJ[0]!, z0 = PJ[2]!;
+          if (x0 < 0 || x0 > dio.width || y0 < 0 || y0 > dio.height) continue;
+          const h = o.size[1]!;
+          if (!dio.project(m[9]! + m[1]! * h, m[10]! + m[4]! * h, m[11]! + m[7]! * h, PJ)) continue;
+          const drawn = Math.hypot(PJ[0]! - x0, PJ[1]! - y0);
+          // The record: at (x, z) on its ground, BH + 0.3 tall (0.3 sunk), seen at its depth.
+          if (!dio.project(OI[r]!, o.pos[1]!, OI[r + 1]!, PJ)) continue;
+          const yb = PJ[1]!, xb = PJ[0]!;
+          if (!dio.project(OI[r]!, o.pos[1]! + BHv(k) + 0.3, OI[r + 1]!, PJ)) continue;
+          out.push(OI[r + 8]!, drawn, Math.hypot(PJ[0]! - xb, PJ[1]! - yb));
+        }
+        return out;
+      },
+      /** Step the ride n times by dt without drawing (a long autopilot ride in a test), as the loop does. */
+      tick(n: number, dt = 1 / 60) {
+        for (let q = 0; q < n; q++) {
+          if (auto) run.autopilot(I);
+          run.step(dt, I[0]!, I[1]!, I[2]!, I[3]!, I[4]!, false, false);
+          if (run.n) events();
+          world();
+          stepCam(dt);
+          occlude(dt);
+        }
+        dirty = true;
+      },
+      /** Draw now with every pool object that is not placed forced out (alpha 0), then as it is: for the stray test. */
+      bareStrays(on: number) {
+        for (let i = 0; i < OBJ.length; i++) if (!ON_[i] && on) OBJ[i]!.alpha = 0;
+        dio.draw();
+        dirty = true;
       },
       /** Buildings ghosted now: [key, level ×100] pairs (level 1 ghosted, 2 gone). */
       ghosts() {
