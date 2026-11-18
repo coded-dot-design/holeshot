@@ -61,7 +61,16 @@ import { readdirSync, readFileSync } from "node:fs";
 // Unreleased, r6 + r7 + r8 + r9 integrated: 194,496 B measured (holeshot.js; +4,526 B over 189,970 with
 // r6-r8: r9's family bodies on r6's layers and groups, the street bikes, the upgrades and their
 // garage rows on r7's one pace measure, the wheelie bar's cap in r8's stunts), plus about 3 KB of room.
-const BUDGET = 197_500;
+// Unreleased, online endless with friends: 186,581 B measured (holeshot.js; +4,794 B over 181,787:
+// the endless rides in the match (each rider's own window of one world, regroup, END, bumps), Endless
+// Wheelie City together (each rider's own run and patrol), the shared session scoreboard, the name
+// tags and off-screen markers, the city scene's online view, the room card's grounds), plus about
+// 3.4 KB of room.
+// 0.4.0, r6 + r7 + r8 + r9 + r11 integrated: 200,075 B measured (holeshot.js; +5,579 B over 194,496 with
+// r6-r9: r11's endless rides together, and their wiring to r8's tricks: the COMBO bit, the board's
+// trick feeds and names, friends' trick callouts and poses, END & BANK in the online pause), plus
+// about 2.9 KB of room.
+const BUDGET = 203_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

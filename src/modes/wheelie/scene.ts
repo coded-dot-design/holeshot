@@ -36,12 +36,14 @@ import { HEAT, STARS, HOT, ESC, TIX, NEAR, MAXP, PS, P_ON, P_KIND, P_X, P_Z, P_Y
 import type { RideSpec } from "./ride.ts";
 import { meter } from "../meter.ts";
 import { dist } from "../../model/units.ts";
-import { modeStage } from "../race/scene.ts";
+import { modeStage, CMD_END, CMD_REGROUP, CMD_HOP, CMD_COMBO, type NetView, type NetRun } from "../race/scene.ts";
+import { font as tagFont, tag, marker } from "../../online/tags.ts";
+import { E_REGROUP } from "./jam.ts";
 import type { ModeCtx, ModeRun } from "../mode.ts";
 import { LOOP, ENDO, CASE, BAIL } from "../../bike/bike.ts";
 import { rig, type Rig } from "../../bike/rig.ts";
 import { DRAG_NAME, FENDER } from "../stunts.ts";
-import { callout, stuntCalls } from "../callout.ts";
+import { callout, stuntCalls, friendStunt } from "../callout.ts";
 import { pool, voice, gamepad, type Pool } from "../../bike/kit.ts";
 import { SC, CB, ON, DIST, TIME, SWEET, PTS, KIND, BEST_W, MANUAL, STOPPIE, F_CROSS, F_SPRINK } from "./tricks.ts";
 import { speedo } from "../speedo.ts";
@@ -125,10 +127,16 @@ const TOUCH = 1;
 const B_TOP = [0.9, 0.9, 0.15, 0.6, 0.15, 0.9, 0.15, 1.5, 0.25, 1.6, 0.5];
 
 /** Endless Wheelie City: the open world, no clock, how far. */
-export function mountCity(ctx: ModeCtx): ModeRun {
+/** Endless Wheelie City; online (`net`) this seat's run in the match's ride together (../../online/
+ *  match.ts steps it; the scene draws every rider, reads this screen's input and commands, and plays
+ *  the first run of each frame's events). */
+export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
   const stage = modeStage(ctx.host, "wc");
   const engine = createEngine({ root: stage, settle: 0.5, seed: ctx.seed });
-  const m = meter("endcity");
+  const seat = net ? net.seat : 0, cj = net ? net.ride.city! : null, H = cj ? cj.humans : 1;
+  const m = net ? net.ride.meters[seat]! : meter("endcity");
+  /** Online: this screen's END (sticky) and REGROUP (frames left), the tags, the callouts. */
+  const CMDQ = new Uint8Array(2), TAGS: string[] = net ? net.names.slice() : [], CALLS: string[] = [], CALLT = new Float64Array(H);
   const SPEC: RideSpec = { id: ctx.bike.model.id, name: ctx.bike.model.name, kind: ctx.bike.power.name, blurb: "", bars: [3, 3, 3], power: ctx.bike.power, shape: ctx.bike.shape, sweet: ctx.bike.sweet, hop: ctx.bike.hop, bar: ctx.bike.bar };
   const L = engine.ledger, sig = { signal: engine.signal };
   let P: Pal = document.documentElement.dataset.theme === "light" ? LIGHT : DARK, F: FPal = P.night ? FIELD_DARK : FIELD_LIGHT;
@@ -143,7 +151,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   play.setAttribute("aria-label", "Endless Wheelie City: Space or J for gas, K or Shift to brake, W and S (or up and down) lean forward and back, A and D (or left and right) steer, L hops. V changes the view, M mutes, P or Escape pauses");
   const hud = L.add(document.createElement("div"));
   hud.className = "wc-hud";
-  hud.innerHTML = `<div class="wc-head"><p class="wc-top"><b class="wc-chip wc-time"><span>${dist(0, ctx.units)}</span></b><b class="wc-chip wc-score"><span>0</span><i>×1</i></b><b class="wc-chip wc-heat" hidden aria-label="Heat"><span></span><i hidden></i></b><b class="wc-chip wc-trick" hidden><span></span></b><b class="wc-chip wc-drag" hidden aria-label="Hand drag"><i class="wc-ring" aria-hidden="true"></i><span></span></b></p><p class="wc-hint"></p></div><p class="wc-toast" hidden></p><div class="wc-ticket" hidden><b>TICKET!</b><p>NEON PATROL · NOISE NOTICE</p><p class="wc-tline"></p></div><p class="wc-live" aria-live="polite"></p><p class="wc-keys">${keysHTML("wc", { reset: "Reset to the last good spot (R)", theme: !!ctx.theme })}</p>`;
+  hud.innerHTML = `<div class="wc-head"><p class="wc-top"><b class="wc-chip wc-time"><span>${dist(0, ctx.units)}</span></b><b class="wc-chip wc-score"><span>0</span><i>×1</i></b><b class="wc-chip wc-heat" hidden aria-label="Heat"><span></span><i hidden></i></b><b class="wc-chip wc-trick" hidden><span></span></b><b class="wc-chip wc-drag" hidden aria-label="Hand drag"><i class="wc-ring" aria-hidden="true"></i><span></span></b></p><p class="wc-hint"></p></div><p class="wc-toast" hidden></p><div class="wc-ticket" hidden><b>TICKET!</b><p>NEON PATROL · NOISE NOTICE</p><p class="wc-tline"></p></div><p class="wc-live" aria-live="polite"></p><p class="wc-keys">${keysHTML("wc", { reset: "Reset to the last good spot (R)", theme: !!ctx.theme, regroup: net ? (seat ? "To the host (G)" : "Regroup: everyone to you (G)") : undefined })}</p>`;
   const head = hud.children[0] as HTMLElement, top = head.children[0] as HTMLElement, hintEl = head.children[1] as HTMLElement;
   const toastEl = hud.children[1] as HTMLElement, ticketEl = hud.children[2] as HTMLElement, live = hud.children[3] as HTMLElement, keysEl = hud.children[4] as HTMLElement;
   // The trick callout (../callout.ts): the combo button's tricks, the whips, the drags.
@@ -195,7 +203,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   paintMute();
 
   // ---- the run and the diorama ----
-  const run = openRun([SPEC], ctx.seed >>> 0 || 1, CITY_SEED), bike = run.bike, S = run.S, sc = run.sc.S, cop = run.cop, Wd = run.world, t = run.win.t;
+  const run = cj ? cj.runs[seat]! : openRun([SPEC], ctx.seed >>> 0 || 1, CITY_SEED), bike = run.bike, S = run.S, sc = run.sc.S, cop = run.cop, Wd = run.world, t = run.win.t;
   const hgt = (x: number, z: number) => t.height(x, z);
   // The far ring: the same ground on a coarse window (the view's: never the bike's).
   const FR = openWindow(Wd, FAR_WIN, FAR_CELL, FAR_STEP, false);
@@ -276,6 +284,8 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     }
     patrols();
     rigs.push(rig(dio, "bike0", { ...P.kit, ...ctx.look }, ctx.bike.rig, ctx.helmet));
+    // Online: every other rider on their own garage bike, in their own colours.
+    if (net) for (let r = 0; r < H; r++) if (r !== seat) rigs.push(rig(dio, "bike" + (r + 1), { ...P.kit, ...net.looks[r]!.look }, net.looks[r]!.rig, net.looks[r]!.helmet));
     dust = pool(dio, DUST, P.smoke, 4);
     spark = pool(dio, SPARK, P.spark, 6);
     water = dio.points({ cap: WATER, color: P.water, layer: 6 });
@@ -634,12 +644,39 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     }
     c2.globalAlpha = 1;
   }
+  /** Online: each friend's name over their head (and a callout), or the marker toward them. */
+  function drawTags(c2: CanvasRenderingContext2D) {
+    const fs = tagFont(c2, dio.width), me = bike.b.pos;
+    for (let r = 0; r < H; r++) {
+      if (r === seat || !TAGS[r]) continue;
+      const o = cj!.riders[r]!, src = o.crashed ? o.rider : o.pos, dx = src[0]! - me[0]!, dz = src[2]! - me[2]!, d = Math.sqrt(dx * dx + dz * dz), col = net!.looks[r]!.look.plastic;
+      if (d < 36 && tag(c2, dio, src[0]!, src[1]! + 1.5, src[2]!, CALLT[r]! > 0 ? `${TAGS[r]} · ${CALLS[r]}` : TAGS[r]!, col, P.ink, fs)) continue;
+      marker(c2, dio, me, dx, dz, d, TAGS[r]!, col, P.ink, fs, V[3]! + 20, ctx.units);
+    }
+  }
+  /** Online: a friend's callout (a trick banked, a hand drag, a ticket) over their head for a moment. */
+  function callouts() {
+    for (let r = 0; r < H; r++) {
+      if (r === seat) continue;
+      const u = cj!.runs[r]!;
+      for (let k = 0; k < u.n; k++) {
+        const ty = u.ev[k * 2]!, v = u.ev[k * 2 + 1]!, s2 = u.sc.S;
+        const text = ty === E_TRICK ? `${TRICK[s2[KIND]!] ?? "TRICK"} +${s2[PTS]!.toLocaleString("en-US")}` : ty === E_HOP ? "HOP" : ty === E_DRAG ? `${DRAG_NAME[v] ?? "HAND DRAG"}!` : ty === E_BANKED ? `DRAG +${v.toLocaleString("en-US")}` : ty === E_TICKET ? "TICKETED!" : ty === E_ESCAPE ? "LOST THEM!" : ty === E_CRASH ? "CRASHED" : ty === E_REGROUP ? "REGROUPED" : "";
+        if (text) (CALLS[r] = text), (CALLT[r] = 1.8);
+      }
+      // Their combo button tricks, whips and landed airs (../stunts.ts), as r8's callouts say them.
+      for (let k = 0; k < u.st.n; k++) {
+        const text = friendStunt(u.st.ev[k * 2]!, u.st.ev[k * 2 + 1]!, u.st);
+        if (text) (CALLS[r] = text), (CALLT[r] = 1.8);
+      }
+    }
+  }
   // ---- state ----
   const I = new Float64Array(5), tmp = new Float64Array(3), tmp2 = new Float64Array(3);
   const V = new Float64Array(8);
   V[0] = V[1] = 1;
   let view = 1, auto = !!ctx.auto || !!ctx.attract, dirty = true, hudDirty = true, shake = 0, toastT = 0, ticketT = 0, sirenT = 0, emitK = 0, crashT = 0, barkT = 0, crashes = 0, spin = 0, paused = false, ended = false;
-  const TT = new Float64Array(4), TF = new Uint8Array(4);
+  const TT = new Float64Array(4), TF = new Uint8Array(4), HOPQ = new Uint8Array(1);
   const was = new Float64Array(10).fill(-1);
   const DRAGA = new Float64Array(1);
   const stars = (x: number, y: number, z: number) => spark.ring(rnd, x, y, z, 18, 2.5, 6, 1.1, 0.09, 1);
@@ -668,6 +705,19 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     // The whip: the bike kicked out sideways in the air.
     const wh = run.st.whip;
     if (wh !== 0 && !d.crashed) (rigs[0]!.root.rot[0] = rigs[0]!.root.rot[0]! + wh * 0.95), (rigs[0]!.root.rot[1] = rigs[0]!.root.rot[1]! + wh * 0.3);
+    if (cj) for (let r = 0, k = 1; r < H; r++) {
+      if (r === seat) continue;
+      const g = rigs[k++]!, o = cj.riders[r]!, dx = o.pos[0]! - d.pos[0]!, dz = o.pos[2]! - d.pos[2]!;
+      // Past this screen's ground (its window) a friend is a marker on the edge, not a bike in the air.
+      g.root.alpha = dx * dx + dz * dz < 36 * 36 ? 1 : 0;
+      if (!g.root.alpha) continue;
+      // A friend's trick pose and whip come from their run's stunts (in the ride's state: the same on
+      // every screen, rolled back with it), the drag unrounded (no easing on a remote rider).
+      const fst = cj.runs[r]!.st;
+      fst.pose(g.T, fst.HD[1] ? 1 : 0);
+      g.pose(o, 0.7);
+      if (fst.whip !== 0 && !o.crashed) (g.root.rot[0] = g.root.rot[0]! + fst.whip * 0.95), (g.root.rot[1] = g.root.rot[1]! + fst.whip * 0.3);
+    }
     walkHud.update(d);
     const SG = run.SG;
     // The dog: along its yard's front fence; a hop when it barks.
@@ -930,6 +980,8 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     return m.stats({ finished: true, score: sc[SC]!, where: "city", farKey: "city", far: run.far, escapes: esc, tickets: tix, summary: `${dist(run.far, ctx.units)} out · ${tw} ${tw === 1 ? "town" : "towns"} · longest wheelie ${sc[BEST_W]!.toFixed(1)} m · ${esc} ${esc === 1 ? "escape" : "escapes"} · ${tix} ${tix === 1 ? "ticket" : "tickets"}` });
   }
   function end() {
+    // Online: END rides this screen's bits (the match banks it on the same frame everywhere).
+    if (net) return void ((CMDQ[0] = CMD_END), toast("RIDE BANKED · RIDE ON WHILE THE OTHERS DO", "clean"));
     if (ended || ctx.attract) return;
     ended = true;
     S[0] = DONE;
@@ -1241,6 +1293,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     c2.fillText(text, bx, by - bh / 2 + 0.5);
   }
   function drawOverlay(c2: CanvasRenderingContext2D) {
+    if (cj) drawTags(c2);
     paintGhosts(c2);
     paintBeams(c2);
     for (let i = 0; i < NNB; i++) {
@@ -1323,6 +1376,26 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     },
     step(e, dt) {
       if (TF[0] && e.time >= TT[0]!) (TF[0] = 0), end();
+      if (net) {
+        // Online the link steps every run (and reads I through `input`); the scene draws and plays.
+        let moving = true;
+        for (let r = 0; r < H; r++) if (CALLT[r]! > 0) CALLT[r] = Math.max(0, CALLT[r]! - dt);
+        world();
+        if (S[0] === CRASH) crashT += dt;
+        if (cop.chasing > 0 && S[0] !== DONE) {
+          sirenT -= dt;
+          if (sirenT <= 0) (sirenT = 0.7), engine.events.emit("siren");
+        }
+        stepFx(dt);
+        stepCam(dt);
+        occlude(dt);
+        if (shake > 0) shake = Math.max(0, shake - dt);
+        if (barkT > 0) barkT = Math.max(0, barkT - dt);
+        if (toastT > 0) (toastT = Math.max(0, toastT - dt)), toastT === 0 && (toastEl.hidden = true);
+        if (ticketT > 0) (ticketT = Math.max(0, ticketT - dt)), ticketT === 0 && (ticketEl.hidden = true);
+        if (moving) e.busy(), (dirty = true), (hudDirty = true);
+        return;
+      }
       if (auto) run.autopilot(I);
       else {
         const stick = c.stick.active;
@@ -1382,6 +1455,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     if (e.code === "KeyM") return void (e.preventDefault(), toggle());
     if (e.code === "KeyV") return void (e.preventDefault(), setView(view ? 0 : 1));
     if (e.code === "KeyE" && S[0] !== READY) return void (e.preventDefault(), end());
+    if (e.code === "KeyG" && net) return void (e.preventDefault(), (CMDQ[1] = 8));
     const k = MAP[e.code];
     if (!k || src(e)?.closest?.(".bui-pad")) return;
     e.preventDefault();
@@ -1410,10 +1484,12 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   viewK.addEventListener("click", () => setView(view ? 0 : 1), sig);
   keysEl.querySelector(".wc-menu")!.addEventListener("click", () => ctx.menu(), sig);
   keysEl.querySelector(".wc-theme")?.addEventListener("click", () => ctx.theme?.(), sig);
+  keysEl.querySelector(".wc-regroup")?.addEventListener("click", () => ((CMDQ[1] = 8), engine.wake()), sig);
   keysEl.querySelector(".wc-reset")!.addEventListener("click", () => ((resetQ = 1), (auto = false), engine.wake()), sig);
   thePad.el.addEventListener("pointerdown", () => ((auto = false), engine.wake()), sig);
 
-  run.reset(0);
+  // (Online the match built and reset the run: it is the ride's state, never touched here.)
+  if (!net) run.reset(0);
   buildScene();
   vox.use(SPEC.power);
   setView(1);
@@ -1451,10 +1527,43 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       if (paused === on || ended) return;
       paused = on;
       c.press("gas", false), rock.release();
+      // (Online the ride goes on: pausing only lets go of the bike.)
+      if (net) return;
       if (on) engine.stop();
       else engine.start();
     },
     destroy: () => engine.destroy(),
+    /** Online: this screen's input now (gas, brake, lean, steer; I[4] the hop, a reset as 2). */
+    input() {
+      const stick = c.stick.active;
+      I[0] = Math.max(c.down(GAS) ? 1 : 0, GP[2]!);
+      I[1] = Math.max(c.down(BRAKE) ? 1 : 0, GP[3]!);
+      I[2] = -GP[1]! || (stick ? -c.stick.y : c.axis("back", "fwd"));
+      I[3] = GP[0]! || (stick ? c.stick.x : c.axis("left", "right"));
+      I[4] = c.hit(HOPK) || GP[4]! > 0.5 ? 1 : 0;
+      const again = resetQ === 1 || c.hit(RESETK) || GP[6]! > 0.5;
+      resetQ = 0;
+      if (paused) I.fill(0);
+      HOPQ[0] = I[4]!;
+      I[4] = again && !paused ? 2 : 0;
+      return I;
+    },
+    cmd() {
+      let k = CMDQ[0]! | (HOPQ[0] ? CMD_HOP : 0) | (!paused && !ended && (c.down(COMBOK) || GP[7]! > 0.5) ? CMD_COMBO : 0);
+      if (CMDQ[1]! > 0) (k |= CMD_REGROUP), (CMDQ[1] = CMDQ[1]! - 1);
+      return k;
+    },
+    events() {
+      events();
+      callouts();
+      dirty = hudDirty = true;
+      engine.busy();
+    },
+    rewind() {},
+    tags(names: string[]) {
+      for (let i = 0; i < names.length; i++) TAGS[i] = names[i]!;
+      dirty = true;
+    },
     probe: {
       /** Put the bike `back` units out from building `key`'s front, facing away from it along the
        *  chase camera's line: the building stands between the camera and the bike. Returns [x, z]. */

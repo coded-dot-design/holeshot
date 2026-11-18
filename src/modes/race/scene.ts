@@ -25,7 +25,9 @@ import { DONE, E_CRASH, E_FINISH, E_GATE, E_LAND, E_LAP, E_PLACE, E_RESPAWN, E_W
 import { freeRun, E_TRICK, E_STUCK, E_RESET, E_GROUND, E_DRAG, E_BANKED, E_LOST } from "../freeride/session.ts";
 import { DRAG_NAME, FENDER } from "../stunts.ts";
 import { SC as T_SC, CB as T_CB, PTS as T_PTS, KIND as T_KIND, DIST as T_DIST, TIME as T_TIME, MANUAL, STOPPIE } from "../wheelie/tricks.ts";
-import { callout, stuntCalls } from "../callout.ts";
+import { callout, stuntCalls, stuntCall, friendStunt } from "../callout.ts";
+import { E_REGROUP, E_STUNT } from "../freeride/jam.ts";
+import { font as tagFont, tag, marker } from "../../online/tags.ts";
 import { RESET } from "../unstuck.ts";
 import { desertView, biomePal, desertBands, GRID_A, type DesertView } from "../desert/look.ts";
 import type { DesertTrack } from "../desert/track.ts";
@@ -60,7 +62,11 @@ export interface NetRun extends ModeRun {
   rewind(before: boolean): void;
   /** Repaint the riders' tags (a seat left). */
   tags(names: string[]): void;
+  /** The endless rides' commands from this screen now (../../net.ts C_END, C_REGROUP, C_HOP bits). */
+  cmd?(): number;
 }
+/** A NetRun's commands (the same bits as ../../net.ts C_END, C_REGROUP, C_HOP, C_COMBO). */
+export const CMD_END = 1, CMD_REGROUP = 2, CMD_HOP = 4, CMD_COMBO = 8;
 
 const TAU = 6.283185307179586;
 type Kit = Omit<RigColors, "plastic" | "plastic2" | "jersey" | "pants" | "helmet" | "stripe" | "plate" | "ink">;
@@ -137,8 +143,11 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   // Online: the match's sim (stepped by the rollback link, not here), this screen's seat in it.
   const seat = net ? net.seat : 0, jam = net ? net.ride.jam : null, humans = net ? net.ride.players : 1;
   const race = net ? net.ride.race : free ? null : motoRace(ctx.seed, track as Track, me0, rivals, opts);
-  const fr = net ? null : free ? freeRun(track, me0, endless ? 1e9 : 600) : null;
-  const sim = (race ?? jam ?? fr)!, t = sim.t, me = sim.riders[seat]!, RIDERS = sim.riders.length;
+  // (Online on an endless ground `fr` is this seat's own run in the jam: its window is this screen's ground.)
+  const fr = net ? (jam && endless ? jam.runs[seat]! : null) : free ? freeRun(track, me0, endless ? 1e9 : 600) : null;
+  const sim = (race ?? jam ?? fr)!, t = net && fr ? fr.t : sim.t, me = sim.riders[seat]!, RIDERS = sim.riders.length;
+  /** Online endless: the ride together (END banks yours, REGROUP brings you to the host). */
+  const roam = !!(net && endless), jamOnly = jam && !roam ? jam : null;
   const m = net ? net.ride.meters[seat]! : meter(endless ? "desert" : free ? "freeride" : "race");
   /** A placed ride (a race, a jam): its place, against whom. */
   const placed = !!race || !!jam, TAGS: string[] = net ? net.names.slice() : [];
@@ -153,7 +162,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   play.setAttribute("aria-label", `${free ? "Free Ride" : "Race"}: Space or J for gas, K or Shift to brake, W and S (or up and down) shift your weight forward and back (back lifts the front; in the air it pitches the bike), A and D (or left and right) steer. V changes the view, M mutes, P or Escape pauses`);
   const hud = L.add(document.createElement("div"));
   hud.className = "mt-hud";
-  hud.innerHTML = `<div class="mt-head"><p class="mt-top">${jam ? `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>0 PTS</span></b>` : endless ? `<b class="mt-chip mt-pos"><span>BEST ${km(ctx.best ?? 0)}</span></b><b class="mt-chip mt-lap"><span>${km(0)}</span></b>` : free ? `<b class="mt-chip mt-pos"><span>${map ? map.name : "FREE RIDE"}</span></b><b class="mt-chip mt-lap"><span>0.0s AIR</span></b>` : `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>LAP 1/${LAPS}</span></b>`}<b class="mt-chip mt-time"><span>0:00.0</span></b><b class="mt-chip mt-ride"><span>#${ctx.number} ${NAME}</span></b>${endless ? `<b class="mt-chip mt-score" aria-label="Trick points"><span>0 PTS</span><i></i></b><b class="mt-chip mt-drag" hidden><span></span></b>` : ""}</p><p class="mt-hint"></p></div><p class="mt-toast" hidden></p><p class="mt-live" aria-live="polite"></p><p class="mt-stuck" hidden>STUCK? Hold R / tap ↺ to reset</p><p class="mt-keys">${keysHTML("mt", { reset: "Reset to the last good spot (R)", view: !endless, theme: !!ctx.theme })}</p>`;
+  hud.innerHTML = `<div class="mt-head"><p class="mt-top">${jamOnly ? `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>0 PTS</span></b>` : endless ? `<b class="mt-chip mt-pos"><span>BEST ${km(ctx.best ?? 0)}</span></b><b class="mt-chip mt-lap"><span>${km(0)}</span></b>` : free ? `<b class="mt-chip mt-pos"><span>${map ? map.name : "FREE RIDE"}</span></b><b class="mt-chip mt-lap"><span>0.0s AIR</span></b>` : `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>LAP 1/${LAPS}</span></b>`}<b class="mt-chip mt-time"><span>0:00.0</span></b><b class="mt-chip mt-ride"><span>#${ctx.number} ${NAME}</span></b>${endless ? `<b class="mt-chip mt-score" aria-label="Trick points"><span>0 PTS</span><i></i></b><b class="mt-chip mt-drag" hidden><span></span></b>` : ""}</p><p class="mt-hint"></p></div><p class="mt-toast" hidden></p><p class="mt-live" aria-live="polite"></p><p class="mt-stuck" hidden>STUCK? Hold R / tap ↺ to reset</p><p class="mt-keys">${keysHTML("mt", { reset: "Reset to the last good spot (R)", view: !endless, theme: !!ctx.theme, regroup: roam ? (seat ? "To the host (G)" : "Regroup: everyone to you (G)") : undefined })}</p>`;
   const head = hud.children[0] as HTMLElement, top = head.children[0] as HTMLElement, hintEl = head.children[1] as HTMLElement;
   const toastEl = hud.children[1] as HTMLElement, live = hud.children[2] as HTMLElement, stuckEl = hud.children[3] as HTMLElement, keysEl = hud.children[4] as HTMLElement;
   const posEl = top.children[0]!.firstChild as HTMLElement, lapEl = top.children[1]!.firstChild as HTMLElement, timeEl = top.children[2]!.firstChild as HTMLElement;
@@ -323,6 +332,10 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   // Online: after a correction a remote rider is drawn where it was and eases to where it is (OFF:
   // its offset, x y z a rider; OLD: the places before the correction).
   const OFF = new Float64Array(RIDERS * 3), OLD = new Float64Array(RIDERS * 3);
+  // Online: each rider's callout over their head (a trick, a regroup) and how long it shows; this
+  // screen's commands (END sticky, REGROUP frames left).
+  const CALLT = new Float64Array(RIDERS), CALLS: string[] = [], CMDQ = new Uint8Array(2);
+  const friend = (r: number, text: string) => void ((CALLS[r] = text), (CALLT[r] = 1.8), (dirty = true));
   const shift = (r: number, k: number) => {
     const b = sim.riders[r]!, x = OFF[r * 3]! * k, y = OFF[r * 3 + 1]! * k, z = OFF[r * 3 + 2]! * k;
     b.pos[0] = b.pos[0]! + x; b.pos[1] = b.pos[1]! + y; b.pos[2] = b.pos[2]! + z;
@@ -333,11 +346,20 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     for (let r = 0; r < RIDERS; r++) {
       const b = sim.riders[r]!, g = rigs[r]!;
       if (net) shift(r, 1);
-      if (st && r === seat) st.pose(g.T, DRAGA[0]!);
+      // The trick pose and the whip from the rider's own stunts: this seat's drag eased, a friend's
+      // (online, endless) straight from their run's state, the same on every screen.
+      const rs = r === seat ? st : roam ? jam!.runs[r]!.st : null;
+      if (rs) rs.pose(g.T, r === seat ? DRAGA[0]! : rs.HD[1] ? 1 : 0);
       g.pose(b, b.air > 0 || Math.abs(b.speed) > 5 ? 0.85 : 0.35);
       // The whip: the bike kicked out sideways in the air.
-      if (st && r === seat && st.whip !== 0 && !b.crashed) (g.root.rot[0] = g.root.rot[0]! + st.whip * 0.95), (g.root.rot[1] = g.root.rot[1]! + st.whip * 0.3);
+      if (rs && rs.whip !== 0 && !b.crashed) (g.root.rot[0] = g.root.rot[0]! + rs.whip * 0.95), (g.root.rot[1] = g.root.rot[1]! + rs.whip * 0.3);
       if (net) shift(r, -1);
+      // Endless together: a friend past this screen's ground (its window) is a marker, not a bike in the haze.
+      if (roam && r !== seat) {
+        const dx = b.pos[0]! - me.pos[0]!, dz = b.pos[2]! - me.pos[2]!, far = dx * dx + dz * dz > 34 * 34;
+        g.root.alpha = far ? 0 : 1;
+        if (far) continue;
+      }
       const x = b.pos[0]!, z = b.pos[2]!, inside = Math.abs(x) < HX && Math.abs(z) < HZ, lift = inside ? b.pos[1]! - t.height(x, z) : 9;
       tv.shadow(r, x, z, 0.95, inside ? Math.max(0, 0.36 - lift * 0.09) : 0);
     }
@@ -397,25 +419,39 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
         if (!ctx.reduced) dust.ring(rnd, me.pos[0]!, me.pos[1]! - 0.6, me.pos[2]!, clean ? 8 : 14, 2.2, 1, 0.8, 0.2, 0.55);
       } else if (type === E_TRICK && r === seat) toast(val === 2 ? "FLIP! LANDED" : "BIG AIR!", "clean"), say(val === 2 ? "Flip" : "Big air");
       else if (type === E_WHEELIE && r === seat && val > 0.6 && !st) toast(`WHEELIE ${val.toFixed(1)}s`, "clean"), engine.events.emit("wheelie");
-      else if (type === E_GROUND && tsc) {
+      else if (type === E_GROUND && tsc && r === seat) {
         // Endless: a ground trick banked (as Endless Wheelie City's).
         const kind = val, x = tsc[T_CB]! > 0 ? ` ×${1 + tsc[T_CB]!}` : "", pts = tsc[T_PTS]!.toLocaleString("en-US");
         engine.events.emit("wheelie");
         if (kind === STOPPIE || kind === 3) toast(`${GROUND[kind]} +${pts}${x}`, "meh");
         else toast(`${GROUND[kind]} ${tsc[T_DIST]!.toFixed(1)} m · ${tsc[T_TIME]!.toFixed(1)}s +${pts}${x}`, kind === MANUAL ? "clean" : "go");
         say(`${GROUND[kind]}, ${tsc[T_PTS]} points`);
-      } else if (type === E_DRAG && st) {
+      } else if (type === E_DRAG && st && r === seat) {
         const nm = DRAG_NAME[val]!, x = st.mult(val);
         engine.events.emit("wheelie");
         if (val === FENDER && !ctx.reduced) shake = 0.3;
         call.show(`${nm}!`, `×${x} · ${val === FENDER ? "SPARKS!" : "BACK UNDER 12 TO BANK"}`, val === FENDER ? "bad" : "go", 1.4);
         say(`${nm}! Times ${x}. Bring it back under twelve to bank it`);
-      } else if (type === E_BANKED && st) {
+      } else if (type === E_BANKED && st && r === seat) {
         engine.events.emit("finish");
         call.show(`${DRAG_NAME[st.lastLevel]!} BANKED`, `+${val.toLocaleString("en-US")}`, "go");
         toast(`BANKED! +${val.toLocaleString("en-US")}`, "clean");
         say(`Banked ${val} points`);
-      } else if (type === E_LOST && st) toast(`LOOPED OUT — LOST ${val.toLocaleString("en-US")}`, "bad"), call.hide(), say(`Looped out. ${val} points lost`);
+      } else if (type === E_LOST && st && r === seat) toast(`LOOPED OUT — LOST ${val.toLocaleString("en-US")}`, "bad"), call.hide(), say(`Looped out. ${val} points lost`);
+      else if (type === E_TRICK && net) friend(r, val === 2 ? "FLIP!" : "BIG AIR!");
+      else if (type === E_WHEELIE && net && !st && val > 1) friend(r, `WHEELIE ${val.toFixed(1)}s`);
+      else if (type === E_GROUND && net && r !== seat) friend(r, GROUND[val] ?? "TRICK");
+      else if (type === E_DRAG && net && r !== seat) friend(r, `${DRAG_NAME[val]!}!`);
+      else if (type === E_BANKED && net && r !== seat) friend(r, `BANKED +${val.toLocaleString("en-US")}`);
+      else if (type >= E_STUNT && type < E_STUNT + 10 && jam) {
+        // The combo button, the whips, an air banked (../stunts.ts), forwarded by the jam: this seat's
+        // as its own callouts, a friend's over their head.
+        if (r === seat) stuntCall(type - E_STUNT, val, jam.runs[r]!.st, call, say, (n) => engine.events.emit(n === "cheer" ? "finish" : "wheelie"));
+        else { const f = friendStunt(type - E_STUNT, val, jam.runs[r]!.st); if (f) friend(r, f); }
+      } else if (type === E_REGROUP) {
+        if (r === seat) CTP.set(me.pos), (target.yaw = me.yaw), chase(dio.cam, target, { ...chaseO, snap: true }, 1 / 60), toast(seat ? "WITH THE HOST" : "REGROUP", "go");
+        else friend(r, "REGROUPED");
+      }
       else if (type === E_CRASH) {
         if (r === seat) (shake = ctx.reduced ? 0 : 0.5), toast(CRASH_NAME[val] || "WIPEOUT!", "bad"), say(CRASH_NAME[val] || "Wipeout"), call.hide();
         engine.events.emit("crash");
@@ -441,6 +477,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       } else if (type === E_FINISH && r === seat) {
         engine.events.emit("finish");
         if (race) toast(`FINISH · ${ORD[val]}`, val ? "go" : "clean"), say(`Finished ${ORD[val]}`);
+        else if (roam) toast("RIDE BANKED · RIDE ON WHILE THE OTHERS DO", "clean"), say("Ride banked");
         else if (jam) toast(`TIME · ${ORD[jam.place(seat)]}`, "clean"), say(`Time. ${ORD[jam.place(seat)]}`);
         else toast("RIDE BANKED", "clean"), say("Ride banked");
         // (Online the match ends the ride for everyone at once: the shell shows the result.)
@@ -465,8 +502,8 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   const clock = (s: number) => `${(s / 60) | 0}:${(s % 60).toFixed(1).padStart(4, "0")}`;
   function hudWrite() {
     const ph = sim.phase;
-    if (jam) {
-      const pl = jam.place(seat), pts = jam.points(seat);
+    if (jamOnly) {
+      const pl = jamOnly.place(seat), pts = jamOnly.points(seat);
       if (was[0] !== pl) (was[0] = pl), (posEl.textContent = ORD[pl]!);
       if (was[1] !== pts) (was[1] = pts), (lapEl.textContent = `${pts.toLocaleString("en-US")} PTS`);
     } else if (race) {
@@ -485,10 +522,12 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       if (was[1] !== a) (was[1] = a), (lapEl.textContent = `${(a / 10).toFixed(1)}s AIR`);
     }
     speedW(me.speed);
-    const tenths = Math.floor((jam ? jam.left : sim.clock) * 10);
+    const tenths = Math.floor((jamOnly ? jamOnly.left : fr ? fr.clock : sim.clock) * 10);
     if (was[2] !== tenths) (was[2] = tenths), (timeEl.textContent = clock(tenths / 10));
     const touch = !!thePad.el.offsetParent;
-    const hint = jam
+    const hint = roam
+      ? ph === GRID ? (touch ? "Ride together: no edge, no clock · the regroup key finds the others · pause ❚❚ banks it" : "Ride together: no edge, no clock · G regroups · E (or pause) banks it") : ""
+      : jam
       ? ph === GRID ? "Trick points: big air, flips, long wheelies · most in three minutes wins" : ""
       : free
       ? ph === GRID ? (endless ? (touch ? `Hold GAS: ${endless.biome.id === "desert" ? "the desert" : "it"} never ends · pause ❚❚ banks it` : `Space to ride: ${endless.biome.id === "desert" ? "the desert" : "it"} never ends · E (or pause) banks it`) : touch ? "Hold GAS and ride anywhere · pause ❚❚ banks it" : "Space to ride, anywhere · E (or pause) banks it") : ""
@@ -497,7 +536,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   }
   function stats() {
     if (race) return m.stats({ place: race.place(seat), time: race.finishTime(seat), bestLap: race.bestLap(seat), led: led && race.place(seat) === 0, finished: race.finished(seat), where: track.id, order: [0, 1, 2, 3].map((r) => race.place(r)), summary: `${ORD[race.place(seat)]} · ${clock(race.finishTime(seat) || race.clock)} · best lap ${clock(race.bestLap(seat))}` });
-    if (jam) return m.stats({ finished: jam.phase === DONE, where: track.id, tricks: jam.tricks(seat), flips: jam.flips(seat), score: jam.points(seat), place: jam.place(seat), summary: `${ORD[jam.place(seat)]} · ${jam.points(seat).toLocaleString("en-US")} trick points · ${m.M[3]!.toFixed(1)}s in the air` });
+    if (jamOnly) return m.stats({ finished: jamOnly.phase === DONE, where: track.id, tricks: jamOnly.tricks(seat), flips: jamOnly.flips(seat), score: jamOnly.points(seat), place: jamOnly.place(seat), summary: `${ORD[jamOnly.place(seat)]} · ${jamOnly.points(seat).toLocaleString("en-US")} trick points · ${m.M[3]!.toFixed(1)}s in the air` });
     if (endless) return m.stats({ finished: true, where: track.id, farKey: endless.biome.id, tricks: fr!.tricks, flips: fr!.flips, far: fr!.distance, score: tsc![T_SC]!, summary: `${km(fr!.distance)} ${endless.biome.word} · ${clock(sim.clock)} ridden · ${m.M[3]!.toFixed(1)}s in the air${fr!.tricks ? ` · ${fr!.tricks} ${fr!.tricks === 1 ? "trick" : "tricks"}` : ""}${tsc![T_SC]! ? ` · ${tsc![T_SC]!.toLocaleString("en-US")} trick points` : ""}` });
     return m.stats({ finished: true, where: track.id, tricks: fr!.tricks, flips: fr!.flips, summary: `${map ? map.name + " · " : ""}${clock(sim.clock)} ridden · ${m.M[3]!.toFixed(1)}s in the air · ${m.M[4]!.toFixed(1)}s on one wheel${fr!.tricks ? ` · ${fr!.tricks} ${fr!.tricks === 1 ? "trick" : "tricks"}` : ""}` });
   }
@@ -679,27 +718,16 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     }
     ctx2.globalAlpha = 1;
   }
-  /** Online: every other rider's name over their head, a sticker in their colours. */
+  /** Online: every other rider's name over their head (and a callout) in their colours; on an
+   *  endless ground, a friend off the screen is an arrow on its edge (../../online/tags.ts). */
   function drawTags(ctx2: CanvasRenderingContext2D) {
-    const fs = Math.round(Math.max(10, Math.min(13, dio.width / 70)));
-    ctx2.font = `900 ${fs}px ui-rounded, system-ui, sans-serif`;
-    ctx2.textBaseline = "middle";
-    ctx2.textAlign = "center";
+    const fs = tagFont(ctx2, dio.width);
     for (let r = 0; r < RIDERS; r++) {
       if (r === seat || !TAGS[r]) continue;
-      const b = sim.riders[r]!, src = b.crashed ? b.rider : b.pos, q = r * 3;
-      if (!dio.project(src[0]! + OFF[q]!, src[1]! + OFF[q + 1]! + 1.25, src[2]! + OFF[q + 2]!, tmp) || tmp[2]! < 0.5) continue;
-      const w = ctx2.measureText(TAGS[r]!).width + fs, h = fs + 8, x = tmp[0]! - w / 2, y = tmp[1]! - h;
-      ctx2.fillStyle = P.ink;
-      ctx2.beginPath();
-      ctx2.roundRect(x + 2, y + 2, w, h, 6);
-      ctx2.fill();
-      ctx2.fillStyle = r < humans ? net!.looks[r]!.look.plastic : P.teams[r % 4]!.plastic;
-      ctx2.beginPath();
-      ctx2.roundRect(x, y, w, h, 6);
-      ctx2.fill();
-      ctx2.fillStyle = P.ink;
-      ctx2.fillText(TAGS[r]!, tmp[0]!, y + h / 2 + 0.5);
+      const b = sim.riders[r]!, src = b.crashed ? b.rider : b.pos, q = r * 3, col = r < humans ? net!.looks[r]!.look.plastic : P.teams[r % 4]!.plastic;
+      const dx = src[0]! - me.pos[0]!, dz = src[2]! - me.pos[2]!, d = Math.sqrt(dx * dx + dz * dz);
+      if ((!roam || d < 34) && tag(ctx2, dio, src[0]! + OFF[q]!, src[1]! + OFF[q + 1]! + 1.25, src[2]! + OFF[q + 2]!, CALLT[r]! > 0 ? `${TAGS[r]} · ${CALLS[r]}` : TAGS[r]!, col, P.ink, fs)) continue;
+      if (roam) marker(ctx2, dio, me.pos, dx, dz, d, TAGS[r]!, col, P.ink, fs, V[3]! + 20, ctx.units);
     }
   }
   /** The tach (revs, the power band lit) and, up on the back wheel, the balance meter: a Board UI sticker. */
@@ -792,7 +820,10 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       const ph = sim.phase;
       // Online the link steps the sim (and reads I through `input`); remote riders ease in.
       let moving = true;
-      if (net) for (let i = 0; i < OFF.length; i++) OFF[i] = Math.abs(OFF[i]!) < 1e-4 ? 0 : OFF[i]! * 0.82;
+      if (net) {
+        for (let i = 0; i < OFF.length; i++) OFF[i] = Math.abs(OFF[i]!) < 1e-4 ? 0 : OFF[i]! * 0.82;
+        for (let r = 0; r < RIDERS; r++) if (CALLT[r]! > 0) CALLT[r] = Math.max(0, CALLT[r]! - dt);
+      }
       else {
         moving = race ? race.step(dt, I, auto) : fr!.step(dt, I, auto);
         if (ph === RACE && !ended && !(race && race.finished(0))) m.tick(me, dt);
@@ -834,7 +865,8 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     if (e.metaKey || e.ctrlKey || e.altKey || ctx.attract || paused || src(e)?.closest?.("input,textarea,select")) return;
     if (e.code === "KeyM") return void (e.preventDefault(), toggle());
     if (e.code === "KeyV") return void (e.preventDefault(), setView(view ? 0 : 1));
-    if (e.code === "KeyE" && fr) return void (e.preventDefault(), fr.finish(), events());
+    if (e.code === "KeyE" && fr) return void (e.preventDefault(), roam ? (CMDQ[0] = CMD_END) : (fr.finish(), events()));
+    if (e.code === "KeyG" && roam) return void (e.preventDefault(), (CMDQ[1] = 8));
     const k = MAP[e.code];
     if (!k || src(e)?.closest?.(".bui-pad") || ended) return;
     e.preventDefault();
@@ -867,6 +899,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   keysEl.querySelector(".mt-menu")!.addEventListener("click", () => ctx.menu(), sig);
   keysEl.querySelector(".mt-reset")!.addEventListener("click", () => ((resetQ = 1), (auto = false), engine.wake()), sig);
   keysEl.querySelector(".mt-theme")?.addEventListener("click", () => ctx.theme?.(), sig);
+  keysEl.querySelector(".mt-regroup")?.addEventListener("click", () => ((CMDQ[1] = 8), engine.wake()), sig);
   thePad.el.addEventListener("pointerdown", () => ((auto = false), wake(), engine.wake()), sig);
 
   // ---- start: the gate (Race) or the open table (Free Ride) ----
@@ -899,7 +932,8 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     },
     finish() {
       if (ended) return;
-      if (fr) fr.finish(), events();
+      if (roam) CMDQ[0] = CMD_END;
+      else if (fr) fr.finish(), events();
       else end();
     },
     stats,
@@ -915,6 +949,12 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     },
     destroy: () => engine.destroy(),
     input: () => (readInput(), I),
+    /** END (sticky, once pressed), REGROUP (a few frames after a press), the combo button (held). */
+    cmd() {
+      let c = CMDQ[0]! | (I[5] ? CMD_COMBO : 0);
+      if (CMDQ[1]! > 0) (c |= CMD_REGROUP), (CMDQ[1] = CMDQ[1]! - 1);
+      return c;
+    },
     events() {
       events();
       dirty = hudDirty = true;

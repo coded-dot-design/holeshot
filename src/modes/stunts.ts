@@ -58,6 +58,9 @@ const POSE = [
  *  (points); a combo trick out (its id), done (points: banked on the ground, pending in the air), a
  *  whip (its count in the jump), the air's tricks banked on a clean landing (points), landed whipped. */
 export const ST_DRAG = 1, ST_BANK = 2, ST_LOST = 3, ST_TRICK = 4, ST_DONE = 5, ST_WHIP = 6, ST_LANDED = 7, ST_WHIPCRASH = 8;
+/** A combo trick banked on the spot (after its ST_DONE; points, `lastTrick` its id): the online
+ *  scoreboard's feed (one pending in the air banks with the landing's ST_LANDED instead). */
+export const ST_BANKED = 9;
 /** `step` returns CRASH when the bike landed still whipped (the mode knocks it over). */
 export const OK = 0, CRASH = 1;
 
@@ -186,6 +189,7 @@ export function stunts(sc: Tricks, seed = 1) {
       bank(p);
       CO[7] = p;
       emit(ST_DONE, p);
+      emit(ST_BANKED, p);
     }
   }
   /** The drag ladder. */
@@ -250,6 +254,8 @@ export function stunts(sc: Tricks, seed = 1) {
     get whip() { return WH[0]!; },
     /** The fender on the road (sparks). */
     get fender() { return HD[7] === 1; },
+    /** The last combo trick's id (../stunts.ts COMBOS). */
+    get lastTrick() { return CO[6]!; },
     /** The last banked drag's top level. */
     get lastLevel() { return HD[6]!; },
   };

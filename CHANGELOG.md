@@ -65,6 +65,37 @@
   and with it the fender never reaches the road (`src/modes/stunts.ts` `bar`; test
   `tests/stunts.test.mjs`).
 
+- **Online: the endless rides with friends.** ONLINE now offers ENDLESS (pick the ground: the Dune
+  Sea, the Deep Quarry, the Endless Woods or the Night Park) and ENDLESS WHEELIE CITY for up to four,
+  on the same invite link and code. Everyone rides the same seeded world (each screen streams its own
+  window of it round each rider, so friends can roam apart), sees the others' names over their heads,
+  and an arrow on the screen's edge (with the name and how far) points at a friend off the screen.
+  G (or TO HOST / REGROUP on the HUD) brings you to the host; the host's brings everyone. Riders bump
+  each other, as in the race. In Endless Wheelie City every rider has their own neon patrol: a cop
+  only chases and tickets the rider it is after. A shared session scoreboard (points, distance, best
+  trick, combo points, hand drags) is the same on every screen, fed through one scoring door
+  (`src/online/board.ts` `feed`) that new tricks plug into; friends' tricks show as callouts over
+  their heads. END banks your ride; the room's result comes when everyone has. Deterministic and
+  rollback-identical: two and four headless screens ride each endless mode for three minutes (90 s for four in `npm test`) over a
+  jittery link and end byte for byte on the no-latency run (`tests/online-endless.test.mjs`); the
+  browser test joins a room in every endless mode (`tests/online-endless.browser.mjs`). The open
+  world's window now slides with a little give (a rider weaving on a slide line, a crash, a
+  rollback's frames run again no longer slide it back and forth: 625 → 69 slides on a weaving
+  minute). Its gather now records, in the state, which gather the live neighbours, sprinklers and
+  dog were mapped onto, so a rollback that lands on a gather a guessed future already made can't
+  leave them mapped for a moment that never happened (the offline ride is byte for byte as before;
+  the golden hash moves only for the two new numbers). The host's pick byte is now kind (3 bits) and sub (3 bits).
+  **With this release's tricks:** the COMBO button rides the wire (input bit 31, decoded like HOP)
+  and both endless rides step it for every rider; every trick feeds the shared board (ground tricks
+  and the combo's share, the drags, the combo button's tricks banked on the spot, an air banked on a
+  landing), and its best-trick column names the trick (SEAT TAP, MANUAL, FLIP, AIR COMBO...);
+  friends' tricks, drags, whips and banks pop over their heads; a friend's trick pose, double hand
+  drag and whip show on their bike (read from their run's stunts, which is ride state, so every
+  screen draws the same and a rollback puts it back); a wheelie bar's cap holds online too. With the
+  END key gone from the HUD, the online pause card has END & BANK in the endless rides (E still
+  banks); REGROUP is an icon key (G). Test: `tests/online-endless.test.mjs` ("the combo button
+  online"). CI rides the online endless test for one minute (`ENDLESS_MINUTES=1` in
+  `.github/workflows/ci.yml`; the default, 3 min for two screens and 90 s for four, stays local).
 - **Miles by default, km as a setting.** SETTINGS → UNITS: Imperial (miles, mph; the default) or
   Metric (km, km/h), saved in the profile (schema v6: every existing save migrates to Imperial).
   Applied wherever a distance shows: the Endless Wheelie City and endless-ground HUD chips (e.g.
@@ -136,10 +167,11 @@
   70 ms while the revs fall to the next gear, a downshift blips the revs. The electric bikes are one
   smooth whine that follows the road speed (an e-bike's hub gears are never heard). Mute silences it
   all (`src/bike/kit.ts` `voice`; tests: `tests/voice.test.mjs`).
-- **Size budget 197,500 B gzip** (was 184,000): this release measures 194,496 B (holeshot.js;
-  +12,036 B over main before these four rounds, 182,460: the bike layers, turntable, speed chip and icon
-  keys; the measured pace, PACE rows, top-gear stretch and gear-change voice; the stunts, callout
-  and COMBO button; the family bodies, street bikes and upgrades), plus about 3 KB of room.
+- **Size budget 203,000 B gzip** (was 184,000): this release measures 200,075 B (holeshot.js;
+  +17,615 B over main before these five rounds, 182,460: the bike layers, turntable, speed chip and
+  icon keys; the measured pace, PACE rows, top-gear stretch and gear-change voice; the stunts,
+  callout and COMBO button; the family bodies, street bikes and upgrades; the endless rides with
+  friends and their trick wiring), plus about 2.9 KB of room.
 
 - **Test credits: `/play/?credits=inf` (or `?money=inf`).** For trying every bike: the garage shows
   ◈ ∞ and a TEST CREDITS ∞ chip, the showroom sells every bike (unlocks open), every part, mod, tune

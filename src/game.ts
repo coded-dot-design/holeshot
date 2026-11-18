@@ -38,8 +38,9 @@ import { ICON } from "./modes/keys.ts";
 import { mountTrack, type NetRun, type NetView } from "./modes/race/scene.ts";
 import { applyOnline, settleOnline } from "./model/economy.ts";
 import { match, OVER, type Match, type Ride, type SeatResult } from "./online/match.ts";
-import { joinRoom, cleanName, encode, scoreBits, packMode, unpackMode, B_AUTO, B_RESET, SEATS, K_RACE, K_JAM, K_AIR } from "./net.ts";
-import { KINDS, pickName, roomCard, seatsHTML, standingsHTML } from "./online/room.ts";
+import { joinRoom, cleanName, encode, scoreBits, packMode, unpackMode, B_AUTO, B_RESET, B_DONE, B_REGROUP, B_HOP, B_COMBO, C_END, C_REGROUP, C_HOP, C_COMBO, SEATS, K_RACE, K_JAM, K_AIR, K_ENDLESS, K_ENDCITY } from "./net.ts";
+import { kindOf, pickName, roomCard, seatsHTML, standingsHTML, boardHTML } from "./online/room.ts";
+import { mountCity } from "./modes/wheelie/scene.ts";
 export { lookOf };
 
 export interface HoleshotOptions {
@@ -209,7 +210,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   }
   const garageCard = () => garageView(profile, gui, head(), tabs("garage"), note);
   function rideCard() {
-    return `<div class="dh-card dh-ridec" data-screen="ride">${head()}${tabs("ride")}<p class="dh-sub">On your ${bikeLine()}.</p><ul class="dh-modes">${MODES.map((md) => `<li><button type="button" class="bui-key dh-modek" data-mode="${md.id}"><b>${md.name}</b><small>${md.blurb}</small><em>${md.maps.length > 1 ? `${md.maps.length} MAPS` : md.maps[0]!.name}</em></button></li>`).join("")}<li class="ol-tile"><button type="button" class="bui-key dh-modek ol-open"${inf ? " disabled" : ""}><b>ONLINE</b><small>${inf ? "Off with test credits: take ?credits=inf off the address to ride online." : "Up to four riders, each on their own garage bike: race, a Free Ride jam, Big Air. Online pays more."}</small><em>${inf ? "TEST CREDITS ∞" : "ONLINE ×1.5 · BEAT A RIDER +75"}</em></button></li></ul>${note ? `<p class="dh-sub dh-note" role="status">${esc(note)}</p>` : ""}</div>`;
+    return `<div class="dh-card dh-ridec" data-screen="ride">${head()}${tabs("ride")}<p class="dh-sub">On your ${bikeLine()}.</p><ul class="dh-modes">${MODES.map((md) => `<li><button type="button" class="bui-key dh-modek" data-mode="${md.id}"><b>${md.name}</b><small>${md.blurb}</small><em>${md.maps.length > 1 ? `${md.maps.length} MAPS` : md.maps[0]!.name}</em></button></li>`).join("")}<li class="ol-tile"><button type="button" class="bui-key dh-modek ol-open"${inf ? " disabled" : ""}><b>ONLINE</b><small>${inf ? "Off with test credits: take ?credits=inf off the address to ride online." : "Up to four riders, each on their own garage bike: race, a Free Ride jam, Big Air, or roam the endless grounds and Endless Wheelie City together. Online pays more."}</small><em>${inf ? "TEST CREDITS ∞" : "ONLINE ×1.5 · BEAT A RIDER +75"}</em></button></li></ul>${note ? `<p class="dh-sub dh-note" role="status">${esc(note)}</p>` : ""}</div>`;
   }
   const seriesCard = () => seriesScreen(profile, head(), tabs("series"), note);
   /** A mode's name for the cards (a series round is a race on the series' track). */
@@ -231,7 +232,9 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   /** Rides with no finish line end when you say so, and pay for what you rode (the pause card's END & BANK). */
   const banks = () => runMode === "freeride" || runMode === "desert" || runMode === "endcity";
   function pauseCard() {
-    if (N.on) return `<div class="dh-card dh-pause" data-screen="pause" role="dialog" aria-label="Paused"><b class="dh-h">ONLINE · ${pickName(N.pick.kind, N.pick.sub)}</b><p class="dh-sub">The ride goes on for everyone (your bike rolls to a stop). Leaving the room now pays nothing; the wear so far still counts.</p><p class="dh-row"><button type="button" class="bui-key dh-go dh-resume">RESUME</button><button type="button" class="bui-key dh-leave">LEAVE ROOM</button></p></div>`;
+    // Online, the endless rides together bank too: END &amp; BANK rides this screen's END bit.
+    const roamBank = N.on && (N.pick.kind === K_ENDLESS || N.pick.kind === K_ENDCITY);
+    if (N.on) return `<div class="dh-card dh-pause" data-screen="pause" role="dialog" aria-label="Paused"><b class="dh-h">ONLINE · ${pickName(N.pick.kind, N.pick.sub)}</b><p class="dh-sub">The ride goes on for everyone (your bike rolls to a stop). ${roamBank ? "END &amp; BANK banks your ride (the room's result comes when everyone has); leaving" : "Leaving"} the room now pays nothing; the wear so far still counts.</p><p class="dh-row"><button type="button" class="bui-key dh-go dh-resume">RESUME</button>${roamBank ? `<button type="button" class="bui-key dh-bank" aria-label="End the ride and bank it (E)">END &amp; BANK</button>` : ""}<button type="button" class="bui-key dh-leave">LEAVE ROOM</button></p></div>`;
     return `<div class="dh-card dh-pause" data-screen="pause" role="dialog" aria-label="Paused"><b class="dh-h">PAUSED</b><p class="dh-sub">${modeName(runMode)} on your ${bikeLine()}. ${banks() ? "END &amp; BANK pays for what you rode; leaving pays nothing" : "Leaving now pays nothing"}; the wear so far still counts.</p><p class="dh-row"><button type="button" class="bui-key dh-go dh-resume">RESUME</button>${banks() ? `<button type="button" class="bui-key dh-bank" aria-label="End the ride and bank it (E)">END &amp; BANK</button>` : ""}<button type="button" class="bui-key dh-leave">LEAVE</button></p></div>`;
   }
   function resultCard() {
@@ -519,12 +522,15 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       press("[data-olkind]", d.olkind, "olkind");
       $r(".ol-tiers").hidden = N.pick.kind !== K_RACE;
       $r(".ol-maps").hidden = N.pick.kind !== K_JAM;
+      $r(".ol-biomes").hidden = N.pick.kind !== K_ENDLESS;
+      press("[data-olbiome]", "0", "olbiome");
       N.pick.sub = 0;
       press("[data-oltier]", "0", "oltier");
       press("[data-olmap]", "0", "olmap");
-      $r(".ol-kind-sub").textContent = KINDS[N.pick.kind]!.blurb;
+      $r(".ol-kind-sub").textContent = kindOf(N.pick.kind).blurb;
     } else if (d.oltier !== undefined) (N.pick.sub = Number(d.oltier)), press("[data-oltier]", d.oltier, "oltier");
     else if (d.olmap !== undefined) (N.pick.sub = Number(d.olmap)), press("[data-olmap]", d.olmap, "olmap");
+    else if (d.olbiome !== undefined) (N.pick.sub = Number(d.olbiome)), press("[data-olbiome]", d.olbiome, "olbiome");
     else if (d.olsize) (N.room = (Math.random() * ROOM_N) | 0), void enterRoom(true, Number(d.olsize));
     else if (d.olroom) (N.room = (N.room + Number(d.olroom) + ROOM_N) % ROOM_N), showRoomN();
     else if (t.classList.contains("ol-back")) netEnd(), show("ride");
@@ -637,8 +643,10 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       const done = !!N.mine;
       return scoreBits(done ? N.final : Number(run.state.score) || 0, done);
     }
-    const I = (run as NetRun).input();
-    return encode(I[0]!, I[1]!, I[2]!, I[3]!, (run.auto ? B_AUTO : 0) | (I[4] === 2 ? B_RESET : 0));
+    const I = (run as NetRun).input(), k = (run as NetRun).cmd?.() ?? 0;
+    // The endless rides' commands: END (banked), REGROUP, a hop (Endless Wheelie City), the combo button.
+    const cmd = (k & C_END ? B_DONE : 0) | (k & C_REGROUP ? B_REGROUP : 0) | (k & C_HOP ? B_HOP : 0) | (k & C_COMBO ? B_COMBO : 0);
+    return encode(I[0]!, I[1]!, I[2]!, I[3]!, (run.auto ? B_AUTO : 0) | (I[4] === 2 ? B_RESET : 0) | cmd);
   }
   /** Each rider's tag: people's names ("· AI" once they left), the race's AI rivals'. */
   function tags() {
@@ -662,10 +670,18 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     };
     paused = false;
     result = null;
-    if (r.race || r.jam) {
-      const view: NetView = { ride: r, seat: N.seat, names: tags(), looks: r.riders.map((x, i) => { const l = lookOf(x.profile); return { look: l.look, helmet: l.helmet, rig: r.tuned[i]!.rig, number: l.number }; }) };
-      runMode = r.race ? "race" : "freeride";
-      run = mountTrack(ctx, r.track!, !!r.jam, [], {}, view);
+    const view: NetView = { ride: r, seat: N.seat, names: tags(), looks: r.riders.map((x, i) => { const l = lookOf(x.profile); return { look: l.look, helmet: l.helmet, rig: r.tuned[i]!.rig, number: l.number }; }) };
+    if (r.city) {
+      // Endless Wheelie City together: this seat's own run (its window, its patrol), every rider drawn.
+      runMode = "endcity";
+      ctx.best = profile.stats.far.city ?? 0;
+      run = mountCity(ctx, view);
+    } else if (r.race || r.jam) {
+      runMode = r.race ? "race" : r.board ? "desert" : "freeride";
+      // An endless ground together: this seat's own track (its window of the same world).
+      const own = r.board ? r.jam!.runs[N.seat]!.track : r.track!;
+      if (r.board) ctx.best = profile.stats.far[(own as { id: string }).id] ?? 0;
+      run = mountTrack(ctx, own, !!r.jam, [], {}, view);
     } else {
       // (Online offers Big Air as its score run: Wheelie City's ninety-second session went with the
       // fixed city; Endless Wheelie City has no clock to race to.)
@@ -678,7 +694,10 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     cards.textContent = "";
     cards.hidden = true;
     stage.removeAttribute("data-menu");
-    board.hidden = !r.score;
+    board.hidden = !r.score && !r.board;
+    // (The endless rides' board sits high on a phone, clear of the pad; the online result hides the pad.)
+    stage.toggleAttribute("data-olboard", !!r.board);
+    stage.removeAttribute("data-olres");
     say(`${pickName(r.kind, r.sub)}, ride ${r.round + 1}, on your ${bikeLine()}`);
   }
   /** A score run ended on this screen: its stats wait for everyone's (the result needs them all). */
@@ -699,7 +718,11 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     let st: RunStats;
     // (A rider still out when the grace time ran out is placed by how far they got, and paid for it.)
     if (r.race) st = { ...blankStats("race"), ...common, place: me.place, time: me.time, bestLap: me.bestLap, finished: true, led: false, where: "online", summary: `Online · ${ORD[me.place]} of ${r.race.riders.length}${me.finished ? ` · ${clock(me.time)}` : " · didn't finish"} · best lap ${clock(me.bestLap)}` };
-    else if (r.jam) st = { ...blankStats("freeride"), ...common, finished: true, tricks: me.tricks, flips: me.flips, score: me.points, where: "online-jam", summary: `Online jam · ${ORD[me.place]} of ${r.players} · ${me.points.toLocaleString("en-US")} trick points` };
+    else if (r.board) {
+      // The endless rides: the distance (each ground's best, kept as riding it alone), the session's points.
+      const where = r.city ? "city" : (r.jam!.runs[N.seat]!.track as { id: string }).id, what = r.city ? "Endless Wheelie City" : pickName(r.kind, r.sub);
+      st = { ...blankStats(r.city ? "endcity" : "desert"), ...common, finished: true, tricks: me.tricks, flips: me.flips, score: me.points, far: me.far, farKey: where, where: "online-endless", summary: `Online · ${what} · ${ORD[me.place]} of ${r.players} · ${km(me.far)} · ${me.points.toLocaleString("en-US")} points${me.drags ? ` · ${me.drags} hand drag${me.drags === 1 ? "" : "s"}` : ""}` };
+    } else if (r.jam) st = { ...blankStats("freeride"), ...common, finished: true, tricks: me.tricks, flips: me.flips, score: me.points, where: "online-jam", summary: `Online jam · ${ORD[me.place]} of ${r.players} · ${me.points.toLocaleString("en-US")} trick points` };
     else {
       const s0 = N.mine ?? { ...(run?.stats() ?? blankStats(runMode)), finished: false };
       st = { ...s0, summary: `Online · ${ORD[me.place]} of ${r.players} · ${s0.summary ?? ""}` };
@@ -713,6 +736,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     paused = false;
     run?.pause(false);
     board.hidden = true;
+    stage.toggleAttribute("data-olres", true);
     show("result");
     say(`${ORD[me.place]}. ${rr.credits} credits`);
   }
@@ -721,7 +745,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     const lines = r.lines.map(([k, v]) => `<li${v < 0 ? " data-loss" : ""}><span>${esc(k)}</span><b>${v < 0 ? "−" : "+"}${num(Math.abs(v))}</b></li>`).join("") || `<li><span>NO PAYOUT</span><b>0</b></li>`;
     const wear = PARTS.map((k) => `<li>${bar(b.parts[k], k === "motor" ? MOTOR_NAME[m.cls] : PART_NAME[k])}<small>−${(r.wear[k] * 100).toFixed(1)}%</small></li>`).join("");
     const others = ((1 << N.players) - 1) & ~(1 << N.seat), alone = (N.m!.link.left & others) === others;
-    return `<div class="dh-card dh-result ol-result" data-screen="result" role="dialog" aria-label="Result"><b class="dh-h">ONLINE · ${pickName(ride.kind, ride.sub)}</b><p class="dh-sub">${esc(r.stats.summary ?? "")}</p>${standingsHTML(ride, N.res!, N.seat, names)}<div class="dh-cols"><section><b class="dh-h2">PAYOUT</b><ul class="dh-pay">${lines}<li class="dh-total"><span>TOTAL</span><b>◈ ${num(r.credits)}</b></li></ul></section><section><b class="dh-h2">WEAR</b><ul class="dh-list dh-wear">${wear}</ul></section></div>${pitReady(profile) ? `<p class="dh-row"><button type="button" class="bui-key dh-pit">PIT CREW: FREE BASIC FIX</button></p>` : ""}<p class="dh-row">${alone ? "" : `<button type="button" class="bui-key dh-go ol-ready" aria-pressed="${N.m!.ready}">${N.m!.ready ? "WAITING…" : "RIDE AGAIN"}</button>`}<button type="button" class="bui-key dh-leave">LEAVE ROOM</button></p><p class="dh-sub ol-ready-say" aria-live="polite">${alone ? "Everyone else left the room." : ""}</p></div>`;
+    return `<div class="dh-card dh-result ol-result" data-screen="result" role="dialog" aria-label="Result"><b class="dh-h">ONLINE · ${pickName(ride.kind, ride.sub)}</b><p class="dh-sub">${esc(r.stats.summary ?? "")}</p>${standingsHTML(ride, N.res!, N.seat, names, profile.settings.units)}<div class="dh-cols"><section><b class="dh-h2">PAYOUT</b><ul class="dh-pay">${lines}<li class="dh-total"><span>TOTAL</span><b>◈ ${num(r.credits)}</b></li></ul></section><section><b class="dh-h2">WEAR</b><ul class="dh-list dh-wear">${wear}</ul></section></div>${pitReady(profile) ? `<p class="dh-row"><button type="button" class="bui-key dh-pit">PIT CREW: FREE BASIC FIX</button></p>` : ""}<p class="dh-row">${alone ? "" : `<button type="button" class="bui-key dh-go ol-ready" aria-pressed="${N.m!.ready}">${N.m!.ready ? "WAITING…" : "RIDE AGAIN"}</button>`}<button type="button" class="bui-key dh-leave">LEAVE ROOM</button></p><p class="dh-sub ol-ready-say" aria-live="polite">${alone ? "Everyone else left the room." : ""}</p></div>`;
   }
   cards.addEventListener("click", (ev) => {
     const t = (ev.target as HTMLElement).closest<HTMLElement>(".ol-ready");
@@ -760,6 +784,8 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     N.ride = null;
     N.res = N.mine = null;
     netChip.hidden = board.hidden = true;
+    stage.removeAttribute("data-olres");
+    stage.removeAttribute("data-olboard");
     if (was && run) run.destroy(), (run = null), (modeEl.textContent = "");
   }
   function netGone(text: string) {
@@ -804,6 +830,13 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       if (L2.away & (1 << N.seat)) chip += " · RECONNECTING";
       if (chip !== N.chip) (N.chip = chip), (netChip.lastElementChild!.textContent = chip), (netChip.dataset.conn = L2.away ? "wait" : "live"), netChip.toggleAttribute("data-quiet", !L2.away);
       netChip.hidden = !N.ride || screen !== "event";
+      const bd = N.ride?.board;
+      if (bd && screen === "event") {
+        // The endless rides' session scoreboard: repainted when a number on it moves (points, tens of metres).
+        let key = "";
+        for (let p = 0; p < N.players; p++) key += `${bd.get(p, 6)}:${Math.floor(bd.get(p, 0) / 10)}:${bd.get(p, 1)}:${bd.get(p, 4)};`;
+        if (key !== N.boardKey) (N.boardKey = key), (board.innerHTML = boardHTML(bd, N.seat, N.ride!.riders.map((x) => x.name), N.ride!.riders.map((x) => lookOf(x.profile).look.plastic), profile.settings.units));
+      }
       const sc = N.ride?.score;
       if (sc && screen === "event") {
         let changed = N.boardKey === "";
@@ -894,7 +927,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
         series: profile.series.run ? { tier: profile.series.run.tier, round: profile.series.run.round, points: [...profile.series.run.points] } : null,
         seriesBest: { ...profile.series.best }, titles: profile.series.titles,
         result: result ? { credits: result.credits, lines: result.lines, wear: result.wear, finished: result.stats.finished } : null,
-        online: N.on && N.m ? { seat: N.seat, players: N.players, room: N.room, phase: N.m.phase === OVER ? "over" : N.ride ? "ride" : "hello", round: N.m.round, kind: N.pick.kind, sub: N.pick.sub, names: N.m.riders.map((r) => r.name), models: N.m.riders.map((r) => r.bike.model), frame: N.m.link.frame, final: N.m.link.final, desync: N.m.link.desync, left: N.m.link.left, ready: N.m.ready, standings: N.res ? N.res.map((x) => x.place) : null } : null,
+        online: N.on && N.m ? { seat: N.seat, players: N.players, room: N.room, phase: N.m.phase === OVER ? "over" : N.ride ? "ride" : "hello", round: N.m.round, kind: N.pick.kind, sub: N.pick.sub, names: N.m.riders.map((r) => r.name), models: N.m.riders.map((r) => r.bike.model), frame: N.m.link.frame, final: N.m.link.final, desync: N.m.link.desync, left: N.m.link.left, ready: N.m.ready, standings: N.res ? N.res.map((x) => x.place) : null, pos: N.ride ? (N.ride.jam ?? N.ride.city ?? N.ride.race)?.riders.slice(0, N.players).map((b) => [Math.round(b.pos[0]!), Math.round(b.pos[2]!)]) ?? null : null } : null,
       };
     },
     /** The online link (frames, corrections, stalls, delay, desync), or null. */
