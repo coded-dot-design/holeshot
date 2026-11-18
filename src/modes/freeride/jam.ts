@@ -132,7 +132,7 @@ export function freeJam(track: Track | RideMap, bikes: { power: Power; shape?: B
   return {
     t, track, riders, runs, ev, humans: H, IN, AUTO, PTS,
     /** The whole state as bytes (rollback, the desync hash). */
-    bytes: [J, PTS, NE, RG, ...(SB ? [SB.B] : []), ...runs.flatMap((r) => r.bytes)].map((a) => new Uint8Array(a.buffer, a.byteOffset, a.byteLength)),
+    bytes: [J, PTS, NE, ...(SB ? [RG, SB.B] : []), ...runs.flatMap((r) => r.bytes)].map((a) => new Uint8Array(a.buffer, a.byteOffset, a.byteLength)),
     /** Endless: the commands (the match writes them each frame), the scoreboard, the ground's track. */
     CMD, board: SB, endless,
     get n() { return NE[0]!; },

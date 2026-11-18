@@ -19,7 +19,7 @@
   world's window now slides with a little give (a rider weaving on a slide line, a crash, a
   rollback's frames run again no longer slide it back and forth: 625 → 69 slides on a weaving
   minute). The host's pick byte is now kind (3 bits) and sub (3 bits). Size budget 184,000 → 190,000
-  B gzip (186,139 B measured, +5,446 B).
+  B gzip (186,581 B measured, +4,794 B).
 - **Miles by default, km as a setting.** SETTINGS → UNITS: Imperial (miles, mph; the default) or
   Metric (km, km/h), saved in the profile (schema v6: every existing save migrates to Imperial).
   Applied wherever a distance shows: the Endless Wheelie City and endless-ground HUD chips (e.g.

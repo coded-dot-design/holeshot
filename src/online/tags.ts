@@ -5,6 +5,7 @@
 // Nothing allocated per frame but the tag's text.
 import type { Diorama } from "@fzlt/core/diorama";
 import { dist, type Units } from "../model/units.ts";
+import { atan2 } from "../math.ts";
 
 const T = new Float64Array(3);
 /** The tags' font size for a canvas `w` wide (set on ctx2 by `font`). */
@@ -50,7 +51,7 @@ export function marker(ctx2: CanvasRenderingContext2D, dio: Diorama, me: ArrayLi
   const x = cx + ux * s, y = cy + uy * s;
   ctx2.save();
   ctx2.translate(x, y);
-  ctx2.rotate(Math.atan2(uy, ux));
+  ctx2.rotate(atan2(uy, ux));
   ctx2.fillStyle = ink;
   ctx2.beginPath();
   ctx2.moveTo(16, 2); ctx2.lineTo(-6, -9); ctx2.lineTo(-6, 13); ctx2.closePath();
