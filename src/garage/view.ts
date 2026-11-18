@@ -9,7 +9,9 @@ import { DAMAGE_NAME, FAIL, GARAGE_SLOTS, MODS, MOTOR_NAME, PARTS, PART_NAME, SE
 import { GRAPHICS, HELMETS, OUTFITS, PAINTS, PATTERNS, PLASTICS, PLATES, SWATCHES, VISORS, paint as paintOf, swatch } from "../data/looks.ts";
 import { bar, esc, num } from "../html.ts";
 import { riding, type BikeSave, type Profile } from "../model/profile.ts";
-import { tune } from "../model/tune.ts";
+import { tune, type Tuned } from "../model/tune.ts";
+import { paceRow } from "../model/pace.ts";
+import type { Units } from "../model/units.ts";
 import { atRisk, failChance, failName, partState, warnings } from "../model/upkeep.ts";
 import { buyBike, cosmeticPrice, choose, dress, fits, fixPrice, modPrice, partPrice, repair, sell, service, setChoice, setupPrice, tradeValue, tryOn, unlocked, upgrade, type Buy, type Slot } from "../model/garage.ts";
 
@@ -28,6 +30,10 @@ const partName = (b: BikeSave, k: PartId) => (k === "motor" ? MOTOR_NAME[modelOf
 const cost = (n: number, can: boolean) => (n ? `<small class="dh-price"${can ? "" : " data-short"}>◈ ${num(n)}</small>` : `<small class="dh-price">OWNED</small>`);
 const SLOT_NAME: Record<string, string> = { paint: "PAINT SCHEME", graphics: "GRAPHICS", plastics: "PLASTICS", plate: "PLATE DECAL", helmet: "HELMET", helmetPaint: "HELMET PAINT", visor: "VISOR", jersey: "JERSEY", pants: "PANTS", pattern: "PATTERN", boots: "BOOTS", gloves: "GLOVES", outfit: "OUTFIT" };
 const STATE_TAG: Record<string, string> = { worn: "WORN", risk: "MAY FAIL", failed: "FAILED" };
+/** The rider's display units (miles and mph unless the settings say metric). */
+const unitsOf = (p: Profile): Units => p.settings.units ?? "imperial";
+/** PACE: 0–a, 0–b and the top speed, measured on the sim (../model/pace.ts) for this bike as tuned. */
+const paceDl = (t: Tuned, u: Units, cls = "dh-pace") => `<dl class="${cls}" aria-label="Pace, measured">${paceRow(t, u).map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`;
 
 /** The profile as the preview shows it: with the try-on on. */
 export function shown(p: Profile, ui: GarageUI): Profile {
@@ -66,7 +72,7 @@ function partsTab(p: Profile, b: BikeSave) {
     return `<li><span class="dh-mod"><b>${modName(b, k)}</b><small>${esc(M.blurb)}</small><i aria-label="Level ${lv} of ${M.max}">${"◆".repeat(lv)}${"◇".repeat(M.max - lv)}</i></span><button type="button" class="bui-key dh-buy" data-mod="${k}" ${price ? "" : "disabled"}>${price ? (lv || M.max === 1 ? (M.max === 1 ? "FIT" : "UPGRADE") : "STAGE 1") + cost(price, cr >= price) : M.max === 1 ? "FITTED" : "MAXED"}</button></li>`;
   }).join("");
   const log = b.log.length ? `<ol class="dh-log">${b.log.slice(0, 8).map(([e, w, c]) => `<li><small>EVENT ${e}</small><span>${logLine(b, w)}</span><b>${c ? "◈" + num(c) : ""}</b></li>`).join("")}</ol>` : `<p class="dh-sub">Nothing yet. Every service, mod and fix lands here.</p>`;
-  return `${banner}<div class="dh-cols"><section><b class="dh-h2">CONDITION</b><ul class="dh-list">${parts}</ul><b class="dh-h2">CRASH DAMAGE</b><ul class="dh-list">${dmg}</ul><b class="dh-h2">SERVICE LOG</b>${log}</section><section><b class="dh-h2">TUNE</b><ul class="dh-list">${setups}</ul><b class="dh-h2">MODS</b><ul class="dh-list">${mods}</ul><b class="dh-h2">FEEL</b><div class="dh-feel">${bar(t.feel.pull, "PULL")}${bar(t.feel.top, "TOP SPEED")}${bar(t.feel.grip, "GRIP")}${bar(t.feel.susp, "SUSPENSION")}${bar(t.feel.brakes, "BRAKES")}${bar(t.feel.light, "LIGHT")}</div></section></div>`;
+  return `${banner}<div class="dh-cols"><section><b class="dh-h2">CONDITION</b><ul class="dh-list">${parts}</ul><b class="dh-h2">CRASH DAMAGE</b><ul class="dh-list">${dmg}</ul><b class="dh-h2">SERVICE LOG</b>${log}</section><section><b class="dh-h2">TUNE</b><ul class="dh-list">${setups}</ul><b class="dh-h2">MODS</b><ul class="dh-list">${mods}</ul><b class="dh-h2">PACE</b>${paceDl(t, unitsOf(p))}<b class="dh-h2">FEEL</b><div class="dh-feel">${bar(t.feel.pull, "PULL")}${bar(t.feel.top, "TOP SPEED")}${bar(t.feel.grip, "GRIP")}${bar(t.feel.susp, "SUSPENSION")}${bar(t.feel.brakes, "BRAKES")}${bar(t.feel.light, "LIGHT")}</div></section></div>`;
 }
 
 type Swk = { id: string; name: string; a: string; b?: string };
@@ -106,7 +112,7 @@ function showroomTab(p: Profile, all: boolean) {
     const btn = !open ? `<button type="button" class="bui-key dh-buy" disabled>LOCKED<small class="dh-price">${u!.events} EVENTS or ◈${num(u!.earned)} EARNED</small></button>`
       : full ? `<button type="button" class="bui-key dh-buy" data-bike="${x.id}" data-trade="${p.ride}">TRADE IN${cost(net, cr >= net)}</button>`
       : `<button type="button" class="bui-key dh-buy" data-bike="${x.id}">BUY${cost(x.price, cr >= x.price)}</button>`;
-    return `<li${open ? "" : " data-locked"}><span class="dh-mod"><small>${"★".repeat(x.tier)}${"☆".repeat(4 - x.tier)} · ◈ ${num(x.price)}</small><b><i class="dh-maker" style="--a:${makerOf(x).colors[0]};--b:${makerOf(x).colors[1]}"></i>${makerOf(x).name} ${x.name}</b><small>${esc(x.blurb)}</small><span class="dh-mini-bars">${bar(t.feel.pull, "PULL")}${bar(t.feel.top, "TOP")}${bar(t.feel.light, "LIGHT")}</span></span>${btn}</li>`;
+    return `<li${open ? "" : " data-locked"}><span class="dh-mod"><small>${"★".repeat(x.tier)}${"☆".repeat(4 - x.tier)} · ◈ ${num(x.price)}</small><b><i class="dh-maker" style="--a:${makerOf(x).colors[0]};--b:${makerOf(x).colors[1]}"></i>${makerOf(x).name} ${x.name}</b><small>${esc(x.blurb)}</small><span class="dh-mini-bars">${bar(t.feel.pull, "PULL")}${bar(t.feel.top, "TOP")}${bar(t.feel.light, "LIGHT")}</span>${paceDl(t, unitsOf(p), "dh-pace dh-pace-s")}</span>${btn}</li>`;
   }).join("")}</ul></li>`).join("");
   const prog = `You: ${p.stats.events} events · ◈ ${num(p.stats.earned)} earned.`;
   return `<p class="dh-sub">${full ? `The garage holds ${GARAGE_SLOTS} bikes: a new one trades in the bike that rides next (◈ ${num(trade)} off), or sell one first.` : "A new bike goes in the empty bay and rides next. Each bike keeps its own parts, mods and paint."} ${prog}</p><b class="dh-h2">YOUR BIKES</b><ul class="dh-list">${mine}</ul><ul class="dh-list dh-classes">${cls}</ul>`;

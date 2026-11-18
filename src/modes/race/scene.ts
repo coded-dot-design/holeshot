@@ -756,7 +756,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     },
     render() {
       if (hudDirty) (hudDirty = false), hudWrite();
-      vox.set(me.rpm, me.throttle, (sim.phase === RACE || sim.phase === GRID) && !me.crashed && !paused && !ended);
+      vox.set(me.rpm, me.throttle, (sim.phase === RACE || sim.phase === GRID) && !me.crashed && !paused && !ended, me.gear, me.speed);
       if (!dirty) return;
       dirty = false;
       pose();

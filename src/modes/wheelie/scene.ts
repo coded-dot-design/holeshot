@@ -1336,7 +1336,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       const cam = dio.cam, k = shake * shake * 10, sx = Math.sin(engine.time * 71) * k, sy = Math.cos(engine.time * 53) * k * 0.7;
       (cam.ox += sx), (cam.oy += sy);
       dio.draw();
-      vox.set(bike.b.rpm, bike.b.throttle, S[0] === RUN && snd.on && !paused);
+      vox.set(bike.b.rpm, bike.b.throttle, S[0] === RUN && snd.on && !paused, bike.b.gear, bike.b.speed);
       (cam.ox -= sx), (cam.oy -= sy), (V[5] = 1);
     },
   });

@@ -76,7 +76,7 @@ export function tune(b: BikeSave): Tuned {
     rig: CLASSES[cls].rig,
     feel: {
       pull: Math.min(1, (force * curve[2]! * (e ? 1.6 : 1) + force * 0.6) / 40),
-      top: Math.min(1, top / 19),
+      top: Math.min(1, top / 21),
       grip: Math.min(1, power.grip / 1.3),
       susp: Math.min(1, (shape.caseDrop! - 18) / 16),
       brakes: Math.min(1, power.brake / 24),

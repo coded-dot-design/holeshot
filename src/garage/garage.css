@@ -31,6 +31,15 @@
 .dh-mini-bars{display:grid;gap:2px;margin-top:2px}
 .dh-mini-bars .dh-bar{grid-template-columns:4.5em minmax(3em,1fr) 3em;font-size:10px}
 .dh-mini-bars .dh-bar i{height:8px}
+/* PACE (measured: src/model/pace.ts): three numbers side by side. */
+.dh-pace{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0}
+.dh-pace>div{padding:4px 8px;border:2px solid var(--rim);border-radius:8px;background:color-mix(in srgb,var(--cy) 10%,var(--surface))}
+.dh-pace dt{font-size:10px;letter-spacing:.08em;color:var(--muted)}
+.dh-pace dd{margin:0;font-size:15px;font-variant-numeric:tabular-nums}
+.dh-pace-s{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.dh-pace-s>div{white-space:nowrap;padding:2px 6px;border-width:1.5px}
+.dh-pace-s dt{font-size:9px}
+.dh-pace-s dd{font-size:12px}
 .dh-pay li[data-loss]{color:var(--hot)}
 .dh-risk{width:min(100%,560px)}
 @media (max-width:620px){.dh-log li{grid-template-columns:4.5em minmax(0,1fr) auto}}

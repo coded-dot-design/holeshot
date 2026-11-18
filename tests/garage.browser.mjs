@@ -60,6 +60,11 @@ try {
     assert.deepEqual(L0, { small: [], sideways: false }, `${name}: garage keys ≥ 44 px, no sideways scroll`);
     await shot(p, `${name}-2-garage-warnings`);
     // ---- service, tyres, damage, a tune choice, a mod ----
+    // ---- PACE: measured 0–20 / 0–30 mph and the top (mph by default); the gearing moves it ----
+    const pace = () => $(p, "[...root.querySelectorAll('.dh-garage .dh-pace:not(.dh-pace-s) dd')].map((d) => d.textContent)");
+    const P0 = await pace();
+    assert.equal(P0.length, 3, `${name}: three pace numbers`);
+    assert.match(P0[2], /^\d+ MPH$/, `${name}: top speed in mph`);
     let q = await prof(p), c = q.credits;
     await click(p, "[data-service=chain]");
     q = await prof(p);
@@ -72,6 +77,7 @@ try {
     await click(p, "[data-mod=power]");
     q = await prof(p);
     assert.deepEqual([q.bikes[0].dmg.bars, q.bikes[0].gearing, q.bikes[0].mods.power], [0, "tall", 1], `${name}: bars, gearing, stage 1`);
+    assert.ok(parseInt((await pace())[2]) > parseInt(P0[2]), `${name}: tall gearing (and fixes) raise the measured top: ${P0[2]} → ${(await pace())[2]}`);
     assert.deepEqual(q.bikes[0].log.slice(0, 5).map((l) => l[1]), ["mod:power:1", "setup:gearing:tall", "fix:bars", "svc:tyres:soft", "svc:chain"], `${name}: the service log`);
     assert.match(await $(p, "root.querySelector('.dh-log').textContent"), /CONTROLLER STAGE 1.*GEARING: TALL.*BENT BARS FIXED.*NEW TYRES \(SOFT\).*CHAIN & SPROCKETS SERVICED/s);
     await $(p, "root.querySelector('.dh-garage').scrollIntoView()");
@@ -112,6 +118,7 @@ try {
     const locked = await $(p, "root.querySelectorAll('.dh-show li[data-locked]').length");
     assert.equal(locked, 8, `${name}: tiers 3 and 4 are locked at 3 events`);
     await shot(p, `${name}-7-showroom`);
+    assert.equal(await $(p, "root.querySelectorAll('.dh-show .dh-pace-s').length"), 16, `${name}: every showroom bike shows its pace`);
     c = (await prof(p)).credits;
     await click(p, "[data-bike=pulse-pedal]");
     q = await prof(p);
