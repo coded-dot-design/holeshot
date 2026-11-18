@@ -3,19 +3,19 @@
 // the rider's weight a little forward (the launch every mode's autopilot uses), at the game's own
 // 60 Hz step; the speed after each frame is kept, so any "0 to v" time is read off the trace. The
 // top speed is the most it reached once the speed stopped rising. The garage's PACE row and the
-// showroom cards show it (0–20 / 0–30 mph and the top, or 0–30 / 0–50 km/h); tests/pace.test.mjs
-// measures every bike in the roster. Pure and deterministic (the same bike gives the same numbers);
+// showroom cards show it: 0–30 / 0–60 mph and the top (0–50 / 0–100 km/h), as displayed. Speed
+// readouts are scaled for feel (./units.ts SPEED_DISPLAY); the measure itself is in world units.
+// tests/pace.test.mjs measures every bike in the roster. Pure and deterministic (the same bike gives the same numbers);
 // a measure is a few thousand bike steps, so each power is measured once and kept.
 import { bike, type BikeGround } from "../bike/bike.ts";
 import type { Tuned } from "./tune.ts";
-import { MI_PER_KM, type Units } from "./units.ts";
+import { perHour, type Units } from "./units.ts";
+export { perHour };
 
 /** The longest run (seconds) and the lean (+1 back) the launch holds. */
 export const PACE_SECS = 25, PACE_LEAN = -0.6;
-/** The "0 to" speeds the garage shows, in the rider's units. */
-export const PACE_MARKS: Record<Units, readonly [number, number]> = { imperial: [20, 30], metric: [30, 50] };
-/** World units a second (about metres a second) in mph or km/h. */
-export const perHour = (ups: number, units: Units = "imperial") => ups * 3.6 * (units === "metric" ? 1 : MI_PER_KM);
+/** The "0 to" speeds the garage shows, as displayed (scaled for feel: ./units.ts SPEED_DISPLAY). */
+export const PACE_MARKS: Record<Units, readonly [number, number]> = { imperial: [30, 60], metric: [50, 100] };
 
 export interface Pace {
   /** The speed (units/s) after each 1/60 s frame from a standstill. */
@@ -69,7 +69,7 @@ export function timeTo(p: Pace, ups: number): number | null {
 /** The garage's numbers in the rider's units: [label, value] for 0–a, 0–b and the top. */
 export function paceRow(t: Pick<Tuned, "power" | "shape">, units: Units = "imperial"): [string, string][] {
   const p = pace(t), u = units === "metric" ? "KM/H" : "MPH", per = perHour(1, units);
-  const at = (v: number) => { const s = timeTo(p, v / per); return s === null ? "—" : `${s.toFixed(2)} S`; };
+  const at = (v: number) => { const s = timeTo(p, v / per); return s === null ? "NEVER" : `${s.toFixed(2)} S`; };
   const [a, b] = PACE_MARKS[units];
   return [[`0–${a} ${u}`, at(a)], [`0–${b} ${u}`, at(b)], ["TOP", `${Math.round(perHour(p.top, units))} ${u}`]];
 }

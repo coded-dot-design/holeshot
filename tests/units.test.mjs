@@ -14,8 +14,10 @@ test("units: conversions and labels", () => {
   assert.equal(U.dist(2736), "1.70 MI");
   assert.equal(U.dist(2736, "metric"), "2.74 KM");
   assert.equal(U.dist(0), "0.00 MI");
-  assert.equal(U.speed(10), "22 MPH", "10 units/s = 36 km/h = 22.37 mph");
-  assert.equal(U.speed(10, "metric"), "36 KM/H");
+  assert.equal(U.speed(10), "36 MPH", "10 units/s = 36 km/h = 22.37 mph, ×SPEED_DISPLAY 1.6 for feel");
+  assert.equal(U.speed(10, "metric"), "58 KM/H");
+  assert.equal(U.SPEED_DISPLAY, 1.6);
+  assert.equal(U.dist(1000), "0.62 MI", "distances are not scaled");
 });
 
 test("units: Imperial by default; Metric saved and loaded; old saves migrate to Imperial", () => {

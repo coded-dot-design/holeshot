@@ -25,22 +25,24 @@
   256 at the start, about 14,000 on screen over 3 km), no outline without its building, every
   placed object at its world record, every solid within 12 units drawn, drawn building heights =
   world heights, the frame's pixels the same with every unplaced object forced out.
+- **Speed readouts are scaled for feel; physics unchanged.** The table is small (1 unit ≈ 1 m),
+  so every speed shown reads ×1.6 (`SPEED_DISPLAY` in `src/model/units.ts`): a top-tier bike reads
+  70+ mph. Display only: the sim, the measurements, distances and saved numbers are untouched.
 - **The faster bikes are a little faster, and every bike has its own pace.** The torque is as it
   was (the curves and the lower gears untouched); the top gear stretches with the tier (×1, ×1.025,
-  ×1.05, ×1.08: `TOP_STRETCH` in `src/data/roster.ts`), so a tier 4 bike runs about 3 mph further at
-  the top and a starter is unchanged. Measured on the sim (full gas on the flat; stock, new), 0–20 /
-  0–30 mph / top: YX-125 0.96 / 1.54 s / 39 mph … YX-250 0.77 / 1.12 s / 45 mph (was 42); REDLINE
-  150F 0.99 / 1.85 s / 38 … 450 WORKS 0.81 / 1.42 s / 44 (was 41); KIT FOX 0.97 s / never / 29 …
-  SILVER FOX 0.67 / 1.36 s / 36 (was 33); LIGHT HORNET 0.71 / 1.15 s / 35 … ALPHA WOLF 0.55 /
-  0.82 s / 42 (was 39). The fastest bike is under 20 % over the slowest gas starter, so stock races
+  ×1.05, ×1.08: `TOP_STRETCH` in `src/data/roster.ts`), so a tier 4 bike runs about 7 % further at
+  the top and a starter is unchanged. Measured on the sim (full gas on the flat; stock, new), 0–30 /
+  0–60 mph / top as shown: YX-125 0.91 / 2.18 s / 63 mph … YX-250 0.74 / 1.55 s / 73 mph (was 68);
+  REDLINE 150F 0.92 / 2.90 s / 61 … 450 WORKS 0.76 / 2.12 s / 70 (was 65); KIT FOX 0.87 s / never /
+  46 … SILVER FOX 0.61 s / never / 58 (was 53); LIGHT HORNET 0.67 s / never / 56 … ALPHA WOLF 0.52 /
+  1.10 s / 67 (was 62). The fastest bike is under 20 % over the slowest gas starter, so stock races
   of one class stay close. The garage's TOP SPEED bar now reads against 21 units/s (was 19), so the
   quicker bikes don't all pin it.
-- **PACE in the garage.** PARTS & MODS shows the riding bike's 0–20 mph, 0–30 mph and top speed as
-  tuned (wear, gearing, motor map and mods all move it), and every showroom card shows the model's
-  new numbers; km/h (0–30, 0–50) when the units are metric. 0–60 mph is past every bike's top at the
-  table's scale (1 unit ≈ 1 m, tops 29–45 mph), so the marks are 20 and 30 (the UNITS setting picks mph or km/h). Each number is measured
-  on the sim once per tuned bike (about 4 ms; `src/model/pace.ts`), not guessed; tests:
-  `tests/pace.test.mjs` (every model and setup).
+- **PACE in the garage.** PARTS & MODS shows the riding bike's 0–30 mph, 0–60 mph and top speed as
+  tuned (wear, gearing, motor map and mods all move it; NEVER when it can't reach 60), and every
+  showroom card shows the model's new numbers; 0–50 / 0–100 km/h when the units are metric. Each
+  number is measured on the sim once per tuned bike (about 4 ms; `src/model/pace.ts`), not guessed;
+  tests: `tests/pace.test.mjs` (every model and setup).
 - **Gear changes you can hear.** The gas bikes shift out loud: an upshift cuts the ignition for
   70 ms while the revs fall to the next gear, a downshift blips the revs. The electric bikes are one
   smooth whine that follows the road speed (an e-bike's hub gears are never heard). Mute silences it
