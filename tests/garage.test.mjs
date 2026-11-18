@@ -3,7 +3,7 @@
 // event's seed (the same event fails the same way), costs part of the payout and leaves the part dead
 // until it is replaced, and the pit crew then helps at once if you can't pay; crash damage builds up
 // and is fixed for credits; tyre compounds and the motor map change the wear; every action lands in
-// the service log. The showroom sells all sixteen bikes (tiers 3-4 open with progress), sells a bike
+// the service log. The showroom sells all nineteen bikes (tiers 3-4 open with progress), sells a bike
 // for its trade-in value (never the last), trades one in when the garage is full; cosmetics are tried
 // on for free and bought once; outfits own their pieces. The new save fields fill in with defaults
 // (no schema step) and a 0.1.0 bike's mods map onto the new ones. The balance: a reference player
@@ -145,9 +145,9 @@ test("garage: mods, choices and fixes land in the service log; cosmetic try-on i
   assert.equal(G.dress({ ...p, credits: 0 }, "outfit", "hornet").ok, false, "costs credits");
 });
 
-test("showroom: all sixteen bikes; tiers 3-4 open with progress or credits earned", () => {
+test("showroom: all nineteen bikes (sixteen dirt, three street); tiers 3-4 open with progress or credits earned", () => {
   const p = start("buzzline", { credits: 1e6 });
-  assert.equal(MODELS.length, 16);
+  assert.equal(MODELS.length, 19);
   const t3 = MODELS.find((m) => m.tier === 3), t4 = MODELS.find((m) => m.tier === 4), t2 = MODELS.find((m) => m.tier === 2);
   assert.ok(G.buyBike(p, t2.id).ok, "tier 2 is always for sale");
   assert.match(G.buyBike(p, t3.id).why, /Opens after 12 events/);
@@ -231,10 +231,12 @@ test("balance: the reference player affords the first real mod after 3-4 events;
   }
 });
 
-test("roster: six original makers, each a nod and none the real thing; a new bike comes in its maker's colours", async () => {
+test("roster: six original dirt makers (each a nod, none the real thing) and three street makers of the city's own; a new bike comes in its maker's colours", async () => {
   const { MAKERS, makerOf } = await import("../src/data/roster.ts");
   const { PAINTS } = await import("../src/data/looks.ts");
-  assert.deepEqual(Object.values(MAKERS).map((m) => m.name), ["YAMADA", "HONDO", "KAWAZAKURA", "STARKWOLF", "SURGE-ON", "MAKFOX"]);
+  assert.deepEqual(Object.values(MAKERS).map((m) => m.name), ["YAMADA", "HONDO", "KAWAZAKURA", "STARKWOLF", "SURGE-ON", "MAKFOX", "CURBCAT", "NIGHTGLASS", "IRONJAW"]);
+  // The street bikes' makers are not the dirt makers (no nod to a real maker at all).
+  for (const m of MODELS.filter((x) => x.cls === "street")) assert.ok(["curbcat", "nightglass", "ironjaw"].includes(m.maker), m.id);
   // No real maker names or model codes, as words, anywhere a player reads.
   const text = [...Object.values(MAKERS).flatMap((m) => [m.name, m.motto]), ...MODELS.flatMap((m) => [m.name, m.blurb])].join(" ").toUpperCase();
   for (const w of ["YAMAHA", "HONDA", "KAWASAKI", "BETA", "STARK", "VARG", "SUR-RON", "SURRON", "ULTRA BEE", "MAC FOX", "MACFOX", "YZ", "CRF", "KX", "RR"]) assert.ok(!new RegExp(`(^|[^A-Z])${w}([^A-Z]|$)`).test(text), w);

@@ -23,7 +23,7 @@ import { rig, type Rig, type RigColors } from "../../bike/rig.ts";
 import { pool, voice, gamepad, type Pool } from "../../bike/kit.ts";
 import { DONE, E_CRASH, E_FINISH, E_GATE, E_LAND, E_LAP, E_PLACE, E_RESPAWN, E_WHEELIE, E_COUNT, GRID, LAPS, RACE, TRACK_W, motoRace, type RaceOpts, type Track } from "./course.ts";
 import { freeRun, E_TRICK, E_STUCK, E_RESET, E_GROUND, E_DRAG, E_BANKED, E_LOST } from "../freeride/session.ts";
-import { DRAG_NAME, DRAG_MULT, FENDER } from "../stunts.ts";
+import { DRAG_NAME, FENDER } from "../stunts.ts";
 import { SC as T_SC, CB as T_CB, PTS as T_PTS, KIND as T_KIND, DIST as T_DIST, TIME as T_TIME, MANUAL, STOPPIE } from "../wheelie/tricks.ts";
 import { callout, stuntCalls } from "../callout.ts";
 import { RESET } from "../unstuck.ts";
@@ -38,6 +38,7 @@ import { walkUi } from "../../bike/walk-ui.ts";
 import type { RigHelmet, RigKind } from "../../bike/rig.ts";
 import { speedo } from "../speedo.ts";
 import { keysHTML, paintMute as paintMuteK, paintView } from "../keys.ts";
+import { rigOfPower } from "../../bike/bodies.ts";
 
 /** An online ride on this screen (../../online/match.ts steps the sim; the scene draws it, reads this
  *  screen's input for it and plays the first run of each frame's events). */
@@ -132,7 +133,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   const DK: Pal = look ? { ...DARK, ...look.dark } : bp ? { ...DARK, ...bp.dark } : DARK, LT: Pal = look ? { ...LIGHT, ...look.light } : bp ? { ...LIGHT, ...bp.light } : LIGHT;
   let P: Pal = document.documentElement.dataset.theme === "light" ? LT : DK;
   const { HX, HZ, NT, TRACK, YAW } = track, { TURN, LAP, GATE_S, LINE_S } = track as Track;
-  const me0 = { power: ctx.bike.power, shape: ctx.bike.shape, sweet: ctx.bike.sweet };
+  const me0 = { power: ctx.bike.power, shape: ctx.bike.shape, sweet: ctx.bike.sweet, bar: ctx.bike.bar };
   // Online: the match's sim (stepped by the rollback link, not here), this screen's seat in it.
   const seat = net ? net.seat : 0, jam = net ? net.ride.jam : null, humans = net ? net.ride.players : 1;
   const race = net ? net.ride.race : free ? null : motoRace(ctx.seed, track as Track, me0, rivals, opts);
@@ -199,7 +200,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   let sky: CanvasGradient | null = null;
   const STARS = new Float32Array(120);
   for (let i = 0; i < 120; i++) STARS[i] = rnd();
-  const rigKind = (p: Power) => (p.name === "2-STROKE" ? "2t" : p.name === "4-STROKE" ? "4t" : "e") as "2t" | "4t" | "e";
+  const rigKind = (p: Power) => rigOfPower(p.name);
 
   function buildScene() {
     dio.clear();
@@ -404,7 +405,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
         else toast(`${GROUND[kind]} ${tsc[T_DIST]!.toFixed(1)} m · ${tsc[T_TIME]!.toFixed(1)}s +${pts}${x}`, kind === MANUAL ? "clean" : "go");
         say(`${GROUND[kind]}, ${tsc[T_PTS]} points`);
       } else if (type === E_DRAG && st) {
-        const nm = DRAG_NAME[val]!, x = DRAG_MULT[val]!;
+        const nm = DRAG_NAME[val]!, x = st.mult(val);
         engine.events.emit("wheelie");
         if (val === FENDER && !ctx.reduced) shake = 0.3;
         call.show(`${nm}!`, `×${x} · ${val === FENDER ? "SPARKS!" : "BACK UNDER 12 TO BANK"}`, val === FENDER ? "bad" : "go", 1.4);
@@ -478,7 +479,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       const pts = tsc![T_SC]!, cb = tsc![T_CB]!;
       if (was[8] !== pts + cb * 1e9) (was[8] = pts + cb * 1e9), (scoreChip!.firstChild!.textContent = `${pts.toLocaleString("en-US")} PTS`), (scoreChip!.lastChild!.textContent = cb > 0 ? `×${1 + cb}` : "");
       const HD = st!.HD, dk = HD[1] ? HD[1]! * 1e8 + Math.floor(HD[2]! / 10) : -1;
-      if (was[9] !== dk) (was[9] = dk), (dragChip!.hidden = dk < 0), dk >= 0 && (dragChip!.firstChild!.textContent = `${DRAG_NAME[HD[1]!]} ×${DRAG_MULT[HD[1]!]} · ${Math.round(HD[2]!).toLocaleString("en-US")} AT RISK`);
+      if (was[9] !== dk) (was[9] = dk), (dragChip!.hidden = dk < 0), dk >= 0 && (dragChip!.firstChild!.textContent = `${DRAG_NAME[HD[1]!]} ×${st!.mult(HD[1]!)} · ${Math.round(HD[2]!).toLocaleString("en-US")} AT RISK`);
     } else {
       const a = Math.floor(m.M[3]! * 10);
       if (was[1] !== a) (was[1] = a), (lapEl.textContent = `${(a / 10).toFixed(1)}s AIR`);

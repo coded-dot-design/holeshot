@@ -153,6 +153,8 @@ export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEE
     const sx = x - tz * hw * 0.5, sz = z + tx * hw * 0.5;
     win.follow(sx, sz);
     bike.use(which, sx, sz, heading(tx, tz));
+    // A wheelie bar caps the drags (../stunts.ts `bar`).
+    st.bar(bike.spec.bar?.dragX);
     S[AI] = 0; S[AJ] = 0; S[AD] = 0; S[AS] = 1;
     ES[0] = sx; ES[1] = sz; ES[2] = 0;
     SGC[2] = 0;

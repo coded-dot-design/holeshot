@@ -38,7 +38,7 @@ window.load = (i) => {
     side: "#e8e8ee", sideInk: "#101018", num: 10 + i, gfx: GFX[i % GFX.length], graphic: "#ffd23f" };
   g = rig(d, "b", C, t.rig, "peak"); bk = bike(flat, t.power, t.shape);
   const by = (k) => d.get("b" + k), bikeParts = g.parts.filter((p) => !under(p, [g.rider]));
-  const side = [["armL", "fkL", "slL", "np-1s"], ["armR", "fkR", "slR", "np1s", ":ex"]].map((r) => r.map((k) => by(k.startsWith(":") ? k : ":" + k)).filter(Boolean));
+  const side = [["armL", "fkL", "slL", "np-1s", ":exL"], ["armR", "fkR", "slR", "np1s", ":ex"]].map((r) => r.map((k) => by(k.startsWith(":") ? k : ":" + k)).filter(Boolean));
   const hub = [by(":w0"), by(":w1")], end = [by(":w0b"), by(":w1b")];
   const tyre = hub.map((h) => g.parts.find((p) => p.parent === h));
   const wheel = bikeParts.filter((p) => under(p, hub));
@@ -166,7 +166,7 @@ try {
     }
   }
   assert.deepEqual(errs, [], "no page errors");
-  assert.deepEqual([...kinds].sort(), ["2t", "4t", "e"], "every rig kind in the roster");
+  assert.deepEqual([...kinds].sort(), ["2t", "4t", "ebike", "emoto", "mini", "naked", "sport"], "every rig kind in the roster");
   assert.ok(judged.fender >= 500 && judged.far >= 500 && judged.near >= 200, `enough overlapping cases to judge (${JSON.stringify(judged)})`);
   assert.deepEqual(bad, [], `bike layers:\n${bad.slice(0, 40).join("\n")}${bad.length > 40 ? `\n… ${bad.length - 40} more` : ""}`);
   console.log(`Layers: ${models.length} bikes × 16 yaws × 2 pitches × ${POSES.length} poses: fenders at least ${(worst.fender * 100).toFixed(0)} % over their tyres (${judged.fender} cases), far-side parts at most ${(worst.far * 100).toFixed(1)} % over the bike (${judged.far}), near-side parts at least ${(worst.near * 100).toFixed(0)} % over the wheels (${judged.near}).`);

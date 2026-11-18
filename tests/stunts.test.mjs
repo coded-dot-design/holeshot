@@ -74,6 +74,40 @@ test("fender drag: on the gas past it, it loops out and the points are lost", ()
   assert.ok(!ev.some((e) => e[1] === W.E_BANKED));
 });
 
+test("wheelie bar (the mini's upgrade): it caps every drag at its ×5 and the fender never reaches the road", () => {
+  const b = newBike("curb-pup", "b1");
+  b.mods.wbar = 1;
+  const t = tune(b), sp = { ...spec("curb-pup"), power: t.power, shape: t.shape, sweet: t.sweet, hop: t.hop, bar: t.bar };
+  assert.ok(t.bar && t.bar.dragX === 5, "the bar's multiplier");
+  const run = O.openRun([sp], 3), ev = [], AI = new Float64Array(5);
+  assert.deepEqual([ST.HAND, ST.DOUBLE, ST.FENDER].map((l) => run.st.mult(l)), [5, 5, 5], "capped at ×5");
+  let top = 0;
+  for (let f = 0; f < 60 * 13; f++) {
+    const k = run.bike.b, th = run.bike.nose, w = k.S[3], v = k.speed;
+    let gas = 0, brake = 0, lean = 0;
+    if (f < 50) gas = v < 4 ? 1 : 0;
+    else if (f < 60 * 8.5) {
+      // Leaned on hard (aiming past the fender line): the bar holds it short of the fender.
+      const u = (2.2 - th) * 10 - w * 4;
+      gas = u > 0 ? 1 : 0.7; brake = u < 0 ? Math.min(1, -u) : 0; lean = th > 1.3 ? 0 : -1;
+    } else (gas = 0), (brake = 1), (lean = 1);
+    run.autopilot(AI);
+    run.step(DT, gas, brake, lean, AI[3], 0);
+    for (let q = 0; q < run.n; q++) ev.push([f, run.ev[q * 2], run.ev[q * 2 + 1]]);
+    run.clear();
+    top = Math.max(top, th);
+  }
+  const lv = ev.filter((e) => e[1] === W.E_DRAG).map((e) => e[2]);
+  assert.ok(lv.includes(ST.HAND) && !lv.includes(ST.FENDER), `drag levels ${lv}`);
+  assert.ok(top < ST.FENDER_AT, `held by the bar at ${top.toFixed(2)} rad`);
+  assert.ok(!ev.some((e) => e[1] === W.E_CRASH || e[1] === W.E_LOST), "never looped out");
+  const bank = ev.find((e) => e[1] === W.E_BANKED);
+  assert.ok(bank, "banked");
+  // ×5 all the way (a stock bike: ×10, then ×20 after DOUBLE_T), plus the streak.
+  const d1 = ev.find((e) => e[1] === W.E_DRAG && e[2] === ST.HAND), secs = (bank[0] - d1[0]) / 60, want = W.DRAG_RATE * 5 * secs + W.STREAK * secs * secs;
+  assert.ok(Math.abs(bank[2] - want) < want * 0.05, `×5, not ×10/×20: ${bank[2]} over ${secs.toFixed(1)} s (×5: ${Math.round(want)})`);
+});
+
 /** A bare bike and the stunts on flat ground, for the whip and the combo button. */
 function bare() {
   const flat = { sample(_x, _z, o) { o[0] = 0; o[1] = 0; o[2] = 1; o[3] = 0; return 0; } };

@@ -53,7 +53,15 @@ import { readdirSync, readFileSync } from "node:fs";
 // Units setting, plus about 2.9 KB of room.
 // Unreleased, r6 + r7 + r8 integrated: 189,970 B measured (holeshot.js; +5,182 B over 184,788 with r6
 // and r7: r8's stunts, callout, COMBO button and ENDLESS scoring), plus about 3 KB of room.
-const BUDGET = 193_000;
+// Unreleased, the bike families: 186,525 B measured (holeshot.js; +4,738 B over 181,787: the five
+// family bodies (e-bike, electric dirt, street mini, supersport, naked) and the four visible
+// upgrades, three street bikes, the families' rules (the dirt penalty, the warning, the fit and the
+// measured pace for the garage's before → after), the upgrades' tune and wheelie bar), plus about
+// 2.5 KB of room.
+// Unreleased, r6 + r7 + r8 + r9 integrated: 194,496 B measured (holeshot.js; +4,526 B over 189,970 with
+// r6-r8: r9's family bodies on r6's layers and groups, the street bikes, the upgrades and their
+// garage rows on r7's one pace measure, the wheelie bar's cap in r8's stunts), plus about 3 KB of room.
+const BUDGET = 197_500;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

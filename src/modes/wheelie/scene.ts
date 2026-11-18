@@ -25,7 +25,7 @@ import { pad } from "@fzlt/core/pad";
 import { sound } from "@fzlt/core/sound";
 import {
   DONE, E_AIR, E_BARK, E_BONUS, E_CRASH, E_END, E_GRUMP, E_HOP, E_RESPAWN, E_RESET, E_STUCK, E_SPLASH, E_START, E_TRICK,
-  E_TICKET, E_ESCAPE, E_STARS, E_UNIT, E_CLEAR, E_DRAG, E_BANKED, E_LOST, HAND_T, DRAG_X, LINES, READY, RUN, CRASH, SP_REACH,
+  E_TICKET, E_ESCAPE, E_STARS, E_UNIT, E_CLEAR, E_DRAG, E_BANKED, E_LOST, HAND_T, LINES, READY, RUN, CRASH, SP_REACH,
 } from "./rules.ts";
 import { openRun, E_TOWN, NNB, NSPK, S_TOWNS } from "./roam.ts";
 import {
@@ -40,7 +40,7 @@ import { modeStage } from "../race/scene.ts";
 import type { ModeCtx, ModeRun } from "../mode.ts";
 import { LOOP, ENDO, CASE, BAIL } from "../../bike/bike.ts";
 import { rig, type Rig } from "../../bike/rig.ts";
-import { DRAG_NAME, DRAG_MULT, FENDER } from "../stunts.ts";
+import { DRAG_NAME, FENDER } from "../stunts.ts";
 import { callout, stuntCalls } from "../callout.ts";
 import { pool, voice, gamepad, type Pool } from "../../bike/kit.ts";
 import { SC, CB, ON, DIST, TIME, SWEET, PTS, KIND, BEST_W, MANUAL, STOPPIE, F_CROSS, F_SPRINK } from "./tricks.ts";
@@ -129,7 +129,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   const stage = modeStage(ctx.host, "wc");
   const engine = createEngine({ root: stage, settle: 0.5, seed: ctx.seed });
   const m = meter("endcity");
-  const SPEC: RideSpec = { id: ctx.bike.model.id, name: ctx.bike.model.name, kind: ctx.bike.power.name, blurb: "", bars: [3, 3, 3], power: ctx.bike.power, shape: ctx.bike.shape, sweet: ctx.bike.sweet, hop: ctx.bike.hop };
+  const SPEC: RideSpec = { id: ctx.bike.model.id, name: ctx.bike.model.name, kind: ctx.bike.power.name, blurb: "", bars: [3, 3, 3], power: ctx.bike.power, shape: ctx.bike.shape, sweet: ctx.bike.sweet, hop: ctx.bike.hop, bar: ctx.bike.bar };
   const L = engine.ledger, sig = { signal: engine.signal };
   let P: Pal = document.documentElement.dataset.theme === "light" ? LIGHT : DARK, F: FPal = P.night ? FIELD_DARK : FIELD_LIGHT;
   const best = ctx.best ?? 0;
@@ -835,7 +835,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
         shake = 0.15;
         spark.ring(rnd, d.wheel[0]!, d.wheel[1]! - 0.3, d.wheel[2]!, 26, 3.5, 4.5, 0.8, 0.07, 1);
         stars(d.pos[0]!, d.pos[1]! + 1.2, d.pos[2]!);
-        const nm = DRAG_NAME[val]!, x = DRAG_MULT[val]!;
+        const nm = DRAG_NAME[val]!, x = run.st.mult(val);
         if (val === FENDER) shake = 0.3;
         toast(`${nm}! ×${x}`, "go");
         call.show(`${nm}!`, `×${x} · ${val === FENDER ? "SPARKS!" : "BACK UNDER 12 TO BANK"}`, val === FENDER ? "bad" : "go", 1.4);
@@ -914,7 +914,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       was[7] = dk;
       dragChip.hidden = dk < 0;
       dragChip.classList.toggle("wc-dragging", dk >= 1000);
-      if (dk >= 1000) dragEl.textContent = `${DRAG_NAME[HDv[1]!]} ×${DRAG_MULT[HDv[1]!]} · ${Math.round(HDv[2]!).toLocaleString("en-US")} AT RISK`;
+      if (dk >= 1000) dragEl.textContent = `${DRAG_NAME[HDv[1]!]} ×${run.st.mult(HDv[1]!)} · ${Math.round(HDv[2]!).toLocaleString("en-US")} AT RISK`;
       else if (dk >= 0) (dragEl.textContent = "PAST 12 · HOLD IT"), dragRing.style.setProperty("--p", dk + "%");
     }
     if (was[6] !== risk) (was[6] = risk), (riskEl.hidden = risk <= 0), (riskEl.textContent = `AT RISK ${risk.toLocaleString("en-US")}`);

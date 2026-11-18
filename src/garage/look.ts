@@ -1,11 +1,13 @@
 // The profile's looks → the rig's colours: the riding bike's paint scheme, its plastics colour, its
-// graphics kit and plate decal (with the rider's number on the side plates), the crash damage (bent
+// graphics kit and plate decal (with the rider's number on the side plates), a family upgrade that
+// shows (a wheelie bar, a turbo…), the crash damage (bent
 // bars, cracked plastics dull the colour), and the rider's kit. Used by every scene (ModeCtx.look)
 // and the garage's preview (with a try-on applied first).
 import type { RigHelmet } from "../bike/rig.ts";
 import { HELMETS, paint as paintOf, PLASTICS, PLATES, swatch, visor as visorOf } from "../data/looks.ts";
 import type { ModeCtx } from "../modes/mode.ts";
 import { riding, type Profile } from "../model/profile.ts";
+import { tune } from "../model/tune.ts";
 
 /** Mix `hex` toward `to` by t (0..1). */
 export function mix(hex: string, to: string, t: number) {
@@ -26,7 +28,7 @@ export function lookOf(p: Profile): { look: ModeCtx["look"]; helmet: RigHelmet; 
     look: {
       plastic: dull(own || pt.plastic), plastic2: dull(pt.plastic2), plate, ink, jersey, pants, helmet, stripe, visor: vis, boots: swatch(k.boots).hex, gloves,
       gfx: L?.graphics ?? "none", graphic: pt.plastic2 === (own || pt.plastic) ? pt.plate : pt.plastic2, side: plate, sideInk: ink, num: L?.number ?? 7,
-      bend: b?.dmg.bars ?? 0, cracks: crack,
+      bend: b?.dmg.bars ?? 0, cracks: crack, up: b ? tune(b).up : undefined,
     },
     helmet: (HELMETS.find((h) => h.id === k.helmet)?.id ?? "peak") as RigHelmet,
     number: L?.number ?? 7,

@@ -36,7 +36,7 @@ export const E_TRICK = 10;
  *  the stunts' own ring (`st`). */
 export const E_GROUND = 13, E_DRAG = 14, E_BANKED = 15, E_LOST = 16;
 
-export function freeRun(track: Track | RideMap | (Track & EndlessTrack), me: { power: Power; shape?: BikeShape; sweet?: number }, limit = 600, ground?: Terrain) {
+export function freeRun(track: Track | RideMap | (Track & EndlessTrack), me: { power: Power; shape?: BikeShape; sweet?: number; bar?: { dragX: number } | null }, limit = 600, ground?: Terrain) {
   const { HX, HZ, NT, TRACK, YAW, NR, near, WANT, FK, PF, prof, sAt } = track;
   const map = "isMap" in track ? track : null, Wd = "isEndless" in track ? track.world : null;
   if (Wd) Wd.follow(0, 0);
@@ -47,6 +47,8 @@ export function freeRun(track: Track | RideMap | (Track & EndlessTrack), me: { p
   // Endless: every trick Endless Wheelie City has (the loop-out past 2 o'clock: the drags live past 12).
   const b: Bike = bike(t, me.power, Wd ? { ...me.shape, walk: walkable, loop: FENDER_LOOP } : { ...me.shape, walk: walkable });
   const sc = tricks(), st = stunts(sc, 7), SWEET = me.sweet ?? 0.1;
+  // A wheelie bar caps the drags (../stunts.ts `bar`).
+  st.bar(me.bar?.dragX);
   // TK: the hop's air (seconds), the stunt events forwarded so far.
   const TK = new Float64Array(2);
   const riders = [b];

@@ -14,16 +14,17 @@ const { GARAGE_SLOTS } = await import("../src/data/economy.ts");
 const { buyBike, choose } = await import("../src/model/garage.ts");
 const mem = () => { const m = new Map(); return { m, get: (k) => m.get(k) ?? null, set: (k, v) => void m.set(k, v) }; };
 
-test("roster: four classes, four original models each; the starters are each class's cheapest", () => {
-  assert.equal(Object.keys(CLASSES).length, 4);
-  assert.equal(MODELS.length, 16);
+test("roster: four dirt classes of four original models, a street class of three; the starters are each dirt class's cheapest", () => {
+  assert.equal(Object.keys(CLASSES).length, 5);
+  assert.equal(MODELS.length, 19);
   for (const c of Object.keys(CLASSES)) {
-    const ms = MODELS.filter((m) => m.cls === c);
-    assert.equal(ms.length, 4, c);
+    const ms = MODELS.filter((m) => m.cls === c), street = CLASSES[c].family === "street";
+    assert.equal(ms.length, street ? 3 : 4, c);
     const s = STARTERS.find((m) => m.cls === c);
-    assert.equal(s.price, Math.min(...ms.map((m) => m.price)), `${c}: the starter is the cheapest`);
+    if (street) assert.equal(s, undefined, "street bikes are bought, never a starter");
+    else assert.equal(s.price, Math.min(...ms.map((m) => m.price)), `${c}: the starter is the cheapest`);
   }
-  assert.equal(new Set(MODELS.map((m) => m.id)).size, 16, "unique ids");
+  assert.equal(new Set(MODELS.map((m) => m.id)).size, 19, "unique ids");
   assert.equal(GARAGE_SLOTS, 3);
 });
 

@@ -41,8 +41,8 @@ test("pace: every bike measured, the table (stock, new)", () => {
 test("pace: each model has its own numbers; within a class the top rises with the tier", () => {
   const all = MODELS.map((m) => ({ m, ...row(stock(m.id)) }));
   const tops = all.map((r) => r.top.toFixed(2)), t30 = all.map((r) => r.t30.toFixed(3));
-  assert.equal(new Set(tops).size, tops.length, "sixteen top speeds");
-  assert.equal(new Set(t30.map((x, i) => x + tops[i])).size, all.length, "sixteen launches");
+  assert.equal(new Set(tops).size, tops.length, "every model its own top speed");
+  assert.equal(new Set(t30.map((x, i) => x + tops[i])).size, all.length, "every model its own launch");
   for (const c of Object.keys(CLASSES)) {
     const same = all.filter((r) => r.m.cls === c).sort((a, b) => a.m.tier - b.m.tier);
     for (let i = 1; i < same.length; i++) assert.ok(same[i].top > same[i - 1].top, `${c}: tier ${i + 1} tops tier ${i}`);
@@ -60,8 +60,9 @@ test("pace: the stretch is small and only at the top; the gas bikes' launch is u
     if (t.power.gears.length > 1) assert.deepEqual(Array.from(t.power.gears).slice(0, -1), Array.from(before.power.gears).slice(0, -1));
     if (m.cls === "2t" || m.cls === "4t") assert.equal(r.t30, b.t30, `${m.id}: 0–30 mph (shown) as before (the torque is untouched)`);
   }
-  // Not crazy: the fastest bike in the roster is at most 20 % over the slowest gas starter.
-  const tops = MODELS.map((m) => row(stock(m.id)).top), gas = row(stock("anvil")).top;
+  // Not crazy: the fastest dirt bike (gas or electric) is at most 20 % over the slowest gas starter.
+  // (The street bikes are built for the asphalt's flat out: faster by design, tests/families.test.mjs.)
+  const tops = MODELS.filter((m) => CLASSES[m.cls].family !== "street").map((m) => row(stock(m.id)).top), gas = row(stock("anvil")).top;
   assert.ok(Math.max(...tops) / gas < 1.2, `fastest ${Math.max(...tops).toFixed(1)} mph vs ${gas.toFixed(1)}`);
 });
 

@@ -1,7 +1,7 @@
 // The garage's card and its clicks: PARTS & MODS (condition with warnings, tyre compounds, crash
 // damage, tune choices, mods, the feel, the service log), PAINT & KIT (the bike's look, the rider's
 // kit, outfits; anything not owned is tried on first: the preview shows it before you buy) and the
-// SHOWROOM (all sixteen bikes, tiers 3-4 opening with progress; sell a bike or trade one in). Also
+// SHOWROOM (all nineteen bikes in five classes, tiers 3-4 opening with progress; sell a bike or trade one in). Also
 // the "before you ride" card when a part may fail. HTML strings, like the rest of the shell's cards;
 // the actions are ../model/garage.ts (pure), so this file only renders and routes.
 import { CLASSES, MODELS, makerOf, model as modelOf } from "../data/roster.ts";
@@ -13,6 +13,9 @@ import { tune, type Tuned } from "../model/tune.ts";
 import { paceRow } from "../model/pace.ts";
 import type { Units } from "../model/units.ts";
 import { atRisk, failChance, failName, partState, warnings } from "../model/upkeep.ts";
+import { DIRT_LINE, paceLine, paceOf } from "../model/families.ts";
+/** The family upgrades (one per family: ../model/families.ts). */
+const UPGRADES: ModId[] = ["wbar", "swap", "bore", "boost"];
 import { buyBike, cosmeticPrice, choose, dress, fits, fixPrice, modPrice, partPrice, repair, sell, service, setChoice, setupPrice, tradeValue, tryOn, unlocked, upgrade, type Buy, type Slot } from "../model/garage.ts";
 
 export interface GarageUI {
@@ -69,7 +72,9 @@ function partsTab(p: Profile, b: BikeSave) {
   const setups = (Object.keys(SETUPS) as SetupId[]).filter((k) => SETUPS[k].only !== "e" || isE(b)).map((k) => `<li class="dh-setup"><b class="dh-h3">${SETUPS[k].name}</b><span class="dh-chips">${SETUPS[k].opts.map((o) => { const pr = setupPrice(b, k, o.id); return `<button type="button" class="bui-key dh-mini" data-setup="${k}" data-id="${o.id}" aria-pressed="${b[k] === o.id}" title="${esc(o.blurb)}">${o.name}${pr ? `<small${cr >= pr ? "" : " data-short"}>◈${pr}</small>` : ""}</button>`; }).join("")}</span><small class="dh-blurb">${esc(SETUPS[k].opts.find((o) => o.id === b[k])?.blurb ?? "")}</small></li>`).join("");
   const mods = (Object.keys(MODS) as ModId[]).filter((k) => fits(b, k)).map((k) => {
     const M = MODS[k], lv = b.mods[k] ?? 0, price = modPrice(b, k);
-    return `<li><span class="dh-mod"><b>${modName(b, k)}</b><small>${esc(M.blurb)}</small><i aria-label="Level ${lv} of ${M.max}">${"◆".repeat(lv)}${"◇".repeat(M.max - lv)}</i></span><button type="button" class="bui-key dh-buy" data-mod="${k}" ${price ? "" : "disabled"}>${price ? (lv || M.max === 1 ? (M.max === 1 ? "FIT" : "UPGRADE") : "STAGE 1") + cost(price, cr >= price) : M.max === 1 ? "FITTED" : "MAXED"}</button></li>`;
+    // A family upgrade: its pace before → after, measured on the sim for this bike as it is now.
+    const pc = UPGRADES.includes(k) ? `<small class="dh-pace-up" aria-label="Pace before and after">${paceLine(paceOf(tune({ ...b, mods: { ...b.mods, [k]: 0 } })), p.settings.units)} → <b>${paceLine(paceOf(tune({ ...b, mods: { ...b.mods, [k]: 1 } })), p.settings.units)}</b></small>` : "";
+    return `<li><span class="dh-mod"><b>${modName(b, k)}</b><small>${esc(M.blurb)}</small>${pc}<i aria-label="Level ${lv} of ${M.max}">${"◆".repeat(lv)}${"◇".repeat(M.max - lv)}</i></span><button type="button" class="bui-key dh-buy" data-mod="${k}" ${price ? "" : "disabled"}>${price ? (lv || M.max === 1 ? (M.max === 1 ? "FIT" : "UPGRADE") : "STAGE 1") + cost(price, cr >= price) : M.max === 1 ? "FITTED" : "MAXED"}</button></li>`;
   }).join("");
   const log = b.log.length ? `<ol class="dh-log">${b.log.slice(0, 8).map(([e, w, c]) => `<li><small>EVENT ${e}</small><span>${logLine(b, w)}</span><b>${c ? "◈" + num(c) : ""}</b></li>`).join("")}</ol>` : `<p class="dh-sub">Nothing yet. Every service, mod and fix lands here.</p>`;
   return `${banner}<div class="dh-cols"><section><b class="dh-h2">CONDITION</b><ul class="dh-list">${parts}</ul><b class="dh-h2">CRASH DAMAGE</b><ul class="dh-list">${dmg}</ul><b class="dh-h2">SERVICE LOG</b>${log}</section><section><b class="dh-h2">TUNE</b><ul class="dh-list">${setups}</ul><b class="dh-h2">MODS</b><ul class="dh-list">${mods}</ul><b class="dh-h2">PACE</b>${paceDl(t, unitsOf(p))}<b class="dh-h2">FEEL</b><div class="dh-feel">${bar(t.feel.pull, "PULL")}${bar(t.feel.top, "TOP SPEED")}${bar(t.feel.grip, "GRIP")}${bar(t.feel.susp, "SUSPENSION")}${bar(t.feel.brakes, "BRAKES")}${bar(t.feel.light, "LIGHT")}</div></section></div>`;
@@ -117,7 +122,7 @@ function showroomTab(p: Profile, all: boolean) {
   const prog = `You: ${p.stats.events} events · ◈ ${num(p.stats.earned)} earned.`;
   return `<p class="dh-sub">${full ? `The garage holds ${GARAGE_SLOTS} bikes: a new one trades in the bike that rides next (◈ ${num(trade)} off), or sell one first.` : "A new bike goes in the empty bay and rides next. Each bike keeps its own parts, mods and paint."} ${prog}</p><b class="dh-h2">YOUR BIKES</b><ul class="dh-list">${mine}</ul><ul class="dh-list dh-classes">${cls}</ul>`;
 }
-const blank = (id: string) => ({ model: id, parts: { tyres: 1, chain: 1, motor: 1, susp: 1, brakes: 1 }, mods: { power: 0, brakes: 0, weight: 0, travel: 0, cells: 0 }, tyre: "med" as TyreId, gearing: "stock", spring: "stock", map: "std", dmg: { bars: 0, plastics: 0 } });
+const blank = (id: string) => ({ model: id, parts: { tyres: 1, chain: 1, motor: 1, susp: 1, brakes: 1 }, mods: { power: 0, brakes: 0, weight: 0, travel: 0, cells: 0, wbar: 0, swap: 0, bore: 0, boost: 0 }, tyre: "med" as TyreId, gearing: "stock", spring: "stock", map: "std", dmg: { bars: 0, plastics: 0 } });
 
 /** The garage card: the header and tabs (the shell's), the bay (the preview slot, your bikes), the
  *  three garage tabs, the note line. */
@@ -157,10 +162,12 @@ export function garageClick(p: Profile, ui: GarageUI, t: HTMLElement, root: Pare
   return null;
 }
 
-/** "Before you ride": a part may fail, or one already has. Empty when the bike is fine. */
-export function riskCard(p: Profile, what: string) {
+/** "Before you ride": a part may fail, or one already has; or a street bike is going on the dirt
+ *  (`street`: RIDE ANYWAY or PICK ANOTHER, ../model/families.ts). Empty when the bike is fine. */
+export function riskCard(p: Profile, what: string, street = false) {
   const b = riding(p), risky = atRisk(b);
-  if (!risky.length && !b.fail) return "";
-  const lines = [...(b.fail ? [`Your <b>${partName(b, b.fail)}</b> failed (${failName(b, b.fail)}): it rides at its worst until you replace it.`] : []), ...risky.map((k) => `Your <b>${partName(b, k)}</b> is past its limit (${Math.round(b.parts[k] * 100)}%): a <b>${Math.round(failChance(b, k) * 100)}%</b> chance it fails in this event.`)];
+  if (!risky.length && !b.fail && !street) return "";
+  if (street && !risky.length && !b.fail) return `<div class="dh-card dh-risk" data-screen="risk" role="dialog" aria-label="Before you ride"><b class="dh-h">BEFORE YOU RIDE</b><p class="dh-sub">${esc(what)}</p><p class="dh-alert dh-street"><b>${esc(DIRT_LINE)}</b> Road tyres slide on the dirt and short springs case the landings. It's built for Endless Wheelie City.</p><p class="dh-row"><button type="button" class="bui-key dh-pick-other" data-go="garage">PICK ANOTHER</button><button type="button" class="bui-key dh-risk-go">RIDE ANYWAY</button></p></div>`;
+  const lines = [...(street ? [`<b>${esc(DIRT_LINE)}</b> Road tyres slide on the dirt; short springs case the landings.`] : []), ...(b.fail ? [`Your <b>${partName(b, b.fail)}</b> failed (${failName(b, b.fail)}): it rides at its worst until you replace it.`] : []), ...risky.map((k) => `Your <b>${partName(b, k)}</b> is past its limit (${Math.round(b.parts[k] * 100)}%): a <b>${Math.round(failChance(b, k) * 100)}%</b> chance it fails in this event.`)];
   return `<div class="dh-card dh-risk" data-screen="risk" role="dialog" aria-label="Before you ride"><b class="dh-h">BEFORE YOU RIDE</b><p class="dh-sub">${esc(what)}</p>${lines.map((l) => `<p class="dh-alert">${l}</p>`).join("")}<p class="dh-sub">A failure costs ${Math.round(FAIL.pay * 100)}% of the payout (the tow) and leaves the part dead. Nothing above ${Math.round(FAIL.at * 100)}% ever fails.</p><p class="dh-row"><button type="button" class="bui-key" data-go="garage">TO THE GARAGE</button><button type="button" class="bui-key dh-risk-go">RIDE ANYWAY</button></p></div>`;
 }

@@ -13,7 +13,7 @@ const steps = [
   ['EARN', 'Races and series rounds pay by place, Big Air by the judges, Endless Wheelie City by points (hold a wheelie past 12 o\'clock for a ×10 hand drag; stop and the neon patrol tickets you), Free Ride a little for saddle time. Crash and you tumble, get back up, and keep riding.'],
   ['WRENCH', 'Every lap wears the bike: tyres lose grip, a 2-stroke\'s top end loses pull, seals blow and it cases sooner. Buy new tyres, rebuild the motor, add mods, change the paint and the kit.'],
 ];
-const classes = Object.values(CLASSES).map((c) => ({ ...c, models: MODELS.filter((m) => m.cls === c.id), starter: STARTERS.find((m) => m.cls === c.id)! }));
+const classes = Object.values(CLASSES).map((c) => ({ ...c, models: MODELS.filter((m) => m.cls === c.id), starter: STARTERS.find((m) => m.cls === c.id) }));
 const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound', 'ui'];
 ---
 <Base title="Holeshot · one bike, every kind of dirt" description={description}>
@@ -63,7 +63,7 @@ const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound'
       <p class="eyebrow"><span class="index">03</span> THE GARAGE</p>
       <h2>Six makers. Sixteen bikes. Room for three.</h2>
       <ul class="cards">
-        {classes.map((c) => <li class="panel"><p class="meta">{c.name}</p><h3>{c.maker}</h3><p>{c.motto}</p><p class="meta">Starter: {c.starter.name} · {c.models.map((m) => m.name).join(' · ')}</p></li>)}
+        {classes.map((c) => <li class="panel"><p class="meta">{c.name}</p><h3>{c.maker}</h3><p>{c.motto}</p><p class="meta">{c.starter ? `Starter: ${c.starter.name} · ` : 'In the showroom: '}{c.models.map((m) => m.name).join(' · ')}</p></li>)}
       </ul>
     </div>
   </section>

@@ -22,6 +22,7 @@ import { FREE_MAPS } from "./modes/index.ts";
 import { exportCode, importCode, load, local, newBike, ready, riding, save, setup, fresh, type Profile, type Store, type RiderKit } from "./model/profile.ts";
 import { testCredits, topUp } from "./model/testcredits.ts";
 import { tune } from "./model/tune.ts";
+import { dirtWarning, onGround } from "./model/families.ts";
 import { apply, pitFix, pitReady, settle, type ModeResult } from "./model/economy.ts";
 import type { Buy } from "./model/garage.ts";
 import { after, ride as garageRide } from "./model/upkeep.ts";
@@ -136,7 +137,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     if (!pv.isConnected || !ready(profile)) return;
     const r = pv.getBoundingClientRect(), w = Math.round(r.width), h = Math.round(r.height);
     if (w < 10 || h < 10) return;
-    const P2 = screen === "garage" ? shown(profile, gui) : profile, b = riding(P2), t = tune(b), L2 = lookOf(P2), key = JSON.stringify([w, h, b.model, b.look, b.dmg, P2.kit, pageTheme(), pvYaw]);
+    const P2 = screen === "garage" ? shown(profile, gui) : profile, b = riding(P2), t = tune(b), L2 = lookOf(P2), key = JSON.stringify([w, h, b.model, b.look, b.dmg, b.mods, P2.kit, pageTheme(), pvYaw]);
     if (key === pvKey) return;
     pvKey = key;
     pdio.resize(w, h, Math.min(2, devicePixelRatio || 1));
@@ -279,7 +280,8 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     if (!ready(profile)) return show("setup");
     if (id === "series" && !profile.series.run) return show("series");
     // A part that may fail (or has): say so before the ride; RIDE ANYWAY goes on.
-    const risk = !o.attract && !opt.auto && !sure ? riskCard(profile, `${modeName(id)} on your ${bikeLine()}.`) : "";
+    // (A street bike on the dirt asks too: ride anyway or pick another. ./model/families.ts)
+    const risk = !o.attract && !opt.auto && !sure ? riskCard(profile, `${modeName(id)} on your ${bikeLine()}.`, dirtWarning(modelOf(riding(profile).model), id)) : "";
     (pending = risk ? [id, opt] : null), (sure = false);
     if (risk) return (cards.innerHTML = risk), (cards.hidden = false), cards.querySelector<HTMLElement>(".dh-risk-go")?.focus();
     run?.destroy();
@@ -290,7 +292,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     const L2 = lookOf(profile), b = riding(profile);
     const ctx: ModeCtx = {
       host: modeEl,
-      bike: tune(b),
+      bike: onGround(tune(b), id),
       look: L2.look, helmet: L2.helmet, number: L2.number, name: profile.name,
       seed: opt.seed ?? ((o.seed ?? 20261114) + profile.stats.events * 7919) >>> 0,
       map: opt.map,

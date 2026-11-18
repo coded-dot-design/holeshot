@@ -32,6 +32,38 @@
   pops with the points. The ENDLESS HUD gains a points chip and an at-risk drag chip; Endless trick
   points pay inside Free Ride's session cap. Size: +5,182 B gzip measured on top of r6 and r7. Tests: `tests/stunts.test.mjs`; golden: the Endless Wheelie City ride's hash (its
   loop-out moved).
+- **Bike families: gas dirt, electric, street.** Every class belongs to a family and every bike
+  looks like its family (`src/bike/bodies.ts`): electrics lose the tank and the exhaust (an e-bike is
+  a pedal bike with thin tubes, a battery on the down tube, cranks and a saddle; an electric dirt bike
+  is a moto frame round a big glowing battery box, the motor at the pivot). Three original **street
+  bikes** in a new STREET class from three new makers of the city's own (no nod to any real maker):
+  CURBCAT BLOCK PUP 125 (a red street mini), NIGHTGLASS TIDEBREAKER 600 (a fully faired supersport)
+  and IRONJAW BARE KNUCKLE 900 (a naked superbike), each with its factory paint. Road tyres, short
+  stiff springs, five-plus gears: the fastest bikes on the flat (measured, as shown: TIDEBREAKER 84 mph and
+  BARE KNUCKLE 90 mph stock against 73 mph for the fastest dirt bike, the YX-250 2T) and best in Endless Wheelie City. On the dirt they slide and case
+  (grip ×0.72, travel ×0.8, case line ×0.85, brakes ×0.8: `src/model/families.ts`), and picking one
+  for a dirt mode asks first: "Street bike on dirt? It won't perform well." (RIDE ANYWAY / PICK
+  ANOTHER). Online rides use the same rules. Never a starter; the showroom sells them (the mini from
+  day one, the big two with the tier 3-4 unlocks).
+- **Family upgrades, the late-game goals** (one per family, the dearest things in the shop): a
+  WHEELIE BAR for the street mini (◈ 5,200: past 12 it sits on its bar and never loops out, the
+  balance window ×1.6; the trade: the hand drag pays ×5, not ×10), a MOTOR SWAP for the electrics
+  (◈ 7,400: +30 % drive, +14 % top gear, the battery heats 1.6× faster), a BIG BORE KIT for the gas
+  dirt bikes (◈ 7,800: +12 % drive, +3.5 % top gear, a deeper note) and a TURBO for the street bikes
+  (◈ 24,000, dearer than any bike: +22 % drive with boost from the middle revs, +16 % top gear). Each
+  shows on the bike (a bar with two little wheels, a bigger motor and a second battery, deep cylinder
+  fins, a charger and intake on the right), is saved with the bike, rides the online hello (one bit
+  each) and shows its pace before → after in the garage, read off the same measure as the PACE
+  row (`src/model/pace.ts`; speeds as shown). Measured (`tests/families.test.mjs` prints the table):
+  YX-250 2T big bore 0–30 0.74 → 0.70 s, top 72.6 → 75.3 mph; REDLINE 450 WORKS 0.76 → 0.70 s,
+  69.7 → 72.4 mph; LIGHT HORNET motor swap 0.67 → 0.54 s, 56.1 → 64.0 mph; ALPHA WOLF 0.52 → 0.43 s,
+  66.9 → 76.4 mph; KIT FOX 0–20 0.48 → 0.37 s, 46.0 → 52.5 mph; TIDEBREAKER turbo 0.79 → 0.65 s,
+  84.1 → 97.9 mph; BARE KNUCKLE turbo 0–60 1.95 → 1.34 s, 89.8 → 104.6 mph. The wheelie bar leaves
+  the pace as it is. Sound hooks for the voice code: a big bore lowers the voice's pitch (in
+  `power.voice`), `tuned.sound.whistle` marks a turbo for a boost whistle and blow-off (not voiced
+  yet). The wheelie bar caps every drag in both endless modes at its ×5 (the double hand drag too),
+  and with it the fender never reaches the road (`src/modes/stunts.ts` `bar`; test
+  `tests/stunts.test.mjs`).
 
 - **Miles by default, km as a setting.** SETTINGS → UNITS: Imperial (miles, mph; the default) or
   Metric (km, km/h), saved in the profile (schema v6: every existing save migrates to Imperial).
@@ -104,10 +136,10 @@
   70 ms while the revs fall to the next gear, a downshift blips the revs. The electric bikes are one
   smooth whine that follows the road speed (an e-bike's hub gears are never heard). Mute silences it
   all (`src/bike/kit.ts` `voice`; tests: `tests/voice.test.mjs`).
-- **Size budget 193,000 B gzip** (was 184,000): r6, r7 and r8 together measure 189,970 B (holeshot.js;
-  +7,510 B over main's 182,460: the bike layers, turntable, speed chip and icon keys; the measured
-  pace, PACE rows, top-gear stretch and gear-change voice; the stunts, callout and COMBO button),
-  plus about 3 KB of room.
+- **Size budget 197,500 B gzip** (was 184,000): this release measures 194,496 B (holeshot.js;
+  +12,036 B over main before these four rounds, 182,460: the bike layers, turntable, speed chip and icon
+  keys; the measured pace, PACE rows, top-gear stretch and gear-change voice; the stunts, callout
+  and COMBO button; the family bodies, street bikes and upgrades), plus about 3 KB of room.
 
 - **Test credits: `/play/?credits=inf` (or `?money=inf`).** For trying every bike: the garage shows
   ◈ ∞ and a TEST CREDITS ∞ chip, the showroom sells every bike (unlocks open), every part, mod, tune

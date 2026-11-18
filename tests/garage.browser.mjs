@@ -134,7 +134,7 @@ try {
     // ---- the showroom: locked tiers, buy, sell ----
     await click(p, "[data-gtab=showroom]");
     const locked = await $(p, "root.querySelectorAll('.dh-show li[data-locked]').length");
-    assert.equal(locked, 8, `${name}: tiers 3 and 4 are locked at 3 events`);
+    assert.equal(locked, 10, `${name}: tiers 3 and 4 are locked at 3 events (eight dirt bikes, two street)`);
     await shot(p, `${name}-7-showroom`);
     assert.equal(await $(p, "root.querySelectorAll('.dh-show .dh-pace-s').length"), 16, `${name}: every showroom bike shows its pace`);
     c = (await prof(p)).credits;

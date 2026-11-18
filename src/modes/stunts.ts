@@ -86,6 +86,11 @@ export function stunts(sc: Tricks, seed = 1) {
   // count, seconds since the last trick, how far out (0..1), the last trick's points and where.
   const CO = new Float64Array(8);
   const RNG = new Uint32Array(1);
+  // BAR: a wheelie bar's drag multiplier (0: no bar). It caps every drag level's multiplier, and with
+  // it the fender never reaches the road (the bar holds the nose short of it): ../model/tune.ts `bar`.
+  const BAR = new Float64Array(1);
+  /** A drag level's multiplier on this bike (capped by a wheelie bar). */
+  const mult = (lv: number) => (BAR[0]! > 0 ? Math.min(DRAG_MULT[lv]!, BAR[0]!) : DRAG_MULT[lv]!);
   const ev = new Float64Array(32), NE = new Uint8Array(1);
   const S = sc.S;
   const emit = (type: number, v: number) => void (NE[0]! < 16 && ((ev[NE[0]! * 2] = type), (ev[NE[0]! * 2 + 1] = v), (NE[0] = NE[0]! + 1)));
@@ -112,7 +117,7 @@ export function stunts(sc: Tricks, seed = 1) {
       CO[0] = combo;
       return OK;
     }
-    HD[7] = !air && b.contact[0] === 1 && b.contact[1] === 0 && b.rel > FENDER_AT ? 1 : 0;
+    HD[7] = !air && !BAR[0] && b.contact[0] === 1 && b.contact[1] === 0 && b.rel > FENDER_AT ? 1 : 0;
     drag(dt, b, air);
     // The whip.
     const was = WH[4] === 1;
@@ -189,7 +194,7 @@ export function stunts(sc: Tricks, seed = 1) {
     if (past) {
       HD[0] = HD[0]! + dt;
       let lv = HD[1]!;
-      if (nose >= FENDER_AT) lv = FENDER;
+      if (nose >= FENDER_AT && !BAR[0]) lv = FENDER;
       else if (lv === FENDER) lv = HD[4]! >= DOUBLE_T ? DOUBLE : HAND;
       else if (!lv && HD[0]! >= HAND_T) (lv = HAND), (HD[3] = 0), (HD[4] = 0);
       if (lv && lv !== FENDER) {
@@ -198,7 +203,7 @@ export function stunts(sc: Tricks, seed = 1) {
       }
       HD[1] = lv;
       if (lv > HD[5]!) (HD[5] = lv), emit(ST_DRAG, lv);
-      if (lv) (HD[3] = HD[3]! + dt), (HD[2] = HD[2]! + DRAG_RATE * DRAG_MULT[lv]! * (1 + S[CB]!) * dt);
+      if (lv) (HD[3] = HD[3]! + dt), (HD[2] = HD[2]! + DRAG_RATE * mult(lv) * (1 + S[CB]!) * dt);
       return;
     }
     if (HD[1]) {
@@ -232,7 +237,9 @@ export function stunts(sc: Tricks, seed = 1) {
     if (HD[1] === FENDER) T[3] = Math.max(T[3]!, 0.6 * drag);
   }
   return {
-    HD, WH, CO, ev, reset, step, lose, pose,
+    HD, WH, CO, ev, reset, step, lose, pose, mult,
+    /** The bike's wheelie bar (its drag multiplier, `tuned.bar.dragX`), or none (0 / null). */
+    bar(dragX: number | null | undefined) { BAR[0] = dragX ?? 0; },
     bytes: [HD, WH, CO, RNG, NE].map((x) => new Uint8Array(x.buffer, x.byteOffset, x.byteLength)),
     get n() { return NE[0]!; },
     clear() { NE[0] = 0; },

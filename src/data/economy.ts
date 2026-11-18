@@ -13,12 +13,12 @@ export type PartId = "tyres" | "chain" | "motor" | "susp" | "brakes";
 export const PARTS: PartId[] = ["tyres", "chain", "motor", "susp", "brakes"];
 /** Part names in the garage, by class for the motor. */
 export const PART_NAME: Record<PartId, string> = { tyres: "TYRES", chain: "CHAIN & SPROCKETS", motor: "MOTOR", susp: "SUSPENSION SEALS", brakes: "BRAKES & GRIPS" };
-export const MOTOR_NAME: Record<ClassId, string> = { "2t": "TOP END", "4t": "ENGINE", ebike: "BATTERY", emoto: "BATTERY" };
+export const MOTOR_NAME: Record<ClassId, string> = { "2t": "TOP END", "4t": "ENGINE", ebike: "BATTERY", emoto: "BATTERY", street: "ENGINE" };
 
 /** What a part costs to replace or rebuild (back to new), before the model's upkeep.cost. */
 export const PART_PRICE: Record<PartId, number> = { tyres: 120, chain: 80, motor: 0, susp: 180, brakes: 80 };
 /** The motor's price per class: 2-strokes rebuild cheap and often, 4-strokes rarely and dear. */
-export const MOTOR_PRICE: Record<ClassId, number> = { "2t": 200, "4t": 480, ebike: 240, emoto: 420 };
+export const MOTOR_PRICE: Record<ClassId, number> = { "2t": 200, "4t": 480, ebike: 240, emoto: 420, street: 560 };
 /** A part is offered for service once it is under this. */
 export const SERVICE_BELOW = 0.99;
 
@@ -29,7 +29,7 @@ export const WEAR = {
   /** Per second on the gas (the motor by class, below). */
   gas: { tyres: 0.0006, chain: 0.001, motor: 0, susp: 0, brakes: 0 } as Record<PartId, number>,
   /** The motor per second on the gas, by class. */
-  motorGas: { "2t": 0.0015, "4t": 0.0011, ebike: 0.0012, emoto: 0.0009 } as Record<ClassId, number>,
+  motorGas: { "2t": 0.0015, "4t": 0.0011, ebike: 0.0012, emoto: 0.0009, street: 0.0008 } as Record<ClassId, number>,
   /** Per second up on one wheel (a spinning rear, a hot clutch). */
   wheelie: { tyres: 0.004, chain: 0.0015, motor: 0.001, susp: 0, brakes: 0.001 } as Record<PartId, number>,
   /** Per second in the air (the landings), and per hard landing. */
@@ -74,13 +74,32 @@ export const ONLINE = { bonus: 1.5, beat: 75, full: 6, fade: 0.5, floor: 0.05, w
  *  more than the start credits: the first real mod comes after about three or four events (the
  *  balance test in tests/garage.test.mjs rides the reference player to it). `only`: the class kind
  *  it fits ("fuel": 2- and 4-strokes, "e": e-bikes and electric dirt bikes). */
-export type ModId = "power" | "brakes" | "weight" | "travel" | "cells";
-export const MODS: Record<ModId, { name: string; e: string; max: number; price: number[]; blurb: string; only?: "e" | "fuel" }> = {
+export type ModId = "power" | "brakes" | "weight" | "travel" | "cells" | "wbar" | "swap" | "bore" | "boost";
+/** What a mod fits: "fuel" the gas dirt bikes (2- and 4-strokes), "e" the electrics, "street" the
+ *  street bikes, "mini" the mini street bike (../model/families.ts `fitsWhere`). */
+export type ModFit = "e" | "fuel" | "street" | "mini";
+export const MODS: Record<ModId, { name: string; e: string; max: number; price: number[]; blurb: string; only?: ModFit }> = {
   power: { name: "EXHAUST", e: "CONTROLLER", max: 3, price: [0, 750, 1250, 1900], blurb: "Stage 1-3: more pull, most of it high in the revs." },
   brakes: { name: "BRAKES", e: "BRAKES", max: 2, price: [0, 750, 1150], blurb: "Bigger discs, sharper pads: stops shorter." },
   weight: { name: "WEIGHT SAVING", e: "WEIGHT SAVING", max: 2, price: [0, 900, 1500], blurb: "Light bolts, a lighter frame: quicker to lift, flick and flip." },
   travel: { name: "LONG TRAVEL KIT", e: "LONG TRAVEL KIT", max: 1, price: [0, 1300], blurb: "Longer forks and shock: soaks big landings, a touch lazier to rotate." },
   cells: { name: "BATTERY PACK", e: "BATTERY PACK", max: 2, price: [0, 950, 1600], blurb: "More cells: holds its voltage (top speed) as it wears, runs cooler. Heavier.", only: "e" },
+  // The family upgrades: one per family, the late-game goals (the dearest things in the shop; the
+  // turbo dearest of all). Effects: FAMILY_FX; measured before → after: tests/families.test.mjs.
+  wbar: { name: "WHEELIE BAR", e: "WHEELIE BAR", max: 1, price: [0, 5200], blurb: "A bar off the back: past 12 it holds the bike up, so it never loops out and the balance window is wider. The trade: the hand drag pays ×5, not ×10.", only: "mini" },
+  swap: { name: "MOTOR SWAP", e: "MOTOR SWAP", max: 1, price: [0, 7400], blurb: "A bigger motor and controller in the same light frame: a big jump in pull and top speed. Drains and heats the battery faster.", only: "e" },
+  bore: { name: "BIG BORE KIT", e: "BIG BORE KIT", max: 1, price: [0, 7800], blurb: "A bigger barrel and piston (a 250 pulls like a 300, a 450 like a 500): more torque, a little more top speed, a deeper exhaust note.", only: "fuel" },
+  boost: { name: "TURBO", e: "TURBO", max: 1, price: [0, 24000], blurb: "A charger, an intake and a blow-off valve: a huge jump in pull and top speed, and the whistle to match. The dearest thing in the shop.", only: "street" },
+};
+/** The family upgrades' effects in tune() (× on the number named): force, the upper curve (from the
+ *  middle revs up: a turbo's boost), the top gear, the mass, the engine voice's pitch (lower is
+ *  deeper), the battery's heat (wear), and the wheelie bar's hold (the nose angle it stops at past
+ *  12 o'clock, rad off the ground; the balance window ×; the hand drag's multiplier with it). */
+export const FAMILY_FX = {
+  swap: { force: 1.3, top: 1.14, mass: 1.03, heat: 1.6 },
+  bore: { force: 1.12, top: 1.035, mass: 1.02, voice: 0.84 },
+  boost: { force: 1.22, curve: 0.3, top: 1.16, mass: 1.02, whistle: 1 },
+  wbar: { at: 1.5708 + 0.3, sweet: 1.6, dragX: 5 },
 };
 
 /** Cosmetics, by kind and tier (tier 0 colours are in the starter kit and cost the first price). */
