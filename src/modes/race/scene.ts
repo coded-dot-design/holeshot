@@ -22,7 +22,10 @@ import { LOOP, ENDO, CASE, BAIL, type Power } from "../../bike/bike.ts";
 import { rig, type Rig, type RigColors } from "../../bike/rig.ts";
 import { pool, voice, gamepad, type Pool } from "../../bike/kit.ts";
 import { DONE, E_CRASH, E_FINISH, E_GATE, E_LAND, E_LAP, E_PLACE, E_RESPAWN, E_WHEELIE, E_COUNT, GRID, LAPS, RACE, TRACK_W, motoRace, type RaceOpts, type Track } from "./course.ts";
-import { freeRun, E_TRICK, E_STUCK, E_RESET } from "../freeride/session.ts";
+import { freeRun, E_TRICK, E_STUCK, E_RESET, E_GROUND, E_DRAG, E_BANKED, E_LOST } from "../freeride/session.ts";
+import { DRAG_NAME, DRAG_MULT, FENDER } from "../stunts.ts";
+import { SC as T_SC, CB as T_CB, PTS as T_PTS, KIND as T_KIND, DIST as T_DIST, TIME as T_TIME, MANUAL, STOPPIE } from "../wheelie/tricks.ts";
+import { callout, stuntCalls } from "../callout.ts";
 import { RESET } from "../unstuck.ts";
 import { desertView, biomePal, desertBands, GRID_A, type DesertView } from "../desert/look.ts";
 import type { DesertTrack } from "../desert/track.ts";
@@ -96,6 +99,8 @@ const LIGHT: Pal = {
 };
 const DUST = 120, SPARK = 48, ROOST = 60;
 const ORD = ["1ST", "2ND", "3RD", "4TH"];
+/** Endless: the ground tricks' names (../wheelie/tricks.ts kinds). */
+const GROUND = ["", "WHEELIE", "MANUAL", "HOP", "STOPPIE"];
 const CRASH_NAME: Record<number, string> = { [LOOP]: "LOOPED OUT!", [ENDO]: "OVER THE BARS!", [CASE]: "CASED IT!", [BAIL]: "BAILED!", 5: "WIPEOUT!", 9: "OFF THE TABLE!" };
 
 /** The mode's host: the gallery stage's two layers (a backdrop and the slot the scene draws in). */
@@ -127,7 +132,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   const DK: Pal = look ? { ...DARK, ...look.dark } : bp ? { ...DARK, ...bp.dark } : DARK, LT: Pal = look ? { ...LIGHT, ...look.light } : bp ? { ...LIGHT, ...bp.light } : LIGHT;
   let P: Pal = document.documentElement.dataset.theme === "light" ? LT : DK;
   const { HX, HZ, NT, TRACK, YAW } = track, { TURN, LAP, GATE_S, LINE_S } = track as Track;
-  const me0 = { power: ctx.bike.power, shape: ctx.bike.shape };
+  const me0 = { power: ctx.bike.power, shape: ctx.bike.shape, sweet: ctx.bike.sweet };
   // Online: the match's sim (stepped by the rollback link, not here), this screen's seat in it.
   const seat = net ? net.seat : 0, jam = net ? net.ride.jam : null, humans = net ? net.ride.players : 1;
   const race = net ? net.ride.race : free ? null : motoRace(ctx.seed, track as Track, me0, rivals, opts);
@@ -147,20 +152,23 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   play.setAttribute("aria-label", `${free ? "Free Ride" : "Race"}: Space or J for gas, K or Shift to brake, W and S (or up and down) shift your weight forward and back (back lifts the front; in the air it pitches the bike), A and D (or left and right) steer. V changes the view, M mutes, P or Escape pauses`);
   const hud = L.add(document.createElement("div"));
   hud.className = "mt-hud";
-  hud.innerHTML = `<div class="mt-head"><p class="mt-top">${jam ? `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>0 PTS</span></b>` : endless ? `<b class="mt-chip mt-pos"><span>BEST ${km(ctx.best ?? 0)}</span></b><b class="mt-chip mt-lap"><span>${km(0)}</span></b>` : free ? `<b class="mt-chip mt-pos"><span>${map ? map.name : "FREE RIDE"}</span></b><b class="mt-chip mt-lap"><span>0.0s AIR</span></b>` : `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>LAP 1/${LAPS}</span></b>`}<b class="mt-chip mt-time"><span>0:00.0</span></b><b class="mt-chip mt-ride"><span>#${ctx.number} ${NAME}</span></b></p><p class="mt-hint"></p></div><p class="mt-toast" hidden></p><p class="mt-live" aria-live="polite"></p><p class="mt-stuck" hidden>STUCK? Hold R / tap ↺ to reset</p><p class="mt-keys">${keysHTML("mt", { reset: "Reset to the last good spot (R)", view: !endless, theme: !!ctx.theme })}</p>`;
+  hud.innerHTML = `<div class="mt-head"><p class="mt-top">${jam ? `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>0 PTS</span></b>` : endless ? `<b class="mt-chip mt-pos"><span>BEST ${km(ctx.best ?? 0)}</span></b><b class="mt-chip mt-lap"><span>${km(0)}</span></b>` : free ? `<b class="mt-chip mt-pos"><span>${map ? map.name : "FREE RIDE"}</span></b><b class="mt-chip mt-lap"><span>0.0s AIR</span></b>` : `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>LAP 1/${LAPS}</span></b>`}<b class="mt-chip mt-time"><span>0:00.0</span></b><b class="mt-chip mt-ride"><span>#${ctx.number} ${NAME}</span></b>${endless ? `<b class="mt-chip mt-score" aria-label="Trick points"><span>0 PTS</span><i></i></b><b class="mt-chip mt-drag" hidden><span></span></b>` : ""}</p><p class="mt-hint"></p></div><p class="mt-toast" hidden></p><p class="mt-live" aria-live="polite"></p><p class="mt-stuck" hidden>STUCK? Hold R / tap ↺ to reset</p><p class="mt-keys">${keysHTML("mt", { reset: "Reset to the last good spot (R)", view: !endless, theme: !!ctx.theme })}</p>`;
   const head = hud.children[0] as HTMLElement, top = head.children[0] as HTMLElement, hintEl = head.children[1] as HTMLElement;
   const toastEl = hud.children[1] as HTMLElement, live = hud.children[2] as HTMLElement, stuckEl = hud.children[3] as HTMLElement, keysEl = hud.children[4] as HTMLElement;
   const posEl = top.children[0]!.firstChild as HTMLElement, lapEl = top.children[1]!.firstChild as HTMLElement, timeEl = top.children[2]!.firstChild as HTMLElement;
   // The speed, next to the distance (lap, points, air) chip.
   const speedW = speedo(top.children[1]!, "mt", ctx.units);
   const viewK = keysEl.querySelector<HTMLButtonElement>(".mt-view")!, muteK = keysEl.querySelector<HTMLButtonElement>(".mt-mute")!;
+  // Endless: the trick points chip, the drag's (at risk) chip, the callout (../callout.ts).
+  const scoreChip = top.querySelector<HTMLElement>(".mt-score"), dragChip = top.querySelector<HTMLElement>(".mt-drag");
+  const call = callout(hud, ctx.reduced), st = endless && fr ? fr.st : null, tsc = endless && fr ? fr.sc.S : null;
   stage.append(canvas, play, hud);
   if (ctx.attract) hud.hidden = true;
   const snd = sound(engine, { cues: { count: "click", gate: "power", lap: "ready", crash: "boom", land: "click", wheelie: "power", finish: "win", pass: "click" }, volume: 0.1, on: ctx.sound && !ctx.attract });
   const vox = voice();
   vox.on = snd.on;
-  const c = controls(engine, { keys: { left: [], right: [], fwd: [], back: [], gas: [], brake: [], reset: [] }, target: play });
-  const RESETK = c.id("reset"), GAS = c.id("gas"), BRAKE = c.id("brake"), LEFT = c.id("left"), RIGHT = c.id("right"), FWD = c.id("fwd"), BACK = c.id("back");
+  const c = controls(engine, { keys: { left: [], right: [], fwd: [], back: [], gas: [], brake: [], reset: [], combo: [] }, target: play });
+  const COMBOK = c.id("combo"), RESETK = c.id("reset"), GAS = c.id("gas"), BRAKE = c.id("brake"), LEFT = c.id("left"), RIGHT = c.id("right"), FWD = c.id("fwd"), BACK = c.id("back");
   const thePad = pad(engine, c, {
     scheme: "stick",
     // Gas and brake on the throttle rocker (../../bike/rocker.ts), under the right thumb.
@@ -168,7 +176,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     host: stage,
   });
   thePad.el.classList.add("mt-pad");
-  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal });
+  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal, combo: endless ? "combo" : "" });
   // Walking the bike: the WALK chip, and on a touch screen the one-time "stick back" hint.
   const coarse = matchMedia("(pointer: coarse)"), walkHud = walkUi(hud, () => coarse.matches && !ctx.attract);
   if (ctx.attract) thePad.el.hidden = true;
@@ -282,7 +290,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   }
 
   // ---- state ----
-  const I = new Float64Array(5), GP = new Float64Array(7), tmp = new Float64Array(3), tmp2 = new Float64Array(3);
+  const I = new Float64Array(6), GP = new Float64Array(8), DRAGA = new Float64Array(1), tmp = new Float64Array(3), tmp2 = new Float64Array(3);
   // Pointer: down, start x, start y, x, y, id.
   const PD = new Float64Array(6);
   PD[5] = -1;
@@ -291,7 +299,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   V[0] = V[1] = 1;
   let blinkT = 0, resetQ = 0;
   let view = ctx.attract ? 1 : 0, auto = !!ctx.auto || !!ctx.attract, dirty = true, hudDirty = true, shake = 0, toastT = 0, gateT = 0, endAt = -1, emitK = 0, paused = false, ended = false, led = true, chaseSet = false;
-  const was = new Float64Array(8).fill(-1);
+  const was = new Float64Array(10).fill(-1);
   const TABLE = { yaw: 0, pitch: 0.82, dist: 40, tx: 0, ty: 0, tz: 0.6, ox: 0, oy: 0, fov: 0.62 };
   // The chase framing is fixed for the whole event (set once, from the stage's shape at the start):
   // no zoom with speed or air, no refit when a phone's address bar comes and goes.
@@ -324,7 +332,10 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     for (let r = 0; r < RIDERS; r++) {
       const b = sim.riders[r]!, g = rigs[r]!;
       if (net) shift(r, 1);
+      if (st && r === seat) st.pose(g.T, DRAGA[0]!);
       g.pose(b, b.air > 0 || Math.abs(b.speed) > 5 ? 0.85 : 0.35);
+      // The whip: the bike kicked out sideways in the air.
+      if (st && r === seat && st.whip !== 0 && !b.crashed) (g.root.rot[0] = g.root.rot[0]! + st.whip * 0.95), (g.root.rot[1] = g.root.rot[1]! + st.whip * 0.3);
       if (net) shift(r, -1);
       const x = b.pos[0]!, z = b.pos[2]!, inside = Math.abs(x) < HX && Math.abs(z) < HZ, lift = inside ? b.pos[1]! - t.height(x, z) : 9;
       tv.shadow(r, x, z, 0.95, inside ? Math.max(0, 0.36 - lift * 0.09) : 0);
@@ -348,6 +359,17 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
         dust.puff(b.wheel[0]! + (rnd() - 0.5) * 0.3, b.wheel[1]! - 0.25, b.wheel[2]! + (rnd() - 0.5) * 0.3, -b.cy * b.speed * 0.12 + (rnd() - 0.5), 0.4 + rnd() * 0.6, b.sy * b.speed * 0.12 + (rnd() - 0.5), 0.6 + rnd() * 0.5, 0.11, 0.4);
       }
       if (b.slip > 0.1 && rnd() < b.slip) roost.puff(b.wheel[0]!, b.wheel[1]! - 0.2, b.wheel[2]!, -b.cy * (3 + rnd() * 3), 2 + rnd() * 2.5, b.sy * (3 + rnd() * 3), 0.5 + rnd() * 0.3, 0.05, 0.9);
+    }
+    if (st) {
+      // The drags: the hand eases down; sparks off the hand on the road, and off the fender.
+      const dg = st.HD[1]! > 0 && !me.crashed ? 1 : 0, was0 = DRAGA[0]!;
+      DRAGA[0] = ctx.reduced ? dg : was0 + (dg - was0) * Math.min(1, dt * 10);
+      if (Math.abs(DRAGA[0]! - dg) > 0.01 || st.amount > 0 || st.whip !== 0) any = true;
+      if (!ctx.reduced && (dg || st.fender)) {
+        const w = me.wheel, fx = me.cy, fz = -me.sy;
+        for (let q = 0; q < (st.fender ? 3 : 1); q++) spark.puff(w[0]! - fx * 0.3 + (rnd() - 0.5) * 0.2, w[1]! - 0.3, w[2]! - fz * 0.3 + (rnd() - 0.5) * 0.2, -fx * me.speed * 0.5 + (rnd() - 0.5) * 3, 1.5 + rnd() * 2.5, -fz * me.speed * 0.5 + (rnd() - 0.5) * 3, 0.2 + rnd() * 0.25, 0.035, 1);
+        any = true;
+      }
     }
     if (dust.step(dt, -0.4, 0.22, 0.32)) any = true;
     if (roost.step(dt, 14, 0.02, 0.9, 0.4)) any = true;
@@ -373,9 +395,28 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
         if (me.landAir > 0.45) toast(`${me.landAir.toFixed(2)}s AIR · ${clean ? "CLEAN" : "SKETCHY"}`, clean ? "clean" : "meh");
         if (!ctx.reduced) dust.ring(rnd, me.pos[0]!, me.pos[1]! - 0.6, me.pos[2]!, clean ? 8 : 14, 2.2, 1, 0.8, 0.2, 0.55);
       } else if (type === E_TRICK && r === seat) toast(val === 2 ? "FLIP! LANDED" : "BIG AIR!", "clean"), say(val === 2 ? "Flip" : "Big air");
-      else if (type === E_WHEELIE && r === seat && val > 0.6) toast(`WHEELIE ${val.toFixed(1)}s`, "clean"), engine.events.emit("wheelie");
+      else if (type === E_WHEELIE && r === seat && val > 0.6 && !st) toast(`WHEELIE ${val.toFixed(1)}s`, "clean"), engine.events.emit("wheelie");
+      else if (type === E_GROUND && tsc) {
+        // Endless: a ground trick banked (as Endless Wheelie City's).
+        const kind = val, x = tsc[T_CB]! > 0 ? ` ×${1 + tsc[T_CB]!}` : "", pts = tsc[T_PTS]!.toLocaleString("en-US");
+        engine.events.emit("wheelie");
+        if (kind === STOPPIE || kind === 3) toast(`${GROUND[kind]} +${pts}${x}`, "meh");
+        else toast(`${GROUND[kind]} ${tsc[T_DIST]!.toFixed(1)} m · ${tsc[T_TIME]!.toFixed(1)}s +${pts}${x}`, kind === MANUAL ? "clean" : "go");
+        say(`${GROUND[kind]}, ${tsc[T_PTS]} points`);
+      } else if (type === E_DRAG && st) {
+        const nm = DRAG_NAME[val]!, x = DRAG_MULT[val]!;
+        engine.events.emit("wheelie");
+        if (val === FENDER && !ctx.reduced) shake = 0.3;
+        call.show(`${nm}!`, `×${x} · ${val === FENDER ? "SPARKS!" : "BACK UNDER 12 TO BANK"}`, val === FENDER ? "bad" : "go", 1.4);
+        say(`${nm}! Times ${x}. Bring it back under twelve to bank it`);
+      } else if (type === E_BANKED && st) {
+        engine.events.emit("finish");
+        call.show(`${DRAG_NAME[st.lastLevel]!} BANKED`, `+${val.toLocaleString("en-US")}`, "go");
+        toast(`BANKED! +${val.toLocaleString("en-US")}`, "clean");
+        say(`Banked ${val} points`);
+      } else if (type === E_LOST && st) toast(`LOOPED OUT — LOST ${val.toLocaleString("en-US")}`, "bad"), call.hide(), say(`Looped out. ${val} points lost`);
       else if (type === E_CRASH) {
-        if (r === seat) (shake = ctx.reduced ? 0 : 0.5), toast(CRASH_NAME[val] || "WIPEOUT!", "bad"), say(CRASH_NAME[val] || "Wipeout");
+        if (r === seat) (shake = ctx.reduced ? 0 : 0.5), toast(CRASH_NAME[val] || "WIPEOUT!", "bad"), say(CRASH_NAME[val] || "Wipeout"), call.hide();
         engine.events.emit("crash");
         if (!ctx.reduced) {
           for (let q = 0; q < 22; q++) {
@@ -406,6 +447,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
         engine.busy(1.7);
       }
     }
+    if (st) stuntCalls(st, call, say, (n) => engine.events.emit(n === "cheer" ? "finish" : "wheelie"));
     sim.clear();
   }
   function toast(text: string, kind: string) {
@@ -433,6 +475,10 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     } else if (endless) {
       const k = Math.floor(fr!.distance / 10);
       if (was[1] !== k) (was[1] = k), (lapEl.textContent = km(fr!.distance) + (fr!.distance > (ctx.best ?? 0) && (ctx.best ?? 0) > 0 ? " · BEST!" : ""));
+      const pts = tsc![T_SC]!, cb = tsc![T_CB]!;
+      if (was[8] !== pts + cb * 1e9) (was[8] = pts + cb * 1e9), (scoreChip!.firstChild!.textContent = `${pts.toLocaleString("en-US")} PTS`), (scoreChip!.lastChild!.textContent = cb > 0 ? `×${1 + cb}` : "");
+      const HD = st!.HD, dk = HD[1] ? HD[1]! * 1e8 + Math.floor(HD[2]! / 10) : -1;
+      if (was[9] !== dk) (was[9] = dk), (dragChip!.hidden = dk < 0), dk >= 0 && (dragChip!.firstChild!.textContent = `${DRAG_NAME[HD[1]!]} ×${DRAG_MULT[HD[1]!]} · ${Math.round(HD[2]!).toLocaleString("en-US")} AT RISK`);
     } else {
       const a = Math.floor(m.M[3]! * 10);
       if (was[1] !== a) (was[1] = a), (lapEl.textContent = `${(a / 10).toFixed(1)}s AIR`);
@@ -451,7 +497,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   function stats() {
     if (race) return m.stats({ place: race.place(seat), time: race.finishTime(seat), bestLap: race.bestLap(seat), led: led && race.place(seat) === 0, finished: race.finished(seat), where: track.id, order: [0, 1, 2, 3].map((r) => race.place(r)), summary: `${ORD[race.place(seat)]} · ${clock(race.finishTime(seat) || race.clock)} · best lap ${clock(race.bestLap(seat))}` });
     if (jam) return m.stats({ finished: jam.phase === DONE, where: track.id, tricks: jam.tricks(seat), flips: jam.flips(seat), score: jam.points(seat), place: jam.place(seat), summary: `${ORD[jam.place(seat)]} · ${jam.points(seat).toLocaleString("en-US")} trick points · ${m.M[3]!.toFixed(1)}s in the air` });
-    if (endless) return m.stats({ finished: true, where: track.id, farKey: endless.biome.id, tricks: fr!.tricks, flips: fr!.flips, far: fr!.distance, summary: `${km(fr!.distance)} ${endless.biome.word} · ${clock(sim.clock)} ridden · ${m.M[3]!.toFixed(1)}s in the air${fr!.tricks ? ` · ${fr!.tricks} ${fr!.tricks === 1 ? "trick" : "tricks"}` : ""}` });
+    if (endless) return m.stats({ finished: true, where: track.id, farKey: endless.biome.id, tricks: fr!.tricks, flips: fr!.flips, far: fr!.distance, score: tsc![T_SC]!, summary: `${km(fr!.distance)} ${endless.biome.word} · ${clock(sim.clock)} ridden · ${m.M[3]!.toFixed(1)}s in the air${fr!.tricks ? ` · ${fr!.tricks} ${fr!.tricks === 1 ? "trick" : "tricks"}` : ""}${tsc![T_SC]! ? ` · ${tsc![T_SC]!.toLocaleString("en-US")} trick points` : ""}` });
     return m.stats({ finished: true, where: track.id, tricks: fr!.tricks, flips: fr!.flips, summary: `${map ? map.name + " · " : ""}${clock(sim.clock)} ridden · ${m.M[3]!.toFixed(1)}s in the air · ${m.M[4]!.toFixed(1)}s on one wheel${fr!.tricks ? ` · ${fr!.tricks} ${fr!.tricks === 1 ? "trick" : "tricks"}` : ""}` });
   }
   function end() {
@@ -709,6 +755,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     I[2] = (+c.down(BACK) - +c.down(FWD)) || (c.stick.active ? c.stick.y : 0) || GP[1]! || (PD[0] ? Math.max(-1, Math.min(1, (PD[4]! - PD[2]!) / drag)) : 0);
     I[3] = (+c.down(RIGHT) - +c.down(LEFT)) || (c.stick.active ? c.stick.x : 0) || GP[0]! || (PD[0] ? Math.max(-1, Math.min(1, (PD[3]! - PD[1]!) / drag)) : 0);
     I[4] = resetQ || c.down(RESETK) || GP[6]! > 0.5 ? RESET : 0;
+    I[5] = endless && (c.down(COMBOK) || GP[7]! > 0.5) ? 1 : 0;
     resetQ = 0;
     if (paused || ended) I.fill(0);
   }
@@ -748,10 +795,11 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       else {
         moving = race ? race.step(dt, I, auto) : fr!.step(dt, I, auto);
         if (ph === RACE && !ended && !(race && race.finished(0))) m.tick(me, dt);
-        if (sim.n) events(), (moving = true);
+        if (sim.n || (st && st.n)) events(), (moving = true);
       }
       if (gateT > 0 && gateT < 0.3) (gateT += dt), (moving = true);
       if (stepFx(dt)) moving = true;
+      if (call.step(dt)) moving = true;
       if (stepCam(dt)) moving = true;
       if (shake > 0) (shake = Math.max(0, shake - dt)), (moving = true);
       if (blinkT > 0) (blinkT = Math.max(0, blinkT - dt)), (moving = true);
@@ -777,7 +825,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   engine.add(loop);
 
   // ---- input: keys on the stage, hold-and-drag on the play surface, the stickers ----
-  const MAP: Record<string, string> = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowUp: "fwd", KeyW: "fwd", ArrowDown: "back", KeyS: "back", Space: "gas", KeyJ: "gas", KeyK: "brake", ShiftLeft: "brake", ShiftRight: "brake", KeyR: "reset" };
+  const MAP: Record<string, string> = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowUp: "fwd", KeyW: "fwd", ArrowDown: "back", KeyS: "back", Space: "gas", KeyJ: "gas", KeyK: "brake", ShiftLeft: "brake", ShiftRight: "brake", KeyR: "reset", KeyC: "combo" };
   const keyHost: EventTarget = window;
   const src = (e: Event) => (e.composedPath?.()[0] ?? e.target) as Element | null;
   keyHost.addEventListener("keydown", (ev) => {
@@ -836,7 +884,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     engine,
     get state() {
       const ph = sim.phase;
-      return { phase: ph === GRID ? (free && !jam ? "ready" : "grid") : ph === RACE ? "run" : ph === DONE ? "done" : "idle", speed: me.speed, walking: me.walking, clock: sim.clock, lap: race ? race.lap(seat) : 0, place: race ? race.place(seat) : jam ? jam.place(seat) : 0, crashes: m.M[5]!, air: me.air, wheelie: me.wheelie, view: view ? "chase" : "table", count: race ? race.count : jam ? jam.count : 0, ended, riders: RIDERS, map: track.id, tricks: fr ? fr.tricks : jam ? jam.tricks(seat) : 0, seat, points: jam ? jam.points(seat) : 0, steer: I[3]!, steerAngle: me.steerAngle, x: me.pos[0]!, z: me.pos[2]!, y: me.pos[1]!, distance: fr ? fr.distance : 0, stuck: fr ? fr.stuck : false, upright: !me.crashed && Math.abs(me.rel) < 0.5, tiles: dv ? endless!.world.stats[0]! : 0, faces: tv.stats.faces };
+      return { phase: ph === GRID ? (free && !jam ? "ready" : "grid") : ph === RACE ? "run" : ph === DONE ? "done" : "idle", speed: me.speed, walking: me.walking, clock: sim.clock, lap: race ? race.lap(seat) : 0, place: race ? race.place(seat) : jam ? jam.place(seat) : 0, crashes: m.M[5]!, air: me.air, wheelie: me.wheelie, view: view ? "chase" : "table", count: race ? race.count : jam ? jam.count : 0, ended, riders: RIDERS, map: track.id, tricks: fr ? fr.tricks : jam ? jam.tricks(seat) : 0, seat, points: jam ? jam.points(seat) : 0, steer: I[3]!, steerAngle: me.steerAngle, x: me.pos[0]!, z: me.pos[2]!, y: me.pos[1]!, distance: fr ? fr.distance : 0, stuck: fr ? fr.stuck : false, upright: !me.crashed && Math.abs(me.rel) < 0.5, tiles: dv ? endless!.world.stats[0]! : 0, faces: tv.stats.faces, score: tsc ? tsc[T_SC]! : 0, drag: st ? st.HD[1]! : 0, stunt: st ? st.trick : -1, whip: st ? st.whip : 0 };
     },
     get auto() {
       return auto;

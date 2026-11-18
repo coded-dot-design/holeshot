@@ -12,8 +12,9 @@
 // (../../math.ts, never the builtin transcendentals); zero allocation per step (what it can hit is
 // gathered round it into fixed arrays).
 import { hypot } from "@fzlt/core/steer";
-import { ride, RIDES, TWELVE, type RideSpec } from "./ride.ts";
-import { B_CRASH, B_STOPPIE } from "../../bike/bike.ts";
+import { ride, RIDES, type RideSpec } from "./ride.ts";
+import { B_CRASH, B_STOPPIE, BAIL } from "../../bike/bike.ts";
+import { stunts, ST_DRAG, ST_BANK, ST_LOST, CRASH as ST_CRASH } from "../stunts.ts";
 import { sin, cos } from "../../math.ts";
 import { unstuck, U_AUTO, U_PROMPT } from "../unstuck.ts";
 import { tricks, ON, SC, PTS, F_CROSS, F_SPRINK, F_GRUMP, BANKED, MAXCB, CB as T_CB, GAP as T_GAP } from "./tricks.ts";
@@ -23,7 +24,7 @@ import {
 } from "./open.ts";
 import {
   READY, RUN, CRASH, DONE, E_START, E_TRICK, E_CRASH, E_RESPAWN, E_GRUMP, E_BARK, E_SPLASH, E_BONUS, E_HOP, E_AIR, E_TICKET, E_ESCAPE, E_STARS, E_UNIT, E_CLEAR,
-  E_STUCK, E_RESET, E_DRAG, E_BANKED, E_LOST, HAND_T, DRAG_RATE, DRAG_X, STREAK, HEAT_FROM, AP, LINES, SP_REACH,
+  E_STUCK, E_RESET, E_DRAG, E_BANKED, E_LOST, HEAT_FROM, AP, LINES, SP_REACH,
 } from "./rules.ts";
 
 /** Into a town (value 1) or out of its limits (0). */
@@ -86,7 +87,8 @@ export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEE
   const NB = new Float64Array(NNB * 4), NI = new Int32Array(NNB), SPK = new Float64Array(NSPK * 2), SPI = new Int32Array(NSPK);
   // The dog: key, x along its fence (local), bark timer, cooldown; its yard's item in SG (DI).
   const DG = new Float64Array(4), DI = new Int32Array(1);
-  const HD = new Float64Array(4);
+  // The stunts (../stunts.ts): the drag ladder, the whip, the combo button; HD is its drag.
+  const st = stunts(sc, seed), HD = st.HD, FW = new Uint8Array(1);
   function emit(type: number, v: number) {
     if (n < 24) (ev[n * 2] = type), (ev[n * 2 + 1] = v), n++;
   }
@@ -130,8 +132,8 @@ export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEE
   }
   function crashed(why: number) {
     if (S[PH] !== RUN) return;
-    if (HD[1] || HD[2]! > 0) emit(E_LOST, Math.round(HD[2]!));
-    HD.fill(0);
+    st.lose();
+    fwd();
     S[PH] = CRASH; S[CT] = CRASH_T; S[WHY] = why;
     sc.drop();
     emit(E_CRASH, why);
@@ -141,9 +143,9 @@ export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEE
     S[CLOCK] = 0; S[RIDE] = which; S[TOWN] = -1;
     sc.reset();
     cop.reset(seed);
-    NB.fill(0); SPK.fill(0); DG.fill(0); HD.fill(0);
+    NB.fill(0); SPK.fill(0); DG.fill(0); st.reset();
     U.clear(); US[0] = 0;
-    n = 0;
+    n = 0; FW[0] = 0;
     // The start: the first town's main road, heading east out of the middle (the way the world goes on).
     const e = W.edge(0, 0, 0);
     W.at(e, 14);
@@ -224,7 +226,7 @@ export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEE
     S[WALL] = v;
   }
   /** Advance dt. `person`: a person is riding (the unstuck watch runs); `again`: the reset input (R). */
-  function step(dt: number, gas: number, brake: number, lean: number, steer: number, hop: number, person = false, again = false) {
+  function step(dt: number, gas: number, brake: number, lean: number, steer: number, hop: number, person = false, again = false, combo = 0) {
     const ph = S[PH]!;
     sync();
     if (person && S[PH] === RUN && !bike.b.crashed) {
@@ -248,7 +250,7 @@ export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEE
     const wasAir = bike.air, b = bike.b;
     // The window under the rider (the fallen rider's, in a crash): the ground never runs out.
     win.follow(b.crashed ? b.rider[0]! : b.pos[0]!, b.crashed ? b.rider[2]! : b.pos[2]!);
-    let moving = bike.step(dt, live || ph === READY ? gas : 0, live ? brake : ph === DONE ? 0.35 : brake, ph === DONE ? (bike.nose > 0.05 ? 1 : 0) : lean, ph === DONE ? 0 : steer, live ? hop : 0);
+    let moving = bike.step(dt, live || ph === READY ? gas : 0, live ? brake : ph === DONE ? 0.35 : brake, ph === DONE ? (bike.nose > 0.05 ? 1 : 0) : lean, ph === DONE ? 0 : steer, live ? hop : 0, st.amount);
     for (let k = 0; k < b.n; k++) {
       const ty = b.ev[k * 2]!, v = b.ev[k * 2 + 1]!;
       if (ty === B_CRASH) crashed(v);
@@ -260,7 +262,8 @@ export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEE
     if (gx * gx + gz * gz > REGATHER * REGATHER) regather(x, z);
     collide();
     win.follow(b.pos[0]!, b.pos[2]!);
-    if (S[PH] === RUN) drag(dt);
+    if (st.step(dt, b, S[PH] === RUN, steer, combo) === ST_CRASH) (b.knock(BAIL), b.clear(), crashed(BAIL));
+    fwd();
     if (S[PH] !== READY) {
       const fx = x - ES[0]!, fz = z - ES[1]!, far = Math.sqrt(fx * fx + fz * fz);
       if (far > ES[2]!) ES[2] = far;
@@ -311,24 +314,15 @@ export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEE
     cop.clear();
     return moving || S[PH] === RUN;
   }
-  /** The hand drag (as the fixed city's: ./city.ts). */
-  function drag(dt: number) {
-    const b = bike.b, past = !bike.air && b.contact[0] === 1 && b.contact[1] === 0 && bike.nose > TWELVE;
-    if (past) {
-      HD[0] = HD[0]! + dt;
-      if (!HD[1] && HD[0]! >= HAND_T) (HD[1] = 1), (HD[3] = 0), emit(E_DRAG, 1);
-      if (HD[1]) (HD[3] = HD[3]! + dt), (HD[2] = HD[2]! + DRAG_RATE * DRAG_X * (1 + sc.S[T_CB]!) * dt);
-      return;
+  /** The stunts' drag events, into the session's (the scene's and the patrol's): a drag level, banked, lost. */
+  function fwd() {
+    for (let k = FW[0]!; k < st.n; k++) {
+      const ty = st.ev[k * 2]!, v = st.ev[k * 2 + 1]!;
+      if (ty === ST_DRAG) emit(E_DRAG, v);
+      else if (ty === ST_BANK) cop.banked(v), emit(E_BANKED, v);
+      else if (ty === ST_LOST) emit(E_LOST, v);
     }
-    if (HD[1]) {
-      const pts = Math.round(HD[2]! + STREAK * HD[3]! * HD[3]!);
-      sc.S[SC] = sc.S[SC]! + pts;
-      sc.S[T_CB] = Math.min(MAXCB, sc.S[T_CB]! + 1);
-      sc.S[T_GAP] = 0;
-      cop.banked(pts);
-      emit(E_BANKED, pts);
-    }
-    HD.fill(0);
+    FW[0] = st.n;
   }
   function bankedNow(type: number) {
     const pts = sc.S[PTS]!;
@@ -513,9 +507,9 @@ export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEE
   }
   reset(0);
   const u8 = (a: Float64Array | Uint32Array) => new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
-  const bytes = [u8(S), u8(NB), u8(SPK), u8(DG), u8(HD), u8(GC), u8(ES), u8(sc.S), u8(cop.S), u8(cop.P), u8(cop.R), u8(bike.R), u8(bike.vel), u8(U.S), u8(U.R), u8(US), ...bike.all.map((bb) => bb.state)];
+  const bytes = [u8(S), u8(NB), u8(SPK), u8(DG), ...st.bytes, u8(GC), u8(ES), u8(sc.S), u8(cop.S), u8(cop.P), u8(cop.R), u8(bike.R), u8(bike.vel), u8(U.S), u8(U.R), u8(US), ...bike.all.map((bb) => bb.state)];
   return {
-    S, ev, bike, sc, cop, NB, NI, SPK, SPI, DG, DI, HD, bytes, unstuck: U, world: W, win, HC, SG, ES,
+    S, ev, bike, sc, st, cop, NB, NI, SPK, SPI, DG, DI, HD, bytes, unstuck: U, world: W, win, HC, SG, ES,
     get sn() { return sn; },
     /** How far from the start (world units), the furthest so far. */
     get far() { return ES[2]!; },
@@ -523,7 +517,7 @@ export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEE
     get inTown() { return S[TOWN]! >= 0; },
     get stuck() { return US[0] === 1; },
     get n() { return n; },
-    clear() { n = 0; },
+    clear() { n = 0; st.clear(); FW[0] = 0; },
     step, reset, autopilot, sprinklerAim, streetClear,
     choose(i: number) { reset(i); },
     /** Put the bike down at world (x, z) facing yaw (a test, a harness); the autopilot takes the nearest road. */

@@ -40,6 +40,8 @@ import { modeStage } from "../race/scene.ts";
 import type { ModeCtx, ModeRun } from "../mode.ts";
 import { LOOP, ENDO, CASE, BAIL } from "../../bike/bike.ts";
 import { rig, type Rig } from "../../bike/rig.ts";
+import { DRAG_NAME, DRAG_MULT, FENDER } from "../stunts.ts";
+import { callout, stuntCalls } from "../callout.ts";
 import { pool, voice, gamepad, type Pool } from "../../bike/kit.ts";
 import { SC, CB, ON, DIST, TIME, SWEET, PTS, KIND, BEST_W, MANUAL, STOPPIE, F_CROSS, F_SPRINK } from "./tricks.ts";
 import { speedo } from "../speedo.ts";
@@ -144,6 +146,8 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   hud.innerHTML = `<div class="wc-head"><p class="wc-top"><b class="wc-chip wc-time"><span>${dist(0, ctx.units)}</span></b><b class="wc-chip wc-score"><span>0</span><i>×1</i></b><b class="wc-chip wc-heat" hidden aria-label="Heat"><span></span><i hidden></i></b><b class="wc-chip wc-trick" hidden><span></span></b><b class="wc-chip wc-drag" hidden aria-label="Hand drag"><i class="wc-ring" aria-hidden="true"></i><span></span></b></p><p class="wc-hint"></p></div><p class="wc-toast" hidden></p><div class="wc-ticket" hidden><b>TICKET!</b><p>NEON PATROL · NOISE NOTICE</p><p class="wc-tline"></p></div><p class="wc-live" aria-live="polite"></p><p class="wc-keys">${keysHTML("wc", { reset: "Reset to the last good spot (R)", theme: !!ctx.theme })}</p>`;
   const head = hud.children[0] as HTMLElement, top = head.children[0] as HTMLElement, hintEl = head.children[1] as HTMLElement;
   const toastEl = hud.children[1] as HTMLElement, ticketEl = hud.children[2] as HTMLElement, live = hud.children[3] as HTMLElement, keysEl = hud.children[4] as HTMLElement;
+  // The trick callout (../callout.ts): the combo button's tricks, the whips, the drags.
+  const call = callout(hud, ctx.reduced);
   const timeEl = top.children[0]!.firstChild as HTMLElement, scoreEl = top.children[1]!.firstChild as HTMLElement, comboEl = top.children[1]!.lastChild as HTMLElement;
   const heatChip = top.children[2] as HTMLElement, heatEl = heatChip.firstChild as HTMLElement, riskEl = heatChip.lastChild as HTMLElement;
   const trickChip = top.children[3] as HTMLElement, trickEl = trickChip.firstChild as HTMLElement;
@@ -171,12 +175,12 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     volume: 0.1,
     on: ctx.sound && !ctx.attract,
   });
-  const c = controls(engine, { keys: { left: [], right: [], fwd: [], back: [], gas: [], brake: [], hop: [], reset: [] }, target: play });
-  const GAS = c.id("gas"), BRAKE = c.id("brake"), HOPK = c.id("hop"), RESETK = c.id("reset");
+  const c = controls(engine, { keys: { left: [], right: [], fwd: [], back: [], gas: [], brake: [], hop: [], reset: [], combo: [] }, target: play });
+  const GAS = c.id("gas"), BRAKE = c.id("brake"), HOPK = c.id("hop"), RESETK = c.id("reset"), COMBOK = c.id("combo");
   const ICON_HOP = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 5 12h4v6h6v-6h4z" fill="currentColor"/></svg>';
   const thePad = pad(engine, c, { scheme: "stick", actions: [{ intent: "hop", label: "", icon: ICON_HOP, name: "Hop (L)", key: "L", role: "aim" }], host: stage });
   thePad.el.classList.add("wc-pad");
-  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal });
+  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal, combo: "combo" });
   const coarse = matchMedia("(pointer: coarse)"), walkHud = walkUi(hud, () => coarse.matches && !ctx.attract);
   if (ctx.attract) thePad.el.hidden = true;
   const vox = voice();
@@ -659,8 +663,11 @@ export function mountCity(ctx: ModeCtx): ModeRun {
 
   function pose() {
     const d = bike.b;
-    rigs[0]!.T[8] = DRAGA[0]!;
+    run.st.pose(rigs[0]!.T, DRAGA[0]!);
     rigs[0]!.pose(d, ctx.bike.cls === "ebike" ? 0.3 : 0.7);
+    // The whip: the bike kicked out sideways in the air.
+    const wh = run.st.whip;
+    if (wh !== 0 && !d.crashed) (rigs[0]!.root.rot[0] = rigs[0]!.root.rot[0]! + wh * 0.95), (rigs[0]!.root.rot[1] = rigs[0]!.root.rot[1]! + wh * 0.3);
     walkHud.update(d);
     const SG = run.SG;
     // The dog: along its yard's front fence; a hop when it barks.
@@ -746,7 +753,12 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       const w = d.wheel, sy = Math.sin(d.yaw), cy = Math.cos(d.yaw);
       for (let q = 0; q < 2; q++) spark.puff(w[0]! - sy * 0.45 + (rnd() - 0.5) * 0.2, w[1]! - 0.25, w[2]! - cy * 0.45 + (rnd() - 0.5) * 0.2, -v[0]! * 0.4 + (rnd() - 0.5) * 2, 1 + rnd() * 2, -v[2]! * 0.4 + (rnd() - 0.5) * 2, 0.25 + rnd() * 0.3, 0.04, 1);
     }
-    let any = dust.step(dt, -0.3, 0.3, 0.45) || dg === 1 || Math.abs(DRAGA[0]! - dg) > 0.01;
+    if (run.st.fender && !ctx.reduced) {
+      // The fender on the road: sparks off the back.
+      const w = d.wheel, fx = Math.cos(d.yaw), fz = -Math.sin(d.yaw);
+      for (let q = 0; q < 3; q++) spark.puff(w[0]! - fx * 0.3 + (rnd() - 0.5) * 0.15, w[1]! - 0.3, w[2]! - fz * 0.3 + (rnd() - 0.5) * 0.15, -v[0]! * 0.5 + (rnd() - 0.5) * 3, 1.5 + rnd() * 2.5, -v[2]! * 0.5 + (rnd() - 0.5) * 3, 0.2 + rnd() * 0.25, 0.035, 1);
+    }
+    let any = dust.step(dt, -0.3, 0.3, 0.45) || dg === 1 || Math.abs(DRAGA[0]! - dg) > 0.01 || run.st.amount > 0 || run.st.whip !== 0;
     if (spark.step(dt, 14, -0.05, 1)) any = true;
     if (splash.step(dt, 9, -0.02, 0.9)) any = true;
     return any || on;
@@ -781,6 +793,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
         spark.ring(rnd, d.pos[0]!, d.pos[1]!, d.pos[2]!, 22, 4, 4, 0.7, 0.06, 1);
         dust.ring(rnd, d.pos[0]!, d.pos[1]! - 0.3, d.pos[2]!, 12, 2, 1.5, 0.8, 0.2, 0.6);
         const what = val === LOOP ? "LOOPED OUT!" : val === ENDO ? "OVER THE BARS!" : val === CASE ? "CASED IT!" : val === BAIL ? "BAILED!" : "BONK!";
+        call.hide();
         toast(what, "bad");
         say(what);
       } else if (type === E_RESPAWN) engine.events.emit("respawn");
@@ -822,15 +835,20 @@ export function mountCity(ctx: ModeCtx): ModeRun {
         shake = 0.15;
         spark.ring(rnd, d.wheel[0]!, d.wheel[1]! - 0.3, d.wheel[2]!, 26, 3.5, 4.5, 0.8, 0.07, 1);
         stars(d.pos[0]!, d.pos[1]! + 1.2, d.pos[2]!);
-        toast(`HAND DRAG! ×${DRAG_X}`, "go");
-        say(`Hand drag! Times ${DRAG_X}. Bring it back under twelve to bank it`);
+        const nm = DRAG_NAME[val]!, x = DRAG_MULT[val]!;
+        if (val === FENDER) shake = 0.3;
+        toast(`${nm}! ×${x}`, "go");
+        call.show(`${nm}!`, `×${x} · ${val === FENDER ? "SPARKS!" : "BACK UNDER 12 TO BANK"}`, val === FENDER ? "bad" : "go", 1.4);
+        say(`${nm}! Times ${x}. Bring it back under twelve to bank it`);
       } else if (type === E_BANKED) {
         engine.events.emit("cheer");
         stars(d.pos[0]!, d.pos[1]! + 1.2, d.pos[2]!);
         toast(`BANKED! +${val.toLocaleString("en-US")}`, "go");
+        call.show(`${DRAG_NAME[run.st.lastLevel]!} BANKED`, `+${val.toLocaleString("en-US")}`, "go");
         say(`Banked ${val} points`);
       } else if (type === E_LOST) {
         toast(`LOOPED OUT — LOST ${val.toLocaleString("en-US")}`, "bad");
+        call.hide();
         say(`Looped out. ${val} points lost`);
       } else if (type === E_TICKET) {
         engine.events.emit("ticket");
@@ -855,6 +873,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
         say("Time");
       }
     }
+    stuntCalls(run.st, call, say, (n) => engine.events.emit(n));
     run.clear();
   }
   function toast(text: string, kind: string) {
@@ -890,12 +909,12 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       heatChip.classList.toggle("wc-hot", chased === 1);
       heatChip.setAttribute("aria-label", `Heat: ${st} of 5 stars`);
     }
-    const HDv = run.HD, dk = HDv[1] ? 1000 + Math.floor(HDv[2]! / 10) : HDv[0]! > 0 ? Math.min(99, Math.floor((HDv[0]! / HAND_T) * 100)) : -1;
+    const HDv = run.HD, dk = HDv[1] ? 1000 + HDv[1]! * 1e8 + Math.floor(HDv[2]! / 10) : HDv[0]! > 0 ? Math.min(99, Math.floor((HDv[0]! / HAND_T) * 100)) : -1;
     if (was[7] !== dk) {
       was[7] = dk;
       dragChip.hidden = dk < 0;
       dragChip.classList.toggle("wc-dragging", dk >= 1000);
-      if (dk >= 1000) dragEl.textContent = `HAND DRAG ×${DRAG_X} · ${Math.round(HDv[2]!).toLocaleString("en-US")} AT RISK`;
+      if (dk >= 1000) dragEl.textContent = `${DRAG_NAME[HDv[1]!]} ×${DRAG_MULT[HDv[1]!]} · ${Math.round(HDv[2]!).toLocaleString("en-US")} AT RISK`;
       else if (dk >= 0) (dragEl.textContent = "PAST 12 · HOLD IT"), dragRing.style.setProperty("--p", dk + "%");
     }
     if (was[6] !== risk) (was[6] = risk), (riskEl.hidden = risk <= 0), (riskEl.textContent = `AT RISK ${risk.toLocaleString("en-US")}`);
@@ -1270,7 +1289,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   }
 
   // ---- the loop ----
-  const GP = new Float64Array(7);
+  const GP = new Float64Array(8);
   /** Each frame: the far ring follows, the pool streams, what stands up fades into the haze. */
   function world() {
     const x = bike.b.pos[0]!, z = bike.b.pos[2]!;
@@ -1317,10 +1336,12 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       const ph = S[0]!;
       const again = !auto && !paused && !ended && (resetQ === 1 || c.hit(RESETK) || GP[6]! > 0.5);
       resetQ = 0;
-      let moving = run.step(dt, I[0]!, I[1]!, I[2]!, I[3]!, I[4]!, !auto && !paused && !ended, again);
+      const combo = !auto && !paused && !ended && (c.down(COMBOK) || GP[7]! > 0.5) ? 1 : 0;
+      let moving = run.step(dt, I[0]!, I[1]!, I[2]!, I[3]!, I[4]!, !auto && !paused && !ended, again, combo);
+      if (call.step(dt)) moving = true;
       if (ph === RUN || ph === CRASH) m.tick(bike.b, dt);
       if (TF[0]) moving = true;
-      if (run.n) events(), (moving = true);
+      if (run.n || run.st.n) events(), (moving = true);
       world();
       if (S[0] === CRASH) crashT += dt;
       if (cop.chasing > 0 && S[0] !== DONE) {
@@ -1351,7 +1372,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   });
 
   // ---- input ----
-  const MAP: Record<string, string> = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowUp: "fwd", KeyW: "fwd", ArrowDown: "back", KeyS: "back", Space: "gas", KeyJ: "gas", KeyK: "brake", ShiftLeft: "brake", ShiftRight: "brake", KeyL: "hop", KeyR: "reset" };
+  const MAP: Record<string, string> = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowUp: "fwd", KeyW: "fwd", ArrowDown: "back", KeyS: "back", Space: "gas", KeyJ: "gas", KeyK: "brake", ShiftLeft: "brake", ShiftRight: "brake", KeyL: "hop", KeyR: "reset", KeyC: "combo" };
   const wake = () => vox.wake(SPEC.power);
   stage.addEventListener("pointerdown", wake, sig);
   const src = (e: Event) => (e.composedPath?.()[0] ?? e.target) as Element | null;
@@ -1419,7 +1440,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       const ph = S[0]!;
       return {
         phase: ph === READY ? "ready" : ph === RUN || ph === CRASH ? "run" : ph === DONE ? "done" : "idle", walking: bike.b.walking, clock: S[1]!, score: sc[SC]!, combo: sc[CB]!, trick: sc[ON] === 1, nose: bike.nose, view: view ? "chase" : "map", speed: bike.b.speed, crashes, grumps: S[4]!, best: sc[BEST_W]!, ended,
-        gas: I[0]!, brake: I[1]!, drag: run.HD[1]!, hold: run.HD[0]!,
+        gas: I[0]!, brake: I[1]!, drag: run.HD[1]!, hold: run.HD[0]!, stunt: run.st.trick, whip: run.st.whip,
         far: run.far, endless: true, towns: S[S_TOWNS]!, inTown: run.inTown, near: cop.S[NEAR]!, heat: cop.S[HEAT]!, stars: cop.S[STARS]!, units: cop.chasing, risk: cop.S[HOT]!, escapes: cop.S[ESC]!, tickets: cop.S[TIX]!, x: bike.b.pos[0]!, z: bike.b.pos[2]!, objects: dio.stats.objects, faces: dio.stats.faces, ground: tv.stats.faces, ribbons: rib.stats.quads, tiles: run.win.stats[0]!,
       };
     },

@@ -137,6 +137,7 @@ export function gamepad(out: Float64Array) {
     out[4] = Math.max(v(2), v(3), v(5));
     out[5] = v(9);
     if (out.length > 6) out[6] = v(8);
+    if (out.length > 7) out[7] = v(4);
     return true;
   }
   return false;

@@ -46,7 +46,14 @@ import { readdirSync, readFileSync } from "node:fs";
 // Unreleased, integration of r6 and r7: 184,788 B measured (holeshot.js; +2,328 B over 182,460 on main with the stray-parts fix: r6's
 // bike layers (level and side groups), the turntable, the speed chip, the icon keys; r7's measured
 // pace and the garage's PACE rows, the top-gear stretch, the gear-change voice), plus about 3.2 KB of room.
-const BUDGET = 188_000;
+// Unreleased, R8 tricks everywhere: 186,048 B measured (holeshot.js; +5,355 B over 180,693: the
+// stunts sim (the drag ladder: double hand and fender drags; the whip; the combo button's eight
+// tricks, ladder and seeded draw), the trick callout and its CSS, the rocker's slide-out COMBO
+// button, the ENDLESS grounds' ground-trick scoring, score and drag chips); 187,119 B on top of the
+// Units setting, plus about 2.9 KB of room.
+// Unreleased, r6 + r7 + r8 integrated: 189,970 B measured (holeshot.js; +5,182 B over 184,788 with r6
+// and r7: r8's stunts, callout, COMBO button and ENDLESS scoring), plus about 3 KB of room.
+const BUDGET = 193_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

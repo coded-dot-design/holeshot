@@ -1,5 +1,5 @@
 // The hand drag (Endless Wheelie City), headless: the city's bikes go past 12 o'clock (vertical) and
-// loop out only past about 1 (LOOP_AT); held past 12 for HAND_T seconds the rider drops a hand to the
+// loop out only past about 2 (LOOP_AT: just past the fender drag, ../src/modes/stunts.ts); held past 12 for HAND_T seconds the rider drops a hand to the
 // road (E_DRAG) and it earns ×DRAG_X while it drags; back under 12 it banks (E_BANKED: the points in
 // the score); looped out the drag's points are lost (E_LOST, the score untouched); the same inputs give
 // the same bytes; no allocation per step.
@@ -42,14 +42,14 @@ function ride(out, goal = 1.75, secs = 8.5, id = "sparkhound") {
   return { run, ev, nose };
 }
 
-test("hand drag: past 12 is reachable; past the hard limit (about 1 o'clock) it loops out", () => {
-  assert.ok(R.LOOP_AT > R.TWELVE + 0.4 && R.LOOP_AT < R.TWELVE + 0.6, "the limit: about 30° past vertical");
+test("hand drag: past 12 is reachable; past the hard limit (about 2 o'clock) it loops out", () => {
+  assert.ok(R.LOOP_AT > R.TWELVE + 0.9 && R.LOOP_AT < R.TWELVE + 1.1, "the limit: about 60° past vertical (past the fender drag)");
   const { ev, nose } = ride("over");
   const top = Math.max(...nose);
   assert.ok(top > R.TWELVE + 0.2, `past 12 (${top.toFixed(2)} rad)`);
   const crash = ev.find((e) => e[1] === W.E_CRASH);
   assert.ok(crash, "let go: it loops out");
-  assert.ok(nose[crash[0]] >= R.LOOP_AT - 0.05, `at the limit (${nose[crash[0]].toFixed(2)})`);
+  assert.ok(nose[crash[0]] >= R.LOOP_AT - 0.08, `at the limit (the last step before) (${nose[crash[0]].toFixed(2)})`);
 });
 
 test("hand drag: held past 12 for HAND_T it starts (×10, the pop); back under 12 it banks, the points kept", () => {
@@ -65,7 +65,7 @@ test("hand drag: held past 12 for HAND_T it starts (×10, the pop); back under 1
   assert.ok(bank[2] >= W.DRAG_RATE * W.DRAG_X * secs * 0.95, `×${W.DRAG_X}: ${bank[2]} points for ${secs.toFixed(1)} s`);
   assert.ok(!ev.some((e) => e[1] === W.E_LOST || e[1] === W.E_CRASH), "never looped");
   assert.ok(bank[3] >= bank[2], `the points are in the score (${bank[3]})`);
-  assert.deepEqual([...run.HD], [0, 0, 0, 0], "done");
+  assert.deepEqual([...run.HD.subarray(0, 4)], [0, 0, 0, 0], "done");
 });
 
 test("hand drag: looped out mid-drag, its points are lost (E_LOST), the score untouched", () => {
@@ -75,7 +75,7 @@ test("hand drag: looped out mid-drag, its points are lost (E_LOST), the score un
   assert.ok(lost[2] > 500, `the pending points are gone (${lost[2]})`);
   assert.ok(!ev.some((e) => e[1] === W.E_BANKED), "nothing banked");
   assert.ok(lost[3] < lost[2], `the score did not get them (${lost[3]})`);
-  assert.deepEqual([...run.HD], [0, 0, 0, 0]);
+  assert.deepEqual([...run.HD.subarray(0, 4)], [0, 0, 0, 0]);
 });
 
 test("hand drag: deterministic, and no allocation per step", async () => {

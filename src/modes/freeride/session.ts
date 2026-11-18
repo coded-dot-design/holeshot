@@ -8,7 +8,9 @@
 // the line puts you back on it just behind the feature, out in the open you get up where you fell,
 // and off the table you go to the nearest spawn point; a post (a tree) is a crash. Clean landings
 // of big air and flips count as tricks (Free Ride pays a little for them).
-import { bike, type Bike, type BikeShape, type Power, B_CRASH, B_LAND, B_WHEELIE, STRIKE } from "../../bike/bike.ts";
+import { bike, type Bike, type BikeShape, type Power, B_CRASH, B_LAND, B_WHEELIE, B_STOPPIE, STRIKE, BAIL } from "../../bike/bike.ts";
+import { tricks, BANKED, KIND } from "../wheelie/tricks.ts";
+import { stunts, assist, FENDER_LOOP, ST_DRAG, ST_BANK, ST_LOST, CRASH as ST_CRASH } from "../stunts.ts";
 import { F_GAP, F_KICKER, F_STEP, type RideMap } from "./maps.ts";
 import type { Terrain } from "@fzlt/core/terrain";
 import { E_CRASH, E_LAND, E_RESPAWN, E_WHEELIE, E_FINISH, GRID, RACE, DONE, type Track } from "../race/course.ts";
@@ -28,8 +30,13 @@ export interface FreeMap { id: string; name: string; blurb: string; track: () =>
 export const TRICK_AIR = 0.6, FLIP_SPIN = 5.2;
 /** A trick landed (value: 1 big air, 2 a flip). */
 export const E_TRICK = 10;
+/** Endless: the ground tricks and the drags (as Endless Wheelie City's: ../wheelie/tricks.ts,
+ *  ../stunts.ts): a wheelie, manual, hop or stoppie banked (value: its kind); a drag level reached
+ *  (value: the level), banked (points), lost (points). The whip and the combo button's tricks are in
+ *  the stunts' own ring (`st`). */
+export const E_GROUND = 13, E_DRAG = 14, E_BANKED = 15, E_LOST = 16;
 
-export function freeRun(track: Track | RideMap | (Track & EndlessTrack), me: { power: Power; shape?: BikeShape }, limit = 600, ground?: Terrain) {
+export function freeRun(track: Track | RideMap | (Track & EndlessTrack), me: { power: Power; shape?: BikeShape; sweet?: number }, limit = 600, ground?: Terrain) {
   const { HX, HZ, NT, TRACK, YAW, NR, near, WANT, FK, PF, prof, sAt } = track;
   const map = "isMap" in track ? track : null, Wd = "isEndless" in track ? track.world : null;
   if (Wd) Wd.follow(0, 0);
@@ -37,7 +44,11 @@ export function freeRun(track: Track | RideMap | (Track & EndlessTrack), me: { p
   const SP = map ? map.SPAWN : null, POSTS = map ? map.POSTS : null, NP = map ? map.NP : 0, HALF = map ? map.def.width / 2 : 0;
   // Walking the bike (../../bike/bike.ts `walk`): never into a post, a cactus, or off the table's edge.
   const walkable = (p: Float64Array) => !anyPost(p[0]!, p[1]!, 0.3) && (Wd !== null || (Math.abs(p[0]!) < HX - 0.6 && Math.abs(p[1]!) < HZ - 0.6));
-  const b: Bike = bike(t, me.power, { ...me.shape, walk: walkable });
+  // Endless: every trick Endless Wheelie City has (the loop-out past 2 o'clock: the drags live past 12).
+  const b: Bike = bike(t, me.power, Wd ? { ...me.shape, walk: walkable, loop: FENDER_LOOP } : { ...me.shape, walk: walkable });
+  const sc = tricks(), st = stunts(sc, 7), SWEET = me.sweet ?? 0.1;
+  // TK: the hop's air (seconds), the stunt events forwarded so far.
+  const TK = new Float64Array(2);
   const riders = [b];
   // S: phase, clock, started, near index, fall x, fall z, fall yaw, off the table, tricks, flips,
   // seconds still since the end.
@@ -58,6 +69,7 @@ export function freeRun(track: Track | RideMap | (Track & EndlessTrack), me: { p
 
   function reset() {
     S.fill(0);
+    sc.reset(); st.reset(); TK.fill(0);
     PP.fill(0);
     D.fill(0);
     U.clear();
@@ -139,9 +151,10 @@ export function freeRun(track: Track | RideMap | (Track & EndlessTrack), me: { p
     let landed = 0;
     for (let k = 0; k < b.n; k++) {
       const type = b.ev[k * 2]!, v = b.ev[k * 2 + 1]!;
-      if (type === B_CRASH) (S[4] = b.pos[0]!), (S[5] = b.pos[2]!), (S[6] = b.yaw), emit(E_CRASH, 0, v);
+      if (type === B_CRASH) (S[4] = b.pos[0]!), (S[5] = b.pos[2]!), (S[6] = b.yaw), emit(E_CRASH, 0, v), Wd && lost();
       else if (type === B_LAND) emit(E_LAND, 0, v), (landed = 1);
       else if (type === B_WHEELIE) emit(E_WHEELIE, 0, v);
+      else if (type === B_STOPPIE && Wd && S[0] === RACE && sc.stoppie(v) === BANKED) emit(E_GROUND, 0, sc.S[KIND]!);
     }
     b.clear();
     // A trick: big air or a flip, landed clean (still up after the landing).
@@ -195,16 +208,18 @@ export function freeRun(track: Track | RideMap | (Track & EndlessTrack), me: { p
     // Reset (R, the pad's ↺, a gamepad's Back; or the watch, after AUTO_T stuck): the last good place.
     if (I[4] === RESET && S[0] === RACE) {
       U.reset(b);
+      if (Wd) lost();
       if (map) near(b.pos[0]!, b.pos[2]!), (S[3] = NR[1]!);
       D[2] = 0;
       if (Wd) Wd.follow(b.pos[0]!, b.pos[2]!);
       emit(E_RESET, 0, 1);
       return true;
     }
-    b.set(I[0]!, I[1]!, I[2]!, I[3]!, 0);
-    const x0 = b.pos[0]!, z0 = b.pos[2]!;
+    b.set(I[0]!, I[1]!, I[2]!, I[3]!, Wd ? st.amount : 0);
+    const x0 = b.pos[0]!, z0 = b.pos[2]!, wasAir = !b.contact[0] && !b.contact[1];
     const moving = b.step(dt);
     events();
+    if (Wd) score(dt, I, wasAir);
     if (S[0] === RACE) {
       const dx = b.pos[0]! - x0, dz = b.pos[2]! - z0;
       D[0] = D[0]! + Math.sqrt(dx * dx + dz * dz);
@@ -223,7 +238,7 @@ export function freeRun(track: Track | RideMap | (Track & EndlessTrack), me: { p
     }
     if (Wd) {
       Wd.follow(b.pos[0]!, b.pos[2]!);
-      if (!b.crashed && U.blink <= 0 && anyPost(b.pos[0]!, b.pos[2]!, 0.28)) (S[4] = b.pos[0]!), (S[5] = b.pos[2]!), (S[6] = b.yaw), b.knock(STRIKE), b.clear(), emit(E_CRASH, 0, 6);
+      if (!b.crashed && U.blink <= 0 && anyPost(b.pos[0]!, b.pos[2]!, 0.28)) (S[4] = b.pos[0]!), (S[5] = b.pos[2]!), (S[6] = b.yaw), b.knock(STRIKE), b.clear(), emit(E_CRASH, 0, 6), lost();
       if (S[0] === RACE && S[1]! >= limit) finish();
       return moving || S[0] === RACE;
     }
@@ -233,6 +248,45 @@ export function freeRun(track: Track | RideMap | (Track & EndlessTrack), me: { p
     else if (NP && !b.crashed && U.blink <= 0 && postAt(b.pos[0]!, b.pos[2]!, 0.28)) (S[4] = b.pos[0]!), (S[5] = b.pos[2]!), (S[6] = b.yaw), b.knock(STRIKE), b.clear(), emit(E_CRASH, 0, 6);
     if (S[0] === RACE && S[1]! >= limit) finish();
     return moving || S[0] === RACE;
+  }
+  /** Endless: the ground tricks, the drags, the whip and the combo button (I[5]). */
+  function score(dt: number, I: Float64Array, wasAir: boolean) {
+    if (b.crashed) return;
+    const live = S[0] === RACE, air = !b.contact[0] && !b.contact[1];
+    assist(b, I[1]!, dt);
+    if (live) {
+      if (air) TK[0] = TK[0]! + dt;
+      else if (wasAir) {
+        if (sc.hop(TK[0]!, b.rel > 0.14) === BANKED) emit(E_GROUND, 0, sc.S[KIND]!);
+        TK[0] = 0;
+      }
+      const v = b.speed;
+      if (sc.step(dt, b.rel, b.bp, SWEET, v < 0 ? -v : v, b.throttle, air) === BANKED) emit(E_GROUND, 0, sc.S[KIND]!);
+    }
+    if (st.step(dt, b, live, I[3]!, I.length > 5 ? I[5]! : 0) === ST_CRASH) {
+      (S[4] = b.pos[0]!), (S[5] = b.pos[2]!), (S[6] = b.yaw);
+      b.knock(BAIL);
+      b.clear();
+      emit(E_CRASH, 0, BAIL);
+      lost();
+    }
+    fwd();
+  }
+  /** A crash: the trick in progress, the combo and the drag's points are gone. */
+  function lost() {
+    sc.drop();
+    st.lose();
+    fwd();
+  }
+  /** The stunts' drag events into the session's ring. */
+  function fwd() {
+    for (let k = TK[1]!; k < st.n; k++) {
+      const ty = st.ev[k * 2]!, v = st.ev[k * 2 + 1]!;
+      if (ty === ST_DRAG) emit(E_DRAG, 0, v);
+      else if (ty === ST_BANK) emit(E_BANKED, 0, v);
+      else if (ty === ST_LOST) emit(E_LOST, 0, v);
+    }
+    TK[1] = st.n;
   }
   function finish() {
     if (S[0] === DONE) return;
@@ -330,9 +384,11 @@ export function freeRun(track: Track | RideMap | (Track & EndlessTrack), me: { p
   return {
     t, track, riders, S, ev,
     /** The whole state as bytes (rollback, the desync hash). */
-    bytes: [S, PP, NE, D, U.S, U.R, b.state].map((a) => new Uint8Array(a.buffer, a.byteOffset, a.byteLength)),
+    bytes: [S, PP, NE, D, U.S, U.R, b.state, ...(Wd ? [sc.S, TK] : [])].map((a) => new Uint8Array(a.buffer, a.byteOffset, a.byteLength)).concat(Wd ? st.bytes : []),
     get n() { return NE[0]!; },
-    clear: () => void (NE[0] = 0),
+    clear: () => void ((NE[0] = 0), st.clear(), (TK[1] = 0)),
+    /** Endless: the ground tricks' scorer (score, combo…) and the stunts (drags, whip, combo button). */
+    sc, st,
     get phase() { return S[0]!; },
     get clock() { return S[1]!; },
     /** Tricks landed (big air and flips), and the flips among them. */
