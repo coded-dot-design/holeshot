@@ -66,7 +66,7 @@ import { readdirSync, readFileSync } from "node:fs";
 // Wheelie City together (each rider's own run and patrol), the shared session scoreboard, the name
 // tags and off-screen markers, the city scene's online view, the room card's grounds), plus about
 // 3.4 KB of room.
-// 0.4.0, r6 + r7 + r8 + r9 + r11 integrated: 200,075 B measured (holeshot.js; +5,579 B over 194,496 with
+// 0.4.0, r6 + r7 + r8 + r9 + r11 integrated: 200,063 B measured (holeshot.js; +5,567 B over 194,496 with
 // r6-r9: r11's endless rides together, and their wiring to r8's tricks: the COMBO bit, the board's
 // trick feeds and names, friends' trick callouts and poses, END & BANK in the online pause), plus
 // about 2.9 KB of room.

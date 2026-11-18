@@ -1,185 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 — 2026-11-18
 
-- **No tan speck beside the bike (Endless Wheelie City) and no stray cactus arms, crowns, pylon tips
-  or camps (the endless grounds).** The same cause as the miniature buildings, in two more places:
-  diorama's `hidden` hides only the object itself, never its parts. In the city the dog, hidden
-  with `hidden` alone while no yard was near, drew its body, legs, head and tail 50 units under the
-  start: a few tan pixels beside the bike out in the fields that never grew. On the endless grounds
-  (Dune Sea, Deep Quarry, Endless Woods, Night Park) the scenery pool let go of cacti, trees,
-  pylons and camps the same way, leaving their arms, crowns, neon tips, tents, beacon poles and
-  lamps where they stood and under the start. Both now go to alpha 0 (the whole of it) and back to
-  the hide spot. Render only. Test `tests/artifacts.browser.mjs` now also checks that every drawn
-  part is owned (`probe.orphans`: its whole chain shown, its top a thing the ride has live: the
-  bike, a placed pool object, the dog at its yard, a neighbour out, a sprinkler on, a patrol unit),
-  in the city's owner's view and its 20 km ride, and on a 4 km seeded autopilot ride in each endless
-  ground (before: the dog's 10 parts every frame; 1,490 to 4,106 stray parts per ground).
-- **Tricks everywhere, new tricks, the COMBO button (R8).** Both endless modes (the ENDLESS grounds:
-  dune sea, quarry, woods, night park; and Endless Wheelie City) now ride the same trick set
-  (`src/modes/stunts.ts`, on top of the city's ground-trick scorer): wheelies, manuals, hops and
-  stoppies with the combo, and past 12 o'clock the **drag ladder**: the hand drag (×10), held 1.5 s
-  more the **double hand drag** (both hands down, ×20), and leaned on to about 2 o'clock the **fender
-  drag** (the rear fender on the road, sparks, ×40; the fender props the bike, but on the gas it still
-  goes over). Banked back under 12, lost on a loop-out; the loop-out moved from about 1 o'clock to just
-  past the fender drag (about a quarter past 2). **Whip:** left or right in the air kicks the bike
-  sideways; back to straight it counts, chained whips are each worth more; landed still kicked out it
-  is a crash. **COMBO button** (C on a keyboard, LB on a gamepad; on a touch screen it slides out of
-  the throttle rocker's gas side while the gas is held, at 10 to 12 o'clock, tap it or slide the gas
-  thumb onto it and the gas stays on): SEAT TAP, KNEE KNOCKER, SIDE KICK, CAN-CAN, then at random
-  NAC-NAC, HEEL CLICKER, SKY DIVER, STARFISH (seeded); held longer pays more, ×2 in a wheelie, ×3 in
-  the air (banked on a clean landing; still out at the landing it is a bail). A big trick-name callout
-  pops with the points. The ENDLESS HUD gains a points chip and an at-risk drag chip; Endless trick
-  points pay inside Free Ride's session cap. Size: +5,182 B gzip measured on top of r6 and r7. Tests: `tests/stunts.test.mjs`; golden: the Endless Wheelie City ride's hash (its
-  loop-out moved).
-- **Bike families: gas dirt, electric, street.** Every class belongs to a family and every bike
-  looks like its family (`src/bike/bodies.ts`): electrics lose the tank and the exhaust (an e-bike is
-  a pedal bike with thin tubes, a battery on the down tube, cranks and a saddle; an electric dirt bike
-  is a moto frame round a big glowing battery box, the motor at the pivot). Three original **street
-  bikes** in a new STREET class from three new makers of the city's own (no nod to any real maker):
-  CURBCAT BLOCK PUP 125 (a red street mini), NIGHTGLASS TIDEBREAKER 600 (a fully faired supersport)
-  and IRONJAW BARE KNUCKLE 900 (a naked superbike), each with its factory paint. Road tyres, short
-  stiff springs, five-plus gears: the fastest bikes on the flat (measured, as shown: TIDEBREAKER 84 mph and
-  BARE KNUCKLE 90 mph stock against 73 mph for the fastest dirt bike, the YX-250 2T) and best in Endless Wheelie City. On the dirt they slide and case
-  (grip ×0.72, travel ×0.8, case line ×0.85, brakes ×0.8: `src/model/families.ts`), and picking one
-  for a dirt mode asks first: "Street bike on dirt? It won't perform well." (RIDE ANYWAY / PICK
-  ANOTHER). Online rides use the same rules. Never a starter; the showroom sells them (the mini from
-  day one, the big two with the tier 3-4 unlocks).
-- **Family upgrades, the late-game goals** (one per family, the dearest things in the shop): a
-  WHEELIE BAR for the street mini (◈ 5,200: past 12 it sits on its bar and never loops out, the
-  balance window ×1.6; the trade: the hand drag pays ×5, not ×10), a MOTOR SWAP for the electrics
-  (◈ 7,400: +30 % drive, +14 % top gear, the battery heats 1.6× faster), a BIG BORE KIT for the gas
-  dirt bikes (◈ 7,800: +12 % drive, +3.5 % top gear, a deeper note) and a TURBO for the street bikes
-  (◈ 24,000, dearer than any bike: +22 % drive with boost from the middle revs, +16 % top gear). Each
-  shows on the bike (a bar with two little wheels, a bigger motor and a second battery, deep cylinder
-  fins, a charger and intake on the right), is saved with the bike, rides the online hello (one bit
-  each) and shows its pace before → after in the garage, read off the same measure as the PACE
-  row (`src/model/pace.ts`; speeds as shown). Measured (`tests/families.test.mjs` prints the table):
-  YX-250 2T big bore 0–30 0.74 → 0.70 s, top 72.6 → 75.3 mph; REDLINE 450 WORKS 0.76 → 0.70 s,
-  69.7 → 72.4 mph; LIGHT HORNET motor swap 0.67 → 0.54 s, 56.1 → 64.0 mph; ALPHA WOLF 0.52 → 0.43 s,
-  66.9 → 76.4 mph; KIT FOX 0–20 0.48 → 0.37 s, 46.0 → 52.5 mph; TIDEBREAKER turbo 0.79 → 0.65 s,
-  84.1 → 97.9 mph; BARE KNUCKLE turbo 0–60 1.95 → 1.34 s, 89.8 → 104.6 mph. The wheelie bar leaves
-  the pace as it is. Sound hooks for the voice code: a big bore lowers the voice's pitch (in
-  `power.voice`), `tuned.sound.whistle` marks a turbo for a boost whistle and blow-off (not voiced
-  yet). The wheelie bar caps every drag in both endless modes at its ×5 (the double hand drag too),
-  and with it the fender never reaches the road (`src/modes/stunts.ts` `bar`; test
-  `tests/stunts.test.mjs`).
+Endless Wheelie City becomes an open world, the endless grounds join ENDLESS, and both ride online
+with friends; new tricks and the COMBO button; bike families (gas, electric, street) with their own
+bodies and upgrades; a garage turntable, measured pace and a speed chip; icon-only keys. Sections
+below; the newest work first in each.
 
-- **Online: the endless rides with friends.** ONLINE now offers ENDLESS (pick the ground: the Dune
-  Sea, the Deep Quarry, the Endless Woods or the Night Park) and ENDLESS WHEELIE CITY for up to four,
-  on the same invite link and code. Everyone rides the same seeded world (each screen streams its own
-  window of it round each rider, so friends can roam apart), sees the others' names over their heads,
-  and an arrow on the screen's edge (with the name and how far) points at a friend off the screen.
-  G (or TO HOST / REGROUP on the HUD) brings you to the host; the host's brings everyone. Riders bump
-  each other, as in the race. In Endless Wheelie City every rider has their own neon patrol: a cop
-  only chases and tickets the rider it is after. A shared session scoreboard (points, distance, best
-  trick, combo points, hand drags) is the same on every screen, fed through one scoring door
-  (`src/online/board.ts` `feed`) that new tricks plug into; friends' tricks show as callouts over
-  their heads. END banks your ride; the room's result comes when everyone has. Deterministic and
-  rollback-identical: two and four headless screens ride each endless mode for three minutes (90 s for four in `npm test`) over a
-  jittery link and end byte for byte on the no-latency run (`tests/online-endless.test.mjs`); the
-  browser test joins a room in every endless mode (`tests/online-endless.browser.mjs`). The open
-  world's window now slides with a little give (a rider weaving on a slide line, a crash, a
-  rollback's frames run again no longer slide it back and forth: 625 → 69 slides on a weaving
-  minute). Its gather now records, in the state, which gather the live neighbours, sprinklers and
-  dog were mapped onto, so a rollback that lands on a gather a guessed future already made can't
-  leave them mapped for a moment that never happened (the offline ride is byte for byte as before;
-  the golden hash moves only for the two new numbers). The host's pick byte is now kind (3 bits) and sub (3 bits).
-  **With this release's tricks:** the COMBO button rides the wire (input bit 31, decoded like HOP)
-  and both endless rides step it for every rider; every trick feeds the shared board (ground tricks
-  and the combo's share, the drags, the combo button's tricks banked on the spot, an air banked on a
-  landing), and its best-trick column names the trick (SEAT TAP, MANUAL, FLIP, AIR COMBO...);
-  friends' tricks, drags, whips and banks pop over their heads; a friend's trick pose, double hand
-  drag and whip show on their bike (read from their run's stunts, which is ride state, so every
-  screen draws the same and a rollback puts it back); a wheelie bar's cap holds online too. With the
-  END key gone from the HUD, the online pause card has END & BANK in the endless rides (E still
-  banks); REGROUP is an icon key (G). Test: `tests/online-endless.test.mjs` ("the combo button
-  online"). CI rides the online endless test for one minute (`ENDLESS_MINUTES=1` in
-  `.github/workflows/ci.yml`; the default, 3 min for two screens and 90 s for four, stays local).
-- **Miles by default, km as a setting.** SETTINGS → UNITS: Imperial (miles, mph; the default) or
-  Metric (km, km/h), saved in the profile (schema v6: every existing save migrates to Imperial).
-  Applied wherever a distance shows: the Endless Wheelie City and endless-ground HUD chips (e.g.
-  "1.70 MI"), the BEST lines, the endless picker's bests, the ride summaries and the payout's
-  distance line. Display only: physics, payouts and saved distances stay in world units
-  (1 km = 0.621371 mi, `src/model/units.ts`). Under `?money=inf` the switch is not saved, as every
-  setting there. Tests: `tests/units.test.mjs` (conversions, default, migration, payout label),
-  `tests/units.browser.mjs` (1440 and 390: MI by default, METRIC shows KM and persists across a
-  reload, not saved under test credits).
-- **No more stray miniature buildings in Endless Wheelie City.** Out in the fields a tiny gas
-  station (a canopy, pumps, a sign; roofs and windows too) floated near the start and never grew as
-  the bike rode at it. The scenery pool hid an object it had not placed with diorama's `hidden`,
-  which hides only the object itself, never its parts: every pool object never placed drew its
-  parts in a heap 50 units under the start (seen from above as a miniature), and a tower or silo let
-  go half in the haze left its parts standing. A pool object let go now goes to alpha 0 (the whole
-  of it) and back to its hide spot, and a slot that takes another item starts unghosted; a building
-  the bike is up against is never faded out completely by the occlusion ghost (at most ghosted and
-  outlined), so the bike is never stuck on nothing. Render only; riding unchanged. Test
-  `tests/artifacts.browser.mjs`: a 20 km seeded autopilot ride (65+ towns, 21 hops into the fields
-  at new headings, 1440 dark and 390 light, on `?money=inf`) audits every frame: no strays (before:
-  256 at the start, about 14,000 on screen over 3 km), no outline without its building, every
-  placed object at its world record, every solid within 12 units drawn, drawn building heights =
-  world heights, the frame's pixels the same with every unplaced object forced out.
-- **The bike draws in the right order.** Every part has its layer: a wheel sits under the body from
-  the side, over it at its own end of the bike and under it at the far end (two nested `behind`
-  groups per wheel); each fender rides with its wheel's level, always over its tyre; the fork legs,
-  swingarm arms, exhaust and side number plates hang from near/far side groups (from 6 over
-  everything to 1 under everything), so the far plate and far parts never show through. The rims and
-  spokes show again (the tyres used to cover them). Measured by `tests/layers.browser.mjs`: all 16
-  bikes × 16 yaws × 2 pitches × 4 poses (seated, wheelie, steered, squashed): fenders 100 % over their
-  tyres (2,604 cases), far-side parts 0.0 % over the bike (1,792), near-side parts 100 % over the
-  wheels (1,792). The far leg test still holds (168 cases, 0.0 %).
-- **The garage turntable turns.** Drag or swipe the bike preview sideways; with focus, ← and → turn
-  it 15° and Home faces it front-quarter again (a slider for assistive tech, in degrees). Tested in
-  `tests/garage.browser.mjs` (mouse at 1440, touch at 390, keys).
-- **Speed on the HUD.** A small chip next to the distance (lap, points, air; next to the clock in Big
-  Air) shows your speed in mph, or km/h with Metric (the UNITS setting, `src/model/units.ts`).
-- **In-game keys, icon only.** One corner row in every mode: reset, the view (a chase-cam icon,
-  pressed in and lit with the map icon while the map view is on), mute (raised while the sound is
-  on, pressed in with no drop shadow while muted), light/dark (on /play/), pause; each with an
-  aria-label, 44 px, one row at 390. The END key is gone: pause has END & BANK in Free Ride, ENDLESS
-  and Endless Wheelie City (E still banks from the keyboard). `onTheme` in `createHoleshot()` options
-  adds the theme key (in the menus' header too).
-- **/play/ is all game.** The site header is tucked away behind a small HOLESHOT handle at the top
-  (desktop; phones already hid it), and on /play/ it has no GitHub, Play or theme keys: the theme
-  key is in the game.
-- **Release tags.** CI tags `vX.Y.Z` on `main` when `package.json`'s version has no tag yet (the
-  `tag-version` job, after the checks); how to cut a release and the commands that backfill v0.1.0 to
-  v0.3.0 are in CONTRIBUTING.md.
-- **Speed readouts are scaled for feel; physics unchanged.** The table is small (1 unit ≈ 1 m),
-  so every speed shown reads ×1.6 (`SPEED_DISPLAY` in `src/model/units.ts`): a top-tier bike reads
-  70+ mph. Display only: the sim, the measurements, distances and saved numbers are untouched.
-- **The faster bikes are a little faster, and every bike has its own pace.** The torque is as it
-  was (the curves and the lower gears untouched); the top gear stretches with the tier (×1, ×1.025,
-  ×1.05, ×1.08: `TOP_STRETCH` in `src/data/roster.ts`), so a tier 4 bike runs about 7 % further at
-  the top and a starter is unchanged. Measured on the sim (full gas on the flat; stock, new), 0–30 /
-  0–60 mph / top as shown: YX-125 0.91 / 2.18 s / 63 mph … YX-250 0.74 / 1.55 s / 73 mph (was 68);
-  REDLINE 150F 0.92 / 2.90 s / 61 … 450 WORKS 0.76 / 2.12 s / 70 (was 65); KIT FOX 0.87 s / never /
-  46 … SILVER FOX 0.61 s / never / 58 (was 53); LIGHT HORNET 0.67 s / never / 56 … ALPHA WOLF 0.52 /
-  1.10 s / 67 (was 62). The fastest bike is under 20 % over the slowest gas starter, so stock races
-  of one class stay close. The garage's TOP SPEED bar now reads against 21 units/s (was 19), so the
-  quicker bikes don't all pin it.
-- **PACE in the garage.** PARTS & MODS shows the riding bike's 0–30 mph, 0–60 mph and top speed as
-  tuned (wear, gearing, motor map and mods all move it; NEVER when it can't reach 60), and every
-  showroom card shows the model's new numbers; 0–50 / 0–100 km/h when the units are metric. Each
-  number is measured on the sim once per tuned bike (about 4 ms; `src/model/pace.ts`), not guessed;
-  tests: `tests/pace.test.mjs` (every model and setup).
-- **Gear changes you can hear.** The gas bikes shift out loud: an upshift cuts the ignition for
-  70 ms while the revs fall to the next gear, a downshift blips the revs. The electric bikes are one
-  smooth whine that follows the road speed (an e-bike's hub gears are never heard). Mute silences it
-  all (`src/bike/kit.ts` `voice`; tests: `tests/voice.test.mjs`).
-- **Size budget 203,000 B gzip** (was 184,000): this release measures 200,075 B (holeshot.js;
-  +17,615 B over main before these five rounds, 182,460: the bike layers, turntable, speed chip and
-  icon keys; the measured pace, PACE rows, top-gear stretch and gear-change voice; the stunts,
-  callout and COMBO button; the family bodies, street bikes and upgrades; the endless rides with
-  friends and their trick wiring), plus about 2.9 KB of room.
+### Endless Wheelie City: the open world
 
-- **Test credits: `/play/?credits=inf` (or `?money=inf`).** For trying every bike: the garage shows
-  ◈ ∞ and a TEST CREDITS ∞ chip, the showroom sells every bike (unlocks open), every part, mod, tune
-  and cosmetic is free (buying never subtracts). The session plays a copy of the saved profile in
-  memory and saves nothing, so taking the param off loads the real profile exactly as it was (the
-  export code stays the real one). ONLINE is off while it is on, so a free-bought bike never rides
-  against other people. No effect without the param; rides unchanged (`src/model/testcredits.ts`;
-  tests: `tests/testcredits.test.mjs`, `tests/testcredits.browser.mjs`).
 - **Clean road edges in Endless Wheelie City.** The asphalt, the gravel shoulder, the sidewalk and
   the roundabouts' rings and islands were coloured onto the ground's triangles, so their edges
   zigzagged along the grid (worst far off, where the ground is drawn coarser). They are ribbons now
@@ -220,62 +49,6 @@
   (LOST THEM!, the points, the combo up). A ticket still only when caught stopped or down. The
   distance is how far out from the start (the furthest so far); `stats.far.city` keeps the best (its
   shape is unchanged: no profile step). The VIEW key's second view is a high map view over the bike.
-- **The fixed table stays headless only** (`cityRun`, its tests and goldens unchanged); the shared
-  rules moved to `src/modes/wheelie/rules.ts` and the patrol no longer imports the hoods, so the game's
-  bundle carries only the open world. The slot row (`slotKind`, `PITCH`, the endless `town`, the
-  scene's hood moves) is deleted.
-- **Goldens:** only "endless wheelie city ride" changes (a new world and session: two minutes on the
-  autopilot through the open world); every fixed-table and other hash is unchanged.
-- Size: 176,994 B gzip (holeshot.js; round 4 measured 174,039 on its own, the last committed build 174,076): +2.9 KB
-  for the open world and its scene, with the fixed table's hoods and session out of the bundle; the
-  178,000 B budget holds (no change).
-- Perf (the round-2 harness, autopilot, 4× CPU throttle, 8 s): 1440 frame p50 116.6 ms (the slot row
-  116.7), faces p50 456 (3,490); 390 frame p50 33.4 ms (50.1), faces p50 294 (3,680). A window slide
-  (8 units of new ground, heights and kinds) costs about 4 ms unthrottled; zero allocation per step.
-- Tests: `tests/endless.test.mjs` (chunks pure and cache-independent; roads continuous, smooth along,
-  level across, no dead ends, never far; towns along and facing their roads; a 20 km ride along the
-  roads in random directions never leaves the streamed window, passes towns, allocates nothing; the
-  same inputs, the same bytes), `tests/cops.test.mjs` (units never past the town limits, none out of
-  town, leaving town ends the chase), the hand drag, unstuck and alloc tests on the open world, and
-  the browser tests (`wheelie`, `occlusion`, `ground`) rewritten for it.
-
-- **Wheelie City's ground no longer drops out.** At some headings the lawn, sidewalks and roads around
-  the bike vanished and the canal showed through (the owner, light mode). The diorama skips a face with
-  any corner behind the camera's near plane, and the island's lawn (98 × 28), its top and the long
-  roads and sidewalks were one face each, so with the chase camera over one the whole piece went.
-  Under every ground piece longer than 4 units the same top now lies in tiles of at most 4 (top faces
-  only, a hair lower in the sort): hidden under the piece while it draws (no seams), there when it is
-  skipped. Render only, built once with the scene (nothing per frame); about 1.5 to 2.1× the faces in
-  a frame (at most 6,252 measured, budget 16,384, none dropped). Test: `tests/ground.browser.mjs`
-  (2 hoods × 4 spots incl. the canal bank × 16 headings, 1440 and 390: no water or sky on the island
-  around and ahead of the bike; before the fix, 100+ cases failed); a `probe.spot` for it.
-
-- **The far leg goes behind the bike.** The rider's legs and arms drew over the whole bike (one layer
-  above every bike part), so at many camera angles the far leg and arm showed over the frame, tank and
-  seat, as if both legs were on the near side (a scooter look; plain when walking it). Each side's leg
-  and arm now hang from a side group at the hip's offset across the bike, which drops under every bike
-  part while it is on the far side (the diorama's `behind`, judged from the eye each draw): every yaw
-  and view (chase, garage turntable), every pose (seated, standing, wheelie, hand drag, walking,
-  crashed). Render only, no allocation per frame; physics and golden hashes unchanged. Test:
-  `tests/legs.browser.mjs` (16 yaws × 2 pitches × 6 poses: the far limbs 0 % drawn over the bike where
-  they overlap it, the near ones ≥ 83 % over it; before the fix, up to 100 %).
-
-- **Walk the bike.** Stopped (under 1.5 m/s), no gas, no brake, the weight held (W/S, ↑/↓, the pad's
-  stick) for 0.15 s: the rider puts a foot down and pushes the bike at 1.25 m/s that way, backwards
-  too, the steer turning the push; let go and the feet stop it, the gas rides on at once. Slower up a
-  slope, none past 0.42 rad; never through a post, a wall or off the table (each mode's own check). In
-  Free Ride, Endless, the jam, Endless Wheelie City, Race and Big Air (people only). Its numbers live
-  in the bike's state (a spare slot and the spare byte: the state size is unchanged), so it is
-  deterministic online and after a rollback; every golden hash is unchanged (no golden case walks).
-  The rig walks astride it, boots on the ground; a WALK chip; a one-time phone hint. Tests:
-  `tests/walk.test.mjs`, `tests/walk.browser.mjs`, an alloc case.
-
-- **Credit: Holeshot is by David Cooley (game creator).** The landing (its eyebrow, the "by" panel
-  with one creator line, the meta description), the /play/ header (V0.x · BY DAVID COOLEY), the
-  footer, README, package.json's author and description; his name links to
-  https://fizlet.com/people/david-cooley/. "Built on Fizlet" stays. The LICENSE's copyright line and
-  the bundle's MIT banner are unchanged (a licence matter, not a credit), as is `site/game.json`
-  (generated from the factory's spec).
 - **One Wheelie City: Endless.** The fixed ninety-second Wheelie City (its tile, its landing entry,
   its online head-to-head) is gone; Endless Wheelie City stays, on the same four hoods. The RIDE menu
   and the landing derive from the mode list (five ways to ride). Online's score run is Big Air (the
@@ -286,40 +59,6 @@
   is built before it moves to its slot, and the headless patrol and unstuck tests ride it). Golden:
   the four fixed-session hashes go, one "endless wheelie city ride" comes; every other hash is as it
   was.
-- **Smooth crests (ENDLESS grounds), on Fizlet 0.26.0.** `@fzlt/core` ^0.25.0 → ^0.26.0; the
-  endless grounds' `terrainView` draws with `split: "adaptive"` (each cell along the diagonal whose
-  ends are closer in height; a tie keeps the fixed one), and the window's own `height` / `normal` /
-  `sample` (`src/modes/desert/world.ts` `face()`) use the same rule, so the bike rides exactly the
-  drawn face: a dune's crest is one straight fold, not stair-steps. Test
-  (`tests/desert.test.mjs`): on every ground (45–61 % of the window's cells flipped), the
-  bike's height equals the brick's adaptive terrain at six points a cell and the normals match.
-  No golden hash changed (no golden case rides the endless window; the race, maps, jams, Big Air
-  and the city keep the fixed split).
-- Size: 174,328 B gzip (holeshot.js, +4,140 B), budget 174,000 → 178,000 B (scripts/size.mjs has
-  the reasons).
-- **The throttle rocker (every mode, touch).** Gas and brake leave the round keys for one tall pill
-  under the right thumb (`src/bike/rocker.ts`, at least 72 × 150 px, safe-area aware): the top is
-  GAS, the bottom BRAKE, the middle SEAM both at once (gas and brake together is the wheelie, and the
-  feather that holds it); the thumb slides between them without lifting, the zone lights at once,
-  a short buzz on a change where there is one (never with reduced motion), and a second finger on
-  the pill adds the brake. Icons only (flame, brake disc, the seam's curve; Big Air's TRICK a star,
-  Wheelie City's HOP an arrow), every one with its words in an aria-label. A first-time hint ("slide
-  to the middle to wheelie") until the seam is used. Desktop keys unchanged. Test:
-  `tests/rocker.browser.mjs` (390 portrait, 844 landscape: one finger gas → seam → brake → gas never
-  lifted, two fingers, icons and labels, the size, the hint; the hand drag reached and held with the
-  rocker alone; Race and Big Air ride on it). Endless Wheelie City's start toast no longer says
-  "ninety seconds".
-- **The hand drag (Endless Wheelie City).** The city's bikes now go back past 12 o'clock (vertical)
-  to about 1 (`LOOP_AT`: 30° past; `BikeShape.loop`, the shared bike's new option, default as
-  before so every other mode is bit for bit the same); past the balance point the rear brake has more
-  say (`PAST_BRAKE`), so feathered it holds the nose up there, but it drifts over if you let it. Hold
-  it past 12 for 1.5 s (`HAND_T`) and the rider drops the left hand to the road: HAND DRAG! (sparks
-  off the glove, a star burst, a cheer, a ×10 chip with the points AT RISK pulsing; a charge ring
-  while you hold). It earns 40 a second ×10 (× the combo); back under 12 it BANKS (plus a streak
-  bonus, 120 × seconds², the combo one up); loop out and the drag's points are LOST. The rig gets a
-  ninth trick-pose channel (the hand down to the road). Tests: `tests/handdrag.test.mjs` (past 12
-  reachable and the loop-out at the limit, the drag after 1.5 s held, ×10, banked on the way down,
-  lost on a loop-out, determinism, no allocation).
 - **The neon patrol's new rules (Endless Wheelie City).** A TICKET only when a unit catches you
   stopped (under 1 m/s for 1 s) or down after a crash, in range; ride on and you never get one,
   however close they are. Running heats it up: while a unit is on your tail (within 9 units) the heat
@@ -342,7 +81,6 @@
   owner's case (a downtown tower filling the screen in front of the camera, the bike hidden behind
   it): drawn solid the tower covers 99 % of the bike's pixels; ghosted ≥ 80 % of them read as the
   bike (measured 100 %), at 1440 and 390, and solid again when clear.
-
 - **Endless Wheelie City, a new mode.** The four hoods as reused SLOTS in a row along +x, canal to
   canal: slot k sits at k × 106 units and its hood kind is `slotKind(k)` (pure, seeded: k + 2·bit, so
   two neighbours are never the same kind and one built hood a kind is enough: only the slot you are
@@ -355,6 +93,18 @@
   Wheelie City runs on the same code (`town(false)`: its four hoods at their table places) and every
   golden hash is unchanged. Tests: `tests/endless.test.mjs` (the slots, seamless joins over 120 slots,
   10 km on the autopilot: one hump a slot, no rescue, never off the row, determinism).
+
+### ENDLESS: the endless grounds
+
+- **Smooth crests (ENDLESS grounds), on Fizlet 0.26.0.** `@fzlt/core` ^0.25.0 → ^0.26.0; the
+  endless grounds' `terrainView` draws with `split: "adaptive"` (each cell along the diagonal whose
+  ends are closer in height; a tie keeps the fixed one), and the window's own `height` / `normal` /
+  `sample` (`src/modes/desert/world.ts` `face()`) use the same rule, so the bike rides exactly the
+  drawn face: a dune's crest is one straight fold, not stair-steps. Test
+  (`tests/desert.test.mjs`): on every ground (45–61 % of the window's cells flipped), the
+  bike's height equals the brick's adaptive terrain at six points a cell and the normals match.
+  No golden hash changed (no golden case rides the endless window; the race, maps, jams, Big Air
+  and the city keep the fixed split).
 - **ENDLESS** (the old ENDLESS DESERT tile): a picker card with the Dune Sea (default) and an endless
   version of each other open Free Ride map, on the desert's streaming window and far ring: THE DEEP
   QUARRY (terraced benches and faces), THE ENDLESS WOODS (wooded hills, log jumps, roots, trees you
@@ -363,11 +113,6 @@
   picker rather than four: on a phone four near-identical tiles would push the rest of the menu down.
   The Neon Loop has no endless version (it is a race loop, not a ground). The desert's ground is
   bit-for-bit as it was.
-- Profile v4: the endless bests (v3 → v4 seeds them at 0; the desert's carries over).
-- Size: 170,188 B gzip (+4,124 B), budget 168,000 → 174,000 B (scripts/size.mjs has the reasons).
-- The town's ground now boxes fewer doubles a step (hypot's arithmetic inline in `roadGap`, the hump
-  height through the scratch array): the same bits, about half the young-generation GCs.
-
 - **Endless Desert to the horizon.** A far ring: the same `heightAt` on a coarse window (4-unit
   cells, 544 units a side, view only, sliding 16 units at a time) drawn as five bands of ridgelines
   from 34 to 250 units, each hazier than the last (the lit sand into the sky's horizon colour) with a
@@ -379,13 +124,6 @@
   frame p50 at 1440 2,848 → 2,873 (the far ring adds 5 polygons and 5 crest lines a frame, not
   faces). A finer LOD to smooth the crests ([14, 30]: stride 4 only inside the haze) was measured
   and left out: +8 % faces and 390 throttled p50 33 → 50 ms.
-- Size: 166,064 B gzip (+2,427 B: the far ring and its painter, unstuck in three more modes), under the 168,000 B budget.
-- **Unstuck in Race, Big Air and Wheelie City** (the same watch and timings as Free Ride: the prompt
-  at 2 s, an automatic reset at 4 s, R / ↺ / a gamepad's Back). Race: back on the line behind where
-  you were, the progress taken back, held 1.2 s; it never gains a place (tested). Big Air: the run-in
-  of the current jump. Wheelie City: the last good spot on the street. Tests: `tests/unstuck.test.mjs`.
-- The golden file: the online race of four (its people's watch is in the race's bytes) and the four
-  Wheelie City sessions (the ring is in the session's bytes) change; every other hash is unchanged.
 - **Endless Desert, a new mode.** A dune sea that never ends: big ridged dunes across the wind, a
   second smaller set, ripples, witches'-hat peaks and bowls on a 72-unit lattice, and sparse
   features on a 40-unit lattice (half the cells are open sand; the rest a kicker, a whoop section, a
@@ -403,6 +141,186 @@
 - **Best distance** in the profile: `stats.far` (by mode), profile version 3 (a v2 save gets
   `far.desert = 0`, everything else carries over). The HUD shows km and your best; the result pays
   20 a km within Free Ride's cap.
+
+### Online with friends: endless
+
+- **Online: the endless rides with friends.** ONLINE now offers ENDLESS (pick the ground: the Dune
+  Sea, the Deep Quarry, the Endless Woods or the Night Park) and ENDLESS WHEELIE CITY for up to four,
+  on the same invite link and code. Everyone rides the same seeded world (each screen streams its own
+  window of it round each rider, so friends can roam apart), sees the others' names over their heads,
+  and an arrow on the screen's edge (with the name and how far) points at a friend off the screen.
+  G (or TO HOST / REGROUP on the HUD) brings you to the host; the host's brings everyone. Riders bump
+  each other, as in the race. In Endless Wheelie City every rider has their own neon patrol: a cop
+  only chases and tickets the rider it is after. A shared session scoreboard (points, distance, best
+  trick, combo points, hand drags) is the same on every screen, fed through one scoring door
+  (`src/online/board.ts` `feed`) that new tricks plug into; friends' tricks show as callouts over
+  their heads. END banks your ride; the room's result comes when everyone has. Deterministic and
+  rollback-identical: two and four headless screens ride each endless mode for three minutes (90 s for four in `npm test`) over a
+  jittery link and end byte for byte on the no-latency run (`tests/online-endless.test.mjs`); the
+  browser test joins a room in every endless mode (`tests/online-endless.browser.mjs`). The open
+  world's window now slides with a little give (a rider weaving on a slide line, a crash, a
+  rollback's frames run again no longer slide it back and forth: 625 → 69 slides on a weaving
+  minute). Its gather now records, in the state, which gather the live neighbours, sprinklers and
+  dog were mapped onto, so a rollback that lands on a gather a guessed future already made can't
+  leave them mapped for a moment that never happened (the offline ride is byte for byte as before;
+  the golden hash moves only for the two new numbers). The host's pick byte is now kind (3 bits) and sub (3 bits).
+  **With this release's tricks:** the COMBO button rides the wire (input bit 31, decoded like HOP)
+  and both endless rides step it for every rider; every trick feeds the shared board (ground tricks
+  and the combo's share, the drags, the combo button's tricks banked on the spot, an air banked on a
+  landing), and its best-trick column names the trick (SEAT TAP, MANUAL, FLIP, AIR COMBO...);
+  friends' tricks, drags, whips and banks pop over their heads; a friend's trick pose, double hand
+  drag and whip show on their bike (read from their run's stunts, which is ride state, so every
+  screen draws the same and a rollback puts it back); a wheelie bar's cap holds online too. With the
+  END key gone from the HUD, the online pause card has END & BANK in the endless rides (E still
+  banks); REGROUP is an icon key (G). Test: `tests/online-endless.test.mjs` ("the combo button
+  online"). CI rides the online endless test for one minute (`ENDLESS_MINUTES=1` in
+  `.github/workflows/ci.yml`; the default, 3 min for two screens and 90 s for four, stays local).
+
+### Tricks
+
+- **Tricks everywhere, new tricks, the COMBO button (R8).** Both endless modes (the ENDLESS grounds:
+  dune sea, quarry, woods, night park; and Endless Wheelie City) now ride the same trick set
+  (`src/modes/stunts.ts`, on top of the city's ground-trick scorer): wheelies, manuals, hops and
+  stoppies with the combo, and past 12 o'clock the **drag ladder**: the hand drag (×10), held 1.5 s
+  more the **double hand drag** (both hands down, ×20), and leaned on to about 2 o'clock the **fender
+  drag** (the rear fender on the road, sparks, ×40; the fender props the bike, but on the gas it still
+  goes over). Banked back under 12, lost on a loop-out; the loop-out moved from about 1 o'clock to just
+  past the fender drag (about a quarter past 2). **Whip:** left or right in the air kicks the bike
+  sideways; back to straight it counts, chained whips are each worth more; landed still kicked out it
+  is a crash. **COMBO button** (C on a keyboard, LB on a gamepad; on a touch screen it slides out of
+  the throttle rocker's gas side while the gas is held, at 10 to 12 o'clock, tap it or slide the gas
+  thumb onto it and the gas stays on): SEAT TAP, KNEE KNOCKER, SIDE KICK, CAN-CAN, then at random
+  NAC-NAC, HEEL CLICKER, SKY DIVER, STARFISH (seeded); held longer pays more, ×2 in a wheelie, ×3 in
+  the air (banked on a clean landing; still out at the landing it is a bail). A big trick-name callout
+  pops with the points. The ENDLESS HUD gains a points chip and an at-risk drag chip; Endless trick
+  points pay inside Free Ride's session cap. Size: +5,182 B gzip measured on top of r6 and r7. Tests: `tests/stunts.test.mjs`; golden: the Endless Wheelie City ride's hash (its
+  loop-out moved).
+- **The hand drag (Endless Wheelie City).** The city's bikes now go back past 12 o'clock (vertical)
+  to about 1 (`LOOP_AT`: 30° past; `BikeShape.loop`, the shared bike's new option, default as
+  before so every other mode is bit for bit the same); past the balance point the rear brake has more
+  say (`PAST_BRAKE`), so feathered it holds the nose up there, but it drifts over if you let it. Hold
+  it past 12 for 1.5 s (`HAND_T`) and the rider drops the left hand to the road: HAND DRAG! (sparks
+  off the glove, a star burst, a cheer, a ×10 chip with the points AT RISK pulsing; a charge ring
+  while you hold). It earns 40 a second ×10 (× the combo); back under 12 it BANKS (plus a streak
+  bonus, 120 × seconds², the combo one up); loop out and the drag's points are LOST. The rig gets a
+  ninth trick-pose channel (the hand down to the road). Tests: `tests/handdrag.test.mjs` (past 12
+  reachable and the loop-out at the limit, the drag after 1.5 s held, ×10, banked on the way down,
+  lost on a loop-out, determinism, no allocation).
+
+### Bikes and upgrades
+
+- **Bike families: gas dirt, electric, street.** Every class belongs to a family and every bike
+  looks like its family (`src/bike/bodies.ts`): electrics lose the tank and the exhaust (an e-bike is
+  a pedal bike with thin tubes, a battery on the down tube, cranks and a saddle; an electric dirt bike
+  is a moto frame round a big glowing battery box, the motor at the pivot). Three original **street
+  bikes** in a new STREET class from three new makers of the city's own (no nod to any real maker):
+  CURBCAT BLOCK PUP 125 (a red street mini), NIGHTGLASS TIDEBREAKER 600 (a fully faired supersport)
+  and IRONJAW BARE KNUCKLE 900 (a naked superbike), each with its factory paint. Road tyres, short
+  stiff springs, five-plus gears: the fastest bikes on the flat (measured, as shown: TIDEBREAKER 84 mph and
+  BARE KNUCKLE 90 mph stock against 73 mph for the fastest dirt bike, the YX-250 2T) and best in Endless Wheelie City. On the dirt they slide and case
+  (grip ×0.72, travel ×0.8, case line ×0.85, brakes ×0.8: `src/model/families.ts`), and picking one
+  for a dirt mode asks first: "Street bike on dirt? It won't perform well." (RIDE ANYWAY / PICK
+  ANOTHER). Online rides use the same rules. Never a starter; the showroom sells them (the mini from
+  day one, the big two with the tier 3-4 unlocks).
+- **Family upgrades, the late-game goals** (one per family, the dearest things in the shop): a
+  WHEELIE BAR for the street mini (◈ 5,200: past 12 it sits on its bar and never loops out, the
+  balance window ×1.6; the trade: the hand drag pays ×5, not ×10), a MOTOR SWAP for the electrics
+  (◈ 7,400: +30 % drive, +14 % top gear, the battery heats 1.6× faster), a BIG BORE KIT for the gas
+  dirt bikes (◈ 7,800: +12 % drive, +3.5 % top gear, a deeper note) and a TURBO for the street bikes
+  (◈ 24,000, dearer than any bike: +22 % drive with boost from the middle revs, +16 % top gear). Each
+  shows on the bike (a bar with two little wheels, a bigger motor and a second battery, deep cylinder
+  fins, a charger and intake on the right), is saved with the bike, rides the online hello (one bit
+  each) and shows its pace before → after in the garage, read off the same measure as the PACE
+  row (`src/model/pace.ts`; speeds as shown). Measured (`tests/families.test.mjs` prints the table):
+  YX-250 2T big bore 0–30 0.74 → 0.70 s, top 72.6 → 75.3 mph; REDLINE 450 WORKS 0.76 → 0.70 s,
+  69.7 → 72.4 mph; LIGHT HORNET motor swap 0.67 → 0.54 s, 56.1 → 64.0 mph; ALPHA WOLF 0.52 → 0.43 s,
+  66.9 → 76.4 mph; KIT FOX 0–20 0.48 → 0.37 s, 46.0 → 52.5 mph; TIDEBREAKER turbo 0.79 → 0.65 s,
+  84.1 → 97.9 mph; BARE KNUCKLE turbo 0–60 1.95 → 1.34 s, 89.8 → 104.6 mph. The wheelie bar leaves
+  the pace as it is. Sound hooks for the voice code: a big bore lowers the voice's pitch (in
+  `power.voice`), `tuned.sound.whistle` marks a turbo for a boost whistle and blow-off (not voiced
+  yet). The wheelie bar caps every drag in both endless modes at its ×5 (the double hand drag too),
+  and with it the fender never reaches the road (`src/modes/stunts.ts` `bar`; test
+  `tests/stunts.test.mjs`).
+- **The faster bikes are a little faster, and every bike has its own pace.** The torque is as it
+  was (the curves and the lower gears untouched); the top gear stretches with the tier (×1, ×1.025,
+  ×1.05, ×1.08: `TOP_STRETCH` in `src/data/roster.ts`), so a tier 4 bike runs about 7 % further at
+  the top and a starter is unchanged. Measured on the sim (full gas on the flat; stock, new), 0–30 /
+  0–60 mph / top as shown: YX-125 0.91 / 2.18 s / 63 mph … YX-250 0.74 / 1.55 s / 73 mph (was 68);
+  REDLINE 150F 0.92 / 2.90 s / 61 … 450 WORKS 0.76 / 2.12 s / 70 (was 65); KIT FOX 0.87 s / never /
+  46 … SILVER FOX 0.61 s / never / 58 (was 53); LIGHT HORNET 0.67 s / never / 56 … ALPHA WOLF 0.52 /
+  1.10 s / 67 (was 62). The fastest bike is under 20 % over the slowest gas starter, so stock races
+  of one class stay close. The garage's TOP SPEED bar now reads against 21 units/s (was 19), so the
+  quicker bikes don't all pin it.
+- **Gear changes you can hear.** The gas bikes shift out loud: an upshift cuts the ignition for
+  70 ms while the revs fall to the next gear, a downshift blips the revs. The electric bikes are one
+  smooth whine that follows the road speed (an e-bike's hub gears are never heard). Mute silences it
+  all (`src/bike/kit.ts` `voice`; tests: `tests/voice.test.mjs`).
+
+### Garage and speed
+
+- **The garage turntable turns.** Drag or swipe the bike preview sideways; with focus, ← and → turn
+  it 15° and Home faces it front-quarter again (a slider for assistive tech, in degrees). Tested in
+  `tests/garage.browser.mjs` (mouse at 1440, touch at 390, keys).
+- **PACE in the garage.** PARTS & MODS shows the riding bike's 0–30 mph, 0–60 mph and top speed as
+  tuned (wear, gearing, motor map and mods all move it; NEVER when it can't reach 60), and every
+  showroom card shows the model's new numbers; 0–50 / 0–100 km/h when the units are metric. Each
+  number is measured on the sim once per tuned bike (about 4 ms; `src/model/pace.ts`), not guessed;
+  tests: `tests/pace.test.mjs` (every model and setup).
+- **Speed on the HUD.** A small chip next to the distance (lap, points, air; next to the clock in Big
+  Air) shows your speed in mph, or km/h with Metric (the UNITS setting, `src/model/units.ts`).
+- **Speed readouts are scaled for feel; physics unchanged.** The table is small (1 unit ≈ 1 m),
+  so every speed shown reads ×1.6 (`SPEED_DISPLAY` in `src/model/units.ts`): a top-tier bike reads
+  70+ mph. Display only: the sim, the measurements, distances and saved numbers are untouched.
+- **Miles by default, km as a setting.** SETTINGS → UNITS: Imperial (miles, mph; the default) or
+  Metric (km, km/h), saved in the profile (schema v6: every existing save migrates to Imperial).
+  Applied wherever a distance shows: the Endless Wheelie City and endless-ground HUD chips (e.g.
+  "1.70 MI"), the BEST lines, the endless picker's bests, the ride summaries and the payout's
+  distance line. Display only: physics, payouts and saved distances stay in world units
+  (1 km = 0.621371 mi, `src/model/units.ts`). Under `?money=inf` the switch is not saved, as every
+  setting there. Tests: `tests/units.test.mjs` (conversions, default, migration, payout label),
+  `tests/units.browser.mjs` (1440 and 390: MI by default, METRIC shows KM and persists across a
+  reload, not saved under test credits).
+- **Test credits: `/play/?credits=inf` (or `?money=inf`).** For trying every bike: the garage shows
+  ◈ ∞ and a TEST CREDITS ∞ chip, the showroom sells every bike (unlocks open), every part, mod, tune
+  and cosmetic is free (buying never subtracts). The session plays a copy of the saved profile in
+  memory and saves nothing, so taking the param off loads the real profile exactly as it was (the
+  export code stays the real one). ONLINE is off while it is on, so a free-bought bike never rides
+  against other people. No effect without the param; rides unchanged (`src/model/testcredits.ts`;
+  tests: `tests/testcredits.test.mjs`, `tests/testcredits.browser.mjs`).
+
+### Controls
+
+- **In-game keys, icon only.** One corner row in every mode: reset, the view (a chase-cam icon,
+  pressed in and lit with the map icon while the map view is on), mute (raised while the sound is
+  on, pressed in with no drop shadow while muted), light/dark (on /play/), pause; each with an
+  aria-label, 44 px, one row at 390. The END key is gone: pause has END & BANK in Free Ride, ENDLESS
+  and Endless Wheelie City (E still banks from the keyboard). `onTheme` in `createHoleshot()` options
+  adds the theme key (in the menus' header too).
+- **The throttle rocker (every mode, touch).** Gas and brake leave the round keys for one tall pill
+  under the right thumb (`src/bike/rocker.ts`, at least 72 × 150 px, safe-area aware): the top is
+  GAS, the bottom BRAKE, the middle SEAM both at once (gas and brake together is the wheelie, and the
+  feather that holds it); the thumb slides between them without lifting, the zone lights at once,
+  a short buzz on a change where there is one (never with reduced motion), and a second finger on
+  the pill adds the brake. Icons only (flame, brake disc, the seam's curve; Big Air's TRICK a star,
+  Wheelie City's HOP an arrow), every one with its words in an aria-label. A first-time hint ("slide
+  to the middle to wheelie") until the seam is used. Desktop keys unchanged. Test:
+  `tests/rocker.browser.mjs` (390 portrait, 844 landscape: one finger gas → seam → brake → gas never
+  lifted, two fingers, icons and labels, the size, the hint; the hand drag reached and held with the
+  rocker alone; Race and Big Air ride on it). Endless Wheelie City's start toast no longer says
+  "ninety seconds".
+- **Walk the bike.** Stopped (under 1.5 m/s), no gas, no brake, the weight held (W/S, ↑/↓, the pad's
+  stick) for 0.15 s: the rider puts a foot down and pushes the bike at 1.25 m/s that way, backwards
+  too, the steer turning the push; let go and the feet stop it, the gas rides on at once. Slower up a
+  slope, none past 0.42 rad; never through a post, a wall or off the table (each mode's own check). In
+  Free Ride, Endless, the jam, Endless Wheelie City, Race and Big Air (people only). Its numbers live
+  in the bike's state (a spare slot and the spare byte: the state size is unchanged), so it is
+  deterministic online and after a rollback; every golden hash is unchanged (no golden case walks).
+  The rig walks astride it, boots on the ground; a WALK chip; a one-time phone hint. Tests:
+  `tests/walk.test.mjs`, `tests/walk.browser.mjs`, an alloc case.
+- **Unstuck in Race, Big Air and Wheelie City** (the same watch and timings as Free Ride: the prompt
+  at 2 s, an automatic reset at 4 s, R / ↺ / a gamepad's Back). Race: back on the line behind where
+  you were, the progress taken back, held 1.2 s; it never gains a place (tested). Big Air: the run-in
+  of the current jump. Wheelie City: the last good spot on the street. Tests: `tests/unstuck.test.mjs`.
 - **Unstuck** (Free Ride, Endless Desert, the Free Ride jam): a ring of the last ten good places, a
   stuck prompt after two seconds without half a unit of progress with the controls held, an automatic
   reset after four, and a manual reset (R, the ↺ key on the HUD, a gamepad's Back/Select; online the
@@ -410,6 +328,111 @@
   six units of clear run-up, nudges a unit or two sideways if the place itself is blocked, and blinks
   the bike for 1.2 s (no tree or cactus hits meanwhile). Tests: a wedged bike gets the prompt and then
   the reset, lands upright behind the trap and rides more than 2 units in a second; R resets.
+- **/play/ is all game.** The site header is tucked away behind a small HOLESHOT handle at the top
+  (desktop; phones already hid it), and on /play/ it has no GitHub, Play or theme keys: the theme
+  key is in the game.
+
+### Fixes
+
+- **No tan speck beside the bike (Endless Wheelie City) and no stray cactus arms, crowns, pylon tips
+  or camps (the endless grounds).** The same cause as the miniature buildings, in two more places:
+  diorama's `hidden` hides only the object itself, never its parts. In the city the dog, hidden
+  with `hidden` alone while no yard was near, drew its body, legs, head and tail 50 units under the
+  start: a few tan pixels beside the bike out in the fields that never grew. On the endless grounds
+  (Dune Sea, Deep Quarry, Endless Woods, Night Park) the scenery pool let go of cacti, trees,
+  pylons and camps the same way, leaving their arms, crowns, neon tips, tents, beacon poles and
+  lamps where they stood and under the start. Both now go to alpha 0 (the whole of it) and back to
+  the hide spot. Render only. Test `tests/artifacts.browser.mjs` now also checks that every drawn
+  part is owned (`probe.orphans`: its whole chain shown, its top a thing the ride has live: the
+  bike, a placed pool object, the dog at its yard, a neighbour out, a sprinkler on, a patrol unit),
+  in the city's owner's view and its 20 km ride, and on a 4 km seeded autopilot ride in each endless
+  ground (before: the dog's 10 parts every frame; 1,490 to 4,106 stray parts per ground).
+- **No more stray miniature buildings in Endless Wheelie City.** Out in the fields a tiny gas
+  station (a canopy, pumps, a sign; roofs and windows too) floated near the start and never grew as
+  the bike rode at it. The scenery pool hid an object it had not placed with diorama's `hidden`,
+  which hides only the object itself, never its parts: every pool object never placed drew its
+  parts in a heap 50 units under the start (seen from above as a miniature), and a tower or silo let
+  go half in the haze left its parts standing. A pool object let go now goes to alpha 0 (the whole
+  of it) and back to its hide spot, and a slot that takes another item starts unghosted; a building
+  the bike is up against is never faded out completely by the occlusion ghost (at most ghosted and
+  outlined), so the bike is never stuck on nothing. Render only; riding unchanged. Test
+  `tests/artifacts.browser.mjs`: a 20 km seeded autopilot ride (65+ towns, 21 hops into the fields
+  at new headings, 1440 dark and 390 light, on `?money=inf`) audits every frame: no strays (before:
+  256 at the start, about 14,000 on screen over 3 km), no outline without its building, every
+  placed object at its world record, every solid within 12 units drawn, drawn building heights =
+  world heights, the frame's pixels the same with every unplaced object forced out.
+- **The bike draws in the right order.** Every part has its layer: a wheel sits under the body from
+  the side, over it at its own end of the bike and under it at the far end (two nested `behind`
+  groups per wheel); each fender rides with its wheel's level, always over its tyre; the fork legs,
+  swingarm arms, exhaust and side number plates hang from near/far side groups (from 6 over
+  everything to 1 under everything), so the far plate and far parts never show through. The rims and
+  spokes show again (the tyres used to cover them). Measured by `tests/layers.browser.mjs`: all 16
+  bikes × 16 yaws × 2 pitches × 4 poses (seated, wheelie, steered, squashed): fenders 100 % over their
+  tyres (2,604 cases), far-side parts 0.0 % over the bike (1,792), near-side parts 100 % over the
+  wheels (1,792). The far leg test still holds (168 cases, 0.0 %).
+- **Wheelie City's ground no longer drops out.** At some headings the lawn, sidewalks and roads around
+  the bike vanished and the canal showed through (the owner, light mode). The diorama skips a face with
+  any corner behind the camera's near plane, and the island's lawn (98 × 28), its top and the long
+  roads and sidewalks were one face each, so with the chase camera over one the whole piece went.
+  Under every ground piece longer than 4 units the same top now lies in tiles of at most 4 (top faces
+  only, a hair lower in the sort): hidden under the piece while it draws (no seams), there when it is
+  skipped. Render only, built once with the scene (nothing per frame); about 1.5 to 2.1× the faces in
+  a frame (at most 6,252 measured, budget 16,384, none dropped). Test: `tests/ground.browser.mjs`
+  (2 hoods × 4 spots incl. the canal bank × 16 headings, 1440 and 390: no water or sky on the island
+  around and ahead of the bike; before the fix, 100+ cases failed); a `probe.spot` for it.
+- **The far leg goes behind the bike.** The rider's legs and arms drew over the whole bike (one layer
+  above every bike part), so at many camera angles the far leg and arm showed over the frame, tank and
+  seat, as if both legs were on the near side (a scooter look; plain when walking it). Each side's leg
+  and arm now hang from a side group at the hip's offset across the bike, which drops under every bike
+  part while it is on the far side (the diorama's `behind`, judged from the eye each draw): every yaw
+  and view (chase, garage turntable), every pose (seated, standing, wheelie, hand drag, walking,
+  crashed). Render only, no allocation per frame; physics and golden hashes unchanged. Test:
+  `tests/legs.browser.mjs` (16 yaws × 2 pitches × 6 poses: the far limbs 0 % drawn over the bike where
+  they overlap it, the near ones ≥ 83 % over it; before the fix, up to 100 %).
+
+### Site, build, tests and size
+
+- **Credit: Holeshot is by David Cooley (game creator).** The landing (its eyebrow, the "by" panel
+  with one creator line, the meta description), the /play/ header (V0.x · BY DAVID COOLEY), the
+  footer, README, package.json's author and description; his name links to
+  https://fizlet.com/people/david-cooley/. "Built on Fizlet" stays. The LICENSE's copyright line and
+  the bundle's MIT banner are unchanged (a licence matter, not a credit), as is `site/game.json`
+  (generated from the factory's spec).
+- **Release tags.** CI tags `vX.Y.Z` on `main` when `package.json`'s version has no tag yet (the
+  `tag-version` job, after the checks); how to cut a release and the commands that backfill v0.1.0 to
+  v0.3.0 are in CONTRIBUTING.md.
+- **Size budget 203,000 B gzip** (was 184,000): this release measures 200,063 B (holeshot.js;
+  +17,603 B over main before these five rounds, 182,460: the bike layers, turntable, speed chip and
+  icon keys; the measured pace, PACE rows, top-gear stretch and gear-change voice; the stunts,
+  callout and COMBO button; the family bodies, street bikes and upgrades; the endless rides with
+  friends and their trick wiring), plus about 2.9 KB of room.
+- **The fixed table stays headless only** (`cityRun`, its tests and goldens unchanged); the shared
+  rules moved to `src/modes/wheelie/rules.ts` and the patrol no longer imports the hoods, so the game's
+  bundle carries only the open world. The slot row (`slotKind`, `PITCH`, the endless `town`, the
+  scene's hood moves) is deleted.
+- **Goldens:** only "endless wheelie city ride" changes (a new world and session: two minutes on the
+  autopilot through the open world); every fixed-table and other hash is unchanged.
+- Size: 176,994 B gzip (holeshot.js; round 4 measured 174,039 on its own, the last committed build 174,076): +2.9 KB
+  for the open world and its scene, with the fixed table's hoods and session out of the bundle; the
+  178,000 B budget holds (no change).
+- Perf (the round-2 harness, autopilot, 4× CPU throttle, 8 s): 1440 frame p50 116.6 ms (the slot row
+  116.7), faces p50 456 (3,490); 390 frame p50 33.4 ms (50.1), faces p50 294 (3,680). A window slide
+  (8 units of new ground, heights and kinds) costs about 4 ms unthrottled; zero allocation per step.
+- Tests: `tests/endless.test.mjs` (chunks pure and cache-independent; roads continuous, smooth along,
+  level across, no dead ends, never far; towns along and facing their roads; a 20 km ride along the
+  roads in random directions never leaves the streamed window, passes towns, allocates nothing; the
+  same inputs, the same bytes), `tests/cops.test.mjs` (units never past the town limits, none out of
+  town, leaving town ends the chase), the hand drag, unstuck and alloc tests on the open world, and
+  the browser tests (`wheelie`, `occlusion`, `ground`) rewritten for it.
+- Size: 174,328 B gzip (holeshot.js, +4,140 B), budget 174,000 → 178,000 B (scripts/size.mjs has
+  the reasons).
+- Profile v4: the endless bests (v3 → v4 seeds them at 0; the desert's carries over).
+- Size: 170,188 B gzip (+4,124 B), budget 168,000 → 174,000 B (scripts/size.mjs has the reasons).
+- The town's ground now boxes fewer doubles a step (hypot's arithmetic inline in `roadGap`, the hump
+  height through the scratch array): the same bits, about half the young-generation GCs.
+- Size: 166,064 B gzip (+2,427 B: the far ring and its painter, unstuck in three more modes), under the 168,000 B budget.
+- The golden file: the online race of four (its people's watch is in the race's bytes) and the four
+  Wheelie City sessions (the ring is in the session's bytes) change; every other hash is unchanged.
 - The golden file: the two Free Ride jam hashes change (a jam's bytes now carry each rider's
   distance and unstuck ring); every other hash is unchanged.
 - Size budget 168,000 B gzip (163,637 B measured, +7,794 B: the desert's ground, window, grid, haze
