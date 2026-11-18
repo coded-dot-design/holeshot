@@ -38,7 +38,7 @@
   it 15° and Home faces it front-quarter again (a slider for assistive tech, in degrees). Tested in
   `tests/garage.browser.mjs` (mouse at 1440, touch at 390, keys).
 - **Speed on the HUD.** A small chip next to the distance (lap, points, air; next to the clock in Big
-  Air) shows your speed in mph, or km/h with Metric units.
+  Air) shows your speed in mph, or km/h with Metric (the UNITS setting, `src/model/units.ts`).
 - **In-game keys, icon only.** One corner row in every mode: reset, the view (a chase-cam icon,
   pressed in and lit with the map icon while the map view is on), mute (raised while the sound is
   on, pressed in with no drop shadow while muted), light/dark (on /play/), pause; each with an

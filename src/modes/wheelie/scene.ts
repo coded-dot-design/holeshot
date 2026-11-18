@@ -145,11 +145,11 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   const head = hud.children[0] as HTMLElement, top = head.children[0] as HTMLElement, hintEl = head.children[1] as HTMLElement;
   const toastEl = hud.children[1] as HTMLElement, ticketEl = hud.children[2] as HTMLElement, live = hud.children[3] as HTMLElement, keysEl = hud.children[4] as HTMLElement;
   const timeEl = top.children[0]!.firstChild as HTMLElement, scoreEl = top.children[1]!.firstChild as HTMLElement, comboEl = top.children[1]!.lastChild as HTMLElement;
-  // The speed, next to the distance chip.
-  const speedW = speedo(top.children[0]!, "wc", ctx.units);
   const heatChip = top.children[2] as HTMLElement, heatEl = heatChip.firstChild as HTMLElement, riskEl = heatChip.lastChild as HTMLElement;
   const trickChip = top.children[3] as HTMLElement, trickEl = trickChip.firstChild as HTMLElement;
   const dragChip = top.children[4] as HTMLElement, dragRing = dragChip.firstChild as HTMLElement, dragEl = dragChip.lastChild as HTMLElement;
+  // The speed, next to the distance chip (after the chips above are found by place).
+  const speedW = speedo(top.children[0]!, "wc", ctx.units);
   const tlineEl = ticketEl.lastChild as HTMLElement;
   const viewK = keysEl.querySelector(".wc-view") as HTMLButtonElement, muteK = keysEl.querySelector(".wc-mute") as HTMLButtonElement;
   const stuckEl = document.createElement("p");
