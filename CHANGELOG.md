@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+### Garage
+
+- **The bike stays in view.** The garage's turntable, the bike's name and pace, your bikes and the
+  PARTS & MODS / PAINT & KIT / SHOWROOM tabs sit in a dock that stays at the top of the card while
+  the lists scroll under it (1440, 1024, 390 and 844×390; on short screens it compacts: a smaller
+  turntable, the info on one line).
+- **Live preview.** Pointing at (or focusing) a paint, a kit piece, a mod or a showroom bike shows it
+  on the turntable at once, with the pace chips against yours (+/−); moving away puts your bike back.
+  Tapping a mod, a showroom bike or one of your bikes pins it: PREVIEW with BUY (or APPLY) and CANCEL
+  (Esc too). Previews are announced.
+- **A plinth that stands out.** A lifted top with a lighter lip on an edge glow (cyan by night, hot
+  pink by day): 3.8:1 (dark) and 3.9:1 (light) against the preview's background, measured.
+- **Tidier lists.** Every bike is one card shape (maker swatch, name, class and maker, stars and
+  price, the key top-right, blurb, bars, pace), two across on wide screens; class headings with their
+  makers; the header's credits, test-credits, rider and theme chips one height. On the game page the
+  header handle no longer overlaps the card's top edge.
+- Tests: `tests/garage-ux.browser.mjs` (the dock in view while the list scrolls; tap → the turntable
+  changes, CANCEL restores it; hover and focus; plinth contrast); `tests/site.mjs` checks the handle.
+
 ## 0.4.0 — 2026-11-18
 
 Endless Wheelie City becomes an open world, the endless grounds join ENDLESS, and both ride online
