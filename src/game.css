@@ -12,7 +12,7 @@
 .dh[data-menu]{background:radial-gradient(120% 80% at 50% 110%,#3a1460 0,#0a0918 62%)}
 .dh[data-menu][data-day]{background:radial-gradient(120% 80% at 50% 110%,#ffd3b0 0,#f6ead8 62%)}
 .dh[data-menu]::before{content:"";position:absolute;inset:50% -20% -10%;background:repeating-linear-gradient(90deg,color-mix(in srgb,var(--cy) 30%,transparent) 0 2px,transparent 2px 64px),repeating-linear-gradient(0deg,color-mix(in srgb,var(--hot) 26%,transparent) 0 2px,transparent 2px 40px);transform:perspective(420px) rotateX(58deg);transform-origin:50% 0;opacity:.55;pointer-events:none}
-.dh-cards{position:absolute;inset:0;overflow:auto;overscroll-behavior:contain;display:grid;place-items:start center;padding:16px 12px 28px;z-index:5}
+.dh-cards{position:absolute;inset:0;overflow:auto;overscroll-behavior:contain;display:grid;place-items:start center;padding:calc(16px + var(--dh-top,0px)) 12px 28px;z-index:5}
 .dh-cards[hidden]{display:none}
 .dh:not([data-menu]) .dh-cards{background:color-mix(in srgb,#07060f 55%,transparent);place-items:center}
 .dh-live{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);margin:0}
@@ -105,7 +105,7 @@
 .dh-pause,.dh-result{width:min(100%,620px)}
 .dh-note:empty{display:none}
 @media (max-width:620px){
-.dh-cards{padding:10px 8px 24px}
+.dh-cards{padding:calc(10px + var(--dh-top,0px)) 8px 24px}
 .dh-card{padding:12px 12px 14px;gap:10px}
 .dh-hero2,.dh-bay,.dh-cols,.dh-picks,.dh-modes{grid-template-columns:1fr}
 .dh-tabs .bui-key{font-size:12px}

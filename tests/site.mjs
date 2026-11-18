@@ -60,7 +60,12 @@ try {
       await until(p, () => window.game && game.getSnapshot().screen === "setup", null, `${at}: /play/ mounts with the setup`);
       if (SHOTS) await p.screenshot({ path: `${SHOTS}/play-setup-${w}-${theme}.png` });
       await p.evaluate(() => game.setup({ starter: "anvil" }));
-      if (SHOTS) await p.evaluate(() => game.show("garage")), await p.waitForTimeout(300), await p.screenshot({ path: `${SHOTS}/play-garage-${w}-${theme}.png` });
+      // The header handle (shown where there is a pointer) clears the garage card's top edge.
+      await p.evaluate(() => game.show("garage"));
+      await until(p, () => !!document.querySelector("#game [data-fizlet-host]").shadowRoot.querySelector(".dh-garage"), null, `${at}: the garage`);
+      const gap = await p.evaluate(() => { const h = document.querySelector(".head-handle"), c = document.querySelector("#game [data-fizlet-host]").shadowRoot.querySelector(".dh-garage"); return h.getClientRects().length ? c.getBoundingClientRect().top - h.getBoundingClientRect().bottom : null; });
+      assert.ok(gap === null || gap >= 4, `${at}: the header handle clears the card (${gap} px)`);
+      if (SHOTS) await p.waitForTimeout(300), await p.screenshot({ path: `${SHOTS}/play-garage-${w}-${theme}.png` });
       await p.goto(`${server.url}${BASE}/play/?mode=bigair`);
       await until(p, () => window.game && game.getSnapshot().mode === "bigair", null, `${at}: ?mode= starts that event`);
       const pad = await p.evaluate(() => !!document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".ba-pad").offsetParent);
@@ -80,7 +85,7 @@ try {
   await until(p, () => document.querySelector(".dt-poster img")?.complete, null, "reduced motion: the poster");
   assert.deepEqual(await p.evaluate(() => ({ poster: !document.querySelector(".dt-poster").hidden, game: !!document.querySelector("[data-fizlet-host]") })), { poster: true, game: false }, "reduced motion: a still poster, no game");
   await ctx.close();
-  console.log("Holeshot site: the hero races, the title, PLAY to /play/, four sections, the measured size, no sideways scroll, /play/ setup and ?mode=, the reduced-motion poster; 1440 and 390, dark and light.");
+  console.log("Holeshot site: the hero races, the title, PLAY to /play/, four sections, the measured size, no sideways scroll, /play/ setup (the header handle clear of the card) and ?mode=, the reduced-motion poster; 1440 and 390, dark and light.");
 } finally {
   await browser.close();
   await server.close();

@@ -44,3 +44,71 @@
 .dh-risk{width:min(100%,560px)}
 @media (max-width:620px){.dh-log li{grid-template-columns:4.5em minmax(0,1fr) auto}}
 .dh-maker{display:inline-block;width:14px;height:14px;margin-right:6px;vertical-align:-1px;border:2px solid var(--rim);border-radius:4px;background:linear-gradient(135deg,var(--a) 55%,var(--b) 0)}
+/* The dock (R14): the turntable, the bike shown and its pace, your bikes, the pinned preview and the
+   garage tabs stay at the top of the card while the lists scroll under it. --dh-top is the room a
+   host page keeps clear at the top (the site's header handle); the dock's upward shadow hides the
+   lists in that gap. On short screens the dock compacts: a smaller turntable, the info on one line. */
+.dh-dock{position:sticky;top:-16px;z-index:3;display:grid;gap:10px;margin:-6px -18px 0;padding:6px 18px 12px;background:var(--surface);border-bottom:2.5px solid var(--rim);box-shadow:0 8px 12px -10px color-mix(in srgb,#07060f 60%,transparent)}
+.dh-dock::before{content:"";position:absolute;inset:auto 0 100%;height:var(--dh-top,0px);background:var(--surface)}
+.dh-garage>.dh-top,.dh-garage>.dh-tabs{position:relative;z-index:4}
+.dh-dock .dh-bay{align-items:start}
+.dh-pvinfo{display:grid;gap:4px;min-width:0}
+.dh-bayline{font-size:12px;letter-spacing:.06em;color:var(--muted);overflow-wrap:anywhere}
+.dh-pvtag{display:inline-block;padding:1px 7px;border:2px solid var(--rim);border-radius:6px;background:var(--hot);color:#fff;font-size:10px;letter-spacing:.1em;vertical-align:1px}
+.dh-pvinfo:has(.dh-pvtag) .dh-big{color:var(--hot)}
+.dh-pace-bay dd{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 5px}
+.dh-pace dd em{font-style:normal;font-size:11px;letter-spacing:.02em}
+.dh-pace dd em[data-d=up]{color:var(--k-go,#39ffb0)}
+.dh[data-day] .dh-pace dd em[data-d=up]{color:#11823b}
+.dh-pace dd em[data-d=down]{color:var(--hot)}
+.dh-pace dd em[data-d=same]{color:var(--muted)}
+.dh-pin{display:grid;grid-template-columns:minmax(0,1fr) auto auto;border-style:solid;background:color-mix(in srgb,var(--hot) 14%,var(--surface))}
+.dh-pin>span{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:14px}
+.dh .dh-pin .dh-go{font-size:14px;padding:0 14px}
+.dh-gbody{display:grid;gap:12px;min-width:0}
+/* The lists: section headings, one card shape for every bike (maker swatch, name, family/maker line,
+   stars and price, the key top-right, blurb, bars, pace). */
+.dh-clh{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin:14px 0 6px;padding-bottom:4px;border-bottom:2px solid color-mix(in srgb,var(--rim) 35%,transparent);font-size:14px;color:var(--ink)}
+.dh-clh small{font-size:11px;letter-spacing:.1em;color:var(--muted)}
+.dh-show{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px}
+.dh-list.dh-show>li.dh-bc{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto;align-items:start;align-content:start;gap:6px 10px;padding:10px 12px;border:2px solid color-mix(in srgb,var(--rim) 55%,transparent);border-radius:12px;background:var(--raised);cursor:pointer}
+.dh-bc>.dh-blurb,.dh-bc>.dh-mini-bars,.dh-bc>.dh-pace{grid-column:1/-1}
+.dh-bc:hover,.dh-bc:focus-within{border-color:var(--rim);background:color-mix(in srgb,var(--cy) 10%,var(--raised))}
+.dh-bc-head{display:flex;gap:8px;align-items:flex-start;min-width:0}
+.dh-bc-head .dh-maker{flex:none;margin:2px 0 0;width:18px;height:18px}
+.dh-bc-head b{font-size:15px;line-height:1.15}
+.dh-bc .dh-buy{min-width:7.5em}
+.dh-stars span{color:var(--hot);letter-spacing:.06em}
+.dh-list>li[data-pv^="mod:"]{cursor:pointer;border-radius:10px}
+.dh-list>li[data-pv^="mod:"]:hover{background:color-mix(in srgb,var(--cy) 10%,transparent)}
+/* The header's cluster: credits, the test chip, the rider and the theme key, one height. */
+.dh-top .dh-chip{box-sizing:border-box;min-height:44px;border-radius:10px;font-size:14px}
+.dh-top .dh-test{border-style:dashed;font-size:12px}
+.dh-top .dh-theme{margin-left:2px}
+@media (max-width:620px){
+.dh-dock{top:-10px;margin-inline:-12px;padding-inline:12px}
+.dh-pin{grid-template-columns:1fr 1fr;gap:6px 8px;padding:6px 8px}.dh-pin>span{grid-column:1/-1}.dh-pin .dh-buy{min-width:0}
+.dh-dock .dh-preview{aspect-ratio:auto;height:min(26svh,210px)}
+.dh-bayblurb{display:none}
+.dh-pvinfo{grid-template-columns:minmax(0,1fr)}
+.dh-pvinfo .dh-big{font-size:20px}
+.dh-dock .dh-slots{flex-wrap:nowrap;overflow-x:auto;margin:0;padding-bottom:2px}
+.dh-dock .dh-slot-k{flex:none;min-width:6em}
+.dh-dock .dh-slot-k small:last-child{display:none}
+.dh-garage .dh-logo{font-size:22px}
+.dh-top .dh-chip{min-height:40px;font-size:12px;padding:.3em .5em}
+.dh-top .dh-test{font-size:10px}
+}
+@media (max-height:620px){
+.dh-dock{gap:6px;padding-bottom:8px}
+.dh-dock .dh-preview{aspect-ratio:auto;height:min(36svh,170px)}
+.dh-bayblurb{display:none}
+.dh-pvinfo{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
+.dh-pvinfo .dh-big{font-size:18px}
+.dh-pvinfo .dh-pace{flex:1 1 100%}
+.dh-pace-bay>div{padding:2px 6px}
+.dh-pace-bay dd{font-size:13px}
+.dh-dock .dh-slots{flex-wrap:nowrap;overflow-x:auto;margin:0}
+.dh-dock .dh-slot-k{flex:none;min-width:6em;padding:2px 10px}
+.dh-dock .dh-slot-k small:last-child{display:none}
+}

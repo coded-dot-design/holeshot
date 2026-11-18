@@ -27,7 +27,7 @@ import { dirtWarning, onGround } from "./model/families.ts";
 import { apply, pitFix, pitReady, settle, type ModeResult } from "./model/economy.ts";
 import type { Buy } from "./model/garage.ts";
 import { after, ride as garageRide } from "./model/upkeep.ts";
-import { garageCard as garageView, garageClick, garageUI, riskCard, shown } from "./garage/view.ts";
+import { bayInfo, garageCard as garageView, garageClick, garageUI, pvName, pvOf, riskCard, shown, type Pv } from "./garage/view.ts";
 import { lookOf } from "./garage/look.ts";
 import { bar, esc, num } from "./html.ts";
 import { enter as enterSeries, recordRound, retire as retireSeries, roundStats } from "./model/series.ts";
@@ -148,8 +148,11 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     pdio.clear();
     const night = pageTheme() === "dark";
     const kit = night ? { seat: "#14121f", frame: "#2b2a3d", tyre: "#0f0f16", rim: "#9aa0c8", metal: "#c9cde6", pipe: "#7e86a8", glow: "#ff2e88" } : { seat: "#2a2833", frame: "#3a3a4c", tyre: "#24232b", rim: "#d9dbe6", metal: "#eceef7", pipe: "#9aa0b8", glow: "#ff3b30" };
-    pdio.add({ shape: "cyl", sides: 24, size: [3.2, 0.12, 3.2], pos: [0, -0.06, 0], color: night ? "#1d1838" : "#f2e2cf", pick: false });
-    pdio.add({ shape: "cyl", sides: 24, size: [3.3, 0.04, 3.3], pos: [0, -0.1, 0], color: night ? "#22e6ff" : "#ff7a59", emissive: night, pick: false });
+    // The plinth: a lifted top with a lighter lip, on an edge glow (the palette's cyan by night, hot
+    // pink by day): 3:1 or more against the preview's background in both themes (tests/garage-ux).
+    pdio.add({ shape: "cyl", sides: 24, size: [3.2, 0.12, 3.2], pos: [0, -0.06, 0], color: night ? "#a49bf0" : "#6f5a8e", pick: false });
+    pdio.add({ shape: "cyl", sides: 24, size: [2.96, 0.13, 2.96], pos: [0, -0.055, 0], color: night ? "#7a70cc" : "#8b74a8", pick: false });
+    pdio.add({ shape: "cyl", sides: 24, size: [3.34, 0.05, 3.34], pos: [0, -0.11, 0], color: night ? "#22e6ff" : "#d81b72", emissive: night, pick: false });
     const g = rig(pdio, "pv", { ...kit, ...L2.look } as RigColors, t.rig, L2.helmet), bk = makeBike(flat, t.power, t.shape);
     bk.reset(0, 0, 0);
     g.pose(bk, 0.6);
@@ -349,10 +352,37 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     finishEvent(s);
   }
 
+  // ---- the garage's live preview: pointing at (or focusing) a paint, a kit piece, a mod or a bike
+  // shows it on the turntable at once, with its pace against yours; leaving puts yours back (or the
+  // pinned one). Tapping a mod or a bike card pins it: BUY / APPLY / CANCEL in the dock. ----
+  const peek = (v: Pv | null, tell = false) => {
+    const a = gui.peek;
+    if (screen !== "garage" || (a === v || (a && v && a[0] === v[0] && a[1] === v[1]))) return;
+    gui.peek = v;
+    const el = cards.querySelector(".dh-pvinfo");
+    if (el) el.innerHTML = bayInfo(profile, gui);
+    if (tell && v) say(`Preview: ${pvName(profile, v)}`);
+    preview();
+  };
+  cards.addEventListener("pointerover", (e) => e.pointerType !== "touch" && peek(pvOf(e.target as Element)), sig);
+  cards.addEventListener("pointerleave", () => peek(null), sig);
+  cards.addEventListener("focusin", (e) => peek(pvOf(e.target as Element), true), sig);
+  cards.addEventListener("focusout", (e) => !cards.contains(e.relatedTarget as Node) && peek(null), sig);
+  cards.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || screen !== "garage" || !gui.trial) return;
+    gui.trial = gui.peek = null;
+    say("Preview cancelled");
+    show("garage");
+  }, sig);
+
   // ---- input on the cards ----
   cards.addEventListener("click", (ev) => {
     const t = (ev.target as HTMLElement).closest<HTMLElement>("button");
-    if (!t) return;
+    if (!t) {
+      const v = screen === "garage" ? pvOf(ev.target as Element) : null;
+      if (v && (v[0] === "mod" || v[0] === "bike" || v[0] === "own")) (gui.trial = v), (gui.peek = null), show("garage"), say(`Preview: ${pvName(profile, v)}. ${v[0] === "own" ? "Apply" : "Buy"} or cancel.`);
+      return;
+    }
     const d = t.dataset;
     if (t.classList.contains("dh-theme")) return o.onTheme?.();
     if (d.go) return show(d.go as Screen);

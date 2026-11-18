@@ -79,7 +79,7 @@ try {
     await shot(p, `${name}-2-garage-warnings`);
     // ---- service, tyres, damage, a tune choice, a mod ----
     // ---- PACE: measured 0–30 / 0–60 mph and the top (as shown, mph by default); the gearing moves it ----
-    const pace = () => $(p, "[...root.querySelectorAll('.dh-garage .dh-pace:not(.dh-pace-s) dd')].map((d) => d.textContent)");
+    const pace = () => $(p, "[...root.querySelectorAll('.dh-gbody .dh-pace:not(.dh-pace-s) dd')].map((d) => d.textContent)");
     const P0 = await pace();
     assert.equal(P0.length, 3, `${name}: three pace numbers`);
     assert.match(P0[2], /^\d+ MPH$/, `${name}: top speed in mph`);
