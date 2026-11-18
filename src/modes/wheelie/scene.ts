@@ -242,7 +242,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     ON_.fill(0);
     // Sprinkler heads (the live ones), the dog, the neighbours.
     for (let i = 0; i < NSPK; i++) sprHeads.push(dio.add({ shape: "cyl", sides: 6, size: [0.16, 0.14, 0.16], pos: [0, -50, 0], color: P.hub, pick: false, hidden: true }));
-    dog = dio.add({ id: "dog", shape: "group", size: [0.6, 0, 0.3], pos: [0, -50, 0], pick: false, hidden: true });
+    dog = dio.add({ id: "dog", shape: "group", size: [0.6, 0, 0.3], pos: [0, -50, 0], pick: false, hidden: true, alpha: 0 });
     dio.add({ size: [0.56, 0.26, 0.26], pos: [0, 0.18, 0], on: "dog", color: P.dog, pick: false });
     for (const lx of [-0.2, 0.2]) for (const lz of [-0.09, 0.09]) dio.add({ size: [0.07, 0.2, 0.07], pos: [lx, 0, lz], on: "dog", color: P.dog2, pick: false });
     dio.add({ size: [0.26, 0.24, 0.24], pos: [0.36, 0.3, 0], on: "dog", color: P.dog, pick: false });
@@ -660,9 +660,13 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     walkHud.update(d);
     const SG = run.SG;
     // The dog: along its yard's front fence; a hop when it barks.
+    // No yard near: alpha 0 (diorama's `hidden` hides only the group, never its body, legs, head
+    // and tail: they stood under the start, a tan speck beside the bike) and back to the hide spot.
     const dq = run.DI[0]!;
     dog.hidden = dq < 0;
-    if (dq >= 0) {
+    dog.alpha = dq < 0 ? 0 : 1;
+    if (dq < 0) (dog.pos[0] = 0), (dog.pos[1] = -50), (dog.pos[2] = 0);
+    else {
       const o = dq * IS, ux = SG[o + 3]!, uz = SG[o + 4]!, fd = SG[o + 6]! / 2 - 0.2, lx = run.DG[1]!;
       dog.pos[0] = SG[o + 1]! + ux * lx - uz * fd; dog.pos[2] = SG[o + 2]! + uz * lx + ux * fd;
       dog.pos[1] = SG[o + 10]! + (run.DG[2]! > 0 ? Math.abs(Math.sin(run.DG[2]! * 10)) * 0.12 : 0);
@@ -1538,6 +1542,29 @@ export function mountCity(ctx: ModeCtx): ModeRun {
           occlude(dt);
         }
         dirty = true;
+      },
+      /** Every object that draws faces, owned: its whole chain shown (diorama's `hidden` hides only the
+       *  object itself, never its parts) and its top a thing the ride has live now (the bike, a placed
+       *  pool object, the dog at its yard, a neighbour out, a sprinkler head on, a patrol unit). Returns
+       *  the strays as [top's id (or "?"), screen x, screen y] per drawn part, as of the last draw;
+       *  `tint` 1 paints them magenta to see them. */
+      orphans(tint = 0) {
+        const out: (string | number)[] = [], live = new Set<DioramaObject>([rigs[0]!.root]);
+        for (let i = 0; i < OBJ.length; i++) if (ON_[i]) live.add(OBJ[i]!);
+        if (run.DI[0]! >= 0) live.add(dog);
+        for (let i = 0; i < NNB; i++) if (run.NI[i]! >= 0 && run.NB[i * 4 + 1]! > 0) live.add(nbs[i]!);
+        for (let i = 0; i < NSPK; i++) if (run.SPI[i]! >= 0) live.add(sprHeads[i]!);
+        for (let i = 0; i < MAXP; i++) if (cop.P[i * PS + P_ON]! > 0) live.add(units[i]!);
+        dio.recolor((ob) => {
+          if (ob.shape === "group" || ob.hidden) return;
+          let a = ob.alpha, top = ob, cut = false;
+          for (let p = ob.parent; p; p = p.parent) (a *= p.alpha), (cut = cut || p.hidden), (top = p);
+          if (a <= 0.01 || (live.has(top) && !cut)) return;
+          if (tint) ob.color = "#ff00ff";
+          const m = ob.M, ok = dio.project(m[9]!, m[10]!, m[11]!, PJ);
+          out.push(top.id ?? "?", ok ? Math.round(PJ[0]!) : NaN, ok ? Math.round(PJ[1]!) : NaN);
+        });
+        return out;
       },
       /** Draw now with every pool object that is not placed forced out (alpha 0), then as it is: for the stray test. */
       bareStrays(on: number) {

@@ -709,7 +709,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   }
 
   // ---- the loop ----
-  engine.add({
+  const loop: Parameters<typeof engine.add>[0] = {
     read() {
       if (V[1]) {
         V[1] = 0;
@@ -768,7 +768,8 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       dio.draw();
       (cam.ox -= sx), (cam.oy -= sy), (V[5] = 1);
     },
-  });
+  };
+  engine.add(loop);
 
   // ---- input: keys on the stage, hold-and-drag on the play surface, the stickers ----
   const MAP: Record<string, string> = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowUp: "fwd", KeyW: "fwd", ArrowDown: "back", KeyS: "back", Space: "gas", KeyJ: "gas", KeyK: "brake", ShiftLeft: "brake", ShiftRight: "brake", KeyR: "reset" };
@@ -880,6 +881,32 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     tags(names: string[]) {
       for (let i = 0; i < names.length; i++) TAGS[i] = names[i]!;
       dirty = true;
+    },
+    probe: {
+      /** Step the ride n times by dt without drawing, as the loop does (a long autopilot ride in a test). */
+      tick(n: number, dt = 1 / 60) {
+        for (let q = 0; q < n; q++) loop.step!(engine, dt);
+      },
+      /** Draw now, as the loop does. */
+      draw() {
+        dirty = true;
+        loop.render!(engine, 1);
+      },
+      /** Every part that draws faces while an ancestor is hidden (diorama's `hidden` hides only the
+       *  object itself, never its parts: a pool's let-go camp, tent, beacon): [top's id, screen x, y]
+       *  each, as of the last draw. */
+      orphans() {
+        const out: (string | number)[] = [];
+        dio.recolor((ob) => {
+          if (ob.shape === "group" || ob.hidden) return;
+          let a = ob.alpha, top = ob, cut = false;
+          for (let p = ob.parent; p; p = p.parent) (a *= p.alpha), (cut = cut || p.hidden), (top = p);
+          if (a <= 0.01 || !cut) return;
+          const m = ob.M, ok = dio.project(m[9]!, m[10]!, m[11]!, tmp);
+          out.push(top.id ?? "?", ok ? Math.round(tmp[0]!) : NaN, ok ? Math.round(tmp[1]!) : NaN);
+        });
+        return out;
+      },
     },
   };
 }

@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **No tan speck beside the bike (Endless Wheelie City) and no stray cactus arms, crowns, pylon tips
+  or camps (the endless grounds).** The same cause as the miniature buildings, in two more places:
+  diorama's `hidden` hides only the object itself, never its parts. In the city the dog, hidden
+  with `hidden` alone while no yard was near, drew its body, legs, head and tail 50 units under the
+  start: a few tan pixels beside the bike out in the fields that never grew. On the endless grounds
+  (Dune Sea, Deep Quarry, Endless Woods, Night Park) the scenery pool let go of cacti, trees,
+  pylons and camps the same way, leaving their arms, crowns, neon tips, tents, beacon poles and
+  lamps where they stood and under the start. Both now go to alpha 0 (the whole of it) and back to
+  the hide spot. Render only. Test `tests/artifacts.browser.mjs` now also checks that every drawn
+  part is owned (`probe.orphans`: its whole chain shown, its top a thing the ride has live: the
+  bike, a placed pool object, the dog at its yard, a neighbour out, a sprinkler on, a patrol unit),
+  in the city's owner's view and its 20 km ride, and on a 4 km seeded autopilot ride in each endless
+  ground (before: the dog's 10 parts every frame; 1,490 to 4,106 stray parts per ground).
 - **Miles by default, km as a setting.** SETTINGS → UNITS: Imperial (miles, mph; the default) or
   Metric (km, km/h), saved in the profile (schema v6: every existing save migrates to Imperial).
   Applied wherever a distance shows: the Endless Wheelie City and endless-ground HUD chips (e.g.

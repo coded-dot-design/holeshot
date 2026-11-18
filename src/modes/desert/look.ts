@@ -94,7 +94,7 @@ export function desertView(d: Diorama, W: World) {
       }
       // A camp: a tent and its beacon (a tall pole with a lamp: something to ride to); the quarry's a
       // hopper on a rig, the woods' a cabin, the park's a light tower on its own.
-      const cid = `dk${s}`, c = d.add({ id: cid, shape: "group", size: [1, 0, 1], pos: [0, -50, 0], pick: false, hidden: true });
+      const cid = `dk${s}`, c = d.add({ id: cid, shape: "group", size: [1, 0, 1], pos: [0, -50, 0], pick: false, hidden: true, alpha: 0 });
       if (bi === B_DESERT) d.add({ shape: "cyl", sides: 4, top: 0, size: [2.2, 1.4, 2.2], pos: [2.2, 0, 1.4], on: cid, color: p.night ? "#3a1d5c" : "#ffffff", pick: false });
       else if (bi === B_QUARRY) {
         d.add({ id: cid + "h", size: [2.2, 1.4, 1.6], pos: [2.4, 0, 1.4], on: cid, color: p.tower, pick: false });
@@ -116,7 +116,12 @@ export function desertView(d: Diorama, W: World) {
     const ci = Math.floor(x / FCELL), cj = Math.floor(z / FCELL);
     if (ci === ci0 && cj === cj0) return;
     ci0 = ci; cj0 = cj;
-    for (let o = 0; o < objs.length; o++) objs[o]!.hidden = true;
+    // Let go: alpha 0 too (diorama's `hidden` hides only the object, never a camp's tent, pole and
+    // lamp) and back to the hide spot; `frame` fades in what is placed.
+    for (let o = 0; o < objs.length; o++) {
+      const ob = objs[o]!;
+      ob.hidden = true; ob.alpha = 0; ob.pos[0] = 0; ob.pos[1] = -50; ob.pos[2] = 0;
+    }
     let s = 0;
     for (let j = cj - 1; j <= cj + 1; j++)
       for (let i = ci - 1; i <= ci + 1; i++, s++) {
