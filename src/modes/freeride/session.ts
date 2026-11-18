@@ -158,6 +158,8 @@ export function freeRun(track: Track | RideMap | (Track & EndlessTrack), me: { p
       // Banked: brake to a stop. Held still a moment, it rests (on a slope the springs would
       // shiver for ever, so the bike is no longer stepped: the scene settles).
       if (S[10]! >= STILL) return false;
+      // (The window under it first: after a rollback it may sit where a guessed future rode.)
+      if (Wd) Wd.follow(b.crashed ? b.rider[0]! : b.pos[0]!, b.crashed ? b.rider[2]! : b.pos[2]!);
       b.set(0, 1, 0, 0);
       const m = b.step(dt);
       b.clear();

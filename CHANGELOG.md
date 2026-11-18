@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- **Online: the endless rides with friends.** ONLINE now offers ENDLESS (pick the ground: the Dune
+  Sea, the Deep Quarry, the Endless Woods or the Night Park) and ENDLESS WHEELIE CITY for up to four,
+  on the same invite link and code. Everyone rides the same seeded world (each screen streams its own
+  window of it round each rider, so friends can roam apart), sees the others' names over their heads,
+  and an arrow on the screen's edge (with the name and how far) points at a friend off the screen.
+  G (or TO HOST / REGROUP on the HUD) brings you to the host; the host's brings everyone. Riders bump
+  each other, as in the race. In Endless Wheelie City every rider has their own neon patrol: a cop
+  only chases and tickets the rider it is after. A shared session scoreboard (points, distance, best
+  trick, combo points, hand drags) is the same on every screen, fed through one scoring door
+  (`src/online/board.ts` `feed`) that new tricks plug into; friends' tricks show as callouts over
+  their heads. END banks your ride; the room's result comes when everyone has. Deterministic and
+  rollback-identical: two and four headless screens ride each endless mode for three minutes over a
+  jittery link and end byte for byte on the no-latency run (`tests/online-endless.test.mjs`); the
+  browser test joins a room in every endless mode (`tests/online-endless.browser.mjs`). The open
+  world's window now slides with a little give (a rider weaving on a slide line, a crash, a
+  rollback's frames run again no longer slide it back and forth: 625 → 69 slides on a weaving
+  minute). The host's pick byte is now kind (3 bits) and sub (3 bits). Size budget 184,000 → 190,000
+  B gzip (186,139 B measured, +5,446 B).
 - **Miles by default, km as a setting.** SETTINGS → UNITS: Imperial (miles, mph; the default) or
   Metric (km, km/h), saved in the profile (schema v6: every existing save migrates to Imperial).
   Applied wherever a distance shows: the Endless Wheelie City and endless-ground HUD chips (e.g.

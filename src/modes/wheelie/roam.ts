@@ -524,6 +524,8 @@ export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEE
     get stuck() { return US[0] === 1; },
     get n() { return n; },
     clear() { n = 0; },
+    /** An event of the caller's onto this run's list (online: END, REGROUP). */
+    emit,
     step, reset, autopilot, sprinklerAim, streetClear,
     choose(i: number) { reset(i); },
     /** Put the bike down at world (x, z) facing yaw (a test, a harness); the autopilot takes the nearest road. */

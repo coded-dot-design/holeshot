@@ -684,6 +684,11 @@ export function openWindow(W: OpenWorld, WINn = WIN, CELLn = CELL, STEPn = STEP,
     }
   }
   function follow(x: number, z: number) {
+    // A little give (within STEP cells of the middle it stays): a rider weaving on a slide line, a
+    // crash's tumble, a rollback's frames run again don't slide it back and forth (a slide here is
+    // the costly part of a step). It stays a cache: the heights are the pure ground's wherever it sits.
+    const u = x / CELLn - O[0]! - WINn / 2, v = z / CELLn - O[1]! - WINn / 2;
+    if (t.version && u >= -STEPn && u < STEPn && v >= -STEPn && v < STEPn) return false;
     const cx = (Math.floor(x / CELLn / STEPn) | 0) * STEPn, cz = (Math.floor(z / CELLn / STEPn) | 0) * STEPn;
     const ox = cx - WINn / 2 + STEPn / 2, oz = cz - WINn / 2 + STEPn / 2;
     if (t.version && ox === O[0] && oz === O[1]) return false;

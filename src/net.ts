@@ -20,6 +20,13 @@ import { fresh, newBike, riding, type BikeSave, type Profile, type RiderKit } fr
 export const B_AUTO = 1 << 24, B_READY = 1 << 25, B_GONE = 1 << 26, B_DONE = 1 << 27;
 /** Reset to the last good place (../modes/unstuck.ts): the sims read it as IN[4] === 2. */
 export const B_RESET = 1 << 28;
+/** The endless rides together (K_ENDLESS, K_ENDCITY): a hop (Endless Wheelie City's L), and REGROUP
+ *  (the host's: everyone to the host; anyone else's: to the host). B_DONE there is END (banked). */
+export const B_HOP = 1 << 29, B_REGROUP = 1 << 30;
+/** The endless rides' commands (../modes/freeride/jam.ts, ../modes/wheelie/jam.ts `CMD`): END, REGROUP, HOP. */
+export const C_END = 1, C_REGROUP = 2, C_HOP = 4;
+/** Seat r's commands from its bits (a seat that left: END, so its ride is banked). */
+export const cmdOf = (bits: number) => (bits & B_DONE ? C_END : 0) | (bits & B_REGROUP && !(bits & B_GONE) ? C_REGROUP : 0) | (bits & B_HOP && !(bits & B_GONE) ? C_HOP : 0);
 /** At most this many seats in a room, and this many name characters. */
 export const SEATS = 4, NAME = 8;
 /** A seat that left plays these bits from the frame after its last input (every screen the same):
@@ -43,11 +50,12 @@ export function decode(bits: number, r: number, IN: Float64Array, AUTO: Uint8Arr
 /** A score run's bits: the score so far (0..16,777,215) and done. */
 export const scoreBits = (score: number, done: boolean, flags = 0) => ((Math.max(0, Math.min(0xffffff, Math.round(score))) | (done ? B_DONE : 0) | flags) >>> 0);
 
-/** Online modes: a race on a generated track, a Free Ride jam, Big Air and Wheelie City score runs. */
-export const K_RACE = 0, K_JAM = 1, K_AIR = 2, K_CITY = 3;
-/** The host's pick as one byte: the kind (bits 0–1), the race tier or the jam's map (2–4). */
-export const packMode = (kind: number, sub: number) => (kind & 3) | ((sub & 7) << 2);
-export const unpackMode = (m: number) => ({ kind: m & 3, sub: (m >> 2) & 7 });
+/** Online modes: a race on a generated track, a Free Ride jam, Big Air and Wheelie City score runs,
+ *  and the endless rides together: an ENDLESS ground (sub: the biome) and Endless Wheelie City. */
+export const K_RACE = 0, K_JAM = 1, K_AIR = 2, K_CITY = 3, K_ENDLESS = 4, K_ENDCITY = 5;
+/** The host's pick as one byte: the kind (bits 0–2), the race tier, the jam's map or the biome (3–5). */
+export const packMode = (kind: number, sub: number) => (kind & 7) | ((sub & 7) << 3);
+export const unpackMode = (m: number) => ({ kind: m & 7, sub: (m >> 3) & 7 });
 
 // Names: A–Z, 0–9 and a space, one byte a character (0 ends the name).
 const ABC = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ";
