@@ -24,7 +24,7 @@ export const B_RESET = 1 << 28;
  *  (the host's: everyone to the host; anyone else's: to the host). B_DONE there is END (banked). */
 export const B_HOP = 1 << 29, B_REGROUP = 1 << 30;
 /** The combo button held (../modes/stunts.ts: every endless mode), the last free bit. */
-export const B_COMBO = 2 ** 31;
+export const B_COMBO = 0x80000000;
 /** The endless rides' commands (../modes/freeride/jam.ts, ../modes/wheelie/jam.ts `CMD`): END, REGROUP, HOP, COMBO. */
 export const C_END = 1, C_REGROUP = 2, C_HOP = 4, C_COMBO = 8;
 /** Seat r's commands from its bits (a seat that left: END, so its ride is banked). */
