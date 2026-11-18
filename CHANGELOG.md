@@ -6,8 +6,9 @@
   looks like its family (`src/bike/bodies.ts`): electrics lose the tank and the exhaust (an e-bike is
   a pedal bike with thin tubes, a battery on the down tube, cranks and a saddle; an electric dirt bike
   is a moto frame round a big glowing battery box, the motor at the pivot). Three original **street
-  bikes** in a new STREET class: HONDO BLOCK PUP 125 (a red street mini), YAMADA TIDEBREAKER 600 (a
-  fully faired supersport) and KAWAZAKURA BARE KNUCKLE 900 (a naked superbike). Road tyres, short
+  bikes** in a new STREET class from three new makers of the city's own (no nod to any real maker):
+  CURBCAT BLOCK PUP 125 (a red street mini), NIGHTGLASS TIDEBREAKER 600 (a fully faired supersport)
+  and IRONJAW BARE KNUCKLE 900 (a naked superbike), each with its factory paint. Road tyres, short
   stiff springs, five-plus gears: the fastest bikes on the flat (measured: 50–52 mph stock against
   42 mph for the best dirt bike) and best in Endless Wheelie City. On the dirt they slide and case
   (grip ×0.72, travel ×0.8, case line ×0.85, brakes ×0.8: `src/model/families.ts`), and picking one
@@ -29,7 +30,7 @@
   58.5 mph; BARE KNUCKLE turbo 1.35 → 1.00 s, 52.2 → 60.8 mph (0–60 in 3.30 s, the only bike that gets
   there). Sound hooks for the voice code: a big bore lowers the voice's pitch (in `power.voice`),
   `tuned.sound.whistle` marks a turbo for a boost whistle and blow-off (not voiced yet). Size
-  budget 184,000 → 189,000 B gzip: the families measured +4,515 B (186,302 B, `scripts/size.mjs`).
+  budget 184,000 → 189,000 B gzip: the families measured +4,738 B (186,525 B, `scripts/size.mjs`).
 
 - **Miles by default, km as a setting.** SETTINGS → UNITS: Imperial (miles, mph; the default) or
   Metric (km, km/h), saved in the profile (schema v6: every existing save migrates to Imperial).

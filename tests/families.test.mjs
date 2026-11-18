@@ -9,7 +9,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-const { MODELS, CLASSES, STARTERS, model, familyOf, bodyOf } = await import("../src/data/roster.ts");
+const { MODELS, CLASSES, STARTERS, model, familyOf, bodyOf, makerOf } = await import("../src/data/roster.ts");
 const { MODS, FAMILY_FX } = await import("../src/data/economy.ts");
 const { tune } = await import("../src/model/tune.ts");
 const { newBike, fresh, normalize, riding } = await import("../src/model/profile.ts");
@@ -40,8 +40,8 @@ test("families: every class and model has one; bodies follow the family; street 
   assert.equal(STARTERS.length, 4);
   assert.ok(STARTERS.every((m) => familyOf(m) !== "street"));
   // No real brand or model names (a short denylist of the ones a kid would know).
-  const real = /honda|yamaha|kawasaki|suzuki|ducati|ktm|grom|ninja|panigale|duke|gsx|cbr|monster|\br1\b|\br6\b/i;
-  for (const m of street) assert.ok(!real.test(m.name + " " + m.blurb + " " + m.id), m.name);
+  const real = /honda|hondo|yamaha|yamada|kawasaki|kawazakura|suzuki|ducati|ktm|triumph|aprilia|bmw|harley|grom|ninja|panigale|duke|gsx|cbr|monster|\br1\b|\br6\b/i;
+  for (const m of street) assert.ok(!real.test(m.name + " " + m.blurb + " " + m.id + " " + makerOf(m).name + " " + makerOf(m).motto), m.name);
 });
 
 test("families: street bikes rule the asphalt and struggle on the dirt (the warning, the same tune online)", () => {

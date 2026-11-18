@@ -2,10 +2,11 @@
 // classes, six makers, four models per dirt class and three street bikes (nineteen in all). Every model is an engine and chassis for ../bike/bike.ts (`power`), a suspension, its price
 // and its upkeep (how fast its parts wear and what a rebuild costs, as multipliers on the economy's
 // rates). The first model of each class is the cheapest: the four starter choices at first run.
-// The makers are our own, each a nod (by sound, meaning and colour) to a maker riders love, in a
+// The dirt makers are our own, each a nod (by sound, meaning and colour) to a maker riders love, in a
 // neon city: YAMADA (harbour-blue 2-strokes), HONDO (red thumpers), KAWAZAKURA (lime-green
 // bruisers), STARKWOLF (a grey wolf of an electric racer), SURGE-ON (light electric
-// hornets) and MAKFOX (fox-orange e-bikes). No real names, model codes or logos. Each model's
+// hornets) and MAKFOX (fox-orange e-bikes); the street makers CURBCAT, NIGHTGLASS and IRONJAW are the
+// city's own (no nod). No real names, model codes or logos. Each model's
 // look (its `body`: ../bike/bodies.ts) follows its family: gas bikes the rig's own tank, shrouds and
 // pipe; electrics no tank and no pipe, a battery box and their own frame; street bikes on asphalt
 // rubber with bodywork of their own (a mini, a fully faired supersport, a naked superbike).
@@ -13,7 +14,7 @@ import type { Power } from "../bike/bike.ts";
 import type { BodyKind } from "../bike/bodies.ts";
 
 /** The makers: a name, a one-line voice, and the factory colours (flat, our palette). */
-export type MakerId = "yamada" | "hondo" | "kawazakura" | "starkwolf" | "surgeon" | "makfox";
+export type MakerId = "yamada" | "hondo" | "kawazakura" | "starkwolf" | "surgeon" | "makfox" | "curbcat" | "nightglass" | "ironjaw";
 export interface Maker { id: MakerId; name: string; motto: string; colors: [plastic: string, plastic2: string] }
 export const MAKERS: Record<MakerId, Maker> = {
   yamada: { id: "yamada", name: "YAMADA", motto: "Harbour-district blue. The 2-stroke snap every kid on the block chases.", colors: ["#2b6bff", "#eef0ff"] },
@@ -22,6 +23,10 @@ export const MAKERS: Record<MakerId, Maker> = {
   starkwolf: { id: "starkwolf", name: "STARKWOLF", motto: "A grey wolf on volts. Silent, savage, hunts the far fence.", colors: ["#8a8fa8", "#ff8a3d"] },
   surgeon: { id: "surgeon", name: "SURGE-ON", motto: "Featherweight volt-motos with a sting. Point, twist, gone.", colors: ["#1b1a2c", "#b6ff3b"] },
   makfox: { id: "makfox", name: "MAKFOX", motto: "Fox-orange e-bikes for the alley lines. Quick, light, sly.", colors: ["#ff8a3d", "#eef0ff"] },
+  // The street makers: the city's own, no nod to anyone (names of the game's voice, no real maker in them).
+  curbcat: { id: "curbcat", name: "CURBCAT", motto: "Little red street minis built in a garage behind the noodle bar. Up on one wheel by the second lamp post.", colors: ["#ff3b4f", "#eef0ff"] },
+  nightglass: { id: "nightglass", name: "NIGHTGLASS", motto: "Blue glass and wind tunnels on the harbour front. Faired, flat out, gone.", colors: ["#2b6bff", "#eef0ff"] },
+  ironjaw: { id: "ironjaw", name: "IRONJAW", motto: "Naked lime-green brawlers with a big twin and no manners.", colors: ["#b6ff3b", "#1b1a2c"] },
 };
 
 /** The five classes. */
@@ -51,7 +56,7 @@ export const CLASSES: Record<ClassId, BikeClass> = {
   "4t": { id: "4t", name: "4-STROKE", maker: "HONDO · KAWAZAKURA", motto: "Thumpers. Heavy, torquey, slow to wear and dear to fix.", family: "gas", rig: "4t", motor: "engine" },
   ebike: { id: "ebike", name: "E-BIKE", maker: "MAKFOX", motto: "Pedal-assist alley bikes. Light, quick to lift, slow on a race track.", family: "electric", rig: "ebike", motor: "battery" },
   emoto: { id: "emoto", name: "ELECTRIC DIRT", maker: "STARKWOLF · SURGE-ON", motto: "Volt-motos. Every newton at once, one gear, a battery to look after.", family: "electric", rig: "emoto", motor: "battery" },
-  street: { id: "street", name: "STREET", maker: "HONDO · YAMADA · KAWAZAKURA", motto: "Asphalt bikes. Sticky road rubber, short springs, long legs: kings of Wheelie City, lost on the dirt.", family: "street", rig: "naked", motor: "engine" },
+  street: { id: "street", name: "STREET", maker: "CURBCAT · NIGHTGLASS · IRONJAW", motto: "Asphalt bikes. Sticky road rubber, short springs, long legs: kings of Wheelie City, lost on the dirt.", family: "street", rig: "naked", motor: "engine" },
 };
 
 export interface Model {
@@ -146,11 +151,11 @@ export const MODELS: Model[] = [
   { id: "gridrat", cls: "emoto", maker: "surgeon", name: "ULTRA HORNET", blurb: "Bigger cells, longer legs, the same sting. Rides the city's spare current.", price: 3900, tier: 2, upkeep: { wear: 0.9, cost: 1.05 }, power: emoto(14.6, 0.82, 1.03), susp: S(0.3, 0.64, 27), sweet: 0.07, hop: 5.8 },
   { id: "overcharge", cls: "emoto", maker: "starkwolf", name: "GREYWOLF MX", blurb: "A wolf's motor and the cooling to keep it. Pulls to the far fence.", price: 6000, tier: 3, upkeep: { wear: 0.95, cost: 1.15 }, power: emoto(16, 0.86, 1.06), susp: S(0.32, 0.66, 28), sweet: 0.075, hop: 5.8 },
   { id: "feral-coil", cls: "emoto", maker: "starkwolf", name: "ALPHA WOLF", blurb: "The pack leader. Brutal on the gas, silent, gentle on nothing.", price: 8600, tier: 4, upkeep: { wear: 1.05, cost: 1.3 }, power: emoto(17.4, 0.84, 1.1), susp: S(0.34, 0.68, 30), sweet: 0.07, hop: 6 },
-  // Street bikes: HONDO's mini, YAMADA's supersport, KAWAZAKURA's naked. Built for Wheelie City's
+  // Street bikes: CURBCAT's mini, NIGHTGLASS's supersport, IRONJAW's naked. Built for Wheelie City's
   // asphalt; on the dirt they slide and case (../model/families.ts). Never a starter.
-  { id: "curb-pup", cls: "street", body: "mini", maker: "hondo", name: "BLOCK PUP 125", blurb: "A little red street mini with fat tyres. Low, light, wheelies all day down the avenue.", price: 2400, tier: 1, upkeep: { wear: 0.6, cost: 0.8 }, power: street("MINI", 15, 0.82, 0.62, 0.56, VMINI), frame: MINI, susp: R(0.16, 0.7, 19), sweet: 0.12, hop: 5.6 },
-  { id: "tidebreaker", cls: "street", body: "sport", maker: "yamada", name: "TIDEBREAKER 600", blurb: "Harbour-blue and fully faired. Screams to the far end of the boulevard; hates a rut.", price: 9800, tier: 3, upkeep: { wear: 0.9, cost: 1.5 }, power: street("SUPERSPORT", 20.5, 1.12, 1.02, 0.7, VSPORT), frame: BIG, susp: R(0.18, 0.74, 20), sweet: 0.075, hop: 4.8 },
-  { id: "bare-knuckle", cls: "street", body: "naked", maker: "kawazakura", name: "BARE KNUCKLE 900", blurb: "A lime-green naked superbike: no fairing, a big twin, torque for every gear. Lifts the front on a thought.", price: 12500, tier: 4, upkeep: { wear: 0.95, cost: 1.7 }, power: street("NAKED", 22.5, 1.16, 1.06, 0.66, VNAKED), frame: BIG, susp: R(0.2, 0.72, 21), sweet: 0.085, hop: 4.9 },
+  { id: "curb-pup", cls: "street", body: "mini", maker: "curbcat", name: "BLOCK PUP 125", blurb: "A little red street mini with fat tyres. Low, light, wheelies all day down the avenue.", price: 2400, tier: 1, upkeep: { wear: 0.6, cost: 0.8 }, power: street("MINI", 15, 0.82, 0.62, 0.56, VMINI), frame: MINI, susp: R(0.16, 0.7, 19), sweet: 0.12, hop: 5.6 },
+  { id: "tidebreaker", cls: "street", body: "sport", maker: "nightglass", name: "TIDEBREAKER 600", blurb: "Harbour-blue and fully faired. Screams to the far end of the boulevard; hates a rut.", price: 9800, tier: 3, upkeep: { wear: 0.9, cost: 1.5 }, power: street("SUPERSPORT", 20.5, 1.12, 1.02, 0.7, VSPORT), frame: BIG, susp: R(0.18, 0.74, 20), sweet: 0.075, hop: 4.8 },
+  { id: "bare-knuckle", cls: "street", body: "naked", maker: "ironjaw", name: "BARE KNUCKLE 900", blurb: "A lime-green naked superbike: no fairing, a big twin, torque for every gear. Lifts the front on a thought.", price: 12500, tier: 4, upkeep: { wear: 0.95, cost: 1.7 }, power: street("NAKED", 22.5, 1.16, 1.06, 0.66, VNAKED), frame: BIG, susp: R(0.2, 0.72, 21), sweet: 0.085, hop: 4.9 },
 ];
 
 

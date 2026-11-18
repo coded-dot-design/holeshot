@@ -43,11 +43,11 @@ import { readdirSync, readFileSync } from "node:fs";
 // Unreleased, the open world's road ribbons: 180,285 B measured (holeshot.js; +3,291 B over 176,994:
 // the asphalt, shoulders, rings and islands drawn as ribbons along the roads' true curves, the
 // window's drawn kinds under them, the probe's bare draw), plus about 3.7 KB of room.
-// Unreleased, the bike families: 186,302 B measured (holeshot.js; +4,515 B over 181,787: the five
+// Unreleased, the bike families: 186,525 B measured (holeshot.js; +4,738 B over 181,787: the five
 // family bodies (e-bike, electric dirt, street mini, supersport, naked) and the four visible
 // upgrades, three street bikes, the families' rules (the dirt penalty, the warning, the fit and the
 // measured pace for the garage's before → after), the upgrades' tune and wheelie bar), plus about
-// 2.7 KB of room.
+// 2.5 KB of room.
 const BUDGET = 189_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
