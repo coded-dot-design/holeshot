@@ -17,8 +17,8 @@
   NAC-NAC, HEEL CLICKER, SKY DIVER, STARFISH (seeded); held longer pays more, ×2 in a wheelie, ×3 in
   the air (banked on a clean landing; still out at the landing it is a bail). A big trick-name callout
   pops with the points. The ENDLESS HUD gains a points chip and an at-risk drag chip; Endless trick
-  points pay inside Free Ride's session cap. Size budget 184,000 → 188,000 B gzip (+5,355 B
-  measured). Tests: `tests/stunts.test.mjs`; golden: the Endless Wheelie City ride's hash (its
+  points pay inside Free Ride's session cap. Size budget 184,000 → 190,000 B gzip (+5,355 B
+  measured; 187,119 B with the Units setting). Tests: `tests/stunts.test.mjs`; golden: the Endless Wheelie City ride's hash (its
   loop-out moved).
 
 - **Miles by default, km as a setting.** SETTINGS → UNITS: Imperial (miles, mph; the default) or

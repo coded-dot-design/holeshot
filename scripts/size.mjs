@@ -46,8 +46,9 @@ import { readdirSync, readFileSync } from "node:fs";
 // Unreleased, R8 tricks everywhere: 186,048 B measured (holeshot.js; +5,355 B over 180,693: the
 // stunts sim (the drag ladder: double hand and fender drags; the whip; the combo button's eight
 // tricks, ladder and seeded draw), the trick callout and its CSS, the rocker's slide-out COMBO
-// button, the ENDLESS grounds' ground-trick scoring, score and drag chips), plus about 2 KB of room.
-const BUDGET = 188_000;
+// button, the ENDLESS grounds' ground-trick scoring, score and drag chips); 187,119 B on top of the
+// Units setting, plus about 2.9 KB of room.
+const BUDGET = 190_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;
