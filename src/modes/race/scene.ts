@@ -3,7 +3,7 @@
 // big triple and the finish tabletop; at night (dark) the track glows with neon edges and light
 // towers, by day (light) it is pastel low-poly. Race: the gate, three laps against three rivals on
 // stock bikes of your class (your mods and your wear are the difference). Free Ride: the same table
-// with nobody else on it, no laps; ride where you like, END banks the session.
+// with nobody else on it, no laps; ride where you like; E or the pause card's END & BANK banks the session.
 // The stick (W/S, ↑/↓) is the rider's weight: back lifts the front, forward keeps it down, and in the
 // air it pitches the bike; A/D (←/→) steer; Space or J is the gas, K or Shift the brake.
 // Bricks: the kernel (fixed step, settle, the ledger), @fzlt/core/diorama, terrain, drive (its
@@ -33,6 +33,8 @@ import type { ModeCtx, ModeRun } from "../mode.ts";
 import type { Ride } from "../../online/match.ts";
 import { walkUi } from "../../bike/walk-ui.ts";
 import type { RigHelmet, RigKind } from "../../bike/rig.ts";
+import { speedo } from "../speedo.ts";
+import { keysHTML, paintMute as paintMuteK, paintView } from "../keys.ts";
 
 /** An online ride on this screen (../../online/match.ts steps the sim; the scene draws it, reads this
  *  screen's input for it and plays the first run of each frame's events). */
@@ -145,10 +147,12 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   play.setAttribute("aria-label", `${free ? "Free Ride" : "Race"}: Space or J for gas, K or Shift to brake, W and S (or up and down) shift your weight forward and back (back lifts the front; in the air it pitches the bike), A and D (or left and right) steer. V changes the view, M mutes, P or Escape pauses`);
   const hud = L.add(document.createElement("div"));
   hud.className = "mt-hud";
-  hud.innerHTML = `<div class="mt-head"><p class="mt-top">${jam ? `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>0 PTS</span></b>` : endless ? `<b class="mt-chip mt-pos"><span>BEST ${km(ctx.best ?? 0)}</span></b><b class="mt-chip mt-lap"><span>${km(0)}</span></b>` : free ? `<b class="mt-chip mt-pos"><span>${map ? map.name : "FREE RIDE"}</span></b><b class="mt-chip mt-lap"><span>0.0s AIR</span></b>` : `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>LAP 1/${LAPS}</span></b>`}<b class="mt-chip mt-time"><span>0:00.0</span></b><b class="mt-chip mt-ride"><span>#${ctx.number} ${NAME}</span></b></p><p class="mt-hint"></p></div><p class="mt-toast" hidden></p><p class="mt-live" aria-live="polite"></p><p class="mt-stuck" hidden>STUCK? Hold R / tap ↺ to reset</p><p class="mt-keys">${free && !net ? `<button type="button" class="mt-key mt-end" aria-label="End the ride and bank it (E)">END</button>` : ""}<button type="button" class="mt-key mt-reset" aria-label="Reset to the last good spot (R)">↺</button><button type="button" class="mt-key mt-view" aria-label="Camera view (V)"${endless ? " hidden" : ""}>VIEW</button><button type="button" class="mt-key mt-mute" aria-label="Mute (M)" aria-pressed="true">♪</button><button type="button" class="mt-key mt-menu" aria-label="Pause (P)">❚❚</button></p>`;
+  hud.innerHTML = `<div class="mt-head"><p class="mt-top">${jam ? `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>0 PTS</span></b>` : endless ? `<b class="mt-chip mt-pos"><span>BEST ${km(ctx.best ?? 0)}</span></b><b class="mt-chip mt-lap"><span>${km(0)}</span></b>` : free ? `<b class="mt-chip mt-pos"><span>${map ? map.name : "FREE RIDE"}</span></b><b class="mt-chip mt-lap"><span>0.0s AIR</span></b>` : `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>LAP 1/${LAPS}</span></b>`}<b class="mt-chip mt-time"><span>0:00.0</span></b><b class="mt-chip mt-ride"><span>#${ctx.number} ${NAME}</span></b></p><p class="mt-hint"></p></div><p class="mt-toast" hidden></p><p class="mt-live" aria-live="polite"></p><p class="mt-stuck" hidden>STUCK? Hold R / tap ↺ to reset</p><p class="mt-keys">${keysHTML("mt", { reset: "Reset to the last good spot (R)", view: !endless, theme: !!ctx.theme })}</p>`;
   const head = hud.children[0] as HTMLElement, top = head.children[0] as HTMLElement, hintEl = head.children[1] as HTMLElement;
   const toastEl = hud.children[1] as HTMLElement, live = hud.children[2] as HTMLElement, stuckEl = hud.children[3] as HTMLElement, keysEl = hud.children[4] as HTMLElement;
   const posEl = top.children[0]!.firstChild as HTMLElement, lapEl = top.children[1]!.firstChild as HTMLElement, timeEl = top.children[2]!.firstChild as HTMLElement;
+  // The speed, next to the distance (lap, points, air) chip.
+  const speedW = speedo(top.children[1]!, "mt", ctx.units);
   const viewK = keysEl.querySelector<HTMLButtonElement>(".mt-view")!, muteK = keysEl.querySelector<HTMLButtonElement>(".mt-mute")!;
   stage.append(canvas, play, hud);
   if (ctx.attract) hud.hidden = true;
@@ -168,7 +172,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   // Walking the bike: the WALK chip, and on a touch screen the one-time "stick back" hint.
   const coarse = matchMedia("(pointer: coarse)"), walkHud = walkUi(hud, () => coarse.matches && !ctx.attract);
   if (ctx.attract) thePad.el.hidden = true;
-  const paintMute = () => (muteK.textContent = snd.on ? "♪" : "×", muteK.setAttribute("aria-pressed", "" + snd.on));
+  const paintMute = () => paintMuteK(muteK, snd.on);
   paintMute();
   const toggle = () => {
     snd.on = vox.on = !snd.on;
@@ -433,13 +437,14 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       const a = Math.floor(m.M[3]! * 10);
       if (was[1] !== a) (was[1] = a), (lapEl.textContent = `${(a / 10).toFixed(1)}s AIR`);
     }
+    speedW(me.speed);
     const tenths = Math.floor((jam ? jam.left : sim.clock) * 10);
     if (was[2] !== tenths) (was[2] = tenths), (timeEl.textContent = clock(tenths / 10));
     const touch = !!thePad.el.offsetParent;
     const hint = jam
       ? ph === GRID ? "Trick points: big air, flips, long wheelies · most in three minutes wins" : ""
       : free
-      ? ph === GRID ? (endless ? (touch ? `Hold GAS: ${endless.biome.id === "desert" ? "the desert" : "it"} never ends · END banks it` : `Space to ride: ${endless.biome.id === "desert" ? "the desert" : "it"} never ends · END (or E) banks it`) : touch ? "Hold GAS and ride anywhere · END banks it" : "Space to ride, anywhere · END (or E) banks it") : ""
+      ? ph === GRID ? (endless ? (touch ? `Hold GAS: ${endless.biome.id === "desert" ? "the desert" : "it"} never ends · pause ❚❚ banks it` : `Space to ride: ${endless.biome.id === "desert" ? "the desert" : "it"} never ends · E (or pause) banks it`) : touch ? "Hold GAS and ride anywhere · pause ❚❚ banks it" : "Space to ride, anywhere · E (or pause) banks it") : ""
       : ph === GRID ? (touch ? "Hold GAS to rev · it drops on GO" : "Hold Space to rev · it drops on GO") : ph === RACE && sim.clock < 6 ? (touch ? "Stick: lean and steer · back lifts the front" : "W/S lean · A/D steer · Space gas · K brake") : "";
     if (hintEl.textContent !== hint) hintEl.textContent = hint;
   }
@@ -501,7 +506,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   function setView(n: number) {
     if (endless) n = 1;
     view = n;
-    viewK.textContent = n ? "VIEW · CHASE" : "VIEW · TABLE";
+    paintView(viewK, !n);
     dirty = true;
     engine.busy(2.5);
     engine.wake();
@@ -811,7 +816,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   viewK.addEventListener("click", () => setView(view ? 0 : 1), sig);
   keysEl.querySelector(".mt-menu")!.addEventListener("click", () => ctx.menu(), sig);
   keysEl.querySelector(".mt-reset")!.addEventListener("click", () => ((resetQ = 1), (auto = false), engine.wake()), sig);
-  keysEl.querySelector(".mt-end")?.addEventListener("click", () => (fr!.finish(), events(), engine.wake()), sig);
+  keysEl.querySelector(".mt-theme")?.addEventListener("click", () => ctx.theme?.(), sig);
   thePad.el.addEventListener("pointerdown", () => ((auto = false), wake(), engine.wake()), sig);
 
   // ---- start: the gate (Race) or the open table (Free Ride) ----

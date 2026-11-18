@@ -19,6 +19,7 @@
 .dh-card{box-sizing:border-box;position:relative;display:grid;gap:12px;width:min(100%,780px);padding:16px 18px 18px;background:var(--surface);color:var(--ink);border:2.5px solid var(--rim);border-radius:14px;box-shadow:calc(6px * var(--bui-sx)) calc(6px * var(--bui-sy)) 0 var(--bui-shadow)}
 .dh-card p{margin:0}
 .dh-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dh-theme{min-width:44px;min-height:44px;padding:0;display:inline-grid;place-items:center}
 .dh-logo{font:900 26px/1 ui-rounded,system-ui,sans-serif;letter-spacing:.06em;color:var(--hot);text-shadow:3px 3px 0 var(--rim);rotate:-2deg;margin-right:auto}
 .dh-chip{display:inline-flex;align-items:center;gap:.35em;padding:.35em .65em;border:2px solid var(--rim);border-radius:8px;background:var(--raised);font-variant-numeric:tabular-nums;white-space:nowrap}
 .dh-test{border-color:var(--hot);color:var(--hot);font-size:.8em;letter-spacing:.04em}

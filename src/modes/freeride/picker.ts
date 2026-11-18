@@ -13,7 +13,7 @@ export function mapsCard(head: string, tabs: string) {
     const tags = m.open ? [...new Set(tagsOf(m.open()))] : ["DOUBLES", "WHOOPS", "TRIPLE", "TABLETOP"];
     return `<li><button type="button" class="bui-key dh-mapk" data-map="${m.id}"><canvas class="dh-mapv" data-prev="${m.id}" aria-hidden="true"></canvas><b><i>${i + 1}</i> ${m.name}</b><small>${m.blurb}</small><em>${tags.join(" · ")}</em></button></li>`;
   }).join("");
-  return `<div class="dh-card dh-mapc" data-screen="maps">${head}${tabs}<p class="dh-row"><button type="button" class="bui-key" data-go="ride">← RIDE</button><b class="dh-h">FREE RIDE · PICK A MAP</b></p><p class="dh-sub">No laps, no clock: ride anywhere. Saddle time, air, wheelies and tricks pay a little; END banks it.</p><ul class="dh-maps">${keys}</ul></div>`;
+  return `<div class="dh-card dh-mapc" data-screen="maps">${head}${tabs}<p class="dh-row"><button type="button" class="bui-key" data-go="ride">← RIDE</button><b class="dh-h">FREE RIDE · PICK A MAP</b></p><p class="dh-sub">No laps, no clock: ride anywhere. Saddle time, air, wheelies and tricks pay a little; pause and END &amp; BANK.</p><ul class="dh-maps">${keys}</ul></div>`;
 }
 
 /** The features a map is known for (its picker tags). */

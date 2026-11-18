@@ -60,13 +60,20 @@ html.bui[data-theme="light"] .panel{box-shadow:5px 5px 0 var(--ink)}
 .site-foot{padding:30px 0 40px;font:14px var(--round);color:var(--muted)}
 .site-foot .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px}.site-foot p{margin:0}
 /* The game page: the stage is the screen under the header. */
-.play-stage{position:relative;height:calc(100svh - 66px);min-height:420px;background:#0d0b1c}
+.play-stage{position:relative;height:100svh;min-height:420px;background:#0d0b1c}
+/* The game page tucks the header away: a small handle at the top opens it over the game. */
+[data-app] .site-head{position:fixed;inset:0 0 auto;z-index:2147483001;transform:translateY(-100%);visibility:hidden;transition:transform .18s ease,visibility 0s .18s}
+[data-app] .site-head[data-open]{transform:none;visibility:visible;transition:transform .18s ease}
+[data-app] .site-head[data-open] .site-nav{display:flex}
+.head-handle{position:fixed;top:0;left:50%;translate:-50% 0;z-index:2147483002;min-height:24px;padding:2px 14px 4px;border:2px solid var(--rim);border-top:0;border-radius:0 0 10px 10px;background:var(--surface);color:var(--muted);font:800 11px/1 var(--round);letter-spacing:.08em;cursor:pointer;opacity:.8}
+.head-handle:hover,.head-handle:focus-visible{opacity:1;color:var(--ink)}
+.head-handle[aria-expanded="true"]{top:66px}.head-handle[aria-expanded="true"] span{display:inline-block;rotate:180deg}
 .play-host{position:absolute;inset:0}
 [data-app] .site-nav{display:none}
 @media (max-width:1000px){.cards,.modes{grid-template-columns:repeat(2,minmax(0,1fr))}.cards.three{grid-template-columns:repeat(2,minmax(0,1fr))}.split{grid-template-columns:1fr}.site-nav{display:none}.head-keys{margin-left:auto}}
 @media (max-width:560px){.cards,.modes,.cards.three{grid-template-columns:1fr}.brand small{display:none}.section{padding:52px 0}
 .dt-hero{min-height:calc(100svh - 66px);align-items:end}.dt-hero::before{background:linear-gradient(0deg,color-mix(in srgb,#0d0b1c 88%,transparent) 0%,color-mix(in srgb,#0d0b1c 55%,transparent) 42%,transparent 70%)}.dt-copy{padding:24px 0 28px}}
-@media (pointer:coarse) and (max-width:900px){[data-app] .site-head{display:none}[data-app] .play-stage{height:100svh}}
+@media (pointer:coarse) and (max-width:900px){[data-app] .site-head,.head-handle{display:none}[data-app] .play-stage{height:100svh}}
 [data-app] .head-keys{margin-left:auto}
 .bui .start-key{background:#39ffb0}.bui .start-key b,.bui .start-key span{color:#07060f}
 .brand b{white-space:nowrap}

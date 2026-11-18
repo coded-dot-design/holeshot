@@ -33,6 +33,7 @@ import { seriesCard as seriesScreen, seriesKeys, seriesName, seriesResult, start
 import type { TierId } from "./data/series.ts";
 import type { Transport } from "@fzlt/core/presence";
 import { blankStats } from "./modes/mode.ts";
+import { ICON } from "./modes/keys.ts";
 import { mountTrack, type NetRun, type NetView } from "./modes/race/scene.ts";
 import { applyOnline, settleOnline } from "./model/economy.ts";
 import { match, OVER, type Match, type Ride, type SeatResult } from "./online/match.ts";
@@ -54,6 +55,9 @@ export interface HoleshotOptions {
   theme?: "dark" | "light";
   /** The fizlet-rooms server for online play (wss://…); `?rooms=` on the page overrides it. */
   rooms?: string;
+  /** The page's light/dark switch: given, the game shows a theme key (in the menus' header and a
+   *  ride's corner keys) that calls it; the game follows `data-theme` on <html> either way. */
+  onTheme?: () => void;
 }
 
 type Screen = "setup" | "menu" | "garage" | "ride" | "maps" | "endless" | "series" | "settings" | "event" | "result" | "online";
@@ -175,7 +179,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   engine.signal.addEventListener("abort", () => pro.disconnect(), { once: true });
 
   // ---- rendering the cards ----
-  const head = () => `<header class="dh-top"><b class="dh-logo">HOLESHOT</b>${inf ? `<span class="dh-chip dh-cr" title="Test credits: nothing is saved">◈ ∞</span><span class="dh-chip dh-test" title="?credits=inf: nothing is saved, online is off">TEST CREDITS ∞</span>` : `<span class="dh-chip dh-cr" title="Credits">◈ ${num(profile.credits)}</span>`}${profile.name ? `<span class="dh-chip">${esc(profile.name)}</span>` : ""}</header>`;
+  const head = () => `<header class="dh-top"><b class="dh-logo">HOLESHOT</b>${inf ? `<span class="dh-chip dh-cr" title="Test credits: nothing is saved">◈ ∞</span><span class="dh-chip dh-test" title="?credits=inf: nothing is saved, online is off">TEST CREDITS ∞</span>` : `<span class="dh-chip dh-cr" title="Credits">◈ ${num(profile.credits)}</span>`}${profile.name ? `<span class="dh-chip">${esc(profile.name)}</span>` : ""}${o.onTheme ? `<button type="button" class="bui-key dh-theme" aria-label="Light or dark">${ICON.theme}</button>` : ""}</header>`;
   const tabs = (on: Screen) => `<nav class="dh-tabs" aria-label="Menu">${([["garage", "GARAGE"], ["ride", "RIDE"], ["series", "SERIES"], ["settings", "SETTINGS"]] as const).map(([s, t]) => `<button type="button" class="bui-key" data-go="${s}" aria-pressed="${s === on}">${t}</button>`).join("")}</nav>`;
   const bikeLine = () => {
     const b = riding(profile), m = modelOf(b.model);
@@ -214,7 +218,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   /** RIDE → ENDLESS: the ground to ride (the desert first), each with its best distance. */
   function endlessCard() {
     const keys = BIOMES.map((b, i) => `<li><button type="button" class="bui-key dh-mapk" data-endless="${b.id}"><b><i>${i + 1}</i> ${b.name}</b><small>${b.blurb}</small><em>BEST ${km(profile.stats.far[b.id] ?? 0)}${i ? ` · ${FREE_MAPS.find((m) => m.id === b.map)?.name ?? ""}, ENDLESS` : ""}</em></button></li>`).join("");
-    return `<div class="dh-card dh-mapc" data-screen="endless">${head()}${tabs("ride")}<p class="dh-row"><button type="button" class="bui-key" data-go="ride">← RIDE</button><b class="dh-h">ENDLESS · PICK THE GROUND</b></p><p class="dh-sub">No edge, no clock: ride as far as you can, END banks it. The distance pays a little; each ground keeps its own best.</p><ul class="dh-maps">${keys}</ul></div>`;
+    return `<div class="dh-card dh-mapc" data-screen="endless">${head()}${tabs("ride")}<p class="dh-row"><button type="button" class="bui-key" data-go="ride">← RIDE</button><b class="dh-h">ENDLESS · PICK THE GROUND</b></p><p class="dh-sub">No edge, no clock: ride as far as you can, then pause ❚❚ and END &amp; BANK. The distance pays a little; each ground keeps its own best.</p><ul class="dh-maps">${keys}</ul></div>`;
   }
   const modeName = (id: ModeId) => (id === "series" ? seriesName(profile) : modeOf(id).name);
   function settingsCard() {
@@ -223,9 +227,11 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       <label class="dh-field">EXPORT CODE<textarea class="dh-code" readonly rows="3">${code()}</textarea></label><p class="dh-row"><button type="button" class="bui-key dh-copy">COPY CODE</button></p>
       <label class="dh-field">IMPORT A CODE<textarea class="dh-codein" rows="3" spellcheck="false" placeholder="DH1-…"></textarea></label><p class="dh-row"><button type="button" class="bui-key dh-import">LOAD IT</button><button type="button" class="bui-key dh-reset">START OVER</button></p><p class="dh-sub dh-note" role="status">${esc(note)}</p></div>`;
   }
+  /** Rides with no finish line end when you say so, and pay for what you rode (the pause card's END & BANK). */
+  const banks = () => runMode === "freeride" || runMode === "desert" || runMode === "endcity";
   function pauseCard() {
     if (N.on) return `<div class="dh-card dh-pause" data-screen="pause" role="dialog" aria-label="Paused"><b class="dh-h">ONLINE · ${pickName(N.pick.kind, N.pick.sub)}</b><p class="dh-sub">The ride goes on for everyone (your bike rolls to a stop). Leaving the room now pays nothing; the wear so far still counts.</p><p class="dh-row"><button type="button" class="bui-key dh-go dh-resume">RESUME</button><button type="button" class="bui-key dh-leave">LEAVE ROOM</button></p></div>`;
-    return `<div class="dh-card dh-pause" data-screen="pause" role="dialog" aria-label="Paused"><b class="dh-h">PAUSED</b><p class="dh-sub">${modeName(runMode)} on your ${bikeLine()}. Leaving now pays nothing; the wear so far still counts.</p><p class="dh-row"><button type="button" class="bui-key dh-go dh-resume">RESUME</button><button type="button" class="bui-key dh-leave">LEAVE</button></p></div>`;
+    return `<div class="dh-card dh-pause" data-screen="pause" role="dialog" aria-label="Paused"><b class="dh-h">PAUSED</b><p class="dh-sub">${modeName(runMode)} on your ${bikeLine()}. ${banks() ? "END &amp; BANK pays for what you rode; leaving pays nothing" : "Leaving now pays nothing"}; the wear so far still counts.</p><p class="dh-row"><button type="button" class="bui-key dh-go dh-resume">RESUME</button>${banks() ? `<button type="button" class="bui-key dh-bank" aria-label="End the ride and bank it (E)">END &amp; BANK</button>` : ""}<button type="button" class="bui-key dh-leave">LEAVE</button></p></div>`;
   }
   function resultCard() {
     const r = result!, b = riding(profile), m = modelOf(b.model);
@@ -296,7 +302,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       sound: o.sound ?? profile.settings.sound,
       end: (s) => finishEvent(s),
       quit: (s) => finishEvent(s),
-      menu: () => setPaused(true),
+      menu: () => setPaused(true), theme: o.onTheme,
     };
     runSeed = ctx.seed;
     screen = "event";
@@ -340,6 +346,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     const t = (ev.target as HTMLElement).closest<HTMLElement>("button");
     if (!t) return;
     const d = t.dataset;
+    if (t.classList.contains("dh-theme")) return o.onTheme?.();
     if (d.go) return show(d.go as Screen);
     const g = screen === "garage" ? garageClick(profile, gui, t, cards) : null;
     if (g) return g.buy ? did(g.buy[0], g.buy[1]) : (g.profile && ((profile = g.profile), keep()), show("garage"));
@@ -360,6 +367,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     }
     if (t.classList.contains("dh-resume")) return setPaused(false);
     if (t.classList.contains("dh-leave")) return leave();
+    if (t.classList.contains("dh-bank")) return run && (setPaused(false), run.finish());
     if (t.classList.contains("dh-again")) return startEvent(runMode, { map: runMap });
     if (t.classList.contains("dh-pit")) return (profile = pitFix(profile)), keep(), say("The pit crew fixed it up"), show(screen === "result" ? "result" : "menu");
     if (t.classList.contains("dh-units")) return (profile = { ...profile, settings: { ...profile.settings, units: profile.settings.units === "metric" ? "imperial" : "metric" } }), keep(), show("settings");
@@ -648,7 +656,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       host: modeEl, bike: t, look: L2.look, helmet: L2.helmet, number: L2.number, name: me.name, seed: r.seed,
       auto: false, attract: false, reduced, sound: o.sound ?? profile.settings.sound, units: profile.settings.units,
       // (A score run ends on this screen first; the result waits for everyone.)
-      end: (st) => netScoreEnd(st), quit: (st) => netScoreEnd(st), menu: () => setPaused(true),
+      end: (st) => netScoreEnd(st), quit: (st) => netScoreEnd(st), menu: () => setPaused(true), theme: o.onTheme,
     };
     paused = false;
     result = null;

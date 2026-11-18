@@ -42,6 +42,8 @@ import { LOOP, ENDO, CASE, BAIL } from "../../bike/bike.ts";
 import { rig, type Rig } from "../../bike/rig.ts";
 import { pool, voice, gamepad, type Pool } from "../../bike/kit.ts";
 import { SC, CB, ON, DIST, TIME, SWEET, PTS, KIND, BEST_W, MANUAL, STOPPIE, F_CROSS, F_SPRINK } from "./tricks.ts";
+import { speedo } from "../speedo.ts";
+import { keysHTML, paintMute as paintMuteK, paintView } from "../keys.ts";
 
 const TAU = 6.283185307179586;
 // Palettes by role: a neon night (dark) and a pastel day (light); each hood has its own ground and buildings over it.
@@ -139,10 +141,12 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   play.setAttribute("aria-label", "Endless Wheelie City: Space or J for gas, K or Shift to brake, W and S (or up and down) lean forward and back, A and D (or left and right) steer, L hops. V changes the view, M mutes, P or Escape pauses");
   const hud = L.add(document.createElement("div"));
   hud.className = "wc-hud";
-  hud.innerHTML = `<div class="wc-head"><p class="wc-top"><b class="wc-chip wc-time"><span>${dist(0, ctx.units)}</span></b><b class="wc-chip wc-score"><span>0</span><i>×1</i></b><b class="wc-chip wc-heat" hidden aria-label="Heat"><span></span><i hidden></i></b><b class="wc-chip wc-trick" hidden><span></span></b><b class="wc-chip wc-drag" hidden aria-label="Hand drag"><i class="wc-ring" aria-hidden="true"></i><span></span></b></p><p class="wc-hint"></p></div><p class="wc-toast" hidden></p><div class="wc-ticket" hidden><b>TICKET!</b><p>NEON PATROL · NOISE NOTICE</p><p class="wc-tline"></p></div><p class="wc-live" aria-live="polite"></p><p class="wc-keys"><button type="button" class="wc-key wc-end" aria-label="End the ride and bank it (E)">END</button><button type="button" class="wc-key wc-reset" aria-label="Reset to the last good spot (R)">↺</button><button type="button" class="wc-key wc-view" aria-label="Camera view (V)">VIEW</button><button type="button" class="wc-key wc-mute" aria-label="Mute (M)" aria-pressed="true">♪</button><button type="button" class="wc-key wc-menu" aria-label="Pause (P)">❚❚</button></p>`;
+  hud.innerHTML = `<div class="wc-head"><p class="wc-top"><b class="wc-chip wc-time"><span>${dist(0, ctx.units)}</span></b><b class="wc-chip wc-score"><span>0</span><i>×1</i></b><b class="wc-chip wc-heat" hidden aria-label="Heat"><span></span><i hidden></i></b><b class="wc-chip wc-trick" hidden><span></span></b><b class="wc-chip wc-drag" hidden aria-label="Hand drag"><i class="wc-ring" aria-hidden="true"></i><span></span></b></p><p class="wc-hint"></p></div><p class="wc-toast" hidden></p><div class="wc-ticket" hidden><b>TICKET!</b><p>NEON PATROL · NOISE NOTICE</p><p class="wc-tline"></p></div><p class="wc-live" aria-live="polite"></p><p class="wc-keys">${keysHTML("wc", { reset: "Reset to the last good spot (R)", theme: !!ctx.theme })}</p>`;
   const head = hud.children[0] as HTMLElement, top = head.children[0] as HTMLElement, hintEl = head.children[1] as HTMLElement;
   const toastEl = hud.children[1] as HTMLElement, ticketEl = hud.children[2] as HTMLElement, live = hud.children[3] as HTMLElement, keysEl = hud.children[4] as HTMLElement;
   const timeEl = top.children[0]!.firstChild as HTMLElement, scoreEl = top.children[1]!.firstChild as HTMLElement, comboEl = top.children[1]!.lastChild as HTMLElement;
+  // The speed, next to the distance chip.
+  const speedW = speedo(top.children[0]!, "wc", ctx.units);
   const heatChip = top.children[2] as HTMLElement, heatEl = heatChip.firstChild as HTMLElement, riskEl = heatChip.lastChild as HTMLElement;
   const trickChip = top.children[3] as HTMLElement, trickEl = trickChip.firstChild as HTMLElement;
   const dragChip = top.children[4] as HTMLElement, dragRing = dragChip.firstChild as HTMLElement, dragEl = dragChip.lastChild as HTMLElement;
@@ -183,7 +187,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     vox.on = snd.on;
     paintMute();
   };
-  const paintMute = () => (muteK.textContent = snd.on ? "♪" : "×", muteK.setAttribute("aria-pressed", "" + snd.on));
+  const paintMute = () => paintMuteK(muteK, snd.on);
   paintMute();
 
   // ---- the run and the diorama ----
@@ -863,6 +867,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   function hudWrite() {
     const ph = S[0]!, cm = Math.floor(run.far / 10);
     if (was[0] !== cm) (was[0] = cm), (timeEl.textContent = dist(cm * 10, ctx.units)), timeEl.parentElement!.classList.toggle("wc-hot", run.far > best && best > 0);
+    speedW(bike.b.speed);
     const s = sc[SC]!;
     if (was[1] !== s) (was[1] = s), (scoreEl.textContent = s.toLocaleString("en-US"));
     const cb = sc[CB]!;
@@ -894,7 +899,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     if (was[4] !== ph * 10 + g + rideN * 100) {
       was[4] = ph * 10 + g + rideN * 100;
       const touch = !!thePad.el.offsetParent;
-      hintEl.textContent = ph === READY ? `BEST ${dist(best, ctx.units)} · ${touch ? "hold ⚡: the world never ends · END banks it" : "Space to ride: the world never ends · END (or E) banks it"}` : g && ph === RUN ? "NEON PATROL ON YOU · KEEP RIDING (STOP AND IT'S A TICKET) · RIDE OUT OF TOWN TO LOSE THEM" : "";
+      hintEl.textContent = ph === READY ? `BEST ${dist(best, ctx.units)} · ${touch ? "hold ⚡: the world never ends · pause ❚❚ banks it" : "Space to ride: the world never ends · E (or pause) banks it"}` : g && ph === RUN ? "NEON PATROL ON YOU · KEEP RIDING (STOP AND IT'S A TICKET) · RIDE OUT OF TOWN TO LOSE THEM" : "";
     }
   }
   function stats() {
@@ -938,7 +943,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   }
   function setView(n: number) {
     view = n;
-    viewK.textContent = n ? "VIEW · CHASE" : "VIEW · MAP";
+    paintView(viewK, !n);
     dirty = true;
     engine.busy(2.5);
     engine.wake();
@@ -1379,7 +1384,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   muteK.addEventListener("click", toggle, sig);
   viewK.addEventListener("click", () => setView(view ? 0 : 1), sig);
   keysEl.querySelector(".wc-menu")!.addEventListener("click", () => ctx.menu(), sig);
-  keysEl.querySelector(".wc-end")?.addEventListener("click", () => end(), sig);
+  keysEl.querySelector(".wc-theme")?.addEventListener("click", () => ctx.theme?.(), sig);
   keysEl.querySelector(".wc-reset")!.addEventListener("click", () => ((resetQ = 1), (auto = false), engine.wake()), sig);
   thePad.el.addEventListener("pointerdown", () => ((auto = false), engine.wake()), sig);
 

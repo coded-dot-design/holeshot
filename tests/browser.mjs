@@ -3,7 +3,7 @@
 // key 44 px or more), picks a bike with clicks and lands in the garage with the bike drawn; RIDE →
 // RACE starts the gate on that bike; the keys (Space) or the throttle rocker's GAS ride it; P or ❚❚ pauses (the
 // clock holds) and RESUME goes on; the autopilot finishes the race and the result pays and wears the
-// bike; NEW SET in the garage buys tyres; Free Ride (END banks it), Big Air and Endless Wheelie City each
+// bike; NEW SET in the garage buys tyres; Free Ride (pause, END & BANK banks it), Big Air and Endless Wheelie City each
 // start and end on the same bike and pay; leaving mid-event pays nothing and still wears; a reload
 // keeps the garage; the export code moves it to a fresh device. The camera: fixed chase framing,
 // and at 390 a phone's URL bar coming and going (height-only resizes) never refits it; a double tap
@@ -23,6 +23,12 @@ const browser = await chromium.launch(launchOptions());
 const snap = (p) => p.evaluate(() => game.getSnapshot());
 const until = (p, fn, arg, what, timeout = 30000) => p.waitForFunction(fn, arg, { timeout, polling: 50 }).catch(() => assert.fail(`${what}: timed out`));
 const click = (p, sel, i = 0) => p.evaluate(([s, i]) => document.querySelector("[data-fizlet-host]").shadowRoot.querySelectorAll(s)[i].click(), [sel, i]);
+/** Pause, then the pause card's END & BANK (rides with no finish line). */
+const bank = async (p) => {
+  await click(p, ".mt-menu");
+  await until(p, () => !!document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".dh-bank"), null, "the pause card offers END & BANK");
+  await click(p, ".dh-bank");
+};
 const VIEWS = [["desktop", { width: 1440, height: 900 }, false], ["phone", { width: 390, height: 844 }, true]];
 
 try {
@@ -78,6 +84,29 @@ try {
     await until(p, () => game.getSnapshot().status === "running", null, `${name}: resumed`);
     const cam0 = (await snap(p)).camera;
     await p.evaluate(() => (game.run.auto = true));
+    // The HUD: the speed chip (mph by default) next to the lap; the corner keys icon only, each named,
+    // in one row that fits; no END key; mute and the map view press in (no drop shadow) when on.
+    await until(p, () => /^\d+MPH$/.test(document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".mt-speed")?.textContent ?? "") && +document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".mt-speed span").textContent > 3, null, `${name}: the speed chip reads mph`);
+    const keys = await p.evaluate(() => {
+      const r = document.querySelector("[data-fizlet-host]").shadowRoot, ks = [...r.querySelectorAll(".mt-keys button")].filter((k) => !k.hidden), boxes = ks.map((k) => k.getBoundingClientRect());
+      return { labels: ks.map((k) => k.getAttribute("aria-label")), text: ks.map((k) => k.textContent.trim()).join(""), svg: ks.every((k) => k.querySelector("svg")), end: !!r.querySelector(".mt-end"), row: new Set(ks.map((k) => k.offsetTop)).size, inside: boxes.every((b) => b.left >= 0 && b.right <= innerWidth), small: boxes.some((b) => Math.min(b.width, b.height) < 43.5), lap: r.querySelector(".mt-lap").nextElementSibling.classList.contains("mt-speed") };
+    });
+    assert.deepEqual(keys, { labels: ["Reset to the last good spot (R)", "Map view (V)", "Mute (M)", "Pause (P)"], text: "", svg: true, end: false, row: 1, inside: true, small: false, lap: true }, `${name}: the corner keys`);
+    const press = (sel) => p.evaluate((s) => { const k = document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(s); return { pressed: k.getAttribute("aria-pressed"), shadow: getComputedStyle(k).boxShadow }; }, sel);
+    // (These pages start with sound off: the mute key starts pressed in.)
+    for (let i = 0; i < 2; i++) {
+      const m = await press(".mt-mute");
+      assert.equal(m.shadow === "none", m.pressed === "true", `${name}: mute ${m.pressed === "true" ? "on: pressed in, no drop shadow" : "off: raised, with its shadow"} (${m.shadow})`);
+      await click(p, ".mt-mute");
+      await until(p, (was) => document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".mt-mute").getAttribute("aria-pressed") !== was, m.pressed, `${name}: mute toggles`);
+      await p.waitForTimeout(150);
+    }
+    await click(p, ".mt-view");
+    await until(p, () => game.getSnapshot().run && document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".mt-view").getAttribute("aria-pressed") === "true", null, `${name}: the map view presses the view key in`);
+    await p.waitForTimeout(150);
+    assert.equal((await press(".mt-view")).shadow, "none", `${name}: map view: pressed in`);
+    await click(p, ".mt-view");
+    await until(p, () => document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".mt-view").getAttribute("aria-pressed") === "false", null, `${name}: back to chase`);
     await until(p, () => game.getSnapshot().screen === "result", null, `${name}: the autopilot finishes the race`, 120000);
     s = await snap(p);
     assert.ok(s.result.finished && s.result.credits >= 130 && s.credits === START_CREDITS + s.result.credits, `${name}: the race pays (${s.result.credits})`);
@@ -99,7 +128,7 @@ try {
       await p.waitForTimeout(1500);
       const d1 = (await snap(p)).camera.dist;
       assert.ok(Math.abs(d1 - d0) <= d0 * 0.08, `${name}: ${id}: the chase distance holds (${d0.toFixed(2)} → ${d1.toFixed(2)})`);
-      if (id === "freeride") await until(p, () => game.run.state.clock > 6, null, `${name}: free riding`), await click(p, ".mt-end");
+      if (id === "freeride") await until(p, () => game.run.state.clock > 6, null, `${name}: free riding`), await bank(p);
       else await p.evaluate(() => game.finish());
       await until(p, () => game.getSnapshot().screen === "result", null, `${name}: ${id} ends`, 60000);
       s = await snap(p);
@@ -137,8 +166,8 @@ try {
           assert.ok(Math.abs(c.dist - d0) <= d0 * 0.08, `${name}: ${id}: height ${h}: the chase framing holds (${c.dist} vs ${d0})`);
         }
       if (touch) await p.setViewportSize(viewport);
-      await click(p, ".mt-end");
-      await until(p, () => game.getSnapshot().screen === "result", null, `${name}: ${id}: END banks it`);
+      await bank(p);
+      await until(p, () => game.getSnapshot().screen === "result", null, `${name}: ${id}: END & BANK banks it`);
       s = await snap(p);
       assert.ok(s.result.finished && s.result.credits > 0 && s.credits === pre.credits + s.result.credits, `${name}: ${id} pays (${s.result.credits})`);
       assert.ok(s.bike.parts.tyres < pre.bike.parts.tyres, `${name}: ${id} wears the bike`);
