@@ -1,7 +1,7 @@
 // The garage's card and its clicks: PARTS & MODS (condition with warnings, tyre compounds, crash
 // damage, tune choices, mods, the feel, the service log), PAINT & KIT (the bike's look, the rider's
 // kit, outfits; anything not owned is tried on first: the preview shows it before you buy) and the
-// SHOWROOM (all sixteen bikes, tiers 3-4 opening with progress; sell a bike or trade one in). Also
+// SHOWROOM (all nineteen bikes in five classes, tiers 3-4 opening with progress; sell a bike or trade one in). Also
 // the "before you ride" card when a part may fail. HTML strings, like the rest of the shell's cards;
 // the actions are ../model/garage.ts (pure), so this file only renders and routes.
 import { CLASSES, MODELS, makerOf, model as modelOf } from "../data/roster.ts";

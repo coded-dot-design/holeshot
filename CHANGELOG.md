@@ -28,7 +28,8 @@
   35.1 → 40.0 mph; KIT FOX 0–20 0.98 → 0.70 s, 28.8 → 32.8 mph; TIDEBREAKER turbo 1.47 → 1.07 s, 50.2 →
   58.5 mph; BARE KNUCKLE turbo 1.35 → 1.00 s, 52.2 → 60.8 mph (0–60 in 3.30 s, the only bike that gets
   there). Sound hooks for the voice code: a big bore lowers the voice's pitch (in `power.voice`),
-  `tuned.sound.whistle` marks a turbo for a boost whistle and blow-off (not voiced yet).
+  `tuned.sound.whistle` marks a turbo for a boost whistle and blow-off (not voiced yet). Size
+  budget 184,000 → 189,000 B gzip: the families measured +4,450 B (185,143 B, `scripts/size.mjs`).
 
 - **Miles by default, km as a setting.** SETTINGS → UNITS: Imperial (miles, mph; the default) or
   Metric (km, km/h), saved in the profile (schema v6: every existing save migrates to Imperial).
