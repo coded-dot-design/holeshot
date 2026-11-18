@@ -17,6 +17,7 @@ import { walkUi } from "../../bike/walk-ui.ts";
 import { createEngine, seeded } from "@fzlt/core/kernel";
 import { diorama, type DioramaObject, type DioramaPoints } from "@fzlt/core/diorama";
 import { terrainView, type TerrainView } from "@fzlt/core/terrain";
+import { roadRibbons } from "./ribbons.ts";
 import { chase } from "@fzlt/core/drive";
 import { controls } from "@fzlt/core/input";
 import { rocker } from "../../bike/rocker.ts";
@@ -189,6 +190,8 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   const FR = openWindow(Wd, FAR_WIN, FAR_CELL, FAR_STEP, false);
   const dio = diorama(canvas, { light: P.light, ambient: P.amb, background: () => P.sky2, overlay: drawOverlay, get shadowColor() { return P.shadow; }, maxVerts: 196608, maxFaces: 16384 });
   let tv: TerrainView;
+  // The road surfaces: ribbons along the roads' true curves (the ground under them drawn as what lies round them).
+  const rib = roadRibbons(Wd, t, dio);
   const rigs: Rig[] = [];
   const nbs: DioramaObject[] = [], arms: DioramaObject[] = [], sprHeads: DioramaObject[] = [];
   const units: DioramaObject[] = [], kinds: DioramaObject[] = [], lites: DioramaObject[] = [];
@@ -213,10 +216,12 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     dio.setLight(P.light, P.amb);
     dio.cluster("sky", { fixed: -10 });
     dio.decal("sky", 0, paintSky);
-    tv = terrainView(dio, t, {
+    tv = terrainView(dio, run.win.view, {
       bands: [[0.9, F.meadow[0]!], [2.2, F.meadow[1]!], [3.6, F.meadow[2]!], [99, F.meadow[3]!]], steep: 0.6, steepColor: F.meadow[0]!, kinds: F.kindC,
       light: P.light, ambient: P.amb, lod: [14, 26], shadows: 1, shadowColor: P.shadow, split: "adaptive",
     });
+    rib.colors(F.kindC, P.light, P.amb);
+    dio.decal("terrain", 0.5, paintRibbons);
     dio.decal("terrain", 1, paintRoads);
     dio.decal("terrain", 1.5, paintPools);
     dio.decal("terrain", 1.8, paintShadow);
@@ -511,7 +516,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     }
     return true;
   }
-  let XR = 0;
+  let XR = 0, BARE = 0;
   function occlude(dt: number) {
     const cm = dio.cam, d = bike.b, cp = Math.cos(cm.pitch), sp = Math.sin(cm.pitch), cy = Math.cos(cm.yaw), sy = Math.sin(cm.yaw);
     OP[0] = cm.tx + cm.dist * sy * cp; OP[1] = cm.ty + cm.dist * sp; OP[2] = cm.tz + cm.dist * cy * cp;
@@ -1032,10 +1037,17 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       c2.stroke();
     }
   }
+  /** The road ribbons round the bike, out past the haze (the window's edge clips them, as it does the ground). */
+  function paintRibbons(c2: CanvasRenderingContext2D) {
+    const d = bike.b;
+    rib.at[0] = d.pos[0]!; rib.at[1] = d.pos[2]!; rib.at[2] = 48;
+    rib.paint(c2);
+  }
   /** The lane paint on the roads round the bike: the edge lines, the dashes down the middle (a double
    *  line on a highway), the roundabouts' rings and the crosswalks' zebras; faded by distance. */
   const RREACH = 40;
   function paintRoads(c2: CanvasRenderingContext2D) {
+    if (BARE) return;
     const d = bike.b, x = d.pos[0]!, z = d.pos[2]!, ci = Math.floor(x / RC), cj = Math.floor(z / RC), EF = Wd.EF;
     c2.lineCap = "butt";
     if (P.night) c2.globalCompositeOperation = "lighter";
@@ -1080,8 +1092,8 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       if ((nx - x) * (nx - x) + (nz - z) * (nz - z) > RREACH * RREACH) continue;
       for (const r of [RB_R - RB_HW + 0.3, RB_R + RB_HW - 0.3]) {
         let pen = false;
-        for (let q = 0; q <= 24; q++) {
-          const a = (q * TAU) / 24, px = nx + Math.cos(a) * r, pz = nz + Math.sin(a) * r;
+        for (let q = 0; q <= 48; q++) {
+          const a = (q * TAU) / 48, px = nx + Math.cos(a) * r, pz = nz + Math.sin(a) * r;
           if (!dio.project(px, t.height(px, pz) + 0.03, pz, tmp) || tmp[2]! < 0.6) { pen = false; continue; }
           if (pen) c2.lineTo(tmp[0]!, tmp[1]!);
           else c2.moveTo(tmp[0]!, tmp[1]!), (pen = true);
@@ -1116,7 +1128,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   }
   /** Pools of light under the streetlamps (night only) and the patrol's lights on the road. */
   function paintPools(c2: CanvasRenderingContext2D) {
-    if (!P.night) return;
+    if (!P.night || BARE) return;
     c2.globalCompositeOperation = "lighter";
     c2.fillStyle = P.glow;
     const f = dio.focal();
@@ -1146,6 +1158,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     c2.globalCompositeOperation = "source-over";
   }
   function paintShadow(c2: CanvasRenderingContext2D) {
+    if (BARE) return;
     const d = bike.b, x = d.pos[0]!, z = d.pos[2]!, gy = hgt(x, z), lift = Math.max(0, d.pos[1]! - gy - d.drop - d.radius - 0.3);
     if (!dio.project(x, gy + 0.01, z, tmp) || tmp[2]! < 0.5) return;
     const f = dio.focal(), r = (f * 0.85) / tmp[2]!;
@@ -1381,7 +1394,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       return {
         phase: ph === READY ? "ready" : ph === RUN || ph === CRASH ? "run" : ph === DONE ? "done" : "idle", walking: bike.b.walking, clock: S[1]!, score: sc[SC]!, combo: sc[CB]!, trick: sc[ON] === 1, nose: bike.nose, view: view ? "chase" : "map", speed: bike.b.speed, crashes, grumps: S[4]!, best: sc[BEST_W]!, ended,
         gas: I[0]!, brake: I[1]!, drag: run.HD[1]!, hold: run.HD[0]!,
-        far: run.far, endless: true, towns: S[S_TOWNS]!, inTown: run.inTown, near: cop.S[NEAR]!, heat: cop.S[HEAT]!, stars: cop.S[STARS]!, units: cop.chasing, risk: cop.S[HOT]!, escapes: cop.S[ESC]!, tickets: cop.S[TIX]!, x: bike.b.pos[0]!, z: bike.b.pos[2]!, objects: dio.stats.objects, faces: dio.stats.faces, tiles: run.win.stats[0]!,
+        far: run.far, endless: true, towns: S[S_TOWNS]!, inTown: run.inTown, near: cop.S[NEAR]!, heat: cop.S[HEAT]!, stars: cop.S[STARS]!, units: cop.chasing, risk: cop.S[HOT]!, escapes: cop.S[ESC]!, tickets: cop.S[TIX]!, x: bike.b.pos[0]!, z: bike.b.pos[2]!, objects: dio.stats.objects, faces: dio.stats.faces, ground: tv.stats.faces, ribbons: rib.stats.quads, tiles: run.win.stats[0]!,
       };
     },
     get camera() { return { dist: view ? dio.cam.dist : chaseO.dist, fov: dio.cam.fov, view: view ? "chase" : "map" }; },
@@ -1424,15 +1437,19 @@ export function mountCity(ctx: ModeCtx): ModeRun {
         }
         return { faces: dio.stats.faces, dropped: dio.stats.dropped, pts: out };
       },
-      draw(xr = 0, rider = 1) {
+      /** Draw now: xr 2 hides the buildings; rider 0 the rider; bare 1 every placed object and the
+       *  paint on the ground too (the bare ground and its road ribbons, for the edge test). */
+      draw(xr = 0, rider = 1, bare = 0) {
         XR = xr;
+        BARE = bare;
         world();
         occlude(0);
         pose();
+        if (bare) for (let i = 0; i < OBJ.length; i++) OBJ[i]!.alpha = 0;
         rigs[0]!.root.alpha = rider;
         dio.draw();
         rigs[0]!.root.alpha = 1;
-        XR = 0;
+        XR = BARE = 0;
         dirty = true;
         return dio.cam.dist;
       },
@@ -1460,7 +1477,16 @@ export function mountCity(ctx: ModeCtx): ModeRun {
       },
       /** The world: the start town's junction, the nearest town to (x, z), a road point (edge i, j, dir at s). */
       node(i: number, j: number) { Wd.nodeQ(i, j); return [Wd.NQ[0]!, Wd.NQ[1]!, Wd.isTown(i, j) ? 1 : 0, Wd.isRound(i, j) ? 1 : 0]; },
-      road(i: number, j: number, dir: number, s: number) { const e = Wd.edge(i, j, dir); if (e < 0) return null; Wd.at(e, Math.min(s, Wd.EF[e * 8 + 1]!)); return [Wd.PQ[0]!, Wd.PQ[1]!, Math.atan2(-Wd.PQ[3]!, Wd.PQ[2]!), Wd.EF[e * 8 + 1]!]; },
+      road(i: number, j: number, dir: number, s: number) { const e = Wd.edge(i, j, dir); if (e < 0) return null; Wd.at(e, Math.min(s, Wd.EF[e * 8 + 1]!)); return [Wd.PQ[0]!, Wd.PQ[1]!, Math.atan2(-Wd.PQ[3]!, Wd.PQ[2]!), Wd.EF[e * 8 + 1]!, Wd.EF[e * 8]!]; },
+      /** Where on screen the point `across` units from road (i, j, dir)'s middle at s lands (on the
+       *  ground the bike rides: the window's height there), as of the last draw: [x, y, depth], or null. */
+      across(i: number, j: number, dir: number, s: number, across: number) {
+        const e = Wd.edge(i, j, dir);
+        if (e < 0) return null;
+        Wd.at(e, s);
+        const x = Wd.PQ[0]! - Wd.PQ[3]! * across, z = Wd.PQ[1]! + Wd.PQ[2]! * across;
+        return dio.project(x, t.height(x, z), z, PJ) ? [PJ[0]!, PJ[1]!, PJ[2]!] : null;
+      },
 
     },
   };

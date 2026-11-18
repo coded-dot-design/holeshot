@@ -77,6 +77,38 @@ test("alloc: Endless Wheelie City, a minute and a half", async () => {
   assert.ok(n <= 5, `${n} young-generation GCs over a session`);
 });
 
+test("alloc: Endless Wheelie City's road ribbons, 600 frames along a ride", async () => {
+  const { openRun } = await import("../src/modes/wheelie/roam.ts");
+  const { roadRibbons } = await import("../src/modes/wheelie/ribbons.ts");
+  const run = openRun([{ id: "x", name: "x", kind: "", blurb: "", bars: [3, 3, 3], power: t.power, shape: t.shape, sweet: t.sweet, hop: t.hop }], 1), I = new Float64Array(5);
+  // A chase camera 9 units back from the bike, looking along +x (the diorama's camera), and a 2D context that draws nothing.
+  const view = { width: 1440, height: 900, cam: { yaw: -Math.PI / 2, pitch: 0.45, dist: 9, tx: 0, ty: 0, tz: 0, fov: 0.9, ox: 0, oy: 0 } };
+  const c2 = { fillStyle: "", beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, fill() {} };
+  const rib = roadRibbons(run.world, run.win.t, view);
+  rib.colors(["#6b7088", "#dcd6cc", "#7cc47a", "#cdbf9f", "#b98a5e", "#c8d36a", "#74c69d"], [0.6, 1, 0.45], 0.58);
+  // The ride first (its own allocation is the session test's), then the frames along it, measured.
+  const P = new Float64Array(600 * 3);
+  run.reset(0);
+  for (let i = 0; i < 600; i++) {
+    run.autopilot(I); run.step(1 / 60, I[0], I[1], I[2], I[3], I[4]); run.clear();
+    const b = run.bike.b.pos;
+    P[i * 3] = b[0]; P[i * 3 + 1] = b[1]; P[i * 3 + 2] = b[2];
+  }
+  let quads = 0;
+  const n = await measure(() => {
+    for (let i = 0; i < 600; i++) {
+      const x = P[i * 3], z = P[i * 3 + 2];
+      run.win.follow(x, z);
+      view.cam.tx = x; view.cam.ty = P[i * 3 + 1]; view.cam.tz = z;
+      rib.at[0] = x; rib.at[1] = z; rib.at[2] = 48;
+      rib.paint(c2);
+      quads += rib.stats.quads;
+    }
+  });
+  assert.ok(quads > 0, "the ribbons drew");
+  assert.ok(n <= 1, `${n} young-generation GCs over 600 frames`);
+});
+
 test("alloc: Wheelie City's patrol (heat, spawns, the chase on the street graph, tickets), 20,000 steps", async () => {
   const { TIX } = await import("../src/modes/wheelie/cops.ts");
   const cop = W.fixedCops(3), X = new Float64Array(1);

@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **Clean road edges in Endless Wheelie City.** The asphalt, the gravel shoulder, the sidewalk and
+  the roundabouts' rings and islands were coloured onto the ground's triangles, so their edges
+  zigzagged along the grid (worst far off, where the ground is drawn coarser). They are ribbons now
+  (`src/modes/wheelie/ribbons.ts`): strips along each road's true curve at its true width (the
+  world's own road polyline, mitred at the joints; the rings as circles), every corner on the ground
+  the bike rides, shaded by slope with the terrain's rule, clipped at the near plane, painted under
+  the lane paint; the ground under them is drawn as what lies round them (grass, or lawn in town), so
+  no stair-step shows past an edge, near or far. Riding is unchanged (heights and face kinds are the
+  same; render only). Zero allocation per frame (a new alloc test). Measured on the edge test
+  (`tests/roads.browser.mjs`, a straight and the most curved open road, 1440 and 390, near and far):
+  drawn edges within 0.51 px of the true edge (were off by up to 57 px). Frame time under 4×
+  throttle unchanged within noise (1440: 90–91 frames in 8 s vs 83–93 before; 390: 255–268 vs
+  257–264); the bundle +3,291 B gzip (budget 184,000).
 - **Endless Wheelie City is an open world.** The row of hood slots is gone: the city is now roads,
   towns and fields that never end, in every direction, on the desert's streaming approach (a window
   of the ground round the rider sliding in whole steps, a coarse far ring to the horizon, the haze).

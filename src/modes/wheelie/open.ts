@@ -33,6 +33,8 @@ export const WIN = 176, CELL = 0.5, STEP = 16, FAR_WIN = 136, FAR_CELL = 4, FAR_
 export const TOWN_R = 46;
 /** Half-widths: a highway, a road, a lane; the shoulder the road blends into the fields over. */
 export const HW_HI = 4.2, HW_RD = 3.1, HW_LN = 2.7, SHOULDER = 6;
+/** The painted strips past a road's edge: the gravel shoulder out of town, the sidewalk in town. */
+export const GRAVEL_W = 1.1, WALK_W = 1.6;
 /** A roundabout: the ring's middle radius and half-width (the island inside it). */
 export const RB_R = 9, RB_HW = 3, RB_ISLE = RB_R - RB_HW;
 /** Samples along an edge (segments). */
@@ -271,8 +273,10 @@ export function openWorld(seed: number) {
       if (d < TQ[0]!) (TQ[0] = d), (TQ[1] = i), (TQ[2] = j), (TQ[3] = NQ[0]!), (TQ[4] = NQ[1]!);
     }
   }
-  /** The ground's height at (x, z) into HQ[0], its face kind into HQ[1]. */
-  const HQ = new Float64Array(2);
+  /** The ground's height at (x, z) into HQ[0], its face kind into HQ[1], the kind drawn under the
+   *  road ribbons into HQ[2] (asphalt, gravel and sidewalk: what lies round them; the ribbons, drawn
+   *  along the road's true curve, paint the strips themselves, so their edges never follow the grid). */
+  const HQ = new Float64Array(3);
   function heightQI() {
     const x = X_heightQ[0]!, z = X_heightQ[1]!;
     ((X_groundQ[0] = x), (X_groundQ[1] = z), groundQI());
@@ -296,15 +300,17 @@ export function openWorld(seed: number) {
   function kindQI() {
     const x = X_kindQ[0]!, z = X_kindQ[1]!;
     const ex = RQ[0]!;
-    if (RQ[3] === 1) return void (HQ[1] = F_ISLE);
-    if (ex <= 0) return void (HQ[1] = F_ROAD);
+    if (RQ[3] === 1) return void (HQ[1] = HQ[2] = F_ISLE);
     ((X_townQ[0] = x), (X_townQ[1] = z), townQI());
-    if (TQ[0]! < TOWN_R) return void (HQ[1] = ex < 1.6 ? F_WALK : F_LAWN);
-    if (ex < 1.1) return void (HQ[1] = F_GRAVEL);
+    const tw = TQ[0]! < TOWN_R;
+    HQ[2] = tw ? F_LAWN : F_GRASS;
+    if (ex <= 0) return void (HQ[1] = F_ROAD);
+    if (tw) return void (HQ[1] = ex < WALK_W ? F_WALK : F_LAWN);
+    if (ex < GRAVEL_W) return void (HQ[1] = F_GRAVEL);
     if (TQ[0]! < TOWN_R + 10 || ex < 5) return void (HQ[1] = F_GRASS);
     // Plots: a skewed lattice of fields, some ploughed, some crops.
     const a = x * 0.866 - z * 0.5, b = x * 0.5 + z * 0.866, r = hashI((Math.floor(a / 34) | 0), (Math.floor(b / 22) | 0), seed + 21) * HI;
-    HQ[1] = r < 0.22 ? F_DIRT : r < 0.42 ? F_CROP : F_GRASS;
+    HQ[2] = HQ[1] = r < 0.22 ? F_DIRT : r < 0.42 ? F_CROP : F_GRASS;
   }
   const height = (x: number, z: number) => (((X_heightQ[0] = x), (X_heightQ[1] = z), heightQI()), HQ[0]!);
 
@@ -571,7 +577,7 @@ export function openWorld(seed: number) {
     townQ: (x: number, z: number) => ((X_townQ[0] = x), (X_townQ[1] = z), townQI()),
     groundQ: (x: number, z: number) => ((X_groundQ[0] = x), (X_groundQ[1] = z), groundQI()),
     /** The window's fill (no double crosses a call: V8 would box it): the point in XH, then `fillQ`. */
-    XH: X_heightQ, heightI: heightQI, fillQ: () => (heightQI(), (X_kindQ[0] = X_heightQ[0]!), (X_kindQ[1] = X_heightQ[1]!), kindQI()),
+    XH: X_heightQ, heightI: heightQI, XT: X_townQ, townI: townQI, fillQ: () => (heightQI(), (X_kindQ[0] = X_heightQ[0]!), (X_kindQ[1] = X_heightQ[1]!), kindQI()),
     height, nodeQ, edge, at, out, incident, isTown, isRound, vOn, gather, town, townName, townGraph, graph,
     /** Town slot s's lots (for a test): count and the table. */
     lotsOf: (s: number) => TN[s]!, TL, MAXL,
@@ -616,15 +622,18 @@ export function openWindow(W: OpenWorld, WINn = WIN, CELLn = CELL, STEPn = STEP,
     F[2] = sz / c;
     return (j * WINn + i) * 2 + (up ? 0 : 1);
   }
-  // VK: each vertex's face kind (a cell takes its first corner's: the road's edge a quarter cell off, unseen).
-  const VK = new Uint8Array(kinds ? W1 * W1 : 0);
+  // VK: each vertex's face kind (a cell takes its first corner's: the road's edge a quarter cell off, unseen);
+  // DV, DK: the same for the kinds drawn (the road ribbons' strips as what lies round them).
+  const VK = new Uint8Array(kinds ? W1 * W1 : 0), DV = new Uint8Array(kinds ? W1 * W1 : 0), DK = new Uint8Array(kinds ? WINn * WINn * 2 : 0);
+  /** What terrainView draws: the window's heights with the drawn kinds (kept in step by moveTo). */
+  const view = { cols: WINn, rows: WINn, cell: CELLn, x0: 0, z0: 0, h, kind: DK, version: 0, split: "adaptive" as const, height: t.height, normal: t.normal, sample: t.sample, kindAt: (x: number, z: number) => DK[face(x, z)]!, at: t.at };
   function fill(i0: number, i1: number, j0: number, j1: number) {
     for (let j = j0; j <= j1; j++) {
       const z = (O[1]! + j) * CELLn;
       for (let i = i0; i <= i1; i++) {
         const x = (O[0]! + i) * CELLn;
         XH[0] = x; XH[1] = z;
-        if (kinds) W.fillQ(), (VK[j * W1 + i] = W.HQ[1]!);
+        if (kinds) W.fillQ(), (VK[j * W1 + i] = W.HQ[1]!), (DV[j * W1 + i] = W.HQ[2]!);
         else W.heightI();
         h[j * W1 + i] = W.HQ[0]!;
       }
@@ -637,8 +646,9 @@ export function openWindow(W: OpenWorld, WINn = WIN, CELLn = CELL, STEPn = STEP,
     if (!kinds) return;
     for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
       const k = j * W1 + i, o = (j * WINn + i) * 2, a = VK[k]!, b = VK[k + 1]!, cc = VK[k + W1 + 1]!, d = VK[k + W1]!;
-      if (Math.abs(h[k + 1]! - h[k + W1]!) < Math.abs(h[k + W1 + 1]! - h[k]!)) (kind[o] = maj(b, cc, d)), (kind[o + 1] = maj(a, b, d));
-      else (kind[o] = maj(a, b, cc)), (kind[o + 1] = maj(a, cc, d));
+      const da = DV[k]!, db = DV[k + 1]!, dc = DV[k + W1 + 1]!, dd = DV[k + W1]!;
+      if (Math.abs(h[k + 1]! - h[k + W1]!) < Math.abs(h[k + W1 + 1]! - h[k]!)) (kind[o] = maj(b, cc, d)), (kind[o + 1] = maj(a, b, d)), (DK[o] = maj(db, dc, dd)), (DK[o + 1] = maj(da, db, dd));
+      else (kind[o] = maj(a, b, cc)), (kind[o + 1] = maj(a, cc, d)), (DK[o] = maj(da, db, dc)), (DK[o + 1] = maj(da, dc, dd));
     }
   }
   function moveTo(ox: number, oz: number) {
@@ -650,7 +660,7 @@ export function openWindow(W: OpenWorld, WINn = WIN, CELLn = CELL, STEPn = STEP,
     if (!keep) fill(0, WINn, 0, WINn), cells(0, WINn - 1, 0, WINn - 1);
     else {
       shift(h, W1, 1, dx, dz);
-      if (kinds) shift(VK, W1, 1, dx, dz), shift(kind, WINn * 2, 2, dx, dz);
+      if (kinds) shift(VK, W1, 1, dx, dz), shift(DV, W1, 1, dx, dz), shift(kind, WINn * 2, 2, dx, dz), shift(DK, WINn * 2, 2, dx, dz);
       if (dz > 0) fill(0, WINn, W1 - dz, WINn), cells(0, WINn - 1, WINn - dz, WINn - 1);
       else if (dz < 0) fill(0, WINn, 0, -dz - 1), cells(0, WINn - 1, 0, -dz - 1);
       const j0 = dz > 0 ? 0 : -dz, j1 = dz > 0 ? WINn - dz : WINn, k0 = dz > 0 ? 0 : -dz, k1 = dz > 0 ? WINn - 1 - dz : WINn - 1;
@@ -659,6 +669,7 @@ export function openWindow(W: OpenWorld, WINn = WIN, CELLn = CELL, STEPn = STEP,
     }
     N[0] = N[0]! + 1;
     t.version++;
+    view.x0 = t.x0; view.z0 = t.z0; view.version = t.version;
     return true;
   }
   /** Shift a row-major grid (rows of `stride`, `per` entries a column) by (dx, dz) columns and rows, in place. */
@@ -678,7 +689,7 @@ export function openWindow(W: OpenWorld, WINn = WIN, CELLn = CELL, STEPn = STEP,
     if (t.version && ox === O[0] && oz === O[1]) return false;
     return moveTo(ox, oz);
   }
-  return { t: t as unknown as Terrain & { x0: number; z0: number }, O, stats: N, follow, moveTo };
+  return { t: t as unknown as Terrain & { x0: number; z0: number }, view: view as unknown as Terrain & { x0: number; z0: number }, O, stats: N, follow, moveTo };
 }
 export type OpenWindow = ReturnType<typeof openWindow>;
 

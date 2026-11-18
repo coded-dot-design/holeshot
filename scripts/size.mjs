@@ -40,7 +40,10 @@ import { readdirSync, readFileSync } from "node:fs";
 // scene code gone: the camera's occlusion test and the ghosts' outlines, the patrol's new rules and
 // the drones' neon and searchlights, the hand drag (its sim, HUD chip, pose, sparks), the throttle
 // rocker (its icons and CSS), the profile's v5 step), plus about 4 KB of room for the crests.
-const BUDGET = 178_000;
+// Unreleased, the open world's road ribbons: 180,285 B measured (holeshot.js; +3,291 B over 176,994:
+// the asphalt, shoulders, rings and islands drawn as ribbons along the roads' true curves, the
+// window's drawn kinds under them, the probe's bare draw), plus about 3.7 KB of room.
+const BUDGET = 184_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;
