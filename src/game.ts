@@ -107,10 +107,24 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   const gui = garageUI(inf);
   let pending: [ModeId, { map?: string; seed?: number; auto?: boolean }] | null = null, sure = false, runSeed = 0;
 
-  // ---- the garage's bike preview: the rig on a turntable, drawn on change (no loop) ----
+  // ---- the garage's bike preview: the rig on a turntable, drawn on change (no loop). Drag or swipe
+  // it sideways to turn it; with focus, ← and → turn it by 15°, Home faces it front-quarter again. ----
   const pv = document.createElement("canvas");
   pv.className = "dh-preview";
-  pv.setAttribute("aria-hidden", "true");
+  pv.tabIndex = 0;
+  pv.setAttribute("role", "slider");
+  pv.setAttribute("aria-label", "Turn the bike: drag, or the left and right arrow keys");
+  pv.setAttribute("aria-valuemin", "0");
+  pv.setAttribute("aria-valuemax", "359");
+  const YAW0 = -0.15;
+  let pvYaw = YAW0;
+  const turn = (to: number) => {
+    pvYaw = to - Math.PI * 2 * Math.floor(to / (Math.PI * 2));
+    const deg = Math.round((pvYaw * 180) / Math.PI) % 360;
+    pv.setAttribute("aria-valuenow", "" + deg);
+    pv.setAttribute("aria-valuetext", deg + "°");
+    preview();
+  };
   const pdio = diorama(pv, { light: [-0.4, 1, 0.6], ambient: 0.55, background: () => (pageTheme() === "dark" ? "#1a1636" : "#fbeee0") });
   const flat = { sample(_x: number, _z: number, out: { [i: number]: number }) { out[0] = 0; out[1] = 0; out[2] = 1; out[3] = 0; return 0; } };
   let pvKey = "";
@@ -118,7 +132,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     if (!pv.isConnected || !ready(profile)) return;
     const r = pv.getBoundingClientRect(), w = Math.round(r.width), h = Math.round(r.height);
     if (w < 10 || h < 10) return;
-    const P2 = screen === "garage" ? shown(profile, gui) : profile, b = riding(P2), t = tune(b), L2 = lookOf(P2), key = JSON.stringify([w, h, b.model, b.look, b.dmg, P2.kit, pageTheme()]);
+    const P2 = screen === "garage" ? shown(profile, gui) : profile, b = riding(P2), t = tune(b), L2 = lookOf(P2), key = JSON.stringify([w, h, b.model, b.look, b.dmg, P2.kit, pageTheme(), pvYaw]);
     if (key === pvKey) return;
     pvKey = key;
     pdio.resize(w, h, Math.min(2, devicePixelRatio || 1));
@@ -130,9 +144,32 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     const g = rig(pdio, "pv", { ...kit, ...L2.look } as RigColors, t.rig, L2.helmet), bk = makeBike(flat, t.power, t.shape);
     bk.reset(0, 0, 0);
     g.pose(bk, 0.6);
-    Object.assign(pdio.cam, { yaw: -0.15, pitch: 0.2, dist: 4.9, tx: 0, ty: 0.55, tz: 0, ox: 0, oy: 0, fov: 0.55 });
+    Object.assign(pdio.cam, { yaw: pvYaw, pitch: 0.2, dist: 4.9, tx: 0, ty: 0.55, tz: 0, ox: 0, oy: 0, fov: 0.55 });
     pdio.draw();
   }
+  let grip = -1, gx = 0;
+  pv.addEventListener("pointerdown", (e) => {
+    grip = e.pointerId; gx = e.clientX;
+    try {
+      pv.setPointerCapture(e.pointerId);
+    } catch {}
+  }, sig);
+  pv.addEventListener("pointermove", (e) => {
+    if (e.pointerId !== grip) return;
+    const dx = e.clientX - gx;
+    gx = e.clientX;
+    if (dx) turn(pvYaw - dx * 0.012);
+  }, sig);
+  for (const t of ["pointerup", "pointercancel"]) pv.addEventListener(t, (e) => (e as PointerEvent).pointerId === grip && (grip = -1), sig);
+  pv.addEventListener("keydown", (e) => {
+    const k = e.key === "ArrowLeft" ? 1 : e.key === "ArrowRight" ? -1 : 0;
+    if (k) turn(pvYaw + (k * Math.PI) / 12);
+    else if (e.key === "Home") turn(YAW0);
+    else return;
+    e.preventDefault();
+    e.stopPropagation();
+  }, sig);
+  turn(YAW0);
   const pro = new ResizeObserver(() => ((pvKey = ""), preview()));
   pro.observe(pv);
   engine.signal.addEventListener("abort", () => pro.disconnect(), { once: true });

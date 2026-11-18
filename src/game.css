@@ -40,7 +40,8 @@
 .dh-tabs .bui-key,.dh-seg .bui-key{padding:0 6px;font-size:14px;letter-spacing:.04em}
 .dh-hero2,.dh-bay{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px;align-items:center}
 .dh-hero2>div,.dh-bay>div{display:grid;gap:6px}
-.dh-preview{width:100%;aspect-ratio:16/10;display:block;border:2px solid var(--rim);border-radius:12px;background:linear-gradient(180deg,color-mix(in srgb,var(--cy) 16%,var(--raised)),var(--raised))}
+.dh-preview{width:100%;aspect-ratio:16/10;display:block;border:2px solid var(--rim);border-radius:12px;background:linear-gradient(180deg,color-mix(in srgb,var(--cy) 16%,var(--raised)),var(--raised));touch-action:pan-y;cursor:grab}
+.dh-preview:active{cursor:grabbing}.dh-preview:focus-visible{outline:3px solid var(--cy);outline-offset:2px}
 .dh-bar{display:grid;grid-template-columns:8.5em minmax(3em,1fr) 3.2em;align-items:center;gap:8px;font-size:12px;letter-spacing:.04em}
 .dh-bar em{font-style:normal;color:var(--muted)}
 .dh-bar i{height:12px;border:2px solid var(--rim);border-radius:5px;background:linear-gradient(90deg,var(--cy) calc(var(--v) * 100%),color-mix(in srgb,var(--rim) 12%,transparent) 0)}
