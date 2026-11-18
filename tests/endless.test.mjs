@@ -189,7 +189,7 @@ test("endless grounds: pure, each its own, and 10 km with no edge", () => {
 test("profile: a best per endless ground and the city's (v3 → v4), apply keeps the best", () => {
   const v3 = { ...fresh(), v: 3, stats: { events: 2, wins: 0, earned: 10, best: {}, far: { desert: 4100 } } };
   const p = migrate(v3);
-  assert.deepEqual([p.v, p.stats.far.desert, p.stats.far.city, p.stats.far.forest], [5, 4100, 0, 0]);
+  assert.deepEqual([p.v, p.stats.far.desert, p.stats.far.city, p.stats.far.forest], [6, 4100, 0, 0]);
   const b = newBike("buzzline", "b1");
   let q = { ...p, bikes: [b] };
   q = apply(q, settle({ ...blankStats("endcity"), finished: true, seconds: 60, distance: 2400, far: 2400, farKey: "city" }, b));
@@ -201,7 +201,7 @@ test("profile: a best per endless ground and the city's (v3 → v4), apply keeps
 test("profile: the fixed Wheelie City's save (v4 → v5): its best score carries into Endless Wheelie City's when higher; the old key stays", () => {
   const v4 = (best) => ({ ...fresh(), v: 4, stats: { events: 9, wins: 1, earned: 500, best, far: { ...fresh().stats.far, city: 1300 } } });
   let p = migrate(v4({ "wheelie:city": 4200, "bigair:arena": 71 }));
-  assert.deepEqual([p.v, p.stats.best["endcity:city"], p.stats.best["wheelie:city"], p.stats.best["bigair:arena"], p.stats.far.city, p.stats.events], [5, 4200, 4200, 71, 1300, 9]);
+  assert.deepEqual([p.v, p.stats.best["endcity:city"], p.stats.best["wheelie:city"], p.stats.best["bigair:arena"], p.stats.far.city, p.stats.events], [6, 4200, 4200, 71, 1300, 9]);
   p = migrate(v4({ "wheelie:city": 4200, "endcity:city": 9000 }));
   assert.equal(p.stats.best["endcity:city"], 9000, "a higher endless best is kept");
   p = migrate(v4({}));

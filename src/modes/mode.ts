@@ -4,6 +4,7 @@
 // RunStats through `ctx.end` when the event is over (or `ctx.quit` when the rider leaves). The shell
 // turns the stats into credits and wear (../model/economy.ts `settle`), saves, and shows the result.
 // A mode never touches the profile, the economy or the page outside its host.
+import type { Units } from "../model/units.ts";
 import type { Engine } from "@fzlt/core/kernel";
 import type { RigColors, RigHelmet } from "../bike/rig.ts";
 import type { Tuned } from "../model/tune.ts";
@@ -70,6 +71,8 @@ export interface ModeCtx {
   map?: string;
   /** The rider's best distance in this mode (and biome: the endless modes), for the HUD. */
   best?: number;
+  /** Distances and speeds as shown (display only; default Imperial). */
+  units?: Units;
   /** Ride itself (the landing hero, the tests). */
   auto?: boolean;
   /** The landing hero: no HUD, no cards, loop forever on the autopilot. */

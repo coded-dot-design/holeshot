@@ -130,11 +130,11 @@ test("unstuck: R resets the desert rider to the last good place, behind, upright
 });
 
 test("profile: best distance (v2 → v3 → v4 → v5) and apply keeps the best", () => {
-  assert.equal(VERSION, 5);
+  assert.equal(VERSION, 6);
   const v2 = { ...fresh(), v: 2, stats: { events: 4, wins: 1, earned: 900, best: { "race:moto": 80 } } };
   delete v2.stats.far;
   const p = migrate(v2);
-  assert.deepEqual([p.v, p.stats.far.desert, p.stats.far.city, p.stats.far.quarry, p.stats.best["race:moto"], p.stats.events], [5, 0, 0, 0, 80, 4]);
+  assert.deepEqual([p.v, p.stats.far.desert, p.stats.far.city, p.stats.far.quarry, p.stats.best["race:moto"], p.stats.events], [6, 0, 0, 0, 80, 4]);
   const ride = (far) => ({ ...blankStats("desert"), finished: true, seconds: 60, distance: far, far });
   const b = newBike("buzzline", "b1");
   let q = { ...p, bikes: [b] };
@@ -142,7 +142,7 @@ test("profile: best distance (v2 → v3 → v4 → v5) and apply keeps the best"
   assert.equal(q.stats.far.desert, 3200);
   q = apply(q, settle(ride(1500), q.bikes[0]));
   assert.equal(q.stats.far.desert, 3200, "a shorter ride keeps the best");
-  assert.ok(settle(ride(3200), b).lines.some((l) => l[0] === "3.20 KM"), "the distance pays a line");
+  assert.ok(settle(ride(3200), b).lines.some((l) => l[0] === "1.99 MI"), "the distance pays a line (Imperial: 3.2 km)");
 });
 
 test("crests (adaptive split): the ground the bike rides is the face terrainView draws, flipped cells and all", async () => {

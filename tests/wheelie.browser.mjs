@@ -74,7 +74,7 @@ try {
     const r = (await snap(p)).result;
     assert.ok(r.finished && r.credits > 0, `${name}: pays ${r.credits}`);
     const lines = await p.evaluate(() => [...document.querySelector("[data-fizlet-host]").shadowRoot.querySelectorAll(".dh-pay li span")].map((e) => e.textContent));
-    assert.ok(lines.some((l) => /KM/.test(l)), `${name}: the distance pays: ${lines.join(" · ")}`);
+    assert.ok(lines.some((l) => / MI$/.test(l)), `${name}: the distance pays: ${lines.join(" · ")}`);
     const sub = await p.evaluate(() => document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".dh-result .dh-sub").textContent);
     assert.ok(/escape/.test(sub) && /town/.test(sub), `${name}: the summary says it: ${sub}`);
     await until(p, () => game.run.engine.paused.includes("settled") && game.engine.paused.includes("settled"), null, `${name}: the result settles`, 30000);

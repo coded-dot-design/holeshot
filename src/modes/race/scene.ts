@@ -9,6 +9,7 @@
 // Bricks: the kernel (fixed step, settle, the ledger), @fzlt/core/diorama, terrain, drive (its
 // `chase` camera), input, pad, sound. The bike is ../../bike/bike.ts drawn by ../../bike/rig.ts; the
 // race is ./course.ts and Free Ride ../freeride/session.ts, both headless.
+import { dist } from "../../model/units.ts";
 import { createEngine, seeded } from "@fzlt/core/kernel";
 import { diorama, type DioramaObject } from "@fzlt/core/diorama";
 import { terrainView, type TerrainView } from "@fzlt/core/terrain";
@@ -93,8 +94,6 @@ const LIGHT: Pal = {
 };
 const DUST = 120, SPARK = 48, ROOST = 60;
 const ORD = ["1ST", "2ND", "3RD", "4TH"];
-/** Metres (world units) as km on the HUD. */
-const km = (u: number) => `${(u / 1000).toFixed(2)} KM`;
 const CRASH_NAME: Record<number, string> = { [LOOP]: "LOOPED OUT!", [ENDO]: "OVER THE BARS!", [CASE]: "CASED IT!", [BAIL]: "BAILED!", 5: "WIPEOUT!", 9: "OFF THE TABLE!" };
 
 /** The mode's host: the gallery stage's two layers (a backdrop and the slot the scene draws in). */
@@ -115,6 +114,8 @@ export function modeStage(host: HTMLElement, cls: string) {
  *  `opts` tunes a race (a series round's rivals' nerve). */
 export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, rivals: Power[], opts: RaceOpts = {}, net: NetView | null = null): NetRun {
   const stage = modeStage(ctx.host, "mt");
+  /** Metres (world units) on the HUD, in the rider's units (miles or km). */
+  const km = (u: number) => dist(u, ctx.units);
   const engine = createEngine({ root: stage, settle: 0.5, seed: ctx.seed });
   const L = engine.ledger, sig = { signal: engine.signal };
   const map = "isMap" in track ? track : null, look = map ? mapLook(map) : null;
@@ -144,7 +145,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   play.setAttribute("aria-label", `${free ? "Free Ride" : "Race"}: Space or J for gas, K or Shift to brake, W and S (or up and down) shift your weight forward and back (back lifts the front; in the air it pitches the bike), A and D (or left and right) steer. V changes the view, M mutes, P or Escape pauses`);
   const hud = L.add(document.createElement("div"));
   hud.className = "mt-hud";
-  hud.innerHTML = `<div class="mt-head"><p class="mt-top">${jam ? `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>0 PTS</span></b>` : endless ? `<b class="mt-chip mt-pos"><span>BEST ${km(ctx.best ?? 0)}</span></b><b class="mt-chip mt-lap"><span>0.00 KM</span></b>` : free ? `<b class="mt-chip mt-pos"><span>${map ? map.name : "FREE RIDE"}</span></b><b class="mt-chip mt-lap"><span>0.0s AIR</span></b>` : `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>LAP 1/${LAPS}</span></b>`}<b class="mt-chip mt-time"><span>0:00.0</span></b><b class="mt-chip mt-ride"><span>#${ctx.number} ${NAME}</span></b></p><p class="mt-hint"></p></div><p class="mt-toast" hidden></p><p class="mt-live" aria-live="polite"></p><p class="mt-stuck" hidden>STUCK? Hold R / tap ↺ to reset</p><p class="mt-keys">${free && !net ? `<button type="button" class="mt-key mt-end" aria-label="End the ride and bank it (E)">END</button>` : ""}<button type="button" class="mt-key mt-reset" aria-label="Reset to the last good spot (R)">↺</button><button type="button" class="mt-key mt-view" aria-label="Camera view (V)"${endless ? " hidden" : ""}>VIEW</button><button type="button" class="mt-key mt-mute" aria-label="Mute (M)" aria-pressed="true">♪</button><button type="button" class="mt-key mt-menu" aria-label="Pause (P)">❚❚</button></p>`;
+  hud.innerHTML = `<div class="mt-head"><p class="mt-top">${jam ? `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>0 PTS</span></b>` : endless ? `<b class="mt-chip mt-pos"><span>BEST ${km(ctx.best ?? 0)}</span></b><b class="mt-chip mt-lap"><span>${km(0)}</span></b>` : free ? `<b class="mt-chip mt-pos"><span>${map ? map.name : "FREE RIDE"}</span></b><b class="mt-chip mt-lap"><span>0.0s AIR</span></b>` : `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>LAP 1/${LAPS}</span></b>`}<b class="mt-chip mt-time"><span>0:00.0</span></b><b class="mt-chip mt-ride"><span>#${ctx.number} ${NAME}</span></b></p><p class="mt-hint"></p></div><p class="mt-toast" hidden></p><p class="mt-live" aria-live="polite"></p><p class="mt-stuck" hidden>STUCK? Hold R / tap ↺ to reset</p><p class="mt-keys">${free && !net ? `<button type="button" class="mt-key mt-end" aria-label="End the ride and bank it (E)">END</button>` : ""}<button type="button" class="mt-key mt-reset" aria-label="Reset to the last good spot (R)">↺</button><button type="button" class="mt-key mt-view" aria-label="Camera view (V)"${endless ? " hidden" : ""}>VIEW</button><button type="button" class="mt-key mt-mute" aria-label="Mute (M)" aria-pressed="true">♪</button><button type="button" class="mt-key mt-menu" aria-label="Pause (P)">❚❚</button></p>`;
   const head = hud.children[0] as HTMLElement, top = head.children[0] as HTMLElement, hintEl = head.children[1] as HTMLElement;
   const toastEl = hud.children[1] as HTMLElement, live = hud.children[2] as HTMLElement, stuckEl = hud.children[3] as HTMLElement, keysEl = hud.children[4] as HTMLElement;
   const posEl = top.children[0]!.firstChild as HTMLElement, lapEl = top.children[1]!.firstChild as HTMLElement, timeEl = top.children[2]!.firstChild as HTMLElement;

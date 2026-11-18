@@ -42,8 +42,8 @@ pick your jersey and a name. That bike rides every event.
   behind it ridgelines layered out to 250 units (the same ground on a coarse far ring, five bands,
   hazier the further), so the dune sea runs to the horizon and there is never an edge. The ground is a pure function of the seed and the place
   (the same dune is always the same dune); the bike rides an 80 × 80 unit window of it that slides
-  with you. The HUD counts kilometres (a unit is about a metre: the bike's wheelbase is 1.5) and your
-  best distance is kept in the profile. END banks it (Free Ride's pay, plus 20 a km, under its cap).
+  with you. The HUD counts the distance in miles, or kilometres with UNITS set to Metric in SETTINGS (a
+  unit is about a metre: the bike's wheelbase is 1.5), and your best distance is kept in the profile. END banks it (Free Ride's pay, plus 20 a km, under its cap).
 - **Big Air**: a minute in the arena, two steel kickers. Hold TRICK in the air and the stick picks
   one of four tricks; weight all the way back flips it. Five judges score the run and pay.
 - **Endless Wheelie City**: an open world of roads, towns and fields that never ends, in every
@@ -126,6 +126,10 @@ surface, the canvas and the pad are `touch-action: none`, so no pinch or double-
 
 **Saving.** Your profile lives on the device (localStorage, a versioned schema). SETTINGS shows an
 export code to carry it to another device (paste it into IMPORT there). No accounts.
+
+**Units.** Distances and speeds show in miles and mph by default; SETTINGS → UNITS switches to
+Metric (km, km/h), saved in the profile (display only: the game measures in world units, about a
+metre each; 1 km = 0.621371 mi). Under `?credits=inf` the switch shows but is not saved.
 
 ## As a module
 

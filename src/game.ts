@@ -5,6 +5,7 @@
 // the shell settles it (credits in, wear on the bike) and saves. Board UI stickers in a shadow root,
 // so the page and the game never touch each other's styles. Every page write goes through the
 // kernel's ledger: Recall gives the page back.
+import { dist } from "./model/units.ts";
 import { createEngine } from "@fzlt/core/kernel";
 import { mount as buiMount } from "@fzlt/core/ui";
 import { diorama } from "@fzlt/core/diorama";
@@ -172,7 +173,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   /** A mode's name for the cards (a series round is a race on the series' track). */
   /** The profile key of a ride's best distance: the biome (ENDLESS), "city" (Endless Wheelie City). */
   const farKey = (id: ModeId, map?: string) => (id === "endcity" ? "city" : id === "desert" ? map ?? "desert" : id);
-  const km = (u: number) => `${(u / 1000).toFixed(2)} KM`;
+  const km = (u: number) => dist(u, profile.settings.units);
   /** RIDE → ENDLESS: the ground to ride (the desert first), each with its best distance. */
   function endlessCard() {
     const keys = BIOMES.map((b, i) => `<li><button type="button" class="bui-key dh-mapk" data-endless="${b.id}"><b><i>${i + 1}</i> ${b.name}</b><small>${b.blurb}</small><em>BEST ${km(profile.stats.far[b.id] ?? 0)}${i ? ` · ${FREE_MAPS.find((m) => m.id === b.map)?.name ?? ""}, ENDLESS` : ""}</em></button></li>`).join("");
@@ -180,7 +181,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   }
   const modeName = (id: ModeId) => (id === "series" ? seriesName(profile) : modeOf(id).name);
   function settingsCard() {
-    return `<div class="dh-card dh-set" data-screen="settings">${head()}${tabs("settings")}<p class="dh-row"><button type="button" class="bui-key dh-sound" aria-pressed="${profile.settings.sound}">SOUND ${profile.settings.sound ? "ON" : "OFF"}</button></p>
+    return `<div class="dh-card dh-set" data-screen="settings">${head()}${tabs("settings")}<p class="dh-row"><button type="button" class="bui-key dh-sound" aria-pressed="${profile.settings.sound}">SOUND ${profile.settings.sound ? "ON" : "OFF"}</button><button type="button" class="bui-key dh-units" aria-label="Units: ${profile.settings.units === "metric" ? "metric, km and km/h" : "imperial, miles and mph"}">UNITS ${profile.settings.units === "metric" ? "KM · KM/H" : "MI · MPH"}</button></p>
       <b class="dh-h2">MOVE YOUR PROFILE</b><p class="dh-sub">Your garage lives on this device. Copy the code to carry it to another one; nothing leaves the device unless you do.</p>${inf ? `<p class="dh-sub dh-warn">Test credits are on: nothing here is saved, and the code is your saved profile, as it was.</p>` : ""}
       <label class="dh-field">EXPORT CODE<textarea class="dh-code" readonly rows="3">${code()}</textarea></label><p class="dh-row"><button type="button" class="bui-key dh-copy">COPY CODE</button></p>
       <label class="dh-field">IMPORT A CODE<textarea class="dh-codein" rows="3" spellcheck="false" placeholder="DH1-…"></textarea></label><p class="dh-row"><button type="button" class="bui-key dh-import">LOAD IT</button><button type="button" class="bui-key dh-reset">START OVER</button></p><p class="dh-sub dh-note" role="status">${esc(note)}</p></div>`;
@@ -251,6 +252,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       seed: opt.seed ?? ((o.seed ?? 20261114) + profile.stats.events * 7919) >>> 0,
       map: opt.map,
       best: profile.stats.far[farKey(id, opt.map)] ?? 0,
+      units: profile.settings.units,
       auto: opt.auto ?? !!o.attract,
       attract: !!o.attract,
       reduced,
@@ -271,7 +273,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     if (!run || o.attract) return;
     // A series round: its tier and round on the stats (the prize lines), then the points table.
     if (runMode === "series") s = roundStats(profile, s);
-    const r = garageRide(settle(s, riding(profile)), riding(profile), runSeed);
+    const r = garageRide(settle(s, riding(profile), profile.settings.units), riding(profile), runSeed);
     profile = after(apply(profile, r), r);
     if (s.mode === "series") profile = recordRound(profile, s).profile;
     keep();
@@ -323,6 +325,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     if (t.classList.contains("dh-leave")) return leave();
     if (t.classList.contains("dh-again")) return startEvent(runMode, { map: runMap });
     if (t.classList.contains("dh-pit")) return (profile = pitFix(profile)), keep(), say("The pit crew fixed it up"), show(screen === "result" ? "result" : "menu");
+    if (t.classList.contains("dh-units")) return (profile = { ...profile, settings: { ...profile.settings, units: profile.settings.units === "metric" ? "imperial" : "metric" } }), keep(), show("settings");
     if (t.classList.contains("dh-sound")) return (profile = { ...profile, settings: { ...profile.settings, sound: !profile.settings.sound } }), keep(), show("settings");
     if (t.classList.contains("dh-copy")) {
       void navigator.clipboard?.writeText(code()).then(() => say("Copied"), () => {});
@@ -606,7 +609,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     const me = r.riders[N.seat]!, L2 = lookOf(me.profile), t = r.tuned[N.seat]!;
     const ctx: ModeCtx = {
       host: modeEl, bike: t, look: L2.look, helmet: L2.helmet, number: L2.number, name: me.name, seed: r.seed,
-      auto: false, attract: false, reduced, sound: o.sound ?? profile.settings.sound,
+      auto: false, attract: false, reduced, sound: o.sound ?? profile.settings.sound, units: profile.settings.units,
       // (A score run ends on this screen first; the result waits for everyone.)
       end: (st) => netScoreEnd(st), quit: (st) => netScoreEnd(st), menu: () => setPaused(true),
     };
@@ -654,7 +657,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       const s0 = N.mine ?? { ...(run?.stats() ?? blankStats(runMode)), finished: false };
       st = { ...s0, summary: `Online · ${ORD[me.place]} of ${r.players} · ${s0.summary ?? ""}` };
     }
-    const r0 = settleOnline(st, riding(profile), { beat, times: profile.online, now }), rr = garageRide(r0, riding(profile), r.seed);
+    const r0 = settleOnline(st, riding(profile), { beat, times: profile.online, now, units: profile.settings.units }), rr = garageRide(r0, riding(profile), r.seed);
     profile = after(applyOnline(profile, rr, now), rr);
     keep();
     result = rr;
@@ -685,7 +688,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   function netLeave() {
     if (run && screen === "event" && N.ride && !N.res) {
       const st = N.ride.race || N.ride.jam ? { ...run.stats(), finished: false } : { ...(N.mine ?? run.stats()), finished: false };
-      const r = garageRide(settle(st, riding(profile)), riding(profile), N.ride.seed);
+      const r = garageRide(settle(st, riding(profile), profile.settings.units), riding(profile), N.ride.seed);
       profile = after(apply(profile, r), r);
       keep();
       note = "Left the room. A ride left pays nothing; its wear counts.";
@@ -715,7 +718,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   function netGone(text: string) {
     if (N.ride && !N.res && run && screen === "event") {
       // Mid-ride: the wear so far counts, no pay (as leaving).
-      const st = { ...run.stats(), finished: false }, r = garageRide(settle(st, riding(profile)), riding(profile), N.ride.seed);
+      const st = { ...run.stats(), finished: false }, r = garageRide(settle(st, riding(profile), profile.settings.units), riding(profile), N.ride.seed);
       profile = after(apply(profile, r), r);
       keep();
     }

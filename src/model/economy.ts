@@ -1,5 +1,6 @@
 // The economy's logic: a finished ride's stats → credits (with the lines that make them up) and the
 // wear on each part; applying that to the profile; the pit crew. The numbers are ../data/economy.ts.
+import { dist, type Units } from "./units.ts";
 import { ONLINE, PARTS, PAYOUT, WEAR, PIT_CREW, type PartId } from "../data/economy.ts";
 import { model } from "../data/roster.ts";
 import type { RunStats } from "../modes/mode.ts";
@@ -18,7 +19,7 @@ export interface ModeResult {
 }
 
 /** What a ride pays. */
-export function payout(s: RunStats): [string, number][] {
+export function payout(s: RunStats, units: Units = "imperial"): [string, number][] {
   const L: [string, number][] = [];
   if (!s.finished) {
     if (PAYOUT.quit > 0) L.push(["LEFT EARLY", 0]);
@@ -56,7 +57,7 @@ export function payout(s: RunStats): [string, number][] {
       if (c > 0) L.push([k, c]);
     };
     add("SADDLE TIME", t);
-    if (s.far) add(`${(s.far / 1000).toFixed(2)} KM`, Math.round((s.far / 1000) * P.perKm));
+    if (s.far) add(dist(s.far, units), Math.round((s.far / 1000) * P.perKm));
     add(`${s.air.toFixed(1)}s AIR`, a);
     add(`${s.wheelie.toFixed(1)}s WHEELIE`, w);
     const fl = s.flips ?? 0, tr = Math.max(0, (s.tricks ?? 0) - fl);
@@ -78,8 +79,8 @@ export function wear(s: RunStats, bike: BikeSave): Record<PartId, number> {
 }
 
 /** Stats → the result (credits, lines, wear) for the bike that rode. */
-export function settle(s: RunStats, bike: BikeSave): ModeResult {
-  const lines = payout(s);
+export function settle(s: RunStats, bike: BikeSave, units: Units = "imperial"): ModeResult {
+  const lines = payout(s, units);
   return { stats: s, lines, credits: lines.reduce((a, l) => a + l[1], 0), wear: wear(s, bike) };
 }
 
@@ -141,8 +142,8 @@ export function onlineShare(times: readonly number[], now: number) {
 /** An online result: the ride's solo payout and wear (settle), then the online lines: the bonus on
  *  the solo payout and `beat` per person beaten, both × the hourly share. `beat`: the people (still
  *  in the room) this rider finished ahead of. */
-export function settleOnline(s: RunStats, bike: BikeSave, o: { beat: number; times: readonly number[]; now: number }): ModeResult & { share: number } {
-  const r = settle(s, bike), ok = s.finished && s.seconds >= ONLINE.minSeconds, { share, before } = onlineShare(o.times, o.now);
+export function settleOnline(s: RunStats, bike: BikeSave, o: { beat: number; times: readonly number[]; now: number; units?: Units }): ModeResult & { share: number } {
+  const r = settle(s, bike, o.units), ok = s.finished && s.seconds >= ONLINE.minSeconds, { share, before } = onlineShare(o.times, o.now);
   if (!ok) return { ...r, share: 0 };
   const extra = Math.round(r.credits * (ONLINE.bonus - 1) * share), beat = Math.round(o.beat * ONLINE.beat * share);
   const tag = share >= 1 ? "" : share > 0 ? ` (${Math.round(share * 100)}%: ONLINE RIDE ${before + 1} THIS HOUR)` : " (HOURLY CAP REACHED)";

@@ -35,6 +35,7 @@ import {
 import { HEAT, STARS, HOT, ESC, TIX, NEAR, MAXP, PS, P_ON, P_KIND, P_X, P_Z, P_YAW, P_FADE, U_CART, U_DRONE } from "./cops.ts";
 import type { RideSpec } from "./ride.ts";
 import { meter } from "../meter.ts";
+import { dist } from "../../model/units.ts";
 import { modeStage } from "../race/scene.ts";
 import type { ModeCtx, ModeRun } from "../mode.ts";
 import { LOOP, ENDO, CASE, BAIL } from "../../bike/bike.ts";
@@ -138,7 +139,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   play.setAttribute("aria-label", "Endless Wheelie City: Space or J for gas, K or Shift to brake, W and S (or up and down) lean forward and back, A and D (or left and right) steer, L hops. V changes the view, M mutes, P or Escape pauses");
   const hud = L.add(document.createElement("div"));
   hud.className = "wc-hud";
-  hud.innerHTML = `<div class="wc-head"><p class="wc-top"><b class="wc-chip wc-time"><span>0.00 KM</span></b><b class="wc-chip wc-score"><span>0</span><i>×1</i></b><b class="wc-chip wc-heat" hidden aria-label="Heat"><span></span><i hidden></i></b><b class="wc-chip wc-trick" hidden><span></span></b><b class="wc-chip wc-drag" hidden aria-label="Hand drag"><i class="wc-ring" aria-hidden="true"></i><span></span></b></p><p class="wc-hint"></p></div><p class="wc-toast" hidden></p><div class="wc-ticket" hidden><b>TICKET!</b><p>NEON PATROL · NOISE NOTICE</p><p class="wc-tline"></p></div><p class="wc-live" aria-live="polite"></p><p class="wc-keys"><button type="button" class="wc-key wc-end" aria-label="End the ride and bank it (E)">END</button><button type="button" class="wc-key wc-reset" aria-label="Reset to the last good spot (R)">↺</button><button type="button" class="wc-key wc-view" aria-label="Camera view (V)">VIEW</button><button type="button" class="wc-key wc-mute" aria-label="Mute (M)" aria-pressed="true">♪</button><button type="button" class="wc-key wc-menu" aria-label="Pause (P)">❚❚</button></p>`;
+  hud.innerHTML = `<div class="wc-head"><p class="wc-top"><b class="wc-chip wc-time"><span>${dist(0, ctx.units)}</span></b><b class="wc-chip wc-score"><span>0</span><i>×1</i></b><b class="wc-chip wc-heat" hidden aria-label="Heat"><span></span><i hidden></i></b><b class="wc-chip wc-trick" hidden><span></span></b><b class="wc-chip wc-drag" hidden aria-label="Hand drag"><i class="wc-ring" aria-hidden="true"></i><span></span></b></p><p class="wc-hint"></p></div><p class="wc-toast" hidden></p><div class="wc-ticket" hidden><b>TICKET!</b><p>NEON PATROL · NOISE NOTICE</p><p class="wc-tline"></p></div><p class="wc-live" aria-live="polite"></p><p class="wc-keys"><button type="button" class="wc-key wc-end" aria-label="End the ride and bank it (E)">END</button><button type="button" class="wc-key wc-reset" aria-label="Reset to the last good spot (R)">↺</button><button type="button" class="wc-key wc-view" aria-label="Camera view (V)">VIEW</button><button type="button" class="wc-key wc-mute" aria-label="Mute (M)" aria-pressed="true">♪</button><button type="button" class="wc-key wc-menu" aria-label="Pause (P)">❚❚</button></p>`;
   const head = hud.children[0] as HTMLElement, top = head.children[0] as HTMLElement, hintEl = head.children[1] as HTMLElement;
   const toastEl = hud.children[1] as HTMLElement, ticketEl = hud.children[2] as HTMLElement, live = hud.children[3] as HTMLElement, keysEl = hud.children[4] as HTMLElement;
   const timeEl = top.children[0]!.firstChild as HTMLElement, scoreEl = top.children[1]!.firstChild as HTMLElement, comboEl = top.children[1]!.lastChild as HTMLElement;
@@ -861,7 +862,7 @@ export function mountCity(ctx: ModeCtx): ModeRun {
   }
   function hudWrite() {
     const ph = S[0]!, cm = Math.floor(run.far / 10);
-    if (was[0] !== cm) (was[0] = cm), (timeEl.textContent = `${(cm / 100).toFixed(2)} KM`), timeEl.parentElement!.classList.toggle("wc-hot", run.far > best && best > 0);
+    if (was[0] !== cm) (was[0] = cm), (timeEl.textContent = dist(cm * 10, ctx.units)), timeEl.parentElement!.classList.toggle("wc-hot", run.far > best && best > 0);
     const s = sc[SC]!;
     if (was[1] !== s) (was[1] = s), (scoreEl.textContent = s.toLocaleString("en-US"));
     const cb = sc[CB]!;
@@ -893,12 +894,12 @@ export function mountCity(ctx: ModeCtx): ModeRun {
     if (was[4] !== ph * 10 + g + rideN * 100) {
       was[4] = ph * 10 + g + rideN * 100;
       const touch = !!thePad.el.offsetParent;
-      hintEl.textContent = ph === READY ? `BEST ${(best / 1000).toFixed(2)} KM · ${touch ? "hold ⚡: the world never ends · END banks it" : "Space to ride: the world never ends · END (or E) banks it"}` : g && ph === RUN ? "NEON PATROL ON YOU · KEEP RIDING (STOP AND IT'S A TICKET) · RIDE OUT OF TOWN TO LOSE THEM" : "";
+      hintEl.textContent = ph === READY ? `BEST ${dist(best, ctx.units)} · ${touch ? "hold ⚡: the world never ends · END banks it" : "Space to ride: the world never ends · END (or E) banks it"}` : g && ph === RUN ? "NEON PATROL ON YOU · KEEP RIDING (STOP AND IT'S A TICKET) · RIDE OUT OF TOWN TO LOSE THEM" : "";
     }
   }
   function stats() {
     const esc = cop.S[ESC]!, tix = cop.S[TIX]!, tw = S[S_TOWNS]!;
-    return m.stats({ finished: true, score: sc[SC]!, where: "city", farKey: "city", far: run.far, escapes: esc, tickets: tix, summary: `${(run.far / 1000).toFixed(2)} KM out · ${tw} ${tw === 1 ? "town" : "towns"} · longest wheelie ${sc[BEST_W]!.toFixed(1)} m · ${esc} ${esc === 1 ? "escape" : "escapes"} · ${tix} ${tix === 1 ? "ticket" : "tickets"}` });
+    return m.stats({ finished: true, score: sc[SC]!, where: "city", farKey: "city", far: run.far, escapes: esc, tickets: tix, summary: `${dist(run.far, ctx.units)} out · ${tw} ${tw === 1 ? "town" : "towns"} · longest wheelie ${sc[BEST_W]!.toFixed(1)} m · ${esc} ${esc === 1 ? "escape" : "escapes"} · ${tix} ${tix === 1 ? "ticket" : "tickets"}` });
   }
   function end() {
     if (ended || ctx.attract) return;

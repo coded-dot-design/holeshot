@@ -4,12 +4,13 @@
 // `migrate` takes anything that was ever saved (or typed in) and returns a valid current profile:
 // each version step in MIGRATIONS runs in order, then `normalize` fills what is missing and clamps
 // what is out of range, so a save from before a part or a field existed still loads.
+import type { Units } from "./units.ts";
 import { model, STARTERS } from "../data/roster.ts";
 import { PARTS, START_CREDITS, GARAGE_SLOTS, MODS, SETUPS, TYRES, LOG_MAX, ONLINE, type PartId, type ModId, type TyreId } from "../data/economy.ts";
 import { PAINTS, SWATCHES, HELMETS, VISORS, PATTERNS, GRAPHICS, PLASTICS, PLATES } from "../data/looks.ts";
 import { freshSeries, normSeries, type SeriesSave } from "./series.ts";
 
-export const VERSION = 5;
+export const VERSION = 6;
 /** The endless bests a profile keeps (world units): the ENDLESS grounds and Endless Wheelie City. */
 export const FAR_KEYS = ["desert", "quarry", "forest", "night-park", "city"];
 const farZero = () => Object.fromEntries(FAR_KEYS.map((k) => [k, 0])) as Record<string, number>;
@@ -69,7 +70,8 @@ export interface Profile {
   stats: { events: number; wins: number; earned: number; best: Record<string, number>; far: Record<string, number> };
   /** Events since the pit crew last helped. */
   pit: number;
-  settings: { sound: boolean; view: "chase" | "table" };
+  /** `units`: distances and speeds as shown (display only): miles and mph, or km and km/h. */
+  settings: { sound: boolean; view: "chase" | "table"; units: Units };
   /** The Race Series (./series.ts): best place per tier, titles, the championship under way. */
   series: SeriesSave;
   /** When the last online payouts were (ms since 1970, newest last): the online bonus's hourly cap
@@ -94,7 +96,7 @@ export function newBike(modelId: string, uid: string, paint = "gridline", number
 }
 /** A profile before the first-run setup: no name, no bike yet. */
 export function fresh(): Profile {
-  return { v: VERSION, name: "", credits: START_CREDITS, ride: 0, bikes: [], kit: { ...STARTER_KIT }, owned: [], stats: { events: 0, wins: 0, earned: 0, best: {}, far: farZero() }, pit: 0, settings: { sound: true, view: "chase" }, series: freshSeries(), online: [] };
+  return { v: VERSION, name: "", credits: START_CREDITS, ride: 0, bikes: [], kit: { ...STARTER_KIT }, owned: [], stats: { events: 0, wins: 0, earned: 0, best: {}, far: farZero() }, pit: 0, settings: { sound: true, view: "chase", units: "imperial" }, series: freshSeries(), online: [] };
 }
 /** The first-run setup: your one starter bike, its paint and number, your name and kit colours. */
 export function setup(p: Profile, o: { starter: string; paint: string; number: number; name: string; kit?: Partial<RiderKit> }): Profile {
@@ -171,7 +173,7 @@ export function normalize(raw: unknown): Profile {
     owned: Array.isArray(o.owned) ? o.owned.filter((s): s is string => typeof s === "string").slice(0, 400) : [],
     stats: { events: int(st.events, 0, 0, 1e9), wins: int(st.wins, 0, 0, 1e9), earned: int(st.earned, 0, 0, 1e12), best, far },
     pit: int(o.pit, 0, 0, 1e6),
-    settings: { sound: set.sound !== false, view: set.view === "table" ? "table" : "chase" },
+    settings: { sound: set.sound !== false, view: set.view === "table" ? "table" : "chase", units: set.units === "metric" ? "metric" : "imperial" },
     series: normSeries(o.series),
     online: (Array.isArray(o.online) ? o.online : []).filter((t): t is number => typeof t === "number" && isFinite(t) && t > 0).slice(-ONLINE.keep),
   };
@@ -189,7 +191,9 @@ export type Migration = (old: Record<string, unknown>) => Record<string, unknown
  *  `.quarry`, `.forest`, `.night-park`), from 0; the desert's best carries over as it was.
  *  4 → 5: the fixed Wheelie City is gone (Endless Wheelie City stays). Its best score
  *  (`stats.best["wheelie:city"]`) carries into Endless Wheelie City's (`"endcity:city"`) when
- *  higher; the old key is kept as it was (read only: nothing writes it now). */
+ *  higher; the old key is kept as it was (read only: nothing writes it now).
+ *  5 → 6: display units (`settings.units`). Every existing save gets Imperial (miles, mph), the
+ *  default; nothing else changes (distances stay saved in world units). */
 export const MIGRATIONS: Record<number, Migration> = {
   1: (o) => {
     const wins = typeof (o.stats as { wins?: unknown } | undefined)?.wins === "number" ? ((o.stats as { wins: number }).wins) : 0;
@@ -208,6 +212,7 @@ export const MIGRATIONS: Record<number, Migration> = {
     if (typeof w === "number" && isFinite(w) && w > 0 && !(typeof e === "number" && e >= w)) best["endcity:city"] = w;
     return { ...o, stats: { ...st, best } };
   },
+  5: (o) => ({ ...o, settings: { ...obj(o.settings), units: "imperial" } }),
 };
 
 /** Anything ever saved → a current profile, or null when it is not a profile at all or comes from a

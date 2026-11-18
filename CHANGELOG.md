@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **Miles by default, km as a setting.** SETTINGS → UNITS: Imperial (miles, mph; the default) or
+  Metric (km, km/h), saved in the profile (schema v6: every existing save migrates to Imperial).
+  Applied wherever a distance shows: the Endless Wheelie City and endless-ground HUD chips (e.g.
+  "1.70 MI"), the BEST lines, the endless picker's bests, the ride summaries and the payout's
+  distance line. Display only: physics, payouts and saved distances stay in world units
+  (1 km = 0.621371 mi, `src/model/units.ts`). Under `?money=inf` the switch is not saved, as every
+  setting there. Tests: `tests/units.test.mjs` (conversions, default, migration, payout label),
+  `tests/units.browser.mjs` (1440 and 390: MI by default, METRIC shows KM and persists across a
+  reload, not saved under test credits).
 - **No more stray miniature buildings in Endless Wheelie City.** Out in the fields a tiny gas
   station (a canopy, pumps, a sign; roofs and windows too) floated near the start and never grew as
   the bike rode at it. The scenery pool hid an object it had not placed with diorama's `hidden`,

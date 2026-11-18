@@ -126,7 +126,7 @@ test("a real round: raced on the autopilot on a generated track, the order score
 });
 
 test("save: v1 → v2 adds the series (three wins open the Pro Circuit); broken series repaired; the code round-trips", () => {
-  assert.equal(P.VERSION, 5);
+  assert.equal(P.VERSION, 6);
   const v1 = { v: 1, name: "OLD", credits: 900, bikes: [{ uid: "b1", model: "anvil" }], stats: { events: 9, wins: 4, earned: 3000, best: { "race:moto-track": 41.2 } } };
   const p = P.migrate(v1);
   assert.deepEqual(p.series, { best: { rookie: 1 }, titles: 0, run: null, last: null });
@@ -149,5 +149,5 @@ test("save: v1 → v2 adds the series (three wins open the Pro Circuit); broken 
   let q = S.enter(rider(), "rookie", 5);
   q = round(q, 2).p;
   assert.deepEqual(P.importCode(P.exportCode(q)).profile.series, q.series);
-  assert.match(P.exportCode(q), /^HS5-/);
+  assert.match(P.exportCode(q), /^HS6-/);
 });
