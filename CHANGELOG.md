@@ -1,5 +1,45 @@
 # Changelog
 
+## Unreleased
+
+### Phone controls
+
+- **The TRICK bubble.** On a touch screen the option actions are no longer keys of their own: a round
+  TRICK bubble pops out of the throttle rocker's side on a stretchy slime tether only while a trick
+  is on (in the air; in a wheelie past 10 o'clock; Big Air: in the air), and in Endless Wheelie City a
+  HOP bubble while on the ground. The thumb slides out onto it without lifting; while it is there the
+  rocker zone it left (gas, brake or both) keeps applying and stays lit, so a wheelie or an air
+  attitude holds; slid back, normal zone control; lifted, everything lets go. The bubble leans after
+  the finger a little. It drives the same intents as the keys (combo, hop, trick), so online it rides
+  the existing input bits (no new wire bits). Desktop keys and gamepads are unchanged.
+- **No standalone JUMP (or TRICK) key** in any mode: it meant letting go of the stick or the gas.
+- **The rocker:** GAS and BRAKE zones square (as tall as the pill is wide, 72 px), the seam 44 px, the
+  pill's ends fully round; 194 px tall instead of 216 in portrait. A held zone presses in (its raised
+  lip goes, the pill sinks) instead of only lighting up. The first-time seam hint moved down so it
+  never sits under a bubble.
+- **The stick** is the same size in landscape as in portrait (94 px, was 81 in landscape) and has
+  the rocker's bottom and side safe-area buffer (it was cut off at the bottom on iPhones in landscape).
+  In landscape the tach sticker moves up clear of it.
+- **One ☰ key on phones.** The corner keys (regroup, reset, view, mute, light/dark) fold into one menu
+  key beside PAUSE; tapped, they open downward as a column (same icon keys, labels and pressed states);
+  tapped again or anywhere else, it closes. The chip bar now sits against the top edge (safe-area
+  aware) with the hint under it, portrait and landscape. Desktop keeps its row.
+- **Cards clear of the controls:** while a card is over the ride (pause, the result) the stick, the
+  rocker and its bubbles are hidden, so the rocker no longer covers the result card's third key.
+- **Fixed: an empty yellow pill mid-screen** in every endless ride: the trick callout's `hidden` was
+  overridden by its own `display:grid`, so its empty name and points boxes showed at rest.
+- **Add to Home Screen:** a web app manifest (full screen, starts at /play/, any orientation, icons
+  192/512 + maskable, an Apple touch icon) and, on a phone browser in landscape, a one-time tip with the
+  platform's how-to (iOS: Share → Add to Home Screen; Android: the menu → Install app, or an INSTALL
+  key where the browser offers it). Dismissible, remembered per browser, never on desktop or once
+  installed.
+- Tests: `tests/controls.browser.mjs` (390×844 and 844×390: stick sizes and safe area, no pad keys,
+  square zones, the brake pressed in, the bubbles' context and one-touch paths gas → HOP → gas,
+  seam → HOP, gas → TRICK → gas, lift releases, Big Air's TRICK in the air, the ☰ column, the chip
+  bar up top, cards hiding the controls, the result card's keys fitting; desktop unchanged);
+  `tests/hud.browser.mjs` (no empty HUD boxes at rest in any mode at 1440 and 390); the stunts test
+  reaches the combo through the bubble; the site test checks the manifest and the tip.
+
 ## 0.4.0 — 2026-11-18
 
 Endless Wheelie City becomes an open world, the endless grounds join ENDLESS, and both ride online

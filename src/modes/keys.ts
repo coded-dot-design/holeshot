@@ -13,13 +13,30 @@ export const ICON = {
   muted: svg(`<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="m16 9 5 6m0-6-5 6"/>`),
   theme: svg(`<path d="M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5z"/>`),
   pause: svg(`<path d="M8 5v14M16 5v14"/>`),
+  more: svg(`<path d="M4 7h16M4 12h16M4 17h16"/>`),
   regroup: svg(`<circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M3 20a5 5 0 0 1 10 0M11 20a5 5 0 0 1 10 0"/>`),
 };
 
 /** The keys' HTML for prefix `p` (`view`: show the view key; `theme`: the page gave a theme switch). */
 export function keysHTML(p: string, o: { reset: string; view?: boolean; theme?: boolean; regroup?: string }) {
   const k = (c: string, label: string, icon: string, extra = "") => `<button type="button" class="${p}-key ${p}-${c}" aria-label="${label}"${extra}>${icon}</button>`;
-  return (o.regroup ? k("regroup", o.regroup, ICON.regroup) : "") + k("reset", o.reset, ICON.reset) + k("view", "Map view (V)", ICON.chase, ` aria-pressed="false"${o.view === false ? " hidden" : ""}`) + k("mute", "Mute (M)", ICON.sound, ` aria-pressed="false"`) + (o.theme ? k("theme", "Light or dark", ICON.theme) : "") + k("menu", "Pause (P)", ICON.pause);
+  const set = (o.regroup ? k("regroup", o.regroup, ICON.regroup) : "") + k("reset", o.reset, ICON.reset) + k("view", "Map view (V)", ICON.chase, ` aria-pressed="false"${o.view === false ? " hidden" : ""}`) + k("mute", "Mute (M)", ICON.sound, ` aria-pressed="false"`) + (o.theme ? k("theme", "Light or dark", ICON.theme) : "");
+  return `<button type="button" class="${p}-key ${p}-more hs-more" aria-label="Ride settings" aria-expanded="false">${ICON.more}</button><span class="hs-keyset">${set}</span>` + k("menu", "Pause (P)", ICON.pause);
+}
+/** Wire the phone's ☰ key in `keys` (the row keysHTML made): it opens and closes the column; a tap
+ *  anywhere outside the row closes it. */
+export function menuKeys(keys: HTMLElement, signal: AbortSignal) {
+  const more = keys.querySelector<HTMLButtonElement>(".hs-more")!;
+  const open = (on: boolean) => {
+    keys.toggleAttribute("data-open", on);
+    more.setAttribute("aria-expanded", "" + on);
+    more.setAttribute("aria-pressed", "" + on);
+  };
+  more.addEventListener("click", () => open(!keys.hasAttribute("data-open")), { signal });
+  (keys.getRootNode() as Document | ShadowRoot).addEventListener("pointerdown", (e) => {
+    if (keys.hasAttribute("data-open") && !keys.contains(e.target as Node)) open(false);
+  }, { signal, capture: true });
+  return { close: () => open(false) };
 }
 /** Paint the view key: pressed in and lit on the map (`map` true), raised in chase. */
 export function paintView(k: HTMLElement, map: boolean) {
