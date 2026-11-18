@@ -136,7 +136,7 @@ try {
     const locked = await $(p, "root.querySelectorAll('.dh-show li[data-locked]').length");
     assert.equal(locked, 10, `${name}: tiers 3 and 4 are locked at 3 events (eight dirt bikes, two street)`);
     await shot(p, `${name}-7-showroom`);
-    assert.equal(await $(p, "root.querySelectorAll('.dh-show .dh-pace-s').length"), 16, `${name}: every showroom bike shows its pace`);
+    assert.equal(await $(p, "root.querySelectorAll('.dh-show .dh-pace-s').length"), 19, `${name}: every showroom bike shows its pace (all nineteen, the street bikes too)`);
     c = (await prof(p)).credits;
     await click(p, "[data-bike=pulse-pedal]");
     q = await prof(p);
