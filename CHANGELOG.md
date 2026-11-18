@@ -64,6 +64,31 @@
 - **Release tags.** CI tags `vX.Y.Z` on `main` when `package.json`'s version has no tag yet (the
   `tag-version` job, after the checks); how to cut a release and the commands that backfill v0.1.0 to
   v0.3.0 are in CONTRIBUTING.md.
+- **Speed readouts are scaled for feel; physics unchanged.** The table is small (1 unit ≈ 1 m),
+  so every speed shown reads ×1.6 (`SPEED_DISPLAY` in `src/model/units.ts`): a top-tier bike reads
+  70+ mph. Display only: the sim, the measurements, distances and saved numbers are untouched.
+- **The faster bikes are a little faster, and every bike has its own pace.** The torque is as it
+  was (the curves and the lower gears untouched); the top gear stretches with the tier (×1, ×1.025,
+  ×1.05, ×1.08: `TOP_STRETCH` in `src/data/roster.ts`), so a tier 4 bike runs about 7 % further at
+  the top and a starter is unchanged. Measured on the sim (full gas on the flat; stock, new), 0–30 /
+  0–60 mph / top as shown: YX-125 0.91 / 2.18 s / 63 mph … YX-250 0.74 / 1.55 s / 73 mph (was 68);
+  REDLINE 150F 0.92 / 2.90 s / 61 … 450 WORKS 0.76 / 2.12 s / 70 (was 65); KIT FOX 0.87 s / never /
+  46 … SILVER FOX 0.61 s / never / 58 (was 53); LIGHT HORNET 0.67 s / never / 56 … ALPHA WOLF 0.52 /
+  1.10 s / 67 (was 62). The fastest bike is under 20 % over the slowest gas starter, so stock races
+  of one class stay close. The garage's TOP SPEED bar now reads against 21 units/s (was 19), so the
+  quicker bikes don't all pin it.
+- **PACE in the garage.** PARTS & MODS shows the riding bike's 0–30 mph, 0–60 mph and top speed as
+  tuned (wear, gearing, motor map and mods all move it; NEVER when it can't reach 60), and every
+  showroom card shows the model's new numbers; 0–50 / 0–100 km/h when the units are metric. Each
+  number is measured on the sim once per tuned bike (about 4 ms; `src/model/pace.ts`), not guessed;
+  tests: `tests/pace.test.mjs` (every model and setup).
+- **Gear changes you can hear.** The gas bikes shift out loud: an upshift cuts the ignition for
+  70 ms while the revs fall to the next gear, a downshift blips the revs. The electric bikes are one
+  smooth whine that follows the road speed (an e-bike's hub gears are never heard). Mute silences it
+  all (`src/bike/kit.ts` `voice`; tests: `tests/voice.test.mjs`).
+- **Size budget 188,000 B gzip** (was 184,000): r6 and r7 together measure 184,788 B (holeshot.js;
+  +2,328 B over main's 182,460: the bike layers, turntable, speed chip and icon keys; the measured
+  pace, PACE rows, top-gear stretch and gear-change voice), plus about 3.2 KB of room.
 
 - **Test credits: `/play/?credits=inf` (or `?money=inf`).** For trying every bike: the garage shows
   ◈ ∞ and a TEST CREDITS ∞ chip, the showroom sells every bike (unlocks open), every part, mod, tune

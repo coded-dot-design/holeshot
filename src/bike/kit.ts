@@ -51,11 +51,21 @@ export function pool(d: Diorama, cap: number, color: string, layer: number) {
 }
 export type Pool = ReturnType<typeof pool>;
 
+/** Gear-change sound for the gas bikes (seconds, and shares): an upshift cuts the ignition for
+ *  CUT seconds (the gain drops to CUT_GAIN) while the revs fall to the next gear; a downshift
+ *  blips the throttle (the pitch jumps by BLIP for BLIP_T seconds, a touch louder). */
+export const CUT = 0.07, CUT_GAIN = 0.18, BLIP = 1.16, BLIP_T = 0.09;
+/** An electric bike's motor (one smooth whine whatever its hub's gears): the name says it. */
+export const electric = (p: Power) => p.name.startsWith("E-");
+
 /** The engine's voice: two oscillators through one gain, pitch from the revs, louder on the gas.
+ *  A gas bike shifts (`gear` changes): a short cut on the way up, a blip on the way down. An
+ *  electric bike is one gear: its whine follows the road speed over its top speed, so a hub's gear
+ *  steps are never heard. Muted (`on` false) it is silent, shifts and all.
  *  Nothing is made until `wake()` from a gesture; `set()` each frame is a few AudioParam writes. */
 export function voice() {
   let ac: AudioContext | null = null, g: GainNode | null = null, o1: OscillatorNode | null = null, o2: OscillatorNode | null = null, on = true;
-  let lo = 90, hi = 320;
+  let lo = 90, hi = 320, e = false, top = 15, last = -1, cutEnd = 0, blipEnd = 0;
   function wake(p: Power) {
     if (!ac) {
       const A = (globalThis as { AudioContext?: typeof AudioContext }).AudioContext;
@@ -76,15 +86,27 @@ export function voice() {
   }
   function use(p: Power) {
     [lo, hi] = p.voice;
+    e = electric(p);
+    top = p.gears[p.gears.length - 1]! || 15;
+    last = -1;
     if (o1 && o2) (o1.type = p.voice[2]), (o2.type = p.voice[2] === "sine" ? "triangle" : "square");
   }
-  /** Revs 0..1, throttle 0..1, `live` false fades it out (paused, crashed, the card). */
-  function set(rpm: number, thr: number, live: boolean) {
+  /** Revs 0..1, throttle 0..1, `live` false fades it out (paused, crashed, the card); the gear
+   *  (0 first) and the speed (units/s) for the shifts and the electric whine. */
+  function set(rpm: number, thr: number, live: boolean, gear = 0, v = 0) {
     if (!ac || !g || !o1 || !o2) return;
-    const t = ac.currentTime, f = lo + (hi - lo) * Math.max(0, Math.min(1.05, rpm));
-    o1.frequency.setTargetAtTime(f, t, 0.03);
-    o2.frequency.setTargetAtTime(f * 0.5 + 3, t, 0.03);
-    g.gain.setTargetAtTime(on && live ? 0.018 + thr * 0.035 : 0, t, 0.05);
+    const t = ac.currentTime;
+    if (!e && live && last >= 0 && gear !== last) {
+      if (gear > last) cutEnd = t + CUT;
+      else blipEnd = t + BLIP_T;
+    }
+    last = live ? gear : -1;
+    const av = v < 0 ? -v : v, x = e ? Math.min(1.05, (av / top) * 0.9 + thr * 0.1) : Math.max(0, Math.min(1.05, rpm));
+    const cut = t < cutEnd, blip = t < blipEnd, f = (lo + (hi - lo) * x) * (blip ? BLIP : 1);
+    o1.frequency.setTargetAtTime(f, t, blip ? 0.012 : 0.03);
+    o2.frequency.setTargetAtTime(f * 0.5 + 3, t, blip ? 0.012 : 0.03);
+    const gain = on && live ? (0.018 + thr * 0.035) * (cut ? CUT_GAIN : blip ? 1.25 : 1) : 0;
+    g.gain.setTargetAtTime(gain, t, cut ? 0.008 : 0.05);
   }
   return {
     wake, use, set,

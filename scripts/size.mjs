@@ -43,7 +43,10 @@ import { readdirSync, readFileSync } from "node:fs";
 // Unreleased, the open world's road ribbons: 180,285 B measured (holeshot.js; +3,291 B over 176,994:
 // the asphalt, shoulders, rings and islands drawn as ribbons along the roads' true curves, the
 // window's drawn kinds under them, the probe's bare draw), plus about 3.7 KB of room.
-const BUDGET = 184_000;
+// Unreleased, integration of r6 and r7: 184,788 B measured (holeshot.js; +2,328 B over 182,460 on main with the stray-parts fix: r6's
+// bike layers (level and side groups), the turntable, the speed chip, the icon keys; r7's measured
+// pace and the garage's PACE rows, the top-gear stretch, the gear-change voice), plus about 3.2 KB of room.
+const BUDGET = 188_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

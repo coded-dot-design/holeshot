@@ -96,8 +96,18 @@ const emoto = (force: number, mass: number, top: number): Power => ({
 /** A pedal e-bike's shorter frame (quick to lift). */
 const EB = { rear: -0.6, front: 0.6, drop: 0.4, radius: 0.34 };
 const S = (travel: number, damp = 0.62, caseDrop = 26) => ({ travel, sag: 0.09, damp, caseDrop });
+/** The top gear stretches with the tier (1 starter .. 4): the better bikes keep their torque (the
+ *  lower gears and the curve are untouched) and run on a little further at the top. Small steps: the
+ *  stretch gives a tier 4 bike about 3 mph more at the top (a starter none), so a race on stock bikes
+ *  of one class stays close. Measured: tests/pace.test.mjs, the garage's PACE row. */
+export const TOP_STRETCH = [1, 1.025, 1.05, 1.08] as const;
+const tall = (p: Power, tier: number): Power => {
+  const g = Array.from(p.gears), k = TOP_STRETCH[tier - 1] ?? 1;
+  g[g.length - 1] = g[g.length - 1]! * k;
+  return { ...p, gears: g };
+};
 
-export const MODELS: Model[] = [
+export const MODELS: Model[] = ([
   // 2-strokes: YAMADA and KAWAZAKURA. Cheap rebuilds, often. The YX-250 is the class's best snap.
   { id: "buzzline", cls: "2t", maker: "yamada", name: "YX-125 2T", blurb: "The little blue screamer every kid starts on. Nothing down low, a hard hit up top.", price: 1800, tier: 1, upkeep: { wear: 1, cost: 1 }, power: two(18, 0.9, 1, 1), susp: S(0.28), sweet: 0.08, hop: 5.4 },
   { id: "razorhive", cls: "2t", maker: "kawazakura", name: "LIMEFANG 150 2T", blurb: "Lime-green and short-tempered. Light, twitchy, bites at the top of the revs.", price: 3600, tier: 2, upkeep: { wear: 1.1, cost: 1.1 }, power: two(19.5, 0.88, 1.02, 1.04), susp: S(0.3, 0.64, 27), sweet: 0.075, hop: 5.6 },
@@ -118,7 +128,7 @@ export const MODELS: Model[] = [
   { id: "gridrat", cls: "emoto", maker: "surgeon", name: "ULTRA HORNET", blurb: "Bigger cells, longer legs, the same sting. Rides the city's spare current.", price: 3900, tier: 2, upkeep: { wear: 0.9, cost: 1.05 }, power: emoto(14.6, 0.82, 1.03), susp: S(0.3, 0.64, 27), sweet: 0.07, hop: 5.8 },
   { id: "overcharge", cls: "emoto", maker: "starkwolf", name: "GREYWOLF MX", blurb: "A wolf's motor and the cooling to keep it. Pulls to the far fence.", price: 6000, tier: 3, upkeep: { wear: 0.95, cost: 1.15 }, power: emoto(16, 0.86, 1.06), susp: S(0.32, 0.66, 28), sweet: 0.075, hop: 5.8 },
   { id: "feral-coil", cls: "emoto", maker: "starkwolf", name: "ALPHA WOLF", blurb: "The pack leader. Brutal on the gas, silent, gentle on nothing.", price: 8600, tier: 4, upkeep: { wear: 1.05, cost: 1.3 }, power: emoto(17.4, 0.84, 1.1), susp: S(0.34, 0.68, 30), sweet: 0.07, hop: 6 },
-];
+] as Model[]).map((m) => ({ ...m, power: tall(m.power, m.tier) }));
 
 
 /** A model's maker. */

@@ -507,7 +507,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
     },
     render() {
       if (hudDirty) (hudDirty = false), hudWrite();
-      vox.set(me.rpm, me.throttle, (show.phase === RUN || show.phase === READY) && !me.crashed && !paused && !ended);
+      vox.set(me.rpm, me.throttle, (show.phase === RUN || show.phase === READY) && !me.crashed && !paused && !ended, me.gear, me.speed);
       if (!dirty) return;
       dirty = false;
       pose();
