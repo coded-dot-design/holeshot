@@ -1,9 +1,9 @@
 // The helmet's draw order in Chromium: its face shows from the front and never through the back of the
 // shell. The rig (src/bike/rig.ts) on a bare diorama, bundled here with esbuild, every helmet shape, in
 // five poses (standing, seated, wheelie, handstand, crashed), at 24 yaws (15° steps) × three pitches
-// (low, level, from above), the camera on the head. Each case draws the shell alone (a mask), then the
+// (low, level, from above), the camera on the head. Each case draws the shell alone (its slabs and the chin bar: a mask), then the
 // whole frame with the goggle's lens and glint in a green probe and every other face part (frame,
-// chin bar, peak, its root, the open face) in a magenta one. With the eye within 60° of the face,
+// the dome's rim, the peak, the open face) in a magenta one. With the eye within 60° of the face,
 // the lens shows (≥ 40 green px); more than 100° round from it, no green at all, and no magenta
 // inside the shell's outline (eroded 2 px for its edge): a face part may stand out past the shell's
 // edge, never show through it. MEDIA=<dir> saves a 24-yaw sheet of the head per pitch.
@@ -28,7 +28,7 @@ const under = (ob, id) => { for (let p = ob; p; p = p.parent) if (p.id === id) r
 function setup(helmet) {
   d.clear();
   const g = rig(d, "b", C, "2t", helmet), bk = bike(flat, TWO_STROKE);
-  const head = d.get("b:h"), shell = g.parts.filter((p) => p.parent === head && p.shape === "cyl" && p.color === C.helmet);
+  const head = d.get("b:h"), shell = g.parts.filter((p) => p.parent === head && (p.shape === "cyl" || p.shape === "prism") && p.color === C.helmet);
   const face = g.parts.filter((p) => under(p, "b:hf"));
   const lens = face.filter((p) => p.color === C.visor || p.emissive);
   return { g, bk, head, shell, face, lens, rest: face.filter((p) => !lens.includes(p)) };

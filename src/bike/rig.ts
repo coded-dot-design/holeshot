@@ -102,14 +102,29 @@ function ik(ax: number, ay: number, bx: number, by: number, l1: number, l2: numb
   J[0] = a1; J[1] = Math.atan2(ay + dy - my, ax + dx - mx); J[2] = mx; J[3] = my;
 }
 
+/** The helmet's side profiles, the portrait's (../garage/portrait.ts) in its units ([x, y], y down,
+ *  facing +x): the MX shell (round at the back and under it), its chin bar, the street dome, the open
+ *  face, the dome's visor and the peaks. */
+const SHELL = [[-30, 38], [-41, 29], [-46, 10], [-46, -10], [-41, -28], [-28, -40], [-8, -46], [14, -46], [29, -41], [39, -30], [44, -14], [46, 2], [42, 28], [12, 41]];
+const CHIN = [[34, -3], [46, 2], [74, 24], [58, 46], [10, 42], [16, 18]];
+const DOME = [[-30, 40], [-42, 30], [-48, 8], [-46, -22], [-30, -42], [0, -50], [26, -44], [44, -30], [54, -8], [58, 18], [50, 36], [30, 43]];
+const OPEN = [[-30, 38], [-41, 29], [-46, 10], [-46, -10], [-41, -28], [-28, -40], [-8, -46], [14, -46], [29, -41], [39, -30], [44, -14], [44, -2], [24, 4], [18, 20], [22, 38]];
+const VISOR = [[2, -28], [30, -36], [45, -26], [53, -8], [55, 8], [30, 13], [2, 8]];
+const PEAK: Partial<Record<RigHelmet, number[][]>> = {
+  peak: [[-10, -44], [40, -54], [78, -62], [76, -40], [34, -26]],
+  duck: [[-10, -44], [40, -52], [98, -52], [96, -34], [34, -26]],
+  retro: [[2, -44], [36, -50], [56, -48], [54, -36], [20, -32]],
+};
+PEAK.fin = PEAK.spike = PEAK.peak;
+
 /** A bike and its rider in diorama `d`, named `id`: `pose(bike)` each frame before `d.draw()`. */
 export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", helmet: RigHelmet = "peak") {
   const root = d.add({ id, shape: "group", size: [1.9, 0, 0.8], tag: { bike: id } });
   const rid = id + ":r";
   const rider = d.add({ id: rid, shape: "group", size: [0.6, 0, 0.5], on: id });
   const parts: DioramaObject[] = [];
-  const part = (size: number[], pos: number[], color: string, o: { shape?: "box" | "wedge" | "cyl" | "prism"; on?: string; rot?: number[]; sides?: number; top?: number; outline?: number[][]; mask?: number; emissive?: boolean; layer?: number } = {}) => {
-    const p = d.add({ shape: o.shape || "box", size, pos, rot: o.rot, on: o.on || id, color, sides: o.sides, top: o.top, outline: o.outline, mask: o.mask, emissive: o.emissive, layer: o.layer, pick: false });
+  const part = (size: number[], pos: number[], color: string, o: { shape?: "box" | "wedge" | "cyl" | "prism"; on?: string; rot?: number[]; sides?: number; top?: number; taper?: number; outline?: number[][]; mask?: number; emissive?: boolean; layer?: number } = {}) => {
+    const p = d.add({ shape: o.shape || "box", size, pos, rot: o.rot, on: o.on || id, color, sides: o.sides, top: o.top, taper: o.taper, outline: o.outline, mask: o.mask, emissive: o.emissive, layer: o.layer, pick: false });
     parts.push(p);
     return p;
   };
@@ -252,21 +267,27 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
   const torso = group(id + ":t", rid);
   part([TORSO, 0.2, 0.32], [TORSO / 2, -0.1, 0], C.jersey, { on: id + ":t" });
   part([0.12, 0.21, 0.33], [TORSO * 0.62, -0.105, 0], C.stripe, { on: id + ":t", layer: 5 });
-  // The helmet, shaped like the game art's (the box art's and the icon's), HS × the old one's size: a
-  // round shell (a drum, a crown and a cap, 14 sides), the goggle (its frame, the lens in the visor tint
-  // standing proud of the shell, a glint that reads on a dark visor), a strap going back from the goggle
-  // on each side, the chin bar jutting forward and down, and the peak coming off the crown's front and
-  // sweeping up, thick at the root (a wedge under it) and narrowing to the tip.
+  // The helmet, the portrait's side profile in 3D (../garage/portrait.ts: its shell, peak, goggle,
+  // chin bar and open face, in the portrait's units, PK of the old size each): every piece is that
+  // outline extruded across the head as slabs, a full one in the middle and two on each side, each
+  // side slab's outer face the profile shrunk toward the head's centre (a prism's `taper`), so side-on
+  // it is the portrait's outline and from the front or the back it rounds off, round at the back and
+  // under it. The goggle (a thick frame in the band, the lens in the visor tint standing proud of it, a
+  // glint) sits in front of the shell; the strap is the shell's slabs again, a band a little bigger
+  // than the shell from the back round to the goggle; the chin bar is a narrower slab jutting forward and
+  // down, stepped from the shell; the peak is a profile too, its sides shrunk toward its root.
   // Its draw order (the rider is layer 7; faces in one layer sort by depth, back faces are culled):
-  //   6.1–6.45  facing away (the face group and a strap on the far side drop by 1): under the shell
-  //   7         the shell (drum, crown, cap), like the torso, the arms and the legs on the near side
-  //   7.1       the near side's strap; the fin and the spikes (on the crown, over it from any side)
-  //   7.2       the goggle's frame (the visor's rim on the dome), the open face's dark opening
-  //   7.25      the chin bar          7.3  the lens (its front face only), the peak's root wedge
+  //   6.1–6.4   facing away (the face group and the far side's strap drop by 1): under the shell
+  //   7         the shell's slabs, the chin bar's, the dome's visor rim (solids, sorted together by
+  //             depth), like the torso, the arms and the legs on the near side
+  //   7.1       the strap (each side's half under the shell from the other side); the fin and the
+  //             spikes (on the crown, over it from any side)
+  //   7.2       the goggle's frame, the open face's dark face
+  //   7.3       the lens (the dome's visor)
   //   7.35      the peak              7.4  the glint (its front face only)
   // The face hangs from a group just in front of the head's centre (x END: only whether the eye is in
-  // front of the face or behind it counts), each strap from a group just off it to its side, both with
-  // `behind`, as the far leg and arm are; the swap at exactly side-on only hides what is inside the
+  // front of the face or behind it counts) with `behind`, as the far leg and arm
+  // are; the swap at exactly side-on only hides what is inside the
   // shell's outline then (tests/helmet.browser.mjs sweeps the yaws and pitches).
   const HS = 1.18, head = group(id + ":h", rid), hf = id + ":hf", ho = { on: id + ":h" }, fo = { on: hf };
   const dome = helmet === "dome", open = helmet === "retro";
@@ -275,39 +296,53 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
   // The goggle's frame: the stripe, or (a stripe the shell's own colour) a dark or light band; the
   // strap is the band toward the shell's colour, so it reads as a strap, not a stripe round the head.
   const band = bandOf(C.helmet, C.stripe), strap = mix(band, C.helmet, 0.4);
-  /** A side profile ([x, y] points, front +x) as a prism `w` wide, centred across the head. */
-  const profile = (pts: number[][], w: number, color: string, layer: number) => part([0, w * HS, 0], [0, 0, (-w / 2) * HS], color, { ...fo, shape: "prism", outline: pts.map(([x, y]) => [x! * HS, -y! * HS]), rot: [PI / 2, 0, 0], layer });
-  const shell = { ...ho, shape: "cyl" as const, sides: 14, layer: 7 };
-  hp([0.29, 0.18, 0.27], [0.02, -0.05, 0], C.helmet, { ...shell, top: 0.95 });
-  hp([0.2755, 0.08, 0.2565], [0.02, 0.13, 0], C.helmet, { ...shell, top: 0.78 });
-  hp([0.215, 0.04, 0.2], [0.02, 0.21, 0], C.helmet, { ...shell, top: 0.5 });
-  d.add({ id: hf, shape: "group", size: [0.2, 0, 0.2], pos: [END, 0, 0], on: id + ":h", behind: 1, pick: false });
-  if (dome) {
-    // A street full-face: a big visor in its rim, a flush chin, no peak.
-    hp([0.03, 0.115, 0.245], [0.142, 0.022, 0], band, { ...fo, layer: 7.2 });
-    hp([0.035, 0.095, 0.225], [0.152, 0.032, 0], C.visor, { ...fo, layer: 7.3, mask: 4 });
-  } else {
-    hp([0.05, 0.095, 0.2], [0.138, 0.035, 0], band, { ...fo, layer: 7.2 });
-    hp([0.03, 0.065, 0.16], [0.162, 0.05, 0], C.visor, { ...fo, layer: 7.3, mask: 4 });
-    // The strap, back from the goggle's side along the shell (each on its side's group).
-    for (const sd of [-1, 1]) {
-      const gid = id + (sd < 0 ? ":hsL" : ":hsR");
-      d.add({ id: gid, shape: "group", size: [0.2, 0, 0.2], pos: [0, 0, sd * END], on: id + ":h", behind: 1, pick: false });
-      hp([0.16, 0.03, 0.012], [0.05, 0.068, sd * 0.11], strap, { on: gid, rot: [0, sd * 0.35, 0], layer: 7.1 });
+  /** Portrait units to the old size, and the head's centre (the portrait's 0, 0) in it. */
+  const PK = 0.0033, O = [0.015, 0.105];
+  /** Outline `pts` (portrait [x, y], y down) about [ox, oy], extruded across the head: a slab `w` wide
+   *  in the middle (`half` 1: halves, one on each side's group; 2: none) and on each side a slab `w1` (its outer face
+   *  scaled `t1`) and one `w2` (`t2`), the -z side on `on[0]` and the +z side on the last. Old size. */
+  const slabs = (pts: number[][], w: number, w1: number, t1: number, w2: number, t2: number, color: string, layer: number, on: string[], oxy = O, half = 0) => {
+    for (const sd of [-1, 0, 1]) {
+      if (!sd && half) continue;
+      const g = on[sd > 0 ? on.length - 1 : 0]!;
+      for (const [z0, ww, sc, tp] of sd ? [[half ? 0 : w / 2, half > 1 ? 0 : half ? w / 2 : 0, 1, 1], [w / 2, w1, 1, t1], [w / 2 + w1, w2, t1, t2]] : [[-w / 2, w, 1, 1]]) {
+        if (!ww) continue;
+        // Its outer face (the prism's bottom, scaled by `taper`) at z0 + ww out to its side.
+        part([0, ww! * HS, 0], [oxy[0]! * HS, oxy[1]! * HS, (sd ? sd * (z0! + ww!) : z0!) * HS], color, { on: g, shape: "prism", taper: tp, layer, rot: [sd > 0 ? -PI / 2 : PI / 2, 0, 0],
+          outline: pts.map(([x, y]) => [x! * PK * sc! * HS, (sd > 0 ? -y! : y!) * PK * sc! * HS]) });
+      }
     }
+  };
+  const SH = [0.1, 0.055, 0.86, 0.03, 0.62] as const;
+  slabs(dome ? DOME : open ? OPEN : SHELL, ...SH, C.helmet, 7, [id + ":h"]);
+  d.add({ id: hf, shape: "group", size: [0.2, 0, 0.2], pos: [END, 0, 0], on: id + ":h", behind: 1, pick: false });
+  const k = (pts: number[][], s: number) => pts.map(([x, y]) => [x! * s, y! * s]);
+  if (dome) {
+    // A street full-face: the big visor in its rim, wrapping round the front of the shell, a flush chin.
+    // The lens inside the shell's own slabs (never past its outline), the rim standing proud of it.
+    slabs(k(VISOR, 1.06), 0.1, 0.055, 0.86, 0, 1, band, 7, [id + ":h"]);
+    slabs(k(VISOR, 0.98), ...SH, C.visor, 7.3, [hf]);
+  } else {
+    // The strap: the shell's band round from the back to the goggle, a little bigger than the shell; its
+    // middle slab on the head, each side's slabs on a group off that side and a little back (`behind`:
+    // under the shell once the eye is round the other side, still shown from straight behind).
+    const S = k([[-47, -21], [45, -21], [47, -3], [-47, -3]], 1.04);
+    slabs(S, SH[0], 0, 1, 0, 1, strap, 7.1, [id + ":h"]);
+    slabs(S, ...SH, strap, 7.1, [-1, 1].map((sd) => {
+      const gid = id + (sd < 0 ? ":hsL" : ":hsR");
+      d.add({ id: gid, shape: "group", size: [0.2, 0, 0.2], pos: [-0.7 * END, 0, sd * END], on: id + ":h", behind: 1, pick: false });
+      return gid;
+    }), O, 2);
+    // The goggle: a thick frame proud of the shell, the lens proud of the frame.
+    hp([0.15, 0.105, 0.17], [O[0]! + 31 * PK, O[1]! + 7 * PK - 0.0525, 0], band, { ...fo, layer: 7.2 });
+    hp([0.02, 0.072, 0.13], [O[0]! + 55 * PK, O[1]! + 7 * PK - 0.036, 0], C.visor, { ...fo, layer: 7.3, mask: 4 });
   }
-  hp([0.008, 0.018, 0.045], [dome ? 0.17 : 0.178, 0.09, 0.05], mix(C.visor, "#ffffff", 0.72), { ...fo, layer: 7.4, emissive: true, mask: 4 });
-  if (open) hp([0.04, 0.075, 0.15], [0.125, -0.05, 0], "#2a2233", { ...fo, layer: 7.2 });
-  else profile(dome ? [[0.12, 0.035], [0.175, 0.015], [0.16, -0.055], [0.04, -0.06]] : [[0.11, 0.05], [0.225, 0.02], [0.2, -0.065], [0.04, -0.07]], dome ? 0.22 : 0.19, C.helmet, 7.25);
-  if (!dome) {
-    // The peak: a plan (x, z) tapering to the tip, a slab raked up from its root inside the crown's front.
-    const long = helmet === "duck" ? 0.37 : open ? 0.17 : 0.29, w = open ? 0.1 : 0.115, tip = open ? 0.07 : 0.075, rake = helmet === "duck" ? 0.3 : open ? 0.16 : 0.4;
-    const R = [0.06, open ? 0.16 : 0.15];
-    part([0, 0.026 * HS, 0], [R[0]! * HS, R[1]! * HS, 0], C.stripe, { ...fo, shape: "prism", rot: [0, 0, rake], layer: 7.35,
-      outline: [[0, -w], [long * 0.48, -w], [long * 0.93, -tip], [long, -0.03], [long, 0.03], [long * 0.93, tip], [long * 0.48, w], [0, w]].map(([x, z]) => [x! * HS, z! * HS]) });
-    // Its root, thick under the slab where it meets the crown, thinning out along it.
-    if (!open) hp([long * 0.6, 0.045, 0.2], [R[0]! + long * 0.3 * Math.cos(rake), R[1]! + long * 0.3 * Math.sin(rake), 0], C.stripe, { ...fo, shape: "wedge", rot: [PI, PI, rake], layer: 7.3 });
-  }
+  hp([0.008, 0.018, 0.045], [dome ? 0.22 : 0.21, dome ? 0.12 : 0.137, 0.04], mix(C.visor, "#ffffff", 0.72), { ...fo, layer: 7.4, emissive: true, mask: 4 });
+  if (open) slabs([[24, 4], [44, 4], [50, 18], [44, 30], [24, 38], [19, 20]], 0.12, 0.02, 0.9, 0, 1, "#2a2233", 7.2, [hf]);
+  else if (!dome) slabs(CHIN, 0.1, 0.035, 0.85, 0, 1, C.helmet, 7, [id + ":h"]);
+  const pk = PEAK[helmet];
+  // The peak: its side profile, its sides shrunk toward its root (thinner and shorter at the edges).
+  if (pk) slabs(pk.map(([x, y]) => [x! - pk[0]![0]!, y! - pk[0]![1]!]), 0, open ? 0.1 : 0.115, 0.62, 0, 1, C.stripe, 7.35, [hf], [O[0]! + pk[0]![0]! * PK, O[1]! - pk[0]![1]! * PK], 1);
   // A shark fin along the crown (a side profile, thin across the head), glowing.
   if (helmet === "fin") part([0, 0.03 * HS, 0], [0, 0, -0.015 * HS], C.stripe, { ...ho, shape: "prism", outline: [[-0.11, 0.21], [0.07, 0.235], [-0.07, 0.315], [-0.14, 0.24]].map(([x, y]) => [x! * HS, -y! * HS]), rot: [PI / 2, 0, 0], layer: 7.1, emissive: true });
   if (helmet === "spike") for (let i = 0; i < 3; i++) hp([0.05, 0.08, 0.04], [-0.09 + i * 0.065, 0.225 - i * 0.012, 0], C.stripe, { ...ho, shape: "cyl", sides: 4, top: 0, layer: 7.1 });
