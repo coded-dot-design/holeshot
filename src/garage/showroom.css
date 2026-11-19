@@ -1,0 +1,6 @@
+/* Holeshot's showroom (./showroom.ts): on the Showroom tab the catalogue brings its own preview panel
+   (the turntable moves into it), so the garage's bike panel steps aside and the host takes the row. */
+.dh-garage[data-tab=showroom] .dh-gwrap{grid-template-columns:minmax(0,1fr)}
+.dh-garage[data-tab=showroom] .dh-bikep{display:none}
+@media (min-width:900px){.dh-garage[data-tab=showroom] .shop-cat{grid-template-columns:minmax(0,480px) minmax(0,1fr);gap:30px}}
+@media (min-width:900px) and (min-height:700px){.dh-garage[data-tab=showroom] .shop-cat-pv{position:sticky;top:110px}}

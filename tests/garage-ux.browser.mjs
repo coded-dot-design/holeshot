@@ -51,31 +51,32 @@ try {
     const ink0 = await ink(p);
     // ---- the showroom (mounted into the garage's Showroom tab); at 1440 the bike panel stays in view while the list scrolls ----
     await click(p, "[data-gtab=showroom]");
-    await until(p, "root.querySelectorAll('.dh-showroom .dh-show [data-pv^=\"bike:\"]').length === 19", `${name}: the showroom lists all nineteen bikes`);
-    const dock = () => $(p, "(() => { const d = root.querySelector('.dh-bikep').getBoundingClientRect(), v = root.querySelector('.dh-preview').getBoundingClientRect(); return { top: d.top, bottom: d.bottom, pv: [v.top, v.bottom, v.height], scroll: root.querySelector('.dh-cards').scrollTop, H: innerHeight }; })()");
+    while (await $(p, "!!root.querySelector('[data-shop-more]')")) await click(p, "[data-shop-more]");
+    await until(p, "root.querySelectorAll('.dh-showroom .shop-cat-item').length === 19", `${name}: the showroom lists all nineteen bikes`);
+    const dock = () => $(p, "(() => { const d = root.querySelector('.shop-cat-pv').getBoundingClientRect(), v = root.querySelector('.dh-preview').getBoundingClientRect(); return { top: d.top, bottom: d.bottom, pv: [v.top, v.bottom, v.height], scroll: root.querySelector('.dh-cards').scrollTop, H: innerHeight }; })()");
     await $(p, "root.querySelector('.dh-cards').scrollTop = 1e6");
     await until(p, "root.querySelector('.dh-cards').scrollTop > 400", `${name}: the list scrolls`);
     const D = await dock();
     if (name === "desktop") {
-      assert.ok(D.pv[0] >= 0 && D.pv[1] <= D.H && D.pv[2] >= 100, `${name}: the bike panel's turntable stays in view (${D.pv})`);
+      assert.ok(D.pv[0] >= 0 && D.pv[1] <= D.H && D.pv[2] >= 100, `${name}: the preview's turntable stays in view (${D.pv})`);
       assert.ok(await $(p, "root.querySelector('.dh-ghead').getBoundingClientRect().top >= -1"), `${name}: the header stays at the top`);
     }
     await shot(p, `${name}-1-scrolled`);
-    // ---- a showroom bike: tap → PREVIEW on the turntable, BUY / CANCEL, the pace against yours ----
+    // ---- a showroom bike: tap its picture → on the turntable in the showroom's preview, the pace
+    // against yours; back to the garage puts your bike back ----
     await $(p, "root.querySelector('.dh-cards').scrollTop = 0");
-    await inkIs(p, ink0, `${name}: the showroom tab keeps your bike on the turntable`);
     let c = (await prof(p)).credits;
-    await click(p, "[data-pv='bike:anvil'] .dh-mod");
-    await until(p, "!!root.querySelector('.dh-pin [data-bike=anvil]')", `${name}: the bike is pinned with its BUY`);
+    await click(p, "[data-gtab=showroom]");
+    await click(p, "[data-shop-pick=razorhive]");
+    await until(p, "root.querySelector('[data-shop-pick=razorhive]').getAttribute('aria-pressed') === 'true'", `${name}: the bike is on the turntable`);
     await inkNot(p, ink0, `${name}: the turntable shows the showroom bike`);
-    const card = await $(p, "root.querySelector(\"[data-pv='bike:anvil'] .dh-mod b\").textContent");
-    assert.ok((await $(p, "root.querySelector('.dh-pvinfo').textContent")).toLowerCase().includes(card.split(" ").slice(1).join(" ").toLowerCase()) && await $(p, "!!root.querySelector('.dh-pvinfo .dh-pvtag')"), `${name}: the dock says PREVIEW and names ${card}`);
-    assert.ok(await $(p, "root.querySelectorAll('.dh-pace-bay em').length") >= 2, `${name}: the pace chips show the preview against yours`);
+    const card = await $(p, "root.querySelector('[data-shop-id=razorhive] .shop-name').textContent");
+    assert.ok((await $(p, "root.querySelector('.shop-cat-pv .shop-title').textContent")).includes(card), `${name}: the preview names ${card}`);
+    assert.equal(await $(p, "root.querySelectorAll('.shop-cat-cmp .shop-stat em').length"), 3, `${name}: the pace tiles show it against yours`);
     assert.equal((await prof(p)).credits, c, `${name}: previewing is free`);
     await shot(p, `${name}-2-showroom-preview`);
-    await click(p, ".dh-pin [data-untry]");
-    await until(p, "!root.querySelector('.dh-pin') && !root.querySelector('.dh-pvtag')", `${name}: CANCEL`);
-    await inkIs(p, ink0, `${name}: CANCEL puts your bike back`);
+    await click(p, "[data-gtab=garage]");
+    await inkIs(p, ink0, `${name}: the garage puts your bike back`);
     // ---- a family upgrade (the motor swap on an electric): tap the row ----
     await click(p, "[data-gtab=garage]");
     await click(p, "[data-gsub=up]");
@@ -98,9 +99,10 @@ try {
     await inkIs(p, ink0, `${name}: CANCEL takes the paint off`);
     assert.equal((await prof(p)).bikes[0].look.paint, "acid", `${name}: nothing was bought`);
     if (!touch) {
-      // ---- pointing: hover a showroom card previews it; moving off restores ----
-      await click(p, "[data-gtab=showroom]");
-      const at = await $(p, "(() => { const r = root.querySelector('[data-pv=\"bike:razorhive\"]').getBoundingClientRect(); return { x: r.x + 40, y: r.y + 20 }; })()");
+      // ---- pointing: hover an upgrade previews it; moving off restores ----
+      await click(p, "[data-gtab=bike]");
+      await click(p, "[data-gsub=up]");
+      const at = await $(p, "(() => { const e = root.querySelector('[data-pv=\"mod:swap\"]'); e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect(); return { x: r.x + 40, y: r.y + 20 }; })()");
       await p.mouse.move(at.x, at.y);
       await until(p, "!!root.querySelector('.dh-pvinfo .dh-pvtag')", `${name}: pointing shows PREVIEW`);
       await inkNot(p, ink0, `${name}: pointing swaps the turntable's bike`);
@@ -108,6 +110,7 @@ try {
       await p.mouse.move(5, 5);
       await until(p, "!root.querySelector('.dh-pvinfo .dh-pvtag')", `${name}: moving off`);
       await inkIs(p, ink0, `${name}: moving off restores your bike`);
+      await $(p, "root.querySelector('.dh-cards').scrollTop = 0");
       // ---- keyboard: focus on a swatch previews it and says so ----
       await click(p, "[data-gtab=garage]");
       await click(p, "[data-gtab=look]");
@@ -186,7 +189,7 @@ try {
     assert.deepEqual(errs, [], `${name}: no page errors`);
     await ctx.close();
   }
-  console.log("Holeshot garage UX: the bike panel stays in view while the showroom scrolls (1440); tap a showroom bike, an upgrade or a paint → PREVIEW on the turntable with BUY / CANCEL and the pace against yours, CANCEL restores; pointing and focus preview too; the plinth ≥ 3:1 in dark and light; the helmet portrait by the name and on RIDER KIT follows the shape, paint and visor, and head-on the goggle reads.");
+  console.log("Holeshot garage UX: the bike panel stays in view while the showroom scrolls (its preview) (1440); a showroom bike on the turntable with its pace against yours; an upgrade or a paint → PREVIEW with BUY / CANCEL, CANCEL restores; pointing and focus preview too; the plinth ≥ 3:1 in dark and light; the helmet portrait by the name and on RIDER KIT follows the shape, paint and visor, and head-on the goggle reads.");
 } finally {
   await browser.close();
   await server.close();

@@ -221,3 +221,23 @@ export function buySpot(p: Profile): Buy {
   n.credits -= cost;
   return { ok: true, profile: n, spent: cost };
 }
+
+/** The garage's bays as the showroom offers them: bay `index` (0-based) holds a bike or is empty.
+ *  The bikes fill the bays in order, so the first empty bay is `bikes.length`. */
+export interface Bay { index: number; bike: BikeSave | null }
+export const baysOf = (p: Profile): Bay[] => Array.from({ length: Math.max(p.slots, p.bikes.length) }, (_, i) => ({ index: i, bike: p.bikes[i] ?? null }));
+/** Buy a new bike into bay `bay`: an empty bay takes it (the first empty one: bays fill in order), a
+ *  bay with a bike in it trades that bike in (its value off the price) and the new one takes its
+ *  place. Either way the new bike rides next. `all` skips the unlocks (as `buyBike`). */
+export function buyInto(p: Profile, modelId: string, bay: number, all = false): Buy {
+  const n = normalize(p), at = bay | 0;
+  if (at < 0 || at >= Math.max(n.slots, n.bikes.length)) return no("No such bay.");
+  if (at >= n.bikes.length) return n.bikes.length >= n.slots ? no("That bay is full.") : buyBike(n, modelId, all);
+  const r = buyBike(n, modelId, all, at);
+  if (!r.ok) return r;
+  // (buyBike puts the new bike last: back into the bay it traded.)
+  const q = r.profile, nb = q.bikes.pop()!;
+  q.bikes.splice(at, 0, nb);
+  q.ride = at;
+  return { ok: true, profile: normalize(q), spent: r.spent };
+}
