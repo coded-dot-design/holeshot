@@ -37,7 +37,7 @@ import { cta as shopCta, tabs as shopTabs } from "./shop/index.ts";
 import { lookOf } from "./garage/look.ts";
 import { mountShowroom as mountSr, showroomState } from "./garage/showroom.ts";
 import { rigKit } from "./garage/snap.ts";
-import { addBackdrop, sceneOf, skyOf } from "./garage/backdrop.ts";
+import { backdropCache, backdropOf } from "./garage/backdrop.ts";
 import { buyInto } from "./model/garage.ts";
 import { words } from "./garage/adapters.ts";
 import { bar, esc, num } from "./html.ts";
@@ -154,27 +154,35 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     pv.setAttribute("aria-valuetext", deg + "°");
     preview();
   };
-  /** The turntable's backdrop now (./garage/backdrop.ts): the profile's pick, AUTO following Day / Night. */
-  const scene = () => sceneOf(profile.settings.backdrop, pageTheme() === "dark");
-  const pdio = diorama(pv, { light: [-0.4, 1, 0.6], ambient: 0.55, background: () => skyOf(scene()) });
+  /** The turntable's backdrop now (./garage/backdrop.ts): the profile's pick, AUTO following Day / Night;
+   *  painted once per backdrop and size, then laid under the bike each redraw (one drawImage). */
+  const scene = () => backdropOf(profile.settings.backdrop, pageTheme() === "dark");
+  const pdio = diorama(pv, { light: [-0.4, 1, 0.6], ambient: 0.55, background: () => scene().sky });
+  const bdPaint = backdropCache();
+  let bdImg: HTMLCanvasElement | null = null, bdW = 0, bdH = 0;
+  const bdDecal = (ctx: CanvasRenderingContext2D) => bdImg && ctx.drawImage(bdImg, 0, 0, bdW, bdH);
   const flat = { sample(_x: number, _z: number, out: { [i: number]: number }) { out[0] = 0; out[1] = 0; out[2] = 1; out[3] = 0; return 0; } };
   let pvKey = "";
   function preview() {
     if (!pv.isConnected || !ready(profile)) return;
     const r = pv.getBoundingClientRect(), w = Math.round(r.width), h = Math.round(r.height);
     if (w < 10 || h < 10) return;
-    const P2 = screen === "garage" ? shown(profile, gui) : profile, b = riding(P2), t = tune(b), L2 = lookOf(P2), close = screen === "garage" && gui.tab === "look" && gui.look !== "bike", key = JSON.stringify([w, h, b.model, b.look, b.dmg, b.mods, P2.kit, pageTheme(), pvYaw, close, scene()]);
+    const P2 = screen === "garage" ? shown(profile, gui) : profile, b = riding(P2), t = tune(b), L2 = lookOf(P2), close = screen === "garage" && gui.tab === "look" && gui.look !== "bike", bd = scene(), key = JSON.stringify([w, h, b.model, b.look, b.dmg, b.mods, P2.kit, pageTheme(), pvYaw, close, bd.id]);
     if (key === pvKey) return;
     pvKey = key;
-    pdio.resize(w, h, Math.min(2, devicePixelRatio || 1));
+    const dpr = Math.min(2, devicePixelRatio || 1);
+    pdio.resize(w, h, dpr);
     pdio.clear();
     const night = pageTheme() === "dark";
     const kit = rigKit(night);
-    addBackdrop(pdio, scene(), pvYaw);
+    pv.dataset.scene = bd.id;
+    (bdImg = bdPaint(bd, w, h, dpr)), (bdW = w), (bdH = h);
+    pdio.cluster("bd", { fixed: 0 });
+    pdio.decal("bd", 0, bdDecal);
     // The plinth: a lifted top with a lighter lip, on an edge glow (the palette's cyan by night, hot
     // pink by day): 3:1 or more against the preview's background in both themes (tests/garage-ux).
-    pdio.add({ shape: "cyl", sides: 24, size: [3.2, 0.12, 3.2], pos: [0, -0.06, 0], color: night ? "#a49bf0" : "#6f5a8e", pick: false });
-    pdio.add({ shape: "cyl", sides: 24, size: [2.96, 0.13, 2.96], pos: [0, -0.055, 0], color: night ? "#7a70cc" : "#8b74a8", pick: false });
+    pdio.add({ shape: "cyl", sides: 24, size: [3.2, 0.12, 3.2], pos: [0, -0.06, 0], color: night ? "#a49bf0" : "#5b4a7c", pick: false });
+    pdio.add({ shape: "cyl", sides: 24, size: [2.96, 0.13, 2.96], pos: [0, -0.055, 0], color: night ? "#7a70cc" : "#6c5a92", pick: false });
     pdio.add({ shape: "cyl", sides: 24, size: [3.34, 0.05, 3.34], pos: [0, -0.11, 0], color: night ? "#22e6ff" : "#d81b72", emissive: night, pick: false });
     const g = rig(pdio, "pv", { ...kit, ...L2.look } as RigColors, t.rig, L2.helmet, t.model.id), bk = makeBike(flat, t.power, t.shape);
     bk.reset(0, 0, 0);

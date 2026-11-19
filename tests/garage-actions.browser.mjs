@@ -88,7 +88,20 @@ try {
     await press("[data-turn='-1']");
     await until(p, "game.profile.ride === 0", `${name}: ‹ previous bike`);
     ok("turntable ‹ › (swap the bike that rides)");
-    for (const want of ["track", "sunset", "auto"]) await press("[data-backdrop]"), await until(p, `game.profile.settings.backdrop === ${JSON.stringify(want)}`, `${name}: backdrop ${want}`);
+    // The backdrop picker: each pick pressed, shown on the turntable (AUTO: the theme's), saved, and the showroom's preview wears it.
+    for (const want of ["track", "sunset", "auto"]) {
+      await press(`[data-backdrop=${want}]`);
+      await until(p, `game.profile.settings.backdrop === ${JSON.stringify(want)} && root.querySelector('[data-backdrop=${want}]').getAttribute('aria-pressed') === 'true'`, `${name}: backdrop ${want}`);
+      await until(p, `root.querySelector('.dh-preview')?.dataset.scene === (${JSON.stringify(want)} === 'auto' ? (document.documentElement.dataset.theme === 'light' ? 'track' : 'sunset') : ${JSON.stringify(want)})`, `${name}: the turntable shows ${want}`);
+    }
+    await press("[data-backdrop=sunset]");
+    await until(p, "JSON.parse(localStorage.getItem('holeshot:profile') || '{}').settings?.backdrop === 'sunset'", `${name}: the pick is saved`);
+    await press("[data-gtab=showroom]");
+    await until(p, "root.querySelector('.shop-cat') && root.querySelector('.dh-preview')?.dataset.scene === 'sunset'", `${name}: the showroom preview wears the pick`);
+    await press("[data-gtab=garage]");
+    await until(p, "!!root.querySelector('[data-backdrop=auto]')", `${name}: back to the garage`);
+    await press("[data-backdrop=auto]");
+    await until(p, "game.profile.settings.backdrop === 'auto'", `${name}: backdrop auto again`);
     ok("the turntable's backdrop (Auto · Track · Sunset, saved)");
 
     // ---- My Bikes: select, sell (confirm, trade value), unlock a bay ----

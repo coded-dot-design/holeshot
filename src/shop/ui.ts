@@ -102,8 +102,9 @@ export const title = (o: { maker?: string; kind?: string; eyebrow?: string; name
 /** The turntable frame with ‹ › keys either side: `turntable("<canvas-slot></canvas-slot>", "data-turn")` (the keys carry `data-turn="-1"` / `"1"`); `arrows` false for one item; `extra` overlays (a chip). */
 export const turntable = (inner: string, key = "data-turn", label = "bike", arrows = true, extra = "") =>
   `<div class="shop-turn">${inner}${arrows ? `<button type="button" class="shop-arrow shop-arrow-l" ${key}="-1" aria-label="Previous ${esc(label)}">‹</button><button type="button" class="shop-arrow shop-arrow-r" ${key}="1" aria-label="Next ${esc(label)}">›</button>` : ""}${extra}</div>`;
-/** A small chip over a frame's corner (the turntable's BACKDROP · Auto): `chip("Backdrop", "Auto", 'data-backdrop')`. */
-export const chip = (label: string, value: string, attrs: string) => `<button type="button" class="shop-chip"${at(attrs)}><small>${esc(label)}</small><b>${esc(value)}</b></button>`;
+/** A small pick over a frame's corner (the turntable's BACKDROP: Auto · Track · Sunset): `chipSeg("Backdrop", [["auto", "Auto"], …], "auto", "backdrop")` (the keys carry `data-backdrop="auto"`…). */
+export const chipSeg = (label: string, items: readonly (readonly [string, string])[], on: string, key: string) =>
+  `<div class="shop-chip" role="group" aria-label="${esc(label)}"><small aria-hidden="true">${esc(label)}</small>${items.map(([id, t]) => `<button type="button" class="shop-chip-k" data-${key}="${id}" aria-pressed="${id === on}">${esc(t)}</button>`).join("")}</div>`;
 
 /** The main call to action: `cta("LET'S RIDE", 'class-extra', "Race · Endless · Free ride · Track day")`; `cls` adds the screen's hook class. */
 export const cta = (label: string, cls = "", sub = "", attrs = "") =>
