@@ -20,7 +20,7 @@ const css = async (file) => (await transform(readFileSync(file, "utf8"), { loade
 const game = (await Promise.all(["src/game.css", "src/locker/ui.css", "src/garage/garage.css", "src/series.css", "src/modes/race/scene.css", "src/modes/bigair/scene.css", "src/modes/wheelie/scene.css", "src/modes/freeride/picker.css", "src/online/online.css", "src/modes/stunts.css"].map(css))).join("");
 const kit = await css(require.resolve("@fzlt/core/ui/board-ui.css"));
 const common = {
-  define: { __KIT_CSS__: JSON.stringify(kit), __GAME_CSS__: JSON.stringify(game), __NAMES__: JSON.stringify(names) },
+  define: { __KIT_CSS__: JSON.stringify(kit), __GAME_CSS__: JSON.stringify(game), __NAMES__: JSON.stringify(names), __VERSION__: JSON.stringify(version) },
   bundle: true, minify: true, target: "es2022", legalComments: "none", logLevel: "warning",
   banner: { js: `/* Holeshot ${version} · MIT © Chris Cooley · built on Fizlet ${core} */` },
 };
