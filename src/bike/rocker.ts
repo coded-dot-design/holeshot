@@ -58,7 +58,13 @@ export function rocker(c: Controls, host: HTMLElement, o: { reduced?: boolean; s
     tether = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     tether.setAttribute("class", "hs-tether");
     tether.setAttribute("aria-hidden", "true");
-    el.append(tether);
+    // Safari: an outer <svg> without width/height can take its default 300×150 box and sit over the
+    // pill; pin it to 1×1 (the paths overflow it) and keep it out of hit testing.
+    tether.setAttribute("width", "1");
+    tether.setAttribute("height", "1");
+    tether.setAttribute("overflow", "visible");
+    tether.setAttribute("pointer-events", "none");
+    el.prepend(tether);
     for (const b of BB) {
       const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
       p.setAttribute("class", "hs-slime");

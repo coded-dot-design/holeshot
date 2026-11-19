@@ -6,6 +6,9 @@
   dish, three spokes and the hub sit thin on each sidewall and drop under the tyre on the far side, so
   no wheel reads see-through and the rim stays inside the tyre from any angle (side, 3/4, head-on).
   Render only: the sim and its goldens are unchanged.
+- **Gas and brake on iPhone.** The rocker's slime tether (an SVG) is pinned to 1×1 and kept out of
+  hit testing, so Safari can't size it to its default 300×150 box over the pill and swallow the
+  thumb.
 
 ## 0.5.0 — 2026-11-18
 
