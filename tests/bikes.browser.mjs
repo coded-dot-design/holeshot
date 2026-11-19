@@ -1,15 +1,18 @@
-// The gas dirt bikes' art style keeps its draw order in Chromium, at every camera yaw. The rig
-// (src/bike/rig.ts, the base in src/bike/bodies.ts `dirt`) on a bare diorama, bundled here with
-// esbuild; for the two models drawn past the base (YOWLER 250 2T, CRIMSON 450 FACTORY) and the base
-// 2-stroke and 4-stroke (no model: a rival) × 24 yaws × two pitches × the poses (seated, standing,
-// wheelie, squashed on its springs) it draws masks of part sets and frames with probe tints, and
-// judges, where the sets overlap on screen (eroded 2 px for the edge, ≥ 40 px):
+// Every bike's art style keeps its draw order in Chromium, at every camera yaw. The rig
+// (src/bike/rig.ts, the bodies in src/bike/bodies.ts: `dirt` for the gas dirt bikes, `body` for the
+// pedal e-bikes, electric dirt bikes and street bikes) on a bare diorama, bundled here with esbuild;
+// for every model in the roster (all nineteen, in their maker's factory paint) and the base 2-stroke
+// and 4-stroke (no model: a rival) × 24 yaws × two pitches × the poses (seated, standing, wheelie,
+// squashed on its springs; the gas references all four, the rest seated and wheelie) it draws masks of
+// part sets and frames with probe tints, and judges, where the sets overlap on screen (eroded 2 px
+// for the edge, ≥ 40 px):
 //   rider: the rider (torso, helmet, the near side's leg and arm) over every bike part (≥ 97 % rider
 //     probe; within 12° of straight ahead or behind no limb is judged, only the torso and helmet);
-//   far block: the shroud's colour block on the far side never shows through the tank (≤ 1 % probe);
-//   near block: the near side's block over the tank (≥ 95 %);
-//   ink: each inked shape (frame-side swingarm arms, side panel, tank and shroud, seat, front plate,
-//     tail, front fender) over its own ink edge, drawn alone (≥ 97 %), and the edge showing round it.
+//   far block: the plate-colour block on the far side never shows through the widest inked shape it
+//     sits on (a gas bike's tank and shroud, a battery, a street bike's tank or fairing) (≤ 1 % probe);
+//   near block: the near side's block over it (≥ 95 %);
+//   ink: each inked shape (the swingarm arms and the body's: ./src/bike/bodies.ts) over its own ink
+//     edge, drawn alone (≥ 97 %), and the edge showing round it.
 // MEDIA=<dir> saves a 16-yaw turntable of each model, with and without the rider.
 import assert from "node:assert/strict";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -20,7 +23,7 @@ import { serve, launchOptions } from "./serve.mjs";
 const entry = `
 import { diorama } from "@fzlt/core/diorama";
 import { rig } from "./src/bike/rig.ts";
-import { INK } from "./src/bike/bodies.ts";
+import { INK, bikeLook } from "./src/bike/bodies.ts";
 import { bike } from "./src/bike/bike.ts";
 import { MODELS } from "./src/data/roster.ts";
 import { paint } from "./src/data/looks.ts";
@@ -43,10 +46,10 @@ window.load = ([id, pnt, withModel]) => {
   // The ink edges: a twin in INK made just before the shape it rims, on the same parent.
   const ink = [];
   for (let i = 0; i + 1 < g.parts.length; i++) { const a = g.parts[i], b = g.parts[i + 1]; if (a.color === INK && a.shape === "prism" && b.parent === a.parent && b.color !== INK) ink.push([a, b]); }
-  const tank = ink.map(([, b]) => b).find((b) => b.size[1] > 0.3), tankInk = ink.find(([, b]) => b === tank)[0];
+  const tank = ink.map(([, b]) => b).reduce((a, b) => (b.size[1] > a.size[1] ? b : a)), tankInk = ink.find(([, b]) => b === tank)[0];
   const block = [by(":sbL"), by(":sbR")].map((s) => g.parts.filter((p) => p.parent === s));
   S = { bikeParts, rider, limbs: limbs.map((l) => rider.filter((p) => under(p, [l]))), ink, tank: [tank, tankInk], block };
-  return { kind: t.rig, inked: ink.length, blocks: block.map((b) => b.length), fork: g.parts.filter((p) => p.shape === "cyl" && p.parent && /:fk[LR]$/.test(p.parent.id ?? "")).map((p) => p.color) };
+  return { kind: t.rig, look: bikeLook(t.rig, withModel ? m.id : undefined), inked: ink.length, blocks: block.map((b) => b.length), fork: g.parts.filter((p) => p.shape === "cyl" && p.parent && /:fk[LR]$/.test(p.parent.id ?? "")).map((p) => p.color) };
 };
 function pose(name) {
   bk.reset(0, 0, 0);
@@ -116,6 +119,7 @@ window.shot = (name, yaw, pitch, rider) => {
   for (const p of g.parts) p.alpha = 1;
   return cv.toDataURL("image/png");
 };
+window.ids = MODELS.map((m) => [m.id, m.maker]);
 window.ready = true;
 `;
 const js = (await build({ stdin: { contents: entry, resolveDir: process.cwd(), loader: "ts" }, bundle: true, format: "esm", write: false, logLevel: "warning", target: "es2022" })).outputFiles[0].text;
@@ -124,7 +128,10 @@ const server = await serve(".", { "/": page });
 const browser = await chromium.launch(launchOptions());
 const MEDIA = process.env.MEDIA;
 if (MEDIA) mkdirSync(MEDIA, { recursive: true });
-const BIKES = [["hivequeen", "f-yamada", true], ["bulkhead", "f-hondo", true], ["buzzline", "gridline", false], ["slag-ox", "f-kawazakura", false]];
+/** The inked shapes each body has (two swingarm arms included): ../src/bike/bodies.ts. */
+const INKED = { "2t": 8, "4t": 8, ebike: 9, emoto: 9, mini: 8, sport: 11, naked: 10 }, MOTO_EBIKE = 3;
+/** The models judged in all four poses (the rest: seated and wheelie). */
+const FULL = new Set(["hivequeen", "bulkhead", "buzzline", "slag-ox"]);
 const POSES = ["seated", "standing", "wheelie", "squash"], YAWS = Array.from({ length: 24 }, (_, i) => (i * Math.PI) / 12);
 
 try {
@@ -132,16 +139,20 @@ try {
   p.on("pageerror", (e) => errs.push(e.message));
   await p.goto(server.url + "/");
   await p.waitForFunction(() => window.ready, null, { timeout: 20000 });
+  // Every model in its maker's factory paint, and the base 2-stroke and 4-stroke (a rival: no model).
+  const BIKES = [...(await p.evaluate(() => window.ids)).map(([id, maker]) => [id, "f-" + maker, true]), ["buzzline", "gridline", false], ["slag-ox", "f-kawazakura", false]];
   const bad = [], worst = { rider: 1, far: 0, near: 1, ink: 1 }, judged = { rider: 0, far: 0, near: 0, ink: 0 };
   for (const b of BIKES) {
     const info = await p.evaluate((k) => window.load(k), b);
     const tag0 = `${b[0]}${b[2] ? "" : " (base)"} ${info.kind}`;
-    assert.equal(info.inked, 8, `${tag0}: eight inked shapes (two swingarm arms, side panel, tank, seat, plate, tail, front fender) — ${info.inked}`);
-    assert.deepEqual(info.blocks, [1, 1], `${tag0}: a colour block on each shroud`);
+    const want = INKED[info.kind] + (info.kind === "ebike" && !info.look.cycle ? MOTO_EBIKE : 0);
+    assert.equal(info.inked, want, `${tag0}: ${want} inked shapes (two swingarm arms and the body's) — ${info.inked}`);
+    assert.ok(info.blocks[0] >= 1 && info.blocks[0] === info.blocks[1], `${tag0}: a colour block on each side (${info.blocks})`);
     assert.equal(new Set(info.fork).size, 1, `${tag0}: both upper fork tubes one colour`);
-    if (b[0] === "bulkhead") assert.equal(info.fork[0], "#e2a62a", "the factory bike's forks are gold");
+    if (info.look.fork) assert.equal(info.fork[0], info.look.fork, `${tag0}: the model's forks`);
     else assert.notEqual(info.fork[0], "#e2a62a", `${tag0}: forks not gold`);
-    for (const pitch of [0.2, 0.6]) for (const name of POSES) for (const yaw of YAWS) {
+    if (b[0] === "bulkhead") assert.equal(info.fork[0], "#e2a62a", "the factory bike's forks are gold");
+    for (const pitch of [0.2, 0.6]) for (const name of FULL.has(b[0]) ? POSES : ["seated", "wheelie"]) for (const yaw of YAWS) {
       const m = await p.evaluate(([n, y, pt]) => window.measure(n, y, pt), [name, yaw, pitch]);
       const tag = `${tag0} ${name} yaw ${yaw.toFixed(2)} pitch ${pitch}`;
       if (m.rider.n >= 40) {
@@ -171,9 +182,9 @@ try {
     }
   }
   assert.deepEqual(errs, [], "no page errors");
-  assert.ok(judged.rider >= 500 && judged.far >= 200 && judged.near >= 200 && judged.ink >= 1500, `enough overlapping cases to judge (${JSON.stringify(judged)})`);
+  assert.ok(judged.rider >= 500 && judged.far >= 200 && judged.near >= 200 && judged.ink >= 1500 && BIKES.length >= 21, `enough overlapping cases to judge (${JSON.stringify(judged)})`);
   assert.deepEqual(bad, [], `bike art draw order:\n${bad.slice(0, 40).join("\n")}${bad.length > 40 ? `\n… ${bad.length - 40} more` : ""}`);
-  console.log(`Bikes: ${BIKES.length} gas bikes × 24 yaws × 2 pitches × ${POSES.length} poses: rider at least ${(worst.rider * 100).toFixed(1)} % over the bike (${judged.rider} cases), far shroud block at most ${(worst.far * 100).toFixed(1)} % through the tank (${judged.far}), near block at least ${(worst.near * 100).toFixed(0)} % over it (${judged.near}), inked shapes at least ${(worst.ink * 100).toFixed(1)} % over their edges (${judged.ink}).`);
+  console.log(`Bikes: ${BIKES.length} bikes (every model and the two gas bases) × 24 yaws × 2 pitches × 2–${POSES.length} poses: rider at least ${(worst.rider * 100).toFixed(1)} % over the bike (${judged.rider} cases), far shroud block at most ${(worst.far * 100).toFixed(1)} % through the tank (${judged.far}), near block at least ${(worst.near * 100).toFixed(0)} % over it (${judged.near}), inked shapes at least ${(worst.ink * 100).toFixed(1)} % over their edges (${judged.ink}).`);
 } finally {
   await browser.close();
   await server.close();
