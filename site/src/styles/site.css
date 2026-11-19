@@ -121,6 +121,7 @@ html.bui[data-theme="light"] .brand-grid .dl a{box-shadow:0 3px 0 var(--ink)}
 .brand-tile img{display:block;width:100%;height:auto}
 .brand-tile.on-dark{background:#0b0a14}.brand-tile.on-light{background:#eef0fb}
 .brand-icon img{display:block;width:96px;height:96px}
+.brand-cart img{width:160px;height:auto}
 .brand-palette .meta{margin:0 0 12px}
 .brand-palette ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
 .brand-palette li{display:grid;grid-template-columns:30px 1fr;column-gap:10px;align-items:center;font:800 13px/1.2 var(--round);color:var(--ink)}
