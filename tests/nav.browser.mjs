@@ -78,11 +78,11 @@ try {
           };
         })()`);
         assert.deepEqual(tiles, {
-          race: ["series:mx", "series:sx!", "race:mx", "race:sx!", "online"],
+          race: ["series:mx", "series:sx", "race:mx", "race:sx", "online"],
           endless: ["desert", "quarry", "forest", "night-park", "endcity", "online", "soon!"],
-          free: ["neon-park", "dune-sea", "quarry", "forest", "night-park", "soon!", "bigair", "online"],
+          free: ["neon-park", "dune-sea", "quarry", "forest", "night-park", "sx-floor", "sx-volt-floor", "bigair", "online"],
           day: ["soon!"], big: true,
-        }, `${at}: the tiles (SERIES first; SX and the coming ones disabled until they ride)`);
+        }, `${at}: the tiles (SERIES first; MX and SX; the coming ones disabled)`);
         assert.equal(await sideways(), false, `${at}: LET'S RIDE: no sideways scroll`);
         // ← GARAGE stays top-left with the groups scrolled to the end.
         await $(p, "(() => { const c = root.querySelector('.dh-cards'); c.scrollTop = c.scrollHeight; })()");
@@ -112,6 +112,24 @@ try {
         await until(p, "game.getSnapshot().screen === 'series' && /SERIES · MX/.test(root.querySelector('.dh-title').textContent)", `${at}: SERIES · MX`);
         await press(".ds .dh-back");
         await until(p, "game.getSnapshot().screen === 'ride'", `${at}: ← LET'S RIDE`);
+        await press("[data-go=series][data-venue=sx]");
+        await until(p, "game.getSnapshot().screen === 'series' && /SERIES · SX/.test(root.querySelector('.dh-title').textContent) && /SX STADIUM SERIES/.test(root.querySelector('.ds > b.dh-h').textContent)", `${at}: SERIES · SX`);
+        await press(".ds [data-series-enter]:not(:disabled)");
+        await until(p, "game.profile.series.run && game.profile.series.run.venue === 'sx'", `${at}: entered at SX`);
+        await press(".ds [data-series-retire]");
+        await press(".ds [data-series-retire]");
+        await until(p, "!game.profile.series.run", `${at}: retired`);
+        await press(".ds .dh-back");
+        await press("[data-mode=race][data-venue=sx]");
+        await until(p, "game.getSnapshot().screen === 'event' && game.getSnapshot().mode === 'race' && /^sx-/.test(game.getSnapshot().run.map)", `${at}: RACE · SX`);
+        await p.evaluate(() => game.leave());
+        await until(p, "game.getSnapshot().screen === 'result'", `${at}: left the SX race`);
+        await press(".dh-result [data-go=ride]");
+        await press("[data-map=sx-floor]");
+        await until(p, "game.getSnapshot().screen === 'event' && game.getSnapshot().mode === 'freeride'", `${at}: FREE RIDE · STADIUM FLOOR`);
+        await p.evaluate(() => game.leave());
+        await until(p, "game.getSnapshot().screen === 'result'", `${at}: left`);
+        await press(".dh-result [data-go=ride]");
         await press("[data-mode=race][data-venue=mx]");
         await until(p, "game.getSnapshot().screen === 'event' && game.getSnapshot().mode === 'race'", `${at}: RACE · MX`);
         await p.evaluate(() => game.finish());

@@ -17,7 +17,7 @@ src/
     look.ts             lookOf(profile): the rig's colours (paint, plastics, graphics, plate decal, number, damage)
     garage.css          the garage's sheet
   series-ui.ts          the SERIES screen, the standings on a round's result, starting a round
-  ride-ui.ts            LET'S RIDE: the four groups (RACE, ENDLESS, FREE RIDE, TRACK DAY), MX/SX, SX_READY
+  ride-ui.ts            LET'S RIDE: the four groups (RACE, ENDLESS, FREE RIDE, TRACK DAY), the MX/SX keys
   series.css            its sheet
   bike/
     bike.ts             the bike sim: a pure, fixed-step, deterministic dirt bike on a heightfield

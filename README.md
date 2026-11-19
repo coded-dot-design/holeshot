@@ -27,10 +27,10 @@ load, and come back to it after every ride. Its one main key, **LET'S RIDE**, op
 (← GARAGE top-left, always in view; Escape steps back too). ⚙ beside the light/dark key opens
 SETTINGS. The ride page has four groups, each a line and a shelf of tiles (side by side on a wide
 screen, stacked on a phone): **RACE** (the SERIES first, then a single RACE, each MX outdoor or SX
-indoor; SX shows as SOON until its tracks ride), **ENDLESS** (each endless ground, Endless Wheelie
-City, a MASHUP to come), **FREE RIDE** (each map, an SX arena to come, Big Air) and **TRACK DAY**
+stadium), **ENDLESS** (each endless ground, Endless Wheelie City, a MASHUP to come), **FREE RIDE**
+(each map, the two SX stadium floors, Big Air) and **TRACK DAY**
 (street bikes on road circuits, to come). Each riding group has its own ONLINE tile (the room card,
-with that group's kind picked). `?mode=<id>` on /play/ still starts that event at once.
+with that group's kind picked; online rides MX, SX is solo). `?mode=<id>` on /play/ still starts that event at once.
 
 **Events**, all on your bike:
 

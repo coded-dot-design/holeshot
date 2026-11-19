@@ -12,13 +12,14 @@
   scroll. ⚙ beside the light/dark key opens SETTINGS; every screen past the garage has ← back
   top-left in a header that sticks to the top; Escape steps back a screen.
 - **LET'S RIDE: four groups**, each with a one-line description and a shelf of tiles: RACE (SERIES
-  first, then RACE, each with an MX outdoor / SX indoor choice), ENDLESS (the Endless Desert and each
+  first, then RACE, each with an MX outdoor / SX stadium choice), ENDLESS (the Endless Desert and each
   endless ground, Endless Wheelie City, MASHUP · COMING SOON), FREE RIDE (the five maps with their
-  previews, SX ARENA · COMING SOON, Big Air) and TRACK DAY (road circuits · COMING SOON). Online sits
-  in RACE, ENDLESS and FREE RIDE, each opening the room card with that kind picked. Side by side on a
-  wide screen, stacked on a phone, no sideways scroll. The SX keys show as SOON until the SX tracks
-  land (`SX_READY` in src/ride-ui.ts); the pick reaches a mode as `ModeCtx.venue` ("mx" default:
-  today's tracks), and `game.start(id, { venue })` takes it.
+  previews, the two SX stadium floors, Big Air) and TRACK DAY (road circuits · COMING SOON). Online
+  sits in RACE, ENDLESS and FREE RIDE, each opening the room card with that kind picked (MX only: SX
+  is solo). Side by side on a wide screen, stacked on a phone, no sideways scroll. The venue API
+  (0.5.6) carries the pick: `game.start(id, { venue, map })`; the SERIES screen shows and enters
+  the venue picked (`enter(…, venue)`, each venue's own unlocks and best places), or the
+  championship under way's.
 - **Garage spots: three to start, buy more up to six.** + BUY SPOT by your bikes: the 4th spot is
   ◈ 2,500, the 5th 5,000, the 6th 10,000 (about 14, 27 and 55 events at the reference player's 183
   an event: a tier 1, tier 2 and tier 4 bike's price). Test credits buy them too (nothing saved). A

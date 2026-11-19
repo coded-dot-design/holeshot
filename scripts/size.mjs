@@ -77,6 +77,10 @@ import { readdirSync, readFileSync } from "node:fs";
 // 2 KB of room. r18 (venues and the endless Big Air) +2,139 measured (205,943 → 208,082 .mjs): the
 // Big Air line and its streaming strip, the scenery sets, the SX tracks, the stadium and the venue
 // plumbing; budget 207,300 → 210,000 (about 1.9 KB of room again).
+// Unreleased, r17 (the garage is home, LET'S RIDE in four groups, buyable garage spots), on r18:
+// 209,820 B measured (holeshot.js; +1,738 B over 0.5.6's 208,082: the ride page's groups, tiles,
+// MX/SX keys and their CSS, the sticky ← back header, ⚙, the spots and the v7 step; less the old
+// menu card, the ENDLESS picker card and the map picker's card). Inside the budget (180 B of room).
 const BUDGET = 210_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
