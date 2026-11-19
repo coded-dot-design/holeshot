@@ -48,17 +48,19 @@ try {
       // The showroom: every bike for sale, each bought in turn (a full garage trades in), every mod maxed.
       await until(p, "game.getSnapshot().screen === 'garage'", `${name}: garage`);
       await click(p, "[data-gtab=showroom]");
-      assert.equal(await $(p, "root.querySelectorAll('[data-locked]').length"), 0, `${name}: nothing locked`);
-      const ids = await $(p, "[...new Set([...root.querySelectorAll('[data-bike]')].map((b) => b.dataset.bike))]");
-      assert.ok(ids.length >= 16, `${name}: every model listed (${ids.length})`);
+      while (await $(p, "!!root.querySelector('[data-shop-more]')")) await click(p, "[data-shop-more]");
+      const ids = await $(p, "[...root.querySelectorAll('[data-shop-pick]')].map((b) => b.dataset.shopPick)");
+      assert.equal(ids.length, 19, `${name}: every model listed`);
       for (const id of ids) {
-        await click(p, `[data-bike="${id}"]`);
+        await click(p, `[data-shop-pick="${id}"]`);
+        assert.equal(await $(p, "root.querySelector('.shop-cat-cmp [data-shop-buy]').disabled"), false, `${name}: ${id} for sale, nothing locked`);
+        await click(p, `[data-shop-buy="${id}"]`);
         const s = await snap(p);
         assert.equal(s.bike.model, id, `${name}: bought ${id}`);
         assert.equal(s.credits, MAX, `${name}: buying ${id} cost nothing`);
         assert.equal(await $(p, "root.querySelector('.dh-cr').textContent.trim()"), "◈ ∞");
       }
-      await click(p, "[data-gtab=bike]");
+      await click(p, "[data-gtab=garage]");
       for (let i = 0; i < 12; i++) {
         const any = await $(p, "(() => { const b = root.querySelector('[data-mod]:not([disabled])'); if (b) b.click(); return !!b; })()");
         if (!any) break;
@@ -99,8 +101,11 @@ try {
     assert.equal(await $(p, "root.querySelector('.ol-open').disabled"), false, `${name}: ONLINE on`);
     await click(p, "[data-go=garage]");
     await click(p, "[data-gtab=showroom]");
-    assert.ok(await $(p, "root.querySelectorAll('[data-locked]').length") > 0, `${name}: tier 3-4 locked again`);
-    await click(p, "[data-gtab=bike]");
+    while (!(await $(p, "!!root.querySelector('[data-shop-pick=nectar-burn]')"))) await click(p, "[data-shop-more]");
+    await click(p, "[data-shop-pick=nectar-burn]");
+    assert.match(await $(p, "root.querySelector('.shop-cat-cmp .shop-need').textContent"), /Opens after/, `${name}: tier 3-4 locked again`);
+    assert.equal(await $(p, "root.querySelector('[data-shop-buy=nectar-burn]').disabled"), true);
+    await click(p, "[data-gtab=garage]");
     await click(p, "[data-mod=power]");
     assert.equal((await snap(p)).credits, 5250, `${name}: stage 1 costs 750`);
     assert.equal(JSON.parse(await saved(p)).credits, 5250, `${name}: and is saved`);

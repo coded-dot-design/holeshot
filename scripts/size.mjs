@@ -108,7 +108,11 @@ import { readdirSync, readFileSync } from "node:fs";
 // paint grid and menu, rider gear, outfits' art, the phone sheet), less the old dock, keys and
 // swatch rows' CSS; the old showroom stays mounted until the new module swaps in. Budget 225,000 →
 // 233,000 (about 1 KB of room).
-const BUDGET = 233_000;
+// The showroom on the shop (pages 29–34): +4,694 B measured (holeshot.mjs 230,945 → 235,639; holeshot.js
+// 231,180 → 235,852): the shop's catalogue + compare screen (src/shop/catalogue.ts, 7.7 KB minified,
+// and its layout sheet), the bike adapter 2.1 KB, the rig stills 1.2 KB, buyInto, less the old
+// showroom's lists (no longer mounted). Budget 233,000 → 237,500 (about 1.6 KB of room).
+const BUDGET = 237_500;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

@@ -4,7 +4,7 @@
 // service the chain, a new set of soft tyres, straighten the bars, tall gearing, stage 1; the
 // service log shows each; PAINT & KIT: a paint scheme is tried on first (the preview changes, the
 // credits don't), BUY pays and owns it, switching back is free; graphics and a plate decal; a helmet
-// shape; an outfit; the SHOWROOM: tier 3-4 locked, buy a bike, sell one. Every key 44 px or more,
+// shape; an outfit; the SHOWROOM: tier 3-4 locked, buy a bike, trade the old one in. Every key 44 px or more,
 // no sideways scroll. The preview's turntable turns by drag, swipe and the arrow keys. With MEDIA set, screenshots of each step go there.
 import assert from "node:assert/strict";
 import { mkdirSync } from "node:fs";
@@ -149,22 +149,32 @@ try {
     q = await prof(p);
     assert.deepEqual([q.bikes[0].look.graphics, q.bikes[0].look.plate, q.kit.helmet, q.kit.jersey], ["circuit", "neon", "spike", "ink"], `${name}: graphics, plate, helmet, outfit`);
     await shot(p, `${name}-6-dressed`);
-    // ---- the showroom: locked tiers, buy, sell ----
+    // ---- the showroom (tests/showroom.browser.mjs has the rest): locked tiers, buy, a trade-in ----
     await click(p, "[data-gtab=showroom]");
-    const locked = await $(p, "root.querySelectorAll('.dh-show li[data-locked]').length");
-    assert.equal(locked, 10, `${name}: tiers 3 and 4 are locked at 3 events (eight dirt bikes, two street)`);
+    while (await $(p, "!!root.querySelector('[data-shop-more]')")) await click(p, "[data-shop-more]");
+    assert.equal(await $(p, "root.querySelectorAll('.shop-cat-item .shop-stats-s').length"), 19, `${name}: every showroom bike shows its pace (all nineteen, the street bikes too)`);
+    const tiers = await $(p, "[...root.querySelectorAll('.shop-cat-item .shop-stars')].map((s) => +s.getAttribute('aria-label').match(/Tier (\\d)/)[1])");
+    assert.equal(tiers.filter((t) => t >= 3).length, 10, `${name}: ten bikes at tiers 3 and 4 (eight dirt bikes, two street)`);
+    await click(p, "[data-shop-pick=nectar-burn]");
+    assert.match(await $(p, "root.querySelector('.shop-cat-cmp .shop-need').textContent"), /Opens after 12 events/, `${name}: tiers 3 and 4 are locked at 3 events`);
+    assert.equal(await $(p, "root.querySelector('[data-shop-buy=nectar-burn]').disabled"), true);
     await shot(p, `${name}-7-showroom`);
-    assert.equal(await $(p, "root.querySelectorAll('.dh-show .dh-pace-s').length"), 19, `${name}: every showroom bike shows its pace (all nineteen, the street bikes too)`);
     c = (await prof(p)).credits;
-    await click(p, "[data-bike=pulse-pedal]");
+    await click(p, "[data-shop-pick=pulse-pedal]");
+    await click(p, "[data-shop-buy=pulse-pedal]");
     q = await prof(p);
     assert.ok(q.bikes.length === 2 && q.bikes[q.ride].model === "pulse-pedal" && q.credits === c - 2600, `${name}: bought a bike`);
-    await click(p, "[data-sell='0']");
-    assert.match(await $(p, "root.querySelector(\"[data-sell='0']\").textContent"), /SURE/);
-    await click(p, "[data-sell='0']");
+    // a trade-in of bay 1 (the old one) for a cheap e-bike: bay 1 takes it
+    c = q.credits;
+    await click(p, "[data-shop-pick=glidewire]");
+    await click(p, "[data-shop-open=slot]");
+    await click(p, "[data-shop-set=slot][data-v='0']");
+    await click(p, "[data-shop-buy=glidewire]");
     q = await prof(p);
-    assert.ok(q.bikes.length === 1 && q.bikes[0].model === "pulse-pedal" && q.credits > c - 2600, `${name}: sold the old one`);
-    assert.deepEqual(await layout(p), { small: [], sideways: false }, `${name}: showroom keys ≥ 44 px, no sideways scroll`);
+    assert.ok(q.bikes.length === 2 && q.bikes[0].model === "glidewire" && q.bikes[1].model === "pulse-pedal" && q.credits > c - 1200, `${name}: traded the old one in`);
+    assert.deepEqual(await $(p, "[...root.querySelectorAll('.shop-cat button')].filter((e) => e.getClientRects().length && Math.min(e.getBoundingClientRect().width, e.getBoundingClientRect().height) < 43.5).map((k) => k.textContent.trim())"), [], `${name}: showroom keys ≥ 44 px`);
+    assert.deepEqual((await layout(p)).sideways, false, `${name}: no sideways scroll`);
+    await click(p, "[data-gtab=garage]");
     // ---- and the ride goes now: nothing at risk ----
     await click(p, "[data-go=ride]");
     await click(p, "[data-mode=bigair]");
@@ -176,7 +186,7 @@ try {
     assert.deepEqual(errs, [], `${name}: no page errors`);
     await ctx.close();
   }
-  console.log("Holeshot garage: warnings and the before-you-ride card, service, tyre compounds, damage, tune, mods, the service log, the tyre compound menu, tuning, the upgrade preview, try-on then buy, the paint menu, graphics, plate, helmet, outfits, the showroom (locked tiers, buy, sell); 1440 and 390.");
+  console.log("Holeshot garage: warnings and the before-you-ride card, service, tyre compounds, damage, tune, mods, the service log, the tyre compound menu, tuning, the upgrade preview, try-on then buy, the paint menu, graphics, plate, helmet, outfits, the showroom (locked tiers, buy, a trade-in into bay 1); 1440 and 390.");
 } finally {
   await browser.close();
   await server.close();

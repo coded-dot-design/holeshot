@@ -32,13 +32,13 @@ const click = (p, sel) => $(p, "root.querySelector(arg).click()", sel);
 const until = (p, fn, what, timeout = 20000) => p.waitForFunction(`((root) => (${fn}))(${root})`, null, { timeout, polling: 50 }).catch(() => assert.fail(`${what}: timed out`));
 const text = (p, sel) => $(p, "root.querySelector(arg).textContent", sel);
 
-// [tier, server, query, what the bay says, a paint in PAINT & KIT, showroom names that must show, names that must not]
+// [tier, server, query, what the bay says, a paint in PAINT & KIT, showroom names that must show (maker and model: the cards name each bike's maker, not the class's), names that must not]
 const CASES = [
-  ["nod", main, "", "DUCELLI", "DUCELLI RED", ["YAMORI YOWLER 250 2T", "HONZO CRIMSON 450 FACTORY", "SURGE-ON LIGHT BUZZ", "HONZO GROWL 125", "DUCELLI STRIKER V4", "HONZO · YAMORI · DUCELLI"], ["YAMAHA", "HONDA", "DUCATI", "BLUEWAKE", "STING"]],
+  ["nod", main, "", "DUCELLI", "DUCELLI RED", ["YAMORI YOWLER 250 2T", "HONZO CRIMSON 450 FACTORY", "SURGE-ON LIGHT BUZZ", "HONZO GROWL 125", "DUCELLI STRIKER V4"], ["YAMAHA", "HONDA", "DUCATI", "BLUEWAKE", "STING"]],
   ["real", main, "?names=real", "DUCATI", "DUCATI RED", ["YAMAHA YZ250", "HONDA CRF450R WORKS EDITION", "SUR-RON LIGHT BEE", "HONDA GROM", "DUCATI STREETFIGHTER V4", "STARK VARG MX"], ["YAMORI", "BLUEWAKE"]],
   ["real-money", main, "?money=inf", "DUCATI", "SUR-RON BLACK", ["YAMAHA YZ250", "KAWASAKI KX450", "YAMAHA R6"], ["YAMORI", "BLUEWAKE"]],
   ["real-credits", main, "?credits=infinite", "DUCATI", "SUR-RON BLACK", ["YAMAHA YZ250", "KAWASAKI KX450", "YAMAHA R6"], ["YAMORI", "BLUEWAKE"]],
-  ["safe", safe, "?names=real", "IRONJAW", "BUZZWORKS BLACK", ["BLUEWAKE RIPPER 250", "EMBERLINE BLAZE 450 PRO", "BUZZWORKS DART", "EMBERLINE BLOCK PUP 125", "IRONJAW BARE KNUCKLE V4", "EMBERLINE · BLUEWAKE · IRONJAW"], ["YAMAHA", "YAMORI", "HONZO", "DUCELLI", "DUCATI"]],
+  ["safe", safe, "?names=real", "IRONJAW", "BUZZWORKS BLACK", ["BLUEWAKE RIPPER 250", "EMBERLINE BLAZE 450 PRO", "BUZZWORKS DART", "EMBERLINE BLOCK PUP 125", "IRONJAW BARE KNUCKLE V4"], ["YAMAHA", "YAMORI", "HONZO", "DUCELLI", "DUCATI"]],
 ];
 try {
   for (const [vname, viewport, touch] of [["desktop", { width: 1440, height: 900 }, false], ["phone", { width: 390, height: 844 }, true]]) {
@@ -60,11 +60,13 @@ try {
       assert.ok(look.includes(paint), `${at}: the paint ${paint}`);
       if (MEDIA) await p.waitForTimeout(150), await p.screenshot({ path: `${MEDIA}/${vname}-${tier}-paint.png` });
       await click(p, "[data-gtab=showroom]");
-      await until(p, "!!root.querySelector('.dh-show')", `${at}: the showroom`);
-      const all = await text(p, ".dh-garage");
+      await until(p, "!!root.querySelector('.shop-cat')", `${at}: the showroom`);
+      while (await $(p, "!!root.querySelector('[data-shop-more]')")) await click(p, "[data-shop-more]");
+      // (a card names its maker in the eyebrow; its picture's label says both)
+      const all = (await text(p, ".dh-garage")) + (await $(p, "[...root.querySelectorAll('[data-shop-pick]')].map((b) => b.getAttribute('aria-label')).join(' ')"));
       for (const w of want) assert.ok(all.includes(w), `${at}: shows ${w}`);
       for (const w of never) assert.ok(!all.toUpperCase().includes(w), `${at}: never ${w}`);
-      if (MEDIA) await $(p, "root.querySelector('.dh-class:last-of-type').scrollIntoView()"), await p.waitForTimeout(150), await p.screenshot({ path: `${MEDIA}/${vname}-${tier}-showroom.png` });
+      if (MEDIA) await $(p, "root.querySelector('.shop-cat-item:last-of-type').scrollIntoView()"), await p.waitForTimeout(150), await p.screenshot({ path: `${MEDIA}/${vname}-${tier}-showroom.png` });
       assert.equal(await p.evaluate((k) => localStorage.getItem(k), KEY), SAVE, `${at}: the save is untouched`);
       assert.deepEqual(errs, [], `${at}: no page errors`);
       await ctx.close();

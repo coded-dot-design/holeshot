@@ -163,3 +163,5 @@
 .shop .shop-turn{position:relative;min-width:0}
 .shop :is(.shop-cta,.shop-btn-go){--edge:color-mix(in srgb,var(--shop-go) 50%,#07060f);--edge-hover:var(--edge)}
 .shop .shop-tile-art>svg{width:auto;height:100%;max-width:100%}
+/* A key that reads as a link ("More bikes ↓"): btn(label, attrs, false, "shop-link"). */
+.shop .shop-btn.shop-link{border-color:transparent;background:none;box-shadow:none;color:var(--shop-soft-ink);padding:0 4px}

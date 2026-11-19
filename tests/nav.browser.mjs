@@ -157,14 +157,15 @@ try {
         assert.equal(await p.evaluate(() => game.profile.slots), 6, `${at}: six spots`);
         await press("[data-gtab=showroom]");
         for (let n = await p.evaluate(() => game.profile.bikes.length); n < 6; n++) {
-          await press("[data-bike]:not([data-trade]):not(:disabled)");
+          await press(".shop-cat-item:not([data-on]) [data-shop-pick]");
+          await press("[data-shop-buy]:not(:disabled)");
           await until(p, `game.profile.bikes.length === ${n + 1}`, `${at}: bike ${n + 1}`);
           if (await screen(p) !== "garage") break;
           if (await $(p, "root.querySelector('[data-gtab=showroom]').getAttribute('aria-pressed') !== 'true'")) await press("[data-gtab=showroom]");
         }
-        const full = await $(p, "({ bikes: game.profile.bikes.length, buy: root.querySelectorAll('[data-bike]:not([data-trade])').length, trade: root.querySelectorAll('[data-bike][data-trade]').length > 0, spot: !!root.querySelector('.dh-spot'), empty: !!root.querySelector('.dh-slots .dh-empty') })");
-        assert.deepEqual(full, { bikes: 6, buy: 0, trade: true, spot: false, empty: false }, `${at}: six bikes: no BUY, no spot left, only TRADE IN`);
-        await press("[data-bike][data-trade]");
+        const full = await $(p, "({ bikes: game.profile.bikes.length, key: root.querySelector('[data-shop-buy]').textContent, empty: /Empty/.test(root.querySelector('.shop-cat-dest').textContent) })");
+        assert.deepEqual({ ...full, key: /^Trade in/.test(full.key) }, { bikes: 6, key: true, empty: false }, `${at}: six bikes: no empty bay, only TRADE IN`);
+        await press("[data-shop-buy]");
         await until(p, "/Traded in/.test(root.querySelector('.dh-live').textContent)", `${at}: a trade-in`);
         assert.equal(await p.evaluate(() => game.profile.bikes.length), 6, `${at}: still six (the 7th is refused)`);
         assert.equal(JSON.stringify(await saved(p)), real, `${at}: test credits: nothing saved`);

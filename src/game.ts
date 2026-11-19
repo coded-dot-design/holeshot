@@ -32,9 +32,12 @@ import { apply, pitFix, pitReady, settle, type ModeResult } from "./model/econom
 import type { Buy } from "./model/garage.ts";
 import { after, ride as garageRide } from "./model/upkeep.ts";
 import { portraitOf } from "./garage/portrait.ts";
-import { bayInfo, garageCard as garageView, garageClick, garageUI, pvName, pvOf, riskCard, showroomView, shown, type Pv } from "./garage/view.ts";
+import { bayInfo, garageCard as garageView, garageClick, garageUI, pvName, pvOf, riskCard, shown, type Pv } from "./garage/view.ts";
 import { cta as shopCta, tabs as shopTabs } from "./shop/index.ts";
 import { lookOf } from "./garage/look.ts";
+import { mountShowroom as mountSr, showroomState } from "./garage/showroom.ts";
+import { rigKit } from "./garage/snap.ts";
+import { buyInto } from "./model/garage.ts";
 import { bar, esc, num } from "./html.ts";
 import { enter as enterSeries, recordRound, retire as retireSeries, roundStats } from "./model/series.ts";
 import { seriesCard as seriesScreen, seriesKeys, seriesName, seriesResult, startRound } from "./series-ui.ts";
@@ -160,7 +163,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     pdio.resize(w, h, Math.min(2, devicePixelRatio || 1));
     pdio.clear();
     const night = pageTheme() === "dark";
-    const kit = night ? { seat: "#14121f", frame: "#2b2a3d", tyre: "#0f0f16", rim: "#9aa0c8", metal: "#c9cde6", pipe: "#7e86a8", glow: "#ff2e88" } : { seat: "#2a2833", frame: "#3a3a4c", tyre: "#24232b", rim: "#d9dbe6", metal: "#eceef7", pipe: "#9aa0b8", glow: "#ff3b30" };
+    const kit = rigKit(night);
     // The plinth: a lifted top with a lighter lip, on an edge glow (the palette's cyan by night, hot
     // pink by day): 3:1 or more against the preview's background in both themes (tests/garage-ux).
     pdio.add({ shape: "cyl", sides: 24, size: [3.2, 0.12, 3.2], pos: [0, -0.06, 0], color: night ? "#a49bf0" : "#6f5a8e", pick: false });
@@ -236,9 +239,15 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   const pitKey = () => (pitReady(profile) ? `<p class="dh-row"><button type="button" class="bui-key dh-pit">PIT CREW: FREE BASIC FIX</button></p>` : "");
   // (The lockup, "by David Cooley", sits above LET'S RIDE where the dock has room: ./garage/garage.css.)
   const garageCard = () => garageView(profile, gui, garageHead(), letsRide, note, pitKey());
-  /** THE SHOWROOM SEAM: the Showroom tab mounts whatever showroom the game has into its host. Swap
-   *  the module here (render + init with the host and the state accessors); nothing else changes. */
-  const mountShowroom = (host: HTMLElement) => { host.innerHTML = showroomView(profile, gui.all); };
+  /** THE SHOWROOM SEAM: the Showroom tab mounts the showroom (./garage/showroom.ts on the shop's
+   *  catalogue) into its host; the turntable moves into its preview. */
+  const srState = showroomState();
+  const srApi = {
+    profile: () => profile, all: gui.all, night: () => pageTheme() === "dark", say,
+    buy: (id: string, bay: number) => { const r = buyInto(profile, id, bay, gui.all); did(r, bay < profile.bikes.length ? "Traded in" : "Bought"); return r; },
+    turntable: (h: HTMLElement, id: string) => { gui.trial = ["bike", id]; h.append(pv); pvKey = ""; requestAnimationFrame(preview); },
+  };
+  const mountShowroom = (host: HTMLElement) => void mountSr(host, srApi, srState);
   const rideCard = () => rideScreen(head(["garage", "GARAGE", "LET'S RIDE"]), { bike: bikeLine(), best: (k) => km(profile.stats.far[k] ?? 0), lap: (c) => lapClock(trackDayBest(profile.stats.best, c)), inf, note });
   /** The series shown: the championship under way's venue, else the one picked on LET'S RIDE. */
   const seriesAt = (): Venue => (profile.series.run ? venueOf(profile.series.run.venue) : seriesVenue);
