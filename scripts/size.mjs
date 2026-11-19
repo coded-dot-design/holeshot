@@ -135,7 +135,12 @@ import { readdirSync, readFileSync } from "node:fs";
 // (+14,276 B over main; about 0.67 KB of room). Rebased on main 619abce (R36's gas dirt bikes, main
 // 226,713 B, budget 227,800): 240,974 B holeshot.js, 240,788 B holeshot.mjs (+14,261 B over main);
 // budget 227,800 + the same 14,261 + about 1.5 KB of room → 242,500.
-const BUDGET = 242_500;
+// R38 (LET'S RIDE on the shop's pieces, the owner's design), on main d644abe: +1,462 B measured
+// (holeshot.js 240,974 → 242,436; holeshot.mjs 240,788 → 242,256): the four tabs and their destination
+// rows, the page's words, WITH FRIENDS, the controls strip (from src/data/controls.ts), the shop's
+// row / figure / list pieces and the ride sheet, Track Day online (the race's sim on a road circuit,
+// its room pick), less the old ride tiles' and the map picker's CSS. Budget 242,500 → 243,500 (about 1 KB of room).
+const BUDGET = 243_500;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;
