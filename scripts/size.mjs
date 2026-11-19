@@ -96,7 +96,12 @@ import { readdirSync, readFileSync } from "node:fs";
 // field.ts), the open world's Mix hook (blended heights and kinds, town/roundabout/kicker gating,
 // thinning and the wild scatter), the trail ribbon, the cactus, the region toast, big airs out of the
 // city and the lit tile; budget 220,500 → 223,500 (about 1.6 KB of room).
-const BUDGET = 223_500;
+// R30 (the helmet like the game art, the helmet portrait), on 0.8.0: +1,919 B measured (221,638 →
+// 223,557 holeshot.mjs; holeshot.js 221,871 → 223,800): the rig's new helmet (a 14-sided three-part shell, the
+// goggle's frame, lens and glint, the straps, the chin bar, the raked peak and its root, the fin) on
+// its facing groups, the portrait SVG (garage/portrait.ts) in the top bar, the bay and the HELMET keys,
+// the rider close-up; budget 223,500 → 225,000 (about 1.2 KB of room).
+const BUDGET = 225_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

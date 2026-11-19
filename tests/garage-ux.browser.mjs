@@ -163,7 +163,7 @@ try {
       was = await svg();
     }
     // Head-on (Home, then 90° round): inside the white helmet's box, the goggle's dark band and lens
-    // (measured: 11–33 % of the box; the helmet before the goggle was 1–4 %, its edges only).
+    // (measured: 9–27 % of the box; the helmet before the goggle was 1–4 %, its edges only).
     await $(p, "root.querySelector('.dh-preview').focus()");
     await p.keyboard.press("Home");
     for (let i = 0; i < 6; i++) await p.keyboard.press("ArrowLeft");
