@@ -79,18 +79,18 @@ try {
     await shot(p, `${name}-2-garage-warnings`);
     // ---- My Bikes: the bays sheet (a popover at 1440, a bottom sheet at 390), the expansion, Escape closes it ----
     await click(p, "[data-bays]");
-    await until(p, "!!root.querySelector('.lk-sheet')", `${name}: My Bikes opens`);
-    const bays = await $(p, "[...root.querySelectorAll('.lk-sheet .lk-row')].map((r) => r.textContent)");
+    await until(p, "!!root.querySelector('.shop-sheet')", `${name}: My Bikes opens`);
+    const bays = await $(p, "[...root.querySelectorAll('.shop-sheet .shop-row')].map((r) => r.textContent)");
     assert.ok(bays.length === 3 && /^BAY 1.*#23.*Rides next$/.test(bays[0]) && bays.slice(1).every((b) => /Empty bay\+ Add bike$/.test(b)), `${name}: three bays, yours rides next (${bays})`);
-    assert.match(await $(p, "root.querySelector('.lk-expand').textContent"), /Garage expansion.*Bay 4 of 6.*Unlock/s, `${name}: the expansion`);
-    if (touch) assert.equal(await $(p, "getComputedStyle(root.querySelector('.lk-sheet')).position"), "fixed", `${name}: a bottom sheet`);
+    assert.match(await $(p, "root.querySelector('.shop-expand').textContent"), /Garage expansion.*Bay 4 of 6.*Unlock/s, `${name}: the expansion`);
+    if (touch) assert.equal(await $(p, "getComputedStyle(root.querySelector('.shop-sheet')).position"), "fixed", `${name}: a bottom sheet`);
     await shot(p, `${name}-2b-my-bikes`);
-    await $(p, "root.querySelector('.lk-sheet .lk-x').focus()");
+    await $(p, "root.querySelector('.shop-sheet .shop-x').focus()");
     await p.keyboard.press("Escape");
-    await until(p, "!root.querySelector('.lk-sheet') && game.getSnapshot().screen === 'garage'", `${name}: Escape closes My Bikes`);
+    await until(p, "!root.querySelector('.shop-sheet') && game.getSnapshot().screen === 'garage'", `${name}: Escape closes My Bikes`);
     // ---- service, tyres, damage, a tune choice, a mod ----
     // ---- PACE: measured 0–30 / 0–60 mph and the top (as shown, mph by default); the gearing moves it ----
-    const pace = () => $(p, "[...root.querySelectorAll('.dh-pace-bay .lk-stat dd')].map((d) => d.textContent)");
+    const pace = () => $(p, "[...root.querySelectorAll('.dh-pace-bay .shop-stat dd')].map((d) => d.textContent)");
     const P0 = await pace();
     assert.equal(P0.length, 3, `${name}: three pace numbers`);
     assert.match(P0[2], /^\d+ mph$/, `${name}: top speed in mph`);
@@ -99,7 +99,7 @@ try {
     q = await prof(p);
     assert.ok(q.bikes[0].parts.chain === 1 && q.credits < c, `${name}: chain serviced`);
     await click(p, "[data-gmenu=tyre]");
-    assert.equal(await $(p, "root.querySelectorAll('.lk-menu [data-tyre]').length"), 3, `${name}: the tyre compound menu lists three`);
+    assert.equal(await $(p, "root.querySelectorAll('.shop-menu [data-tyre]').length"), 3, `${name}: the tyre compound menu lists three`);
     await click(p, "[data-tyre=soft]");
     q = await prof(p);
     assert.deepEqual([q.bikes[0].tyre, q.bikes[0].parts.tyres], ["soft", 1], `${name}: soft tyres`);
@@ -108,7 +108,7 @@ try {
     await click(p, "[data-setup=gearing][data-id=tall]");
     await click(p, "[data-gsub=up]");
     await click(p, "[data-pv='mod:power']");
-    await until(p, "!!root.querySelector('.lk-preview [data-mod=power]')", `${name}: the upgrade preview with its key`);
+    await until(p, "!!root.querySelector('.shop-preview [data-mod=power]')", `${name}: the upgrade preview with its key`);
     await click(p, "[data-mod=power]");
     q = await prof(p);
     assert.deepEqual([q.bikes[0].dmg.bars, q.bikes[0].gearing, q.bikes[0].mods.power], [0, "tall", 1], `${name}: bars, gearing, stage 1`);
@@ -125,7 +125,7 @@ try {
     const ink0 = await ink(p);
     c = (await prof(p)).credits;
     await $(p, "root.querySelector(\"[data-page='1']\")?.click()"), await click(p, "[data-dress=paint][data-id=magma]");
-    await until(p, "!!root.querySelector('.lk-pin')", `${name}: trying on`);
+    await until(p, "!!root.querySelector('.shop-pin')", `${name}: trying on`);
     await p.waitForTimeout(200);
     assert.notEqual(await ink(p), ink0, `${name}: the preview shows the paint before you buy`);
     q = await prof(p);
@@ -137,7 +137,7 @@ try {
     await $(p, "root.querySelector(\"[data-page='0']\")?.click()"), await click(p, "[data-dress=paint][data-id=acid]");
     await $(p, "root.querySelector(\"[data-page='1']\")?.click()"), await click(p, "[data-dress=paint][data-id=magma]");
     q = await prof(p);
-    assert.ok(!(await $(p, "!!root.querySelector('.lk-pin')")) && q.bikes[0].look.paint === "magma", `${name}: owned: switches back for free`);
+    assert.ok(!(await $(p, "!!root.querySelector('.shop-pin')")) && q.bikes[0].look.paint === "magma", `${name}: owned: switches back for free`);
     for (const [slot, id] of [["graphics", "circuit"], ["plate", "neon"]]) await click(p, "[data-gmenu=slot]"), await click(p, `[data-gslot=${slot}]`), await click(p, `[data-dress=${slot}][data-id=${id}]`), await click(p, "[data-buytrial]");
     await click(p, "[data-look=rider]");
     await click(p, "[data-dress=helmet][data-id=spike]");

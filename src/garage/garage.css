@@ -1,8 +1,8 @@
-/* The garage's layout over the locker (../locker/ui.css) and HOLESHOT's tokens: the game re-points the
-   locker's bar, price and go colours at its own palette (--cy, --hot, --k-go: one source). Part
+/* The garage's layout over the shop (../shop/shop.css) and HOLESHOT's tokens: the game re-points the
+   shop's bar, price and go colours at its own palette (--cy, --hot, --k-go: one source). Part
    states (worn amber, may-fail red), the old showroom's cards (until the new module lands), the
    rider's portrait. Layout only beyond that. */
-.dh .lk{--lk-bar:var(--cy);--lk-price:var(--hot);--lk-go:var(--k-go);--lk-warn:var(--amber)}
+.dh .shop{--shop-bar:var(--cy);--shop-price:var(--hot);--shop-go:var(--k-go);--shop-warn:var(--amber)}
 .dh{--amber:#ffb23d}
 .dh[data-day]{--amber:#b86a00}
 .dh-tag{justify-self:start;padding:1px 7px;border:2px solid var(--rim);border-radius:6px;font-size:10px;letter-spacing:.08em;background:var(--amber);color:var(--rim)}
@@ -49,56 +49,56 @@
 @media (max-width:620px){.dh-face .dh-helm{inline-size:72px;block-size:54px;padding:2px 4px}}
 /* The page: a full-bleed sheet under a sticky header. */
 .dh-cards:has(>.dh-garage){display:block;padding:var(--dh-top,0px) 0 0}
-.dh .dh-garage{width:100%;min-height:100%;align-content:start;gap:0;padding:0;border:0;border-radius:0;box-shadow:none;background:var(--lk-bg);color:var(--lk-ink);font-weight:800}
-.dh-ghead{position:sticky;top:0;z-index:8;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:14px 36px 0;background:var(--lk-panel);border-bottom:1.5px solid var(--lk-line)}
+.dh .dh-garage{width:100%;min-height:100%;align-content:start;gap:0;padding:0;border:0;border-radius:0;box-shadow:none;background:var(--shop-bg);color:var(--shop-ink);font-weight:800}
+.dh-ghead{position:sticky;top:0;z-index:8;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:14px 36px 0;background:var(--shop-panel);border-bottom:1.5px solid var(--shop-line)}
 .dh-brand{display:grid;justify-items:start;gap:4px;padding-bottom:14px}
 .dh .dh-garage .dh-brand .dh-logo{height:32px;margin:0}
-.dh-brand .lk-eyebrow{display:flex;gap:.9em;font-size:11px}.dh-brand i{font-style:normal}
-.dh-ghead .lk-tabs-big{align-self:end}
+.dh-brand .shop-eyebrow{display:flex;gap:.9em;font-size:11px}.dh-brand i{font-style:normal}
+.dh-ghead .shop-tabs-big{align-self:end}
 .dh-hkeys{display:flex;justify-content:end;align-items:center;gap:12px;padding-bottom:14px}
-.dh .dh-ghead .dh-cr{min-height:44px;padding:0 26px;border:0;border-radius:6px;background:var(--lk-go);color:var(--lk-go-ink);font-size:20px}
+.dh .dh-ghead .dh-cr{min-height:44px;padding:0 26px;border:0;border-radius:6px;background:var(--shop-go);color:var(--shop-go-ink);font-size:20px}
 .dh .dh-ghead .dh-test{min-height:44px;border-radius:6px}
 .dh-ghead .dh-who .dh-helm{inline-size:1.6em;block-size:1.2em}
 .dh-ghead .dh-cog{min-width:48px;padding:0}.dh-ghead .dh-cog svg{width:22px;height:22px}
 .dh-ghead .dh-theme{min-width:9em;justify-content:start;gap:.8em;padding:0 22px;font-weight:700}
-.dh-ghead .dh-theme i{font-style:normal;color:var(--lk-bar)}
+.dh-ghead .dh-theme i{font-style:normal;color:var(--shop-bar)}
 /* Two columns: the bike panel (sticky where the screen is tall enough) and the tabs. */
 @media (min-height:700px){.dh-bikep{position:sticky;top:110px}}
 .dh-gwrap{display:grid;grid-template-columns:minmax(0,480px) minmax(0,1fr);gap:30px;padding:30px 36px 40px;align-items:start}
 .dh-bikep{display:grid;gap:16px;padding:14px 0 18px;border-radius:14px}
 .dh-bikep>*{margin-inline:16px}
-.dh-bikep>.lk-turn{margin-inline:0}
+.dh-bikep>.shop-turn{margin-inline:0}
 .dh-bikebar{justify-content:space-between}
-.dh-bikebar .lk-drop{min-width:9.5em}
-@media (min-width:621px){.dh-bays>.lk-sheet{position:absolute;z-index:20;top:calc(100% + 14px);left:-2px;width:min(440px,calc(100vw - 32px))}}
-.dh-bikep .lk-turn .dh-preview{display:block;width:100%;aspect-ratio:16/11;border:0;border-radius:0;background:var(--lk-tile)}
+.dh-bikebar .shop-drop{min-width:9.5em}
+@media (min-width:621px){.dh-bays>.shop-sheet{position:absolute;z-index:20;top:calc(100% + 14px);left:-2px;width:min(440px,calc(100vw - 32px))}}
+.dh-bikep .shop-turn .dh-preview{display:block;width:100%;aspect-ratio:16/11;border:0;border-radius:0;background:var(--shop-tile)}
 .dh-pvinfo{display:grid;gap:14px;min-width:0}
-.dh-bayline{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--lk-mute)}
-.dh-bikep .lk-cta-w{margin-top:24px}
+.dh-bayline{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--shop-mute)}
+.dh-bikep .shop-cta-w{margin-top:24px}
 .dh-bikep .dh-pit{width:100%}
 .dh-gbody{display:grid;gap:22px;align-content:start;min-width:0}
-.dh-gbody>.lk-heading{margin-top:12px}
-.dh-gbody .lk-h3{font-size:26px}
+.dh-gbody>.shop-heading{margin-top:12px}
+.dh-gbody .shop-h3{font-size:26px}
 .dh-cond{padding:14px 24px}
 .dh-feelc{padding:24px 20px}
 .dh-log{padding:20px 22px 8px}
 .dh-note:empty{display:none}
 .dh-kitart{width:96px;height:96px}
-.lk-tile-art .dh-helm{width:110px;height:84px}
+.shop-tile-art .dh-helm{width:110px;height:84px}
 .dh-tag{margin-top:2px}
 .dh-gbody>.dh-alert{margin:0}
 .dh-oldshow{display:grid;gap:12px}
-@media (max-width:1100px){.dh-gwrap{grid-template-columns:minmax(0,400px) minmax(0,1fr);gap:20px;padding-inline:20px}.dh-ghead{padding-inline:20px}.lk-barrow,.lk-colhead{grid-template-columns:minmax(0,1fr) minmax(60px,1fr) 3.5em minmax(8em,auto)}}
+@media (max-width:1100px){.dh-gwrap{grid-template-columns:minmax(0,400px) minmax(0,1fr);gap:20px;padding-inline:20px}.dh-ghead{padding-inline:20px}.shop-barrow,.shop-colhead{grid-template-columns:minmax(0,1fr) minmax(60px,1fr) 3.5em minmax(8em,auto)}}
 /* Phone: the header compacts (logo, credits, Day / Night; the tabs under it), the sections stack and
-   My Bikes rises as a bottom sheet (../locker/ui.css). */
+   My Bikes rises as a bottom sheet (../shop/shop.css). */
 @media (max-width:820px){
 .dh-ghead{grid-template-columns:minmax(0,1fr) auto;padding:10px 16px 0;gap:4px 8px}
-.dh-ghead .lk-tabs-big{grid-column:1/-1;grid-row:2;justify-content:space-around}
-.dh-ghead .lk-tabs-big .lk-tab{font-size:18px;padding-bottom:10px}
+.dh-ghead .shop-tabs-big{grid-column:1/-1;grid-row:2;justify-content:space-around}
+.dh-ghead .shop-tabs-big .shop-tab{font-size:18px;padding-bottom:10px}
 .dh-brand,.dh-hkeys{padding-bottom:4px}
 .dh .dh-garage .dh-brand .dh-logo{height:24px}
-.dh-brand .lk-eyebrow{font-size:9px}.dh-brand .lk-eyebrow :is(i,span){display:none}
-.dh-bikep .lk-cta-sub{font-size:10px;letter-spacing:.02em}.lk .lk-stat dt{font-size:10px;letter-spacing:.04em}
+.dh-brand .shop-eyebrow{font-size:9px}.dh-brand .shop-eyebrow :is(i,span){display:none}
+.dh-bikep .shop-cta-sub{font-size:10px;letter-spacing:.02em}.shop .shop-stat dt{font-size:10px;letter-spacing:.04em}
 .dh-hkeys{gap:8px}
 .dh-ghead .dh-who{display:none}
 .dh .dh-ghead .dh-cr{padding:0 14px;font-size:16px}
@@ -107,22 +107,22 @@
 .dh-gwrap{grid-template-columns:minmax(0,1fr);gap:16px;padding:12px 12px 28px}
 .dh-bikep{position:static;padding:10px 0 14px;gap:12px}
 .dh-bikep>*{margin-inline:12px}
-.dh-bikep .lk-cta-w{margin-top:4px}
-.lk .lk-name{font-size:30px}
-.lk .lk-seg{gap:8px}.lk .lk-seg-k{font-size:17px;min-height:48px}
-.lk .lk-tabs{gap:4px 22px}.lk .lk-tab{font-size:16px}
-.lk .lk-h2{font-size:26px}
-.lk-colhead{display:none}
-.lk .lk-barrow{grid-template-columns:minmax(0,1fr) auto;gap:6px 12px}
-.lk .lk-barrow .lk-meter{grid-column:1/-1;grid-row:2}
-.lk .lk-barrow .lk-barrow-a{grid-column:1/-1}
-.lk .lk-bars-loose .lk-btn{min-width:0}
+.dh-bikep .shop-cta-w{margin-top:4px}
+.shop .shop-name{font-size:30px}
+.shop .shop-seg{gap:8px}.shop .shop-seg-k{font-size:17px;min-height:48px}
+.shop .shop-tabs{gap:4px 22px}.shop .shop-tab{font-size:16px}
+.shop .shop-h2{font-size:26px}
+.shop-colhead{display:none}
+.shop .shop-barrow{grid-template-columns:minmax(0,1fr) auto;gap:6px 12px}
+.shop .shop-barrow .shop-meter{grid-column:1/-1;grid-row:2}
+.shop .shop-barrow .shop-barrow-a{grid-column:1/-1}
+.shop .shop-bars-loose .shop-btn{min-width:0}
 .dh-cond{padding:8px 14px}
-.lk .lk-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-.lk .lk-feel{grid-template-columns:minmax(0,1fr);gap:10px}
-.lk .lk-opts{gap:6px}.lk .lk-opts .lk-btn{padding:0 8px;font-size:14px}
-.lk .lk-stat dd{font-size:18px}
-.lk .lk-row:has(.lk-row-m){grid-template-columns:minmax(0,1fr) auto}.lk .lk-row-m{grid-column:1;grid-row:2;font-size:13px}.lk .lk-row-e{grid-row:1/3;grid-column:2}
-.lk .lk-table{font-size:15px}.lk .lk-table td:first-child{width:3.5em}
-.lk .lk-foot{gap:8px}.lk .lk-foot>span{width:100%}.lk .lk-foot>span>.lk-btn{flex:1}
+.shop .shop-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.shop .shop-feel{grid-template-columns:minmax(0,1fr);gap:10px}
+.shop .shop-opts{gap:6px}.shop .shop-opts .shop-btn{padding:0 8px;font-size:14px}
+.shop .shop-stat dd{font-size:18px}
+.shop .shop-row:has(.shop-row-m){grid-template-columns:minmax(0,1fr) auto}.shop .shop-row-m{grid-column:1;grid-row:2;font-size:13px}.shop .shop-row-e{grid-row:1/3;grid-column:2}
+.shop .shop-table{font-size:15px}.shop .shop-table td:first-child{width:3.5em}
+.shop .shop-foot{gap:8px}.shop .shop-foot>span{width:100%}.shop .shop-foot>span>.shop-btn{flex:1}
 }
