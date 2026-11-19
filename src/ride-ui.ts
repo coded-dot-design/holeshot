@@ -10,6 +10,7 @@ import { FREE_MAPS, FREE_SX, TRACK_DAY_MAPS } from "./modes/index.ts";
 import type { Venue } from "./modes/race/venue.ts";
 import { K_ENDLESS, K_JAM, K_RACE, K_TRACKDAY, SEATS } from "./net.ts";
 import { ONLINE } from "./data/economy.ts";
+import { KEYS } from "./data/controls.ts";
 import { btn, card, esc, figure, footbar, heading, list, row, seg, title } from "./shop/index.ts";
 
 export const VENUES: { id: Venue; name: string; where: string }[] = [
@@ -68,8 +69,12 @@ function friends(kind: number, name: string, line: string, inf: boolean) {
   const say = inf ? "Off with test credits: take ?credits=inf off the address to ride online." : line;
   return `<h2 class="shop-eyebrow dh-rfh">With friends</h2>${card(`<div class="dh-rf-t"><b class="shop-h3">${esc(name)}</b><p class="shop-sub">${esc(say)}</p></div><small class="shop-meta">${esc(meta)}</small>${btn("Play online →", `data-olkind="${kind}"${inf ? " disabled" : ""}`, false, "ol-open dh-olgo")}`, "shop-tint dh-rf")}`;
 }
-/** The keys, as words (the page is the game's own: nothing links out). */
-const KEYS: [string, string][] = [["W/S", "lean"], ["A/D", "steer"], ["Space", "gas"], ["K", "brake"], ["L", "trick / hop"], ["C", "endless combo"], ["P", "pause"]];
+/** The controls strip, from the one source (./data/controls.ts): each binding's letter keys (the arrows
+ *  and the full card live in ⚙ → CONTROLS · HOW TO), in words: the page is the game's own, no links. */
+const strip = () => KEYS.flatMap((g) => g.rows).map(([ks, what]) => {
+  const k = ks.filter((x) => !/^[↑↓←→]$/.test(x));
+  return `<span><kbd>${esc(k.includes("+") ? k.join("") : k.join("/"))}</kbd> ${esc(what.toLowerCase())}</span>`;
+}).join("");
 
 /** The LET'S RIDE page (`head`: the shell's header with ← Garage). */
 export function rideCard(head: string, v: RideView) {
@@ -91,6 +96,6 @@ export function rideCard(head: string, v: RideView) {
     body = heading("Choose a circuit") + `<p class="shop-sub">Three laps on asphalt against three rivals. Each circuit keeps your best lap.</p>`
       + list(TRACK_DAY_MAPS.map((m) => dest(`data-circuit="${m.id}"`, words(m.id, m.name, m.blurb), figure("", v.lap(m.id)))), ["Road circuit", "Best lap"], "Road circuits")
       + friends(K_TRACKDAY, "Track Day Online", "Pick a road circuit and ride three laps with friends.", v.inf);
-  const keys = footbar("Controls", KEYS.map(([k, w]) => `<span><kbd>${esc(k)}</kbd> ${esc(w)}</span>`).join(""), 'aria-label="Controls"');
+  const keys = footbar("Controls", strip(), 'aria-label="Controls"');
   return `<div class="dh-card dh-ride shop" data-screen="ride" data-tab="${v.tab}">${head}<div class="dh-rwrap"><div class="dh-rtitle"><h1 class="shop-h1">Let’s Ride</h1>${title({ maker: "Your bike", kind: `#${v.number}`, name: v.bike, small: true })}</div><div class="dh-rtabs">${seg(RIDE_TABS, v.tab, "rtab", "Ways to ride")}</div><section class="dh-rbody" aria-label="${esc(RIDE_TABS.find((t) => t[0] === v.tab)![1])}">${body}</section>${v.note ? `<p class="shop-sub dh-note" role="status">${esc(v.note)}</p>` : ""}<div class="dh-keys">${keys}</div></div></div>`;
 }

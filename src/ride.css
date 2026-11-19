@@ -31,9 +31,9 @@
 .dh-rf .shop-meta{font-size:14px}
 .dh-olgo{min-width:13em;min-height:56px;font-size:20px}
 .dh-keys{margin-top:auto;padding-top:24px}
-.dh-keys .shop-foot{justify-content:start;gap:8px 24px}
+.dh-keys .shop-foot{flex-wrap:nowrap;align-items:baseline;justify-content:start;gap:8px 24px}
 .dh-keys .shop-foot>b{font-size:16px;color:var(--shop-mute)}
-.dh-keys .shop-foot>span{flex-wrap:wrap;gap:6px 36px;font:500 14px/1.4 var(--shop-mono);color:var(--shop-mute)}
+.dh-keys .shop-foot>span{flex-wrap:wrap;gap:6px 26px;font:500 14px/1.4 var(--shop-mono);color:var(--shop-mute)}
 .dh-keys kbd{font:inherit;color:var(--shop-ink);margin-right:.7em;padding:0;border:0;background:none;box-shadow:none}
 .dh-ride .dh-note{margin:0}
 @media (max-width:1100px){.dh-rwrap{padding-inline:20px}.dh .dh-rhead .dh-back{margin-left:16px}}
