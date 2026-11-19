@@ -8,7 +8,7 @@
   or a gamepad's X, Y or right bumper. The hop is your bike's own (the garage's hop: suspension and
   travel count), it lands as a HOP ground trick, and it rides online too (the jam's HOP bit). One
   hop for both modes (src/bike/hop.ts) and one flick reader (src/bike/flick.ts). Race and Big Air
-  keep their controls. Size: +0.4 KB gzip, inside the 207,300 budget.
+  keep their controls. Size: +364 B gzip (205,943 B, inside the 207,300 budget).
 
 ## 0.5.4 — 2026-11-19
 
