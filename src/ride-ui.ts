@@ -1,6 +1,6 @@
 // LET'S RIDE, the shell's ride page (owner, 2026-11-19): every way to ride in four groups, each a
 // shelf of tiles with a one-line description. RACE (the SERIES first, then a single RACE, each MX
-// outdoor or SX indoor), ENDLESS (each endless ground, Endless Wheelie City, the mashup to come),
+// outdoor or SX indoor), ENDLESS (each endless ground, Endless Wheelie City, the Endless Mashup),
 // FREE RIDE (the maps, Big Air) and TRACK DAY (street bikes on the road circuits: ./modes/race/circuits.ts). Riding online
 // sits in the groups it belongs to (MX only: SX is solo). Strings in, a string out, like ./series-ui.ts: the shell
 // (./game.ts) owns the clicks (`data-mode`, `data-endless`, `data-map`, `data-circuit`, `data-go`, `data-venue`,
@@ -46,7 +46,7 @@ export function rideCard(head: string, v: RideView) {
     BIOMES.map((b, i) => tile(`data-endless="${b.id}"`, i ? b.name.replace(/^THE /, "") : "ENDLESS DESERT", esc(b.blurb), `BEST ${v.best(b.id)}`)).join("")
     + tile(`data-mode="endcity"`, "ENDLESS WHEELIE CITY", "Roads, towns and fields that never end. Wheelie, lose the neon patrol.", `BEST ${v.best("city")}`)
     + online(K_ENDLESS, "Roam an endless ground or the city together.", v.inf)
-    + soon("MASHUP", "Every kind of riding in one run."));
+    + tile(`data-mode="mashup"`, "ENDLESS MASHUP", "One endless world: city, dunes, mountains, quarry, park and a city again.", `BEST ${v.best("mashup")}`));
   const free = group("free", "FREE RIDE", "No laps, no clock: air, wheelies and tricks pay a little.",
     mapTiles("dh-tile")
     + FREE_SX.map((m) => tile(`data-map="${m.id}" data-venue="sx"`, m.name, esc(m.blurb), "SX · STADIUM")).join("")

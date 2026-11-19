@@ -92,6 +92,10 @@ import { readdirSync, readFileSync } from "node:fs";
 // scene's kerbs, edge lines, chequer, grid boxes, pit lane, gantry and start lights, pit wall,
 // garages, grandstands and tyre walls, two palettes, the mode, the rivals, the road penalty, the best
 // lap per circuit and the ride page's circuit tiles; budget 215,000 → 220,500 (about 1.9 KB of room).
+// R22 (the Endless Mashup), on 0.7.0: +MEAS B measured: the biome field (src/modes/mashup/
+// field.ts), the open world's Mix hook (blended heights and kinds, town/roundabout/kicker gating,
+// thinning and the wild scatter), the trail ribbon, the cactus, the region toast, big airs out of the
+// city and the lit tile; budget 220,500 → BUDG.
 const BUDGET = 220_500;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {

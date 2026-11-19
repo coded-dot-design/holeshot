@@ -79,7 +79,7 @@ try {
         })()`);
         assert.deepEqual(tiles, {
           race: ["series:mx", "series:sx", "race:mx", "race:sx", "online"],
-          endless: ["desert", "quarry", "forest", "night-park", "endcity", "online", "soon!"],
+          endless: ["desert", "quarry", "forest", "night-park", "endcity", "online", "mashup"],
           free: ["neon-park", "dune-sea", "quarry", "forest", "night-park", "sx-floor", "sx-volt-floor", "bigair", "online"],
           day: ["td-meridian", "td-knotworks", "td-bottlecap"], big: true,
         }, `${at}: the tiles (SERIES first; MX and SX; the coming ones disabled)`);
