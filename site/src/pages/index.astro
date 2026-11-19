@@ -30,7 +30,7 @@ const steps = [
 // The keyboard, from the game's own bindings (src/modes/*/scene.ts MAP, the play pages' labels).
 const keys: { group: string; rows: [string[], string, string?][] }[] = [
   { group: 'RIDE', rows: [[['Space', 'J'], 'Gas'], [['K', 'Shift'], 'Brake'], [['W', 'S', '↑', '↓'], 'Lean', 'back lifts the front; in the air it pitches the bike'], [['A', 'D', '←', '→'], 'Steer'], [['Space', '+', 'K'], 'Wheelie', 'gas and brake together']] },
-  { group: 'TRICKS', rows: [[['L'], 'Hop', 'every endless ride; a trick in Big Air (L or E)'], [['C'], 'Combo trick', 'hold for more points'], [['R'], 'Reset', 'back to the last good spot']] },
+  { group: 'TRICKS', rows: [[['L'], 'Hop', 'every endless ride'], [['C'], 'Trick', 'hold for more; in Big Air the trick ladder (L or E too)'], [['R'], 'Reset', 'back to the last good spot']] },
   { group: 'GAME', rows: [[['V'], 'View', 'chase cam or the map'], [['M'], 'Mute'], [['P', 'Esc'], 'Pause']] },
 ];
 // The gamepad (src/bike/kit.ts gamepad()).
@@ -55,7 +55,7 @@ const ways = [
     items: [['Endless Desert', `${words[BIOMES.length]!.toLowerCase()} grounds: ${BIOMES.map((b) => b.name.replace(/^THE /, '').toLowerCase()).join(', ')}`, 'desert'], ['Endless Wheelie City', 'roads, towns and fields; lose the neon patrol', 'endcity'], ['Mashup', 'coming soon', '']] },
   { id: 'free', name: 'FREE RIDE', tone: 'cyan', shot: 'freeride', alt: 'Free Ride: a rider on the night park map beside a neon-lit wall', inset: 'bigair', insetAlt: 'Big Air: a trick called out over a kicker',
     line: 'Saddle time, air, wheelies and tricks. No laps.',
-    items: [['Free Ride', `${freeCount} maps, MX and SX`, 'freeride'], ['Big Air', 'an endless straight of jumps sized to your bike; five judges pay', 'bigair']] },
+    items: [['Free Ride', `${freeCount} maps, MX and SX`, 'freeride'], ['Big Air', 'an endless straight of jumps sized to your bike; freestyle: an 11-trick ladder on C or the TRICK button, whips and flip combos; five judges pay', 'bigair']] },
   { id: 'trackday', name: 'TRACK DAY', tone: 'lime', soon: true,
     line: 'Street bikes on road circuits.',
     items: [['Road circuits', 'street bikes on tarmac, kerbs and corners: coming soon', '']] },
