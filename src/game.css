@@ -20,10 +20,10 @@
 .dh-card p{margin:0}
 .dh-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .dh-theme{min-width:44px;min-height:44px;padding:0;display:inline-grid;place-items:center}
-.dh-logo{display:block;flex:none;height:26px;width:auto;aspect-ratio:619/126;margin-right:auto}
+.dh-logo{display:block;flex:none;height:26px;width:auto;margin-right:auto}
 /* The garage's lockup (the logo with "by David Cooley") above LET'S RIDE; where it shows, the
    header's wordmark steps aside (one logo on screen). Hidden where the dock is tight. */
-.dh-lockup{display:block;width:min(100%,300px);height:auto;aspect-ratio:625/168.72;justify-self:center;margin:6px 0 2px}
+.dh-lockup{display:block;width:min(100%,300px);height:auto;justify-self:center;margin:6px 0 2px}
 .dh-garage .dh-top .dh-logo{visibility:hidden}
 .dh-chip{display:inline-flex;align-items:center;gap:.35em;padding:.35em .65em;border:2px solid var(--rim);border-radius:8px;background:var(--raised);font-variant-numeric:tabular-nums;white-space:nowrap}
 .dh-test{border-color:var(--hot);color:var(--hot);font-size:.8em;letter-spacing:.04em}

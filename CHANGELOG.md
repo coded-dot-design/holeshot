@@ -23,9 +23,11 @@
 - **The final HOLESHOT logo in the game** (paths only, no fonts; src/logo.ts): the L1 wordmark in
   the header (26 px tall, 22 px on a phone; `role="img"`, named HOLESHOT) and, on the garage where
   the dock has room (wider than 620 px and taller than 620 px), the lockup with "by David Cooley"
-  above LET'S RIDE (the header's wordmark steps aside there, one logo on screen). +933 B gzip;
-  budget 210,000 → 211,700 (scripts/size.mjs).
-- **Garage spots: three to start, buy more up to six.** + BUY SPOT by your bikes: the 4th spot is
+  above LET'S RIDE (the header's wordmark steps aside there, one logo on screen). The art's drops
+  fall straight down. src/logo.ts is generated from the art files (one letter path, reused).
+- **Garage spots: three to start, grow it to six** with the credits every ride pays (races and
+  series rounds by place and prizes, Big Air by the judges, Free Ride and the endless rides by saddle
+  time, distance and tricks, Endless Wheelie City by points). + BUY SPOT by your bikes: the 4th spot is
   ◈ 2,500, the 5th 5,000, the 6th 10,000 (about 14, 27 and 55 events at the reference player's 183
   an event: a tier 1, tier 2 and tier 4 bike's price). Test credits buy them too (nothing saved). A
   full six-bike garage only trades in. Profile v7 (additive: `slots`, three on an old save, or as many
