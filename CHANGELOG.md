@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- **Solid wheels.** Each tyre is one closed band (tread and both sidewalls); the rim ring, a solid
+  dish, three spokes and the hub sit thin on each sidewall and drop under the tyre on the far side, so
+  no wheel reads see-through and the rim stays inside the tyre from any angle (side, 3/4, head-on).
+  Render only: the sim and its goldens are unchanged.
+
 ## 0.4.0 — 2026-11-18
 
 Endless Wheelie City becomes an open world, the endless grounds join ENDLESS, and both ride online

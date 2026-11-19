@@ -60,9 +60,17 @@ const SIDE_DROP = 6.5;
 const WHEEL = 4.5, BODY = 4, NEAR = 6;
 /** A wheel's level drops by END_DROP per group facing away (4.5 → 3 → 1.5); a side's parts by FAR_DROP (6 → 1). */
 const END_DROP = 1.5, FAR_DROP = 5;
+/** A wheel face's drop on the far side: from just over its tyre to just under it. */
+const FACE_DROP = 0.1;
 /** The level and side groups' offset (only its direction counts; the parts make up for it). */
 const END = 1e-3;
 const THIGH = 0.4, SHIN = 0.42, UPPER = 0.29, FORE = 0.29, TORSO = 0.46;
+
+/** `a` toward `b` by t (`#rrggbb`). */
+const mix = (a: string, b: string, t: number) => {
+  const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16), c = (sh: number) => Math.round(((x >> sh) & 255) * (1 - t) + ((y >> sh) & 255) * t);
+  return "#" + ((1 << 24) | (c(16) << 16) | (c(8) << 8) | c(0)).toString(16).slice(1);
+};
 
 /** Bones and the solved joints, reused (no allocation per pose). */
 const J = new Float64Array(4);
@@ -113,18 +121,25 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
   // and 45° to each side: both face the eye (the near end), one does (the side), neither (the far end).
   // A side's parts hang from a group just off the centre plane (x 0: only which side the eye is on counts).
   const hubs: DioramaObject[] = [], ends: DioramaObject[] = [];
+  // The wheel's dish: between the tyre and the rim, so it reads solid, not a hole.
+  const dish = mix(C.tyre, C.rim, 0.42);
   for (let i = 0; i < 2; i++) {
     const hid = id + ":w" + i, f = i ? 1 : -1;
     const a = d.add({ id: hid + "a", shape: "group", size: [0.2, 0, 0.2], pos: [f * END, 0, END], on: id, behind: END_DROP, pick: false });
     d.add({ id: hid + "b", shape: "group", size: [0.2, 0, 0.2], pos: [f * END, 0, -END], on: hid + "a", behind: END_DROP, pick: false });
     const hub = group(hid, hid + "b");
-    part([0.68, 0.15, 0.68], [0, 0, -0.075], C.tyre, { shape: "cyl", sides: 14, rot: [PI / 2, 0, 0], on: hid, layer: WHEEL });
-    part([0.5, 0.16, 0.5], [0, 0, -0.08], C.rim, { shape: "cyl", sides: 14, rot: [PI / 2, 0, 0], on: hid, layer: WHEEL + 0.1 });
-    part([0.44, 0.17, 0.44], [0, 0, -0.085], C.tyre, { shape: "cyl", sides: 12, rot: [PI / 2, 0, 0], on: hid, layer: WHEEL + 0.2 });
-    // Spokes: two bars across the rim that turn with the wheel; the hub.
-    part([0.44, 0.03, 0.18], [0, -0.015, 0], C.metal, { on: hid, layer: WHEEL + 0.3 });
-    part([0.03, 0.44, 0.18], [0, -0.22, 0], C.metal, { on: hid, layer: WHEEL + 0.3 });
-    part([0.12, 0.2, 0.12], [0, 0, -0.1], C.metal, { shape: "cyl", sides: 8, rot: [PI / 2, 0, 0], on: hid, layer: WHEEL + 0.4 });
+    // The tyre: one closed band (tread and both sidewalls). Each face of the wheel (rim ring, a solid
+    // dish, spokes, the hub) is thin and sits on its sidewall, on a side group that drops under the
+    // tyre on the far side (`behind`), so the far face never shows through the near sidewall.
+    part([0.68, 0.15, 0.68], [0, 0, -0.075], C.tyre, { shape: "cyl", sides: 16, rot: [PI / 2, 0, 0], on: hid, layer: WHEEL });
+    for (const s of [-1, 1]) {
+      const sid = hid + (s < 0 ? "L" : "R"), z = (h: number) => (s > 0 ? 0.075 : -0.075 - h) - s * END, o = { on: sid, rot: [PI / 2, 0, 0] };
+      d.add({ id: sid, shape: "group", size: [0.2, 0, 0.2], pos: [0, 0, s * END], on: hid, behind: FACE_DROP, pick: false });
+      part([0.52, 0.006, 0.52], [0, 0, z(0.006)], C.rim, { ...o, shape: "cyl", sides: 14, layer: WHEEL + 0.05 });
+      part([0.42, 0.01, 0.42], [0, 0, z(0.01)], dish, { ...o, shape: "cyl", sides: 12, layer: WHEEL + 0.06 });
+      for (let k = 0; k < 3; k++) part([0.4, 0.035, 0.012], [0, -0.0175, s * (0.091 - END)], C.metal, { on: sid, rot: [0, 0, (k * PI) / 3], layer: WHEEL + 0.07 });
+      part([0.13, 0.03, 0.13], [0, 0, z(0.03)], C.metal, { ...o, shape: "cyl", sides: 8, layer: WHEEL + 0.08 });
+    }
     hubs.push(hub);
     ends.push(d.get(hid + "b")!);
   }
