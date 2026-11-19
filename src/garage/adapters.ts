@@ -11,11 +11,11 @@ import { paceRow } from "../model/pace.ts";
 import type { Tuned } from "../model/tune.ts";
 import type { Units } from "../model/units.ts";
 import { atRisk, failChance, partState } from "../model/upkeep.ts";
-import { cosmeticPrice, fits, fixPrice, modPrice, partPrice, setupPrice, spotPrice, type Slot } from "../model/garage.ts";
+import { cosmeticPrice, fits, fixPrice, modPrice, partPrice, setupPrice, spotPrice, tradeValue, type Slot } from "../model/garage.ts";
 import { helmetSVG } from "./portrait.ts";
 import { helmetOf } from "./look.ts";
 import type { Bay, Item, Slot as LkSlot, Upgrade, Wear } from "../shop/index.ts";
-import { btn, esc, pill, swatch } from "../shop/index.ts";
+import { btn, esc, pill, price, swatch } from "../shop/index.ts";
 
 /** "CHAIN & SPROCKETS" → "Chain & sprockets" (the design's sentence case). */
 export const cap = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
@@ -115,7 +115,8 @@ export function bays(p: Profile): { bays: Bay[]; sub: string; line: string; expa
     const b = p.bikes[i];
     if (!b) { list.push({ label: `BAY ${i + 1}`, end: btn("+ Add bike", 'data-gtab="showroom"') }); continue; }
     const warn = atRisk(b).length || b.fail ? " ⚠" : "";
-    list.push({ label: `BAY ${i + 1}`, name: `${words(modelOf(b.model).name)}  #${b.look.number}${warn}`, on: i === p.ride, end: i === p.ride ? pill("Rides next", "plain") : btn("Select bike", `data-ride="${i}"`) });
+    const sellKey = n > 1 ? price({ label: "Sell", price: tradeValue(b), attrs: `data-sell="${i}" aria-label="Sell for ${tradeValue(b)} credits"` }) : "";
+    list.push({ label: `BAY ${i + 1}`, name: `${words(modelOf(b.model).name)}  #${b.look.number}${warn}`, on: i === p.ride, end: (i === p.ride ? pill("Rides next", "plain") : btn("Select bike", `data-ride="${i}"`)) + sellKey });
   }
   const pr = spotPrice(p), pl = (k: number, w: string) => `${k} ${w}${k === 1 ? "" : "s"}`;
   return {

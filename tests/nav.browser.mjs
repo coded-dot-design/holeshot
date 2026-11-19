@@ -143,17 +143,22 @@ try {
         await p.evaluate((s) => localStorage.setItem("holeshot:profile", JSON.stringify({ ...s, credits: 3000 })), s0);
         await p.goto(server.url + "/");
         await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${at}: reload`);
-        assert.match(await $(p, "root.querySelector('.dh-spot').textContent"), /SPOT 4 OF 6.*BUY SPOT.*2,500/, `${at}: + BUY SPOT, the 4th, its price`);
-        await press(".dh-spot");
+        // (The spots are My Bikes' garage expansion: the sheet opens from My Bikes.)
+        const bays = async () => { if (!(await $(p, "!!root.querySelector('.shop-sheet')"))) await press("[data-bays]"); };
+        await bays();
+        assert.match(await $(p, "root.querySelector('.shop-expand').textContent"), /Garage expansion.*Bay 4 of 6.*Unlock.*2,500/, `${at}: the expansion, the 4th bay, its price`);
+        await press("[data-spot]");
         await until(p, "game.profile.slots === 4", `${at}: the 4th spot`);
         assert.deepEqual([(await saved(p)).slots, (await saved(p)).credits], [4, 500], `${at}: paid and saved`);
-        assert.match(await $(p, "root.querySelector('.dh-spot').textContent"), /SPOT 5 OF 6.*5,000/, `${at}: the 5th costs more`);
+        await bays();
+        assert.match(await $(p, "root.querySelector('.shop-expand').textContent"), /Bay 5 of 6.*5,000/, `${at}: the 5th costs more`);
 
         // ---- test credits: spots to six, bikes to six, then the 7th is refused; nothing saved ----
         const real = JSON.stringify(await saved(p));
         await p.goto(server.url + "/?money=inf");
         await until(p, "window.game && game.getSnapshot().screen === 'garage' && game.getSnapshot().testCredits", `${at}: test credits`);
-        while (await $(p, "!!root.querySelector('.dh-spot')")) await press(".dh-spot");
+        while ((await bays(), await $(p, "!!root.querySelector('[data-spot]')"))) await press("[data-spot]");
+        await p.keyboard.press("Escape");
         assert.equal(await p.evaluate(() => game.profile.slots), 6, `${at}: six spots`);
         await press("[data-gtab=showroom]");
         for (let n = await p.evaluate(() => game.profile.bikes.length); n < 6; n++) {

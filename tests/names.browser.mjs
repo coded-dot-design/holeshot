@@ -50,14 +50,17 @@ try {
       await p.goto(server.url + "/" + q);
       await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${at}: the saved profile loads`);
       await until(p, "game.getSnapshot().screen === 'garage' && root.querySelector('.dh-preview').width > 50", `${at}: the garage`);
-      const head = await text(p, ".dh-bay");
-      assert.ok(head.includes(bay), `${at}: the bay names the maker (${head.slice(0, 80)})`);
+      const head = await text(p, ".dh-pvinfo");
+      assert.ok(head.toLowerCase().includes(bay.toLowerCase()), `${at}: the bay names the maker (${head.slice(0, 80)})`);
       if (MEDIA) await p.waitForTimeout(150), await p.screenshot({ path: `${MEDIA}/${vname}-${tier}-bay.png` });
       // PAINT & KIT: the factory paints in the tier's names.
       await click(p, "[data-gtab=look]");
       await until(p, "root.querySelector('[data-gtab=look]').getAttribute('aria-pressed') === 'true'", `${at}: paint & kit`);
-      const look = await $(p, "root.querySelector('.dh-garage').innerHTML");
-      assert.ok(look.includes(paint), `${at}: the paint ${paint}`);
+      // (The schemes come twelve to a page: read both pages.)
+      let look = await $(p, "root.querySelector('.dh-garage').innerHTML");
+      await click(p, "[data-page='1']");
+      look += await $(p, "root.querySelector('.dh-garage').innerHTML");
+      assert.ok(look.toLowerCase().includes(paint.toLowerCase()), `${at}: the paint ${paint}`);
       if (MEDIA) await p.waitForTimeout(150), await p.screenshot({ path: `${MEDIA}/${vname}-${tier}-paint.png` });
       await click(p, "[data-gtab=showroom]");
       await until(p, "!!root.querySelector('.shop-cat')", `${at}: the showroom`);

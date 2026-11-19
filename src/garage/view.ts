@@ -3,22 +3,20 @@
 // RIDE); right, PARTS & MODS (Condition with the tyre compound menu and crash damage, Tuning with
 // the ride feel, Upgrades with a preview, Service log) and PAINT & KIT (the bike's paint menu and
 // scheme grid, the rider's gear, outfits; anything not owned is tried on first and bought from the
-// preview bar). The SHOWROOM is its own module, mounted by the shell (game.ts mountShowroom); the
-// old showroom below stays as what it mounts until the new one lands. Also the "before you ride"
-// card when a part may fail. HTML strings; the actions are ../model/garage.ts (pure), so this file
+// preview bar). The SHOWROOM is its own module (./showroom.ts), mounted by the shell into the
+// Showroom tab's host (game.ts mountShowroom). Also the "before you ride" card when a part may fail. HTML strings; the actions are ../model/garage.ts (pure), so this file
 // only renders and routes.
-import { CLASSES, MODELS, makerOf, model as modelOf } from "../data/roster.ts";
-import { DAMAGE_NAME, FAIL, GARAGE_MAX, MODS, SETUPS, TYRES, UNLOCK, type DamageId, type ModId, type PartId, type SetupId, type TyreId } from "../data/economy.ts";
+import { CLASSES, makerOf, model as modelOf } from "../data/roster.ts";
+import { DAMAGE_NAME, FAIL, MODS, SETUPS, TYRES, type DamageId, type ModId, type PartId, type SetupId, type TyreId } from "../data/economy.ts";
 import { GRAPHICS, HELMETS, OUTFITS, PAINTS, PATTERNS, PLASTICS, PLATES, SWATCHES, VISORS } from "../data/looks.ts";
 import { bar, esc, num } from "../html.ts";
 import { portraitOf } from "./portrait.ts";
 import { newBike, riding, type BikeSave, type Profile } from "../model/profile.ts";
-import { tune, type Tuned } from "../model/tune.ts";
-import { paceRow } from "../model/pace.ts";
+import { tune } from "../model/tune.ts";
 import type { Units } from "../model/units.ts";
 import { atRisk, failChance, failName, warnings } from "../model/upkeep.ts";
 import { DIRT_LINE } from "../model/families.ts";
-import { buyBike, buySpot, cosmeticPrice, choose, dress, fits, modPrice, repair, sell, service, setChoice, tradeValue, tryOn, unlocked, upgrade, type Buy, type Slot } from "../model/garage.ts";
+import { buySpot, cosmeticPrice, choose, dress, fits, modPrice, repair, sell, service, setChoice, tryOn, unlocked, upgrade, type Buy, type Slot } from "../model/garage.ts";
 import { baysSheet, condition, itemGrid, upgrades as upgradeList } from "../shop/index.ts";
 import { btn, card, chips, cta, drop, feel, heading, menu, pill, price, seg, stat, stats, table, tabs, title, turntable } from "../shop/index.ts";
 import { RIDER_SLOTS, SLOT_NAME, bays, bikeItems, bikeSlots, cap, damageRows, feelRows, isE, modKey, modName, modStage, outfitItems, pace, partName, riderItems, riderSlots, setups, tyreItems, upgradeItems, wearRows, words, type BikeSlot, type RiderSlot } from "./adapters.ts";
@@ -47,11 +45,8 @@ export interface GarageUI {
 }
 export const garageUI = (all = false): GarageUI => ({ tab: "bike", sub: "cond", look: "bike", slot: "paint", rslot: "helmet", page: 0, owned: false, menu: "", trial: null, peek: null, all });
 
-const cost = (n: number, can: boolean) => (n ? `<small class="dh-price"${can ? "" : " data-short"}>◈ ${num(n)}</small>` : `<small class="dh-price">OWNED</small>`);
 /** The rider's display units (miles and mph unless the settings say metric). */
 const unitsOf = (p: Profile): Units => p.settings.units ?? "imperial";
-/** PACE (old showroom cards): 0–a, 0–b and the top speed, measured on the sim (../model/pace.ts). */
-const paceDl = (t: Tuned, u: Units, cls = "dh-pace") => `<dl class="${cls}" aria-label="Pace, measured">${paceRow(t, u).map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`;
 
 /** The profile as the preview shows it: with the peek (or the pinned try-on) on. A mod shows its
  *  next level on the riding bike; a showroom bike stands in for it, new, in its maker's colours. */
@@ -141,27 +136,6 @@ function nameOf(slot: Slot, id: string) {
   return (L[slot] ?? SWATCHES).find((x) => x.id === id)?.name ?? id;
 }
 
-// ---- the old SHOWROOM (what mountShowroom mounts until the new module lands) ----
-/** The showroom's lists: your bikes (sell), then all nineteen by class (buy, trade in, locked). */
-export function showroomView(p: Profile, all: boolean) {
-  const full = p.bikes.length >= p.slots, me = riding(p), trade = tradeValue(me), u = unitsOf(p);
-  const mine = p.bikes.map((x, i) => { const m = modelOf(x.model), v = tradeValue(x); return `<li class="dh-bc" data-pv="own:${i}"><span class="dh-bc-head"><i class="dh-maker" style="--a:${makerOf(m).colors[0]};--b:${makerOf(m).colors[1]}"></i><span class="dh-mod"><small>${CLASSES[m.cls].name} · #${x.look.number}${i === p.ride ? " · RIDES NEXT" : ""}</small><b>${makerOf(m).name} ${m.name}</b><small>Trade-in ◈ ${num(v)} · ${x.events} events</small></span></span><button type="button" class="bui-key dh-buy" data-sell="${i}" ${p.bikes.length > 1 ? "" : "disabled"}>SELL<small class="dh-price">+◈ ${num(v)}</small></button></li>`; }).join("");
-  const cls = (Object.keys(CLASSES) as (keyof typeof CLASSES)[]).map((c) => `<li class="dh-class"><h3 class="dh-h2 dh-clh">${CLASSES[c].name} <small>${CLASSES[c].maker}</small></h3><ul class="dh-list dh-show">${MODELS.filter((x) => x.cls === c).map((x) => {
-    const t = tune({ ...me, ...blank(x.id) });
-    return `<li class="dh-bc" data-pv="bike:${x.id}"${all || unlocked(p, x) ? "" : " data-locked"}><span class="dh-bc-head"><i class="dh-maker" style="--a:${makerOf(x).colors[0]};--b:${makerOf(x).colors[1]}"></i><span class="dh-mod"><small>${CLASSES[x.cls].name} · ${makerOf(x).name}</small><b>${makerOf(x).name} ${x.name}</b><small class="dh-stars"><span aria-label="Tier ${x.tier} of 4">${"★".repeat(x.tier)}${"☆".repeat(4 - x.tier)}</span> · ◈ ${num(x.price)}</small></span></span>${bikeKey(p, x.id, all)}<small class="dh-blurb">${esc(x.blurb)}</small><span class="dh-mini-bars">${bar(t.feel.pull, "PULL")}${bar(t.feel.top, "TOP")}${bar(t.feel.light, "LIGHT")}</span>${paceDl(t, u, "dh-pace dh-pace-s")}</li>`;
-  }).join("")}</ul></li>`).join("");
-  const prog = `You: ${p.stats.events} events · ◈ ${num(p.stats.earned)} earned.`;
-  return `<div class="dh-oldshow"><p class="dh-sub">${full ? `The garage holds ${p.slots} bikes: a new one trades in the bike that rides next (◈ ${num(trade)} off)${p.slots < GARAGE_MAX ? ", or unlock a bay (My Bikes)" : ""}, or sell one first.` : "A new bike goes in the empty bay and rides next. Each bike keeps its own parts, mods and paint."} ${prog} Point at a bike (or tap it) to see it on the turntable.</p><h3 class="dh-h2">YOUR BIKES</h3><ul class="dh-list dh-show dh-mine">${mine}</ul><ul class="dh-list dh-classes">${cls}</ul></div>`;
-}
-/** A showroom bike's key: BUY, TRADE IN (a full garage) or LOCKED (with what opens it). */
-function bikeKey(p: Profile, id: string, all: boolean, go = "") {
-  const x = modelOf(id), full = p.bikes.length >= p.slots, net = full ? Math.max(0, x.price - tradeValue(riding(p))) : x.price, cr = p.credits, u = UNLOCK[x.tier];
-  return !(all || unlocked(p, x)) ? `<button type="button" class="bui-key dh-buy" disabled>LOCKED<small class="dh-price">${u!.events} EVENTS or ◈${num(u!.earned)} EARNED</small></button>`
-    : full ? `<button type="button" class="bui-key dh-buy${go}" data-bike="${x.id}" data-trade="${p.ride}">TRADE IN${cost(net, cr >= net)}</button>`
-    : `<button type="button" class="bui-key dh-buy${go}" data-bike="${x.id}">BUY${cost(x.price, cr >= x.price)}</button>`;
-}
-const blank = (id: string) => ({ model: id, parts: { tyres: 1, chain: 1, motor: 1, susp: 1, brakes: 1 }, mods: { power: 0, brakes: 0, weight: 0, travel: 0, cells: 0, wbar: 0, swap: 0, bore: 0, boost: 0 }, tyre: "med" as TyreId, gearing: "stock", spring: "stock", map: "std", dmg: { bars: 0, plastics: 0 } });
-
 /** What a preview is, in words (the PREVIEW tag and the announcement). */
 export function pvName(p: Profile, v: Pv) {
   const [k, id] = v, b = riding(p);
@@ -187,22 +161,13 @@ export function bayInfo(p: Profile, ui: GarageUI) {
   const tag = v ? `${pill("Preview", "", "dh-pvtag")} ${esc(v[0] === "bike" ? "Showroom" : v[0] === "own" ? "Your bikes" : words(pvName(p, v)))}` : "";
   return `${face}${tag ? `<small class="dh-bayline">${tag}</small>` : ""}${title({ maker: words(makerOf(m).name), kind: CLASSES[m.cls].name, name: words(m.name), number: b.look.number })}<div class="dh-pace-bay">${tiles}</div>`;
 }
-/** A pinned showroom bike or one of yours: its bar under the bike (BUY / APPLY, CANCEL). */
-function pinBar(p: Profile, ui: GarageUI) {
-  const v = ui.trial;
-  if (!v || (v[0] !== "bike" && v[0] !== "own")) return "";
-  const [k, id] = v;
-  const go = k === "own" ? `<button type="button" class="shop-btn shop-btn-go" data-ride="${id}"${+id === p.ride ? " disabled" : ""}>${+id === p.ride ? "Rides next" : "Ride this one"}</button>` : bikeKey(p, id, ui.all, " dh-go");
-  return `<div class="shop-pin dh-pin" role="group" aria-label="Preview"><div class="shop-foot"><b>${pill("Preview", "", "dh-pvtag")} ${esc(words(pvName(p, v)))}</b><span>${btn("Cancel", "data-untry")}${go}</span></div></div>`;
-}
-
 /** The garage card: the header (the shell's), the bike panel on the left (My Bikes, the turntable,
  *  the bike shown and its pace, LET'S RIDE) and PARTS & MODS / PAINT & KIT on the right; the
  *  SHOWROOM tab leaves an empty `.dh-showroom` host for the shell to mount into. */
 export function garageCard(p: Profile, ui: GarageUI, head: string, go: string, note: string, extra = "") {
   const b = riding(p), B = bays(p);
   const sheet = ui.menu === "bays" ? baysSheet({ title: "My Bikes", sub: B.sub, bays: B.bays, expand: B.expand, credits: p.credits, close: "data-bays", empty: "Empty bay" }) : "";
-  const left = `<aside class="shop-card dh-bikep"><div class="shop-toolbar dh-bikebar"><span class="shop-pop dh-bays">${drop("My Bikes", "data-bays", ui.menu === "bays")}${sheet}</span><small class="shop-sub">${esc(B.line)}</small></div>${p.bikes.length > 1 ? turntable("<canvas-slot></canvas-slot>", "data-turn") : `<div class="shop-turn"><canvas-slot></canvas-slot></div>`}<div class="dh-pvinfo">${bayInfo(p, ui)}</div>${pinBar(p, ui)}${go}${extra}</aside>`;
+  const left = `<aside class="shop-card dh-bikep"><div class="shop-toolbar dh-bikebar"><span class="shop-pop dh-bays">${drop("My Bikes", "data-bays", ui.menu === "bays")}${sheet}</span><small class="shop-sub">${esc(B.line)}</small></div>${p.bikes.length > 1 ? turntable("<canvas-slot></canvas-slot>", "data-turn") : `<div class="shop-turn"><canvas-slot></canvas-slot></div>`}<div class="dh-pvinfo">${bayInfo(p, ui)}</div>${go}${extra}</aside>`;
   const right = ui.tab === "showroom" ? `<div class="dh-showroom"></div>`
     : `${seg([["bike", "Parts & Mods"], ["look", "Paint & Kit"]], ui.tab, "gtab", "Garage")}${ui.tab === "bike" ? tabs([["cond", "Condition"], ["tune", "Tuning"], ["up", "Upgrades"], ["log", "Service log"]], ui.sub, "gsub", "Parts and mods") + (ui.sub === "cond" ? condTab(p, b, ui) : ui.sub === "tune" ? tuneTab(p, b) : ui.sub === "up" ? upTab(p, b, ui) : logTab(b)) : lookTab(p, b, ui)}`;
   return `<div class="dh-card dh-garage shop" data-screen="garage" data-tab="${ui.tab}">${head}<div class="dh-gwrap">${left}<div class="dh-gbody">${right}<p class="shop-sub dh-note" role="status">${esc(note)}</p></div></div></div>`;
@@ -240,9 +205,10 @@ export function garageClick(p: Profile, ui: GarageUI, t: HTMLElement, root: Pare
   if (d.untry !== undefined) return (ui.trial = null), {};
   if (d.number !== undefined) return { buy: [dress(p, "number", root.querySelector<HTMLInputElement>(".dh-numin")!.value), "Number set"] };
   if (d.spot !== undefined) return { buy: [buySpot(p), "Garage bay unlocked"] };
-  if (d.bike) return (ui.trial = null), { buy: [buyBike(p, d.bike, ui.all, d.trade !== undefined ? +d.trade : undefined), d.trade !== undefined ? "Traded in" : "Bought"] };
   if (d.sell) {
-    if (d.sure === undefined) return (d.sure = ""), (t.firstChild!.textContent = "SURE? TAP AGAIN"), null;
+    // Sell asks once: the key turns into its confirmation, then a second tap sells (the sheet stays open).
+    ui.menu = was;
+    if (d.sure === undefined) return (d.sure = ""), (t.firstChild!.textContent = "Sure? Sell for"), null;
     return { buy: [sell(p, +d.sell), "Sold"] };
   }
   ui.menu = was;

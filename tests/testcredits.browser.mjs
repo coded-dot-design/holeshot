@@ -106,6 +106,8 @@ try {
     assert.match(await $(p, "root.querySelector('.shop-cat-cmp .shop-need').textContent"), /Opens after/, `${name}: tier 3-4 locked again`);
     assert.equal(await $(p, "root.querySelector('[data-shop-buy=nectar-burn]').disabled"), true);
     await click(p, "[data-gtab=garage]");
+    await click(p, "[data-gsub=up]");
+    await click(p, "[data-pv='mod:power']");
     await click(p, "[data-mod=power]");
     assert.equal((await snap(p)).credits, 5250, `${name}: stage 1 costs 750`);
     assert.equal(JSON.parse(await saved(p)).credits, 5250, `${name}: and is saved`);
