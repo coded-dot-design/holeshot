@@ -63,6 +63,7 @@ try {
           looping: document.getAnimations().filter((a) => a.effect?.target?.closest?.(".phone")).length,
           garage: document.getElementById("garage-title").textContent,
           spots: [document.querySelectorAll("#garage .spots .open").length, document.querySelectorAll("#garage .spots li").length],
+          spotText: document.querySelector("#garage .spots").textContent,
           nav: [...document.querySelectorAll(".site-head a")].map((a) => a.getAttribute("href")),
           foot: [...document.querySelectorAll(".site-foot a")].map((a) => a.href),
           domvirus: /dom virus/i.test(document.body.innerText + document.title + document.querySelector('meta[name="description"]').content),
@@ -84,6 +85,7 @@ try {
       assert.ok(m.rocker && m.looping > 0, `${at}: the rocker diagram (three zones, COMBO), animated`);
       assert.match(m.garage, /Three spots to start\. Grow to six\./, `${at}: the garage's spots`);
       assert.deepEqual(m.spots, [3, 6], `${at}: 3 garage spots open of 6`);
+      assert.match(m.spotText, /2,500.*5,000.*10,000/, `${at}: the spots' prices`);
       assert.ok(m.nav.every((h) => !/^https?:/.test(h)), `${at}: the header links stay on the site: ${m.nav}`);
       assert.ok(m.foot.some((h) => h.startsWith("https://github.com/")) && m.foot.some((h) => h === "https://fizlet.com/"), `${at}: the footer links out (source, Fizlet)`);
       assert.equal(m.domvirus, false, `${at}: no DOM VIRUS`);

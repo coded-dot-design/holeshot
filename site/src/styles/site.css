@@ -175,7 +175,7 @@ html.bui[data-theme="light"] .bands::before{opacity:.22}
 .spots li{display:grid;place-items:center;aspect-ratio:1.25;border-radius:12px;font:900 26px var(--round)}
 .spots .open{background:var(--lime);color:#0b0a14;border:3px solid var(--rim);box-shadow:var(--drop-s)}
 .spots .locked{border:3px dashed var(--muted);color:var(--muted);position:relative}
-.spots .locked::after{content:"EARN IT";position:absolute;bottom:6px;font:900 9px var(--mono);letter-spacing:.1em}
+.spots .locked small{position:absolute;bottom:6px;font:900 11px var(--mono);letter-spacing:.04em;color:var(--hot)}
 .garage-count{margin:30px 0 0}
 .makers{list-style:none;margin:16px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px}
 .makers li{rotate:-.8deg}.makers li:nth-child(even){rotate:.9deg}

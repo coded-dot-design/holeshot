@@ -13,6 +13,7 @@ import { CLASSES, MODELS, STARTERS, makerOf } from '../../../src/data/roster.ts'
 import { MODES, FREE_MAPS, FREE_SX } from '../../../src/modes/index.ts';
 import { BIOMES } from '../../../src/modes/desert/track.ts';
 import { TIERS } from '../../../src/data/series.ts';
+import { GARAGE_SLOTS, GARAGE_MAX, SPOT_PRICE } from '../../../src/data/economy.ts';
 import { ICON_GAS, ICON_BRAKE, ICON_SEAM, ICON_COMBO } from '../../../src/bike/rocker.ts';
 const description = 'Holeshot is a dirt bike game on a tabletop: one bike and a garage, races and a race series at MX and SX, Endless rides (the dunes, a quarry, woods, a night park and Endless Wheelie City) that never end, Free Ride maps and a Big Air straight of jumps. Earn in every mode, wear out tyres and top ends, rebuild, mod and paint. Free in the browser, by David Cooley, built on Fizlet.';
 const kb = (GZIP / 1024).toFixed(1);
@@ -61,8 +62,9 @@ const ways = [
 ].map((w) => ({ ...w, items: w.items.map(([name, note, mode]) => ({ name, note, mode: mode && has(mode) ? mode : '' })) }));
 const classes = Object.values(CLASSES).map((c) => ({ ...c, models: MODELS.filter((m) => m.cls === c.id), starter: STARTERS.find((m) => m.cls === c.id) }));
 const makers = new Set(MODELS.map((m) => makerOf(m).name)).size;
-// The garage's room: 3 spots to start, up to 6 (the game's garage, R17).
-const SPOTS = 3, SPOTS_MAX = 6;
+// The garage's room, from the game's economy: spots to start, the most, and each extra spot's price.
+const SPOTS = GARAGE_SLOTS, SPOTS_MAX = GARAGE_MAX;
+const cr = (n: number) => n.toLocaleString('en-US');
 const palette = [['Logo lime', '#B6F23A'], ['Drop pink', '#FF4FA8'], ['Credit cyan', '#22E6FF'], ['Sun yellow', '#FFD166'], ['Stripe pink', '#E23D8A'], ['Dusk purple', '#3A1D6E'], ['Night navy', '#1A1038'], ['Ink', '#0B0A14']];
 const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound', 'ui'];
 ---
@@ -176,10 +178,10 @@ const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound'
       <div class="garage-head">
         <div>
           <h2 id="garage-title">{words[SPOTS]} spots to start. Grow to {words[SPOTS_MAX]!.toLowerCase()}.</h2>
-          <p class="sub">You start with one bike and room for {words[SPOTS]!.toLowerCase()}. Every mode pays: races, series rounds, Endless rides, tricks. Spend it on bikes, parts, paint and more garage spots, up to {words[SPOTS_MAX]!.toLowerCase()} as you win.</p>
+          <p class="sub">You start with one bike and room for {words[SPOTS]!.toLowerCase()}. Every mode pays credits: races, series rounds, Endless rides, tricks. Spend them on bikes, parts and paint, and on more garage spots, up to {words[SPOTS_MAX]!.toLowerCase()}: {SPOT_PRICE.map(cr).join(', ').replace(/, ([^,]*)$/, ' and $1')} credits.</p>
         </div>
         <ol class="spots" aria-label={`${SPOTS} garage spots to start, up to ${SPOTS_MAX}`}>
-          {Array.from({ length: SPOTS_MAX }, (_, i) => <li class={i < SPOTS ? 'open' : 'locked'}><span>{i + 1}</span></li>)}
+          {Array.from({ length: SPOTS_MAX }, (_, i) => <li class={i < SPOTS ? 'open' : 'locked'}><span>{i + 1}</span>{i >= SPOTS && <small>◈ {cr(SPOT_PRICE[i - SPOTS] ?? 0)}</small>}</li>)}
         </ol>
       </div>
       <p class="meta garage-count">{words[makers]} makers · {MODELS.length} bikes</p>
