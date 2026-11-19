@@ -843,7 +843,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     let st: RunStats;
     // (A rider still out when the grace time ran out is placed by how far they got, and paid for it.)
     // (Track Day keeps the circuit's best lap, as riding it alone: ./model/economy.ts `apply`.)
-    if (r.race) st = { ...blankStats(r.kind === K_TRACKDAY ? "trackday" : "race"), ...common, place: me.place, time: me.time, bestLap: me.bestLap, finished: true, led: false, where: r.kind === K_TRACKDAY ? (r.track as { id: string }).id : "online", summary: `Online · ${r.kind === K_TRACKDAY ? (r.track as { name: string }).name + " · " : ""}${ORD[me.place]} of ${r.race.riders.length}${me.finished ? ` · ${clock(me.time)}` : " · didn't finish"} · best lap ${clock(me.bestLap)}` };
+    if (r.race) st = { ...blankStats(r.kind === K_TRACKDAY ? "trackday" : "race"), ...common, place: me.place, time: me.time, bestLap: me.bestLap, finished: true, led: false, where: r.kind === K_TRACKDAY ? (r.track as { id: string }).id : "online", summary: `Online · ${r.kind === K_TRACKDAY ? (r.track as { name: string }).name + " · " : ""}${ORD[me.place]} of ${r.race.riders.length}${me.finished ? ` · ${clock(me.time)}` : " · didn't finish"}${me.bestLap ? ` · best lap ${clock(me.bestLap)}` : ""}` };
     else if (r.board) {
       // The endless rides: the distance (each ground's best, kept as riding it alone), the session's points.
       const where = r.city ? "city" : (r.jam!.runs[N.seat]!.track as { id: string }).id, what = r.city ? "Endless Wheelie City" : pickName(r.kind, r.sub);

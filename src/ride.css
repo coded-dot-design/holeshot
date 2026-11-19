@@ -5,7 +5,7 @@
 .dh .dh-ride{display:flex;flex-direction:column;width:100%;min-height:100%;gap:0;padding:0;border:0;border-radius:0;box-shadow:none;background:var(--shop-bg);color:var(--shop-ink);font-weight:800}
 .dh .dh-ride .dh-brand .dh-logo{height:32px;margin:0}
 .dh-rhead{grid-template-columns:auto minmax(0,1fr) auto}
-.dh .dh-rhead .dh-back{justify-self:start;align-self:start;margin-left:40px;padding:0 24px;font-size:17px;letter-spacing:0}
+.dh .dh-rhead .dh-back{justify-self:start;align-self:center;margin:0 0 14px 40px;padding:0 24px;font-size:17px;letter-spacing:0}
 .dh-rwrap{flex:1;display:flex;flex-direction:column;gap:20px;box-sizing:border-box;width:100%;max-width:1600px;margin:0 auto;padding:28px 36px 24px}
 .dh-rtitle{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 24px}
 .dh-rtitle .shop-h1{font-size:52px}
