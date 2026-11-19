@@ -1,29 +1,11 @@
-// LET'S RIDE → FREE RIDE: the maps. One key per map with a preview: the map seen from above (its
+// LET'S RIDE → Free Ride: each map's thumbnail (../../ride-ui.ts): the map seen from above (its
 // ground by height, hill-shaded, its painted trail and faces), the ride line in neon, the start
-// marked, and its features listed. Previews are drawn into small canvases after the card mounts,
+// marked. Previews are drawn into small canvases after the card mounts,
 // one map per frame (building a map's terrain takes a few tens of ms), and kept per map and theme.
 import { FREE_MAPS } from "../index.ts";
 import { makeTrack, MOTO_TRACK } from "../race/course.ts";
-import { FEATURE_NAMES, type RideMap } from "./maps.ts";
+import type { RideMap } from "./maps.ts";
 import { previewColors } from "./scenery.ts";
-
-/** One key per map (`<li>`s for LET'S RIDE's FREE RIDE group; `cls` on each key). */
-export function mapTiles(cls = "") {
-  return FREE_MAPS.map((m, i) => {
-    const tags = m.open ? [...new Set(tagsOf(m.open()))] : ["DOUBLES", "WHOOPS", "TRIPLE", "TABLETOP"];
-    return `<li><button type="button" class="bui-key dh-mapk ${cls}" data-map="${m.id}"><canvas class="dh-mapv" data-prev="${m.id}" aria-hidden="true"></canvas><b><i>${i + 1}</i> ${m.name}</b><small>${m.blurb}</small><em>${tags.slice(0, 4).join(" · ")}</em></button></li>`;
-  }).join("");
-}
-
-/** The features a map is known for (its picker tags). */
-function tagsOf(m: RideMap) {
-  const out: string[] = [];
-  for (let k = 0; k < m.FEATURES.length; k += 2) out.push(FEATURE_NAMES[m.FEATURES[k]!]!.replace(/^THE /, ""));
-  if (m.def.banks.length) out.push(m.id === "night-park" ? "WALL RIDE" : "BERMS");
-  if (m.id === "quarry") out.push("DROP-IN", "HILL CLIMBS", "LEDGES");
-  if (m.NP) out.push("TREES");
-  return out;
-}
 
 const cache = new Map<string, ImageData>();
 let queue: HTMLCanvasElement[] = [], raf = 0;

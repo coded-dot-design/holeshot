@@ -13,7 +13,7 @@ import { PerformanceObserver } from "node:perf_hooks";
 
 const B = await import("../src/bike/bike.ts");
 const N = await import("../src/net.ts");
-const { match, HELLO_P, RIDE, OVER, ARENA, raceTrack, jamMap, rideSeed } = await import("../src/online/match.ts");
+const { match, HELLO_P, RIDE, OVER, ARENA, raceTrack, jamMap, rideSeed, circuitTrack } = await import("../src/online/match.ts");
 const C = await import("../src/modes/race/course.ts");
 const { freeJam } = await import("../src/modes/freeride/jam.ts");
 const { tune } = await import("../src/model/tune.ts");
@@ -50,7 +50,7 @@ test("the wire: inputs survive the trip; the pick fits a byte; the hello carries
   assert.ok(N.encode(0, 0, 0, 0, N.B_READY) & N.B_READY);
   assert.equal(N.scoreBits(123456, true) & 0xffffff, 123456);
   assert.ok(N.scoreBits(1, true) & N.B_DONE);
-  for (const k of [N.K_RACE, N.K_JAM, N.K_AIR, N.K_CITY]) for (const sub of [0, 2, 4]) assert.deepEqual(N.unpackMode(N.packMode(k, sub)), { kind: k, sub });
+  for (const k of [N.K_RACE, N.K_JAM, N.K_AIR, N.K_CITY, N.K_ENDLESS, N.K_ENDCITY, N.K_TRACKDAY]) for (const sub of [0, 2, 4]) assert.deepEqual(N.unpackMode(N.packMode(k, sub)), { kind: k, sub });
   assert.equal(N.cleanName("  zoë-7 the  great "), "ZO7 THE");
   // The hello: three bytes a frame, back together on another screen.
   for (const [i, p] of PROFILES.entries()) {
@@ -197,6 +197,38 @@ test("a whole match on four screens: the hello, a race to the flag (rivals none:
   assert.equal(a.m.ride.race.humans, 4, "four people, no AI");
   assert.notEqual(a.m.ride.track, null);
   assert.equal(a.m.round, 1, "the second ride");
+  assert.ok(settle(o), "and byte for byte after");
+  for (const r of o.runs) r.e.destroy();
+});
+
+// Track Day together (K_TRACKDAY): the race's sim on the host's road circuit, the empty places to
+// street-bike rivals; deterministic over a link with latency and jitter, to the flag and on to the next.
+test("Track Day online: each circuit, two and three screens with latency end byte for byte on the no-latency run; a race to the flag, the result on the same frame, the next ride on the same circuit", () => {
+  for (const [sub, P] of [[0, 2], [1, 3], [2, 2]]) {
+    const mode = N.packMode(N.K_TRACKDAY, sub), stopAt = (runs) => runs.every((r) => r.m.link.final >= 1200);
+    const base = online(P, mode, { until: stopAt });
+    assert.ok(settle(base), `${sub}/${P}: the no-latency screens agree`);
+    const want = base.runs[0].m.arena.slice(), at = base.runs[0].m.link.final, ride = base.runs[0].m.ride;
+    assert.equal(ride.track, circuitTrack(sub), `${sub}: the host's circuit`);
+    assert.equal(ride.track.venue, "td", "a road circuit");
+    assert.equal(ride.race.riders.length, 4, "the grid is full");
+    assert.equal(ride.ai.length, 4 - P, "street-bike rivals in the empty places");
+    for (const r of base.runs) r.e.destroy();
+    const o = online(P, mode, { latency: 9, jitter: 7, seed: 3, hold: at, until: (runs) => runs.every((r) => r.m.link.final === at) });
+    for (const r of o.runs) {
+      assert.equal(r.m.link.desync, -1, "no desync");
+      assert.ok(eq(r.m.arena, want), `Track Day ${sub}, ${P} screens, latency 9 ± 7: byte for byte the no-latency run`);
+    }
+    assert.ok(o.runs.every((r) => r.m.link.corrections > 0), "corrections ran");
+    for (const r of o.runs) r.e.destroy();
+  }
+  const P = 2, input = (f, s, r) => ((r.m.ready = r.over.length > 0 && r.m.phase === OVER), drive(f, s, 200));
+  const o = online(P, N.packMode(N.K_TRACKDAY, 2), { latency: 6, jitter: 5, ticks: 60 * 400, input, until: (runs) => runs.every((r) => r.built >= 2) });
+  const [a] = o.runs;
+  assert.ok(o.runs.every((r) => r.over.length === 1 && r.built === 2 && r.over[0].f === a.over[0].f), "one result each, on the same frame, then the next ride");
+  for (const r of o.runs) assert.deepEqual(r.over[0].res, a.over[0].res, "every screen has every seat's result");
+  assert.ok(a.over[0].res.every((x) => x.bestLap > 0), `laps timed (${a.over[0].res.map((x) => x.bestLap.toFixed(1))})`);
+  assert.equal(a.m.ride.track, circuitTrack(2), "the next ride on the same circuit");
   assert.ok(settle(o), "and byte for byte after");
   for (const r of o.runs) r.e.destroy();
 });
