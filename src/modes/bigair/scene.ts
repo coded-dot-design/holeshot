@@ -189,7 +189,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
     // The roll-in's start deck: a gantry over it.
     for (const side of [-1, 1]) dio.add({ size: [0.3, 4.2, 0.3], pos: [ROLL_X + 1.5, ROLL_H - 0.1, side * (HW + 0.4)], color: P.tower, pick: false });
     dio.add({ size: [0.5, 0.9, HW * 2 + 1.1], pos: [ROLL_X + 1.5, ROLL_H + 3.6, 0], color: P.rim, emissive: P.night, pick: false });
-    g = rig(dio, "rider", { ...P.kit, ...ctx.look }, ctx.bike.rig, ctx.helmet);
+    g = rig(dio, "rider", { ...P.kit, ...ctx.look }, ctx.bike.rig, ctx.helmet, ctx.bike.model.id);
     dust = pool(dio, DUST, P.dust, 4);
     spark = pool(dio, SPARK, P.spark, 6);
     fans = pool(dio, FANS, P.fans[0]!, 7);

@@ -163,7 +163,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     pdio.add({ shape: "cyl", sides: 24, size: [3.2, 0.12, 3.2], pos: [0, -0.06, 0], color: night ? "#a49bf0" : "#6f5a8e", pick: false });
     pdio.add({ shape: "cyl", sides: 24, size: [2.96, 0.13, 2.96], pos: [0, -0.055, 0], color: night ? "#7a70cc" : "#8b74a8", pick: false });
     pdio.add({ shape: "cyl", sides: 24, size: [3.34, 0.05, 3.34], pos: [0, -0.11, 0], color: night ? "#22e6ff" : "#d81b72", emissive: night, pick: false });
-    const g = rig(pdio, "pv", { ...kit, ...L2.look } as RigColors, t.rig, L2.helmet), bk = makeBike(flat, t.power, t.shape);
+    const g = rig(pdio, "pv", { ...kit, ...L2.look } as RigColors, t.rig, L2.helmet, t.model.id), bk = makeBike(flat, t.power, t.shape);
     bk.reset(0, 0, 0);
     g.pose(bk, 0.6);
     // Dressing the rider (RIDER KIT, OUTFITS), the turntable closes in on them: helmet, kit and boots.
@@ -731,7 +731,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     };
     paused = false;
     result = null;
-    const view: NetView = { ride: r, seat: N.seat, names: tags(), looks: r.riders.map((x, i) => { const l = lookOf(x.profile); return { look: l.look, helmet: l.helmet, rig: r.tuned[i]!.rig, number: l.number }; }) };
+    const view: NetView = { ride: r, seat: N.seat, names: tags(), looks: r.riders.map((x, i) => { const l = lookOf(x.profile); return { look: l.look, helmet: l.helmet, rig: r.tuned[i]!.rig, model: r.tuned[i]!.model.id, number: l.number }; }) };
     if (r.city) {
       // Endless Wheelie City together: this seat's own run (its window, its patrol), every rider drawn.
       runMode = "endcity";

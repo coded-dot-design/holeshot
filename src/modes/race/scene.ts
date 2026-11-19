@@ -51,7 +51,7 @@ export interface NetView {
   /** Every rider's tag (people's names, the AI rivals', "· AI" for a seat that left). */
   names: string[];
   /** Each person's colours, helmet, rig and plate. */
-  looks: { look: ModeCtx["look"]; helmet: RigHelmet; rig: RigKind; number: number }[];
+  looks: { look: ModeCtx["look"]; helmet: RigHelmet; rig: RigKind; model?: string; number: number }[];
 }
 /** A ModeRun with an online ride's hooks. */
 export interface NetRun extends ModeRun {
@@ -288,7 +288,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       // Online: every person in their own garage colours and kit; the AI in the track's teams.
       const L = net && r < humans ? net.looks[r]! : null;
       const col = L ? { ...P.kit, ...L.look } : r ? { ...P.kit, ...P.teams[r]! } : { ...P.kit, ...ctx.look };
-      rigs.push(rig(dio, "rider" + r, col, L ? L.rig : r ? rigKind(sim.riders[r]!.power) : ctx.bike.rig, L ? L.helmet : r ? "peak" : ctx.helmet));
+      rigs.push(rig(dio, "rider" + r, col, L ? L.rig : r ? rigKind(sim.riders[r]!.power) : ctx.bike.rig, L ? L.helmet : r ? "peak" : ctx.helmet, L ? L.model : r ? undefined : ctx.bike.model.id));
     }
     dust = pool(dio, DUST, P.dust, 4);
     roost = pool(dio, ROOST, P.dust, 5);

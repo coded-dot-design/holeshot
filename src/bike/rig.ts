@@ -2,14 +2,15 @@
 // from @fzlt/core/diorama parts and posed each frame from ./bike.ts (the same file in Moto Track, Big
 // Air and Wheelie City). The bike: wheels that spin and ride their springs, a swingarm that follows
 // the rear axle, telescoping forks, tank and shrouds, seat, fenders, number plate, the engine (a
-// 2-stroke's fat expansion chamber, a 4-stroke's high silencer, an e-motor's glowing battery). The
+// 2-stroke's curved silver expansion chamber, a 4-stroke's header and side silencer: ./bodies.ts
+// `dirt`, in the art's style with an ink edge; an e-motor's glowing battery). The
 // rider: a two-bone leg from hip to peg and arm from shoulder to grip (solved each frame), a torso
 // that leans with the weight shift, a helmet with its peak; standing in the attack position, sitting
 // in a turn. A trick pose (`T`) moves the body and takes the hands or feet off; after a crash the
 // rider leaves the bike and tumbles where bike.ts throws them. Cosmetic: builtin maths is fine here.
 import type { Diorama, DioramaObject } from "@fzlt/core/diorama";
 import type { Bike } from "./bike.ts";
-import { body, extras, type BodyKind, type BodyKit, type ShownUpgrade } from "./bodies.ts";
+import { body, dirt, dirtLook, extras, INK, type BodyKind, type BodyKit, type ShownUpgrade } from "./bodies.ts";
 export type { ShownUpgrade };
 
 /** The colours of one bike and rider (`#rrggbb`). */
@@ -88,6 +89,20 @@ const mix = (a: string, b: string, t: number) => {
   return "#" + ((1 << 24) | (c(16) << 16) | (c(8) << 8) | c(0)).toString(16).slice(1);
 };
 
+/** The ink edge's width round a gas bike's main shapes (./bodies.ts INK is its colour). */
+const INK_W = 0.013;
+/** Twice the signed area of polygon `P`. */
+const area = (P: number[][]) => P.reduce((a, p, i) => { const q = P[(i + 1) % P.length]!; return a + p[0]! * q[1]! - q[0]! * p[1]!; }, 0);
+/** Polygon `P` grown by `e` all round (each corner mitred, spikes capped). */
+function grow(P: number[][], e: number) {
+  const n = P.length, s = area(P) > 0 ? 1 : -1;
+  const nrm = (a: number[], b: number[]) => { const dx = b[0]! - a[0]!, dy = b[1]! - a[1]!, l = Math.hypot(dx, dy) || 1; return [(s * dy) / l, (-s * dx) / l]; };
+  return P.map((p, i) => {
+    const a = nrm(P[(i + n - 1) % n]!, p), b = nrm(p, P[(i + 1) % n]!), k = e / Math.max(0.35, 1 + a[0]! * b[0]! + a[1]! * b[1]!);
+    return [p[0]! + (a[0]! + b[0]!) * k, p[1]! + (a[1]! + b[1]!) * k];
+  });
+}
+
 /** Bones and the solved joints, reused (no allocation per pose). */
 const J = new Float64Array(4);
 /** Two-bone solve from (ax, ay) to (bx, by), bones l1 then l2, bending to `bend` (+1: the middle joint
@@ -118,7 +133,7 @@ const PEAK: Partial<Record<RigHelmet, number[][]>> = {
 PEAK.fin = PEAK.spike = PEAK.peak;
 
 /** A bike and its rider in diorama `d`, named `id`: `pose(bike)` each frame before `d.draw()`. */
-export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", helmet: RigHelmet = "peak") {
+export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", helmet: RigHelmet = "peak", model?: string) {
   const root = d.add({ id, shape: "group", size: [1.9, 0, 0.8], tag: { bike: id } });
   const rid = id + ":r";
   const rider = d.add({ id: rid, shape: "group", size: [0.6, 0, 0.5], on: id });
@@ -129,6 +144,19 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
     return p;
   };
   const group = (gid: string, on: string) => d.add({ id: gid, shape: "group", size: [0.2, 0, 0.2], on, pick: false });
+  /** A side-profile slab: outline `pts` ([x, y] in its parent's frame) extruded `w` across, centred on
+   *  `z` (a prism turned on its side, as the helmet's are); with `ink` (the default) a dark twin grown
+   *  INK_W all round on the layer just under it, so the shape wears the art's ink edge from any side. */
+  const slab = (pts: number[][], w: number, z: number, color: string, o: { on?: string; layer: number }, ink = INK_W) => {
+    let P = pts.map(([x, y]) => [x!, -y!]);
+    if (area(P) * area(SHELL) < 0) P = P.reverse();
+    const at = (q: number[][], ww: number, c: string, layer: number) =>
+      part([Math.max(...q.map((v) => v[0]!)) - Math.min(...q.map((v) => v[0]!)), ww, 0], [0, 0, z - ww / 2], c, { ...o, shape: "prism", outline: q, rot: [PI / 2, 0, 0], layer });
+    if (ink) at(grow(P, ink), w + 2 * ink, INK, o.layer - 0.01);
+    return at(P, w, color, o.layer);
+  };
+  /** The light alloy of a gas bike's frame, swingarm and plain fork tubes. */
+  const ALLOY = mix(C.metal, C.pipe, 0.35);
   // A bone: a group at the joint, turned about z; a box along its x.
   const bone = (gid: string, len: number, w: number, z: number, color: string, on = rid) => {
     const g = group(gid, on);
@@ -140,20 +168,30 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
   // ---- the bike ----
   // Layers inside the bike's cluster (the painter sorts by layer, then by depth inside a layer):
   //   0.5      the rider's far-side leg and arm (SIDE_DROP)
-  //   1–1.4    far-side parts (FAR_DROP from 6–6.4): the far fork leg, swingarm arm, exhaust, side plate
+  //   0.99–1.4 far-side parts (FAR_DROP from 5.99–6.4): the far fork leg, swingarm arm (and its ink),
+  //            exhaust, side plate
   //   1.5–2.1  a wheel and its fender at the far end of the bike (the eye is past the other end)
   //   3–3.6    a wheel and its fender seen from the side
+  //   3.16     a gas bike's far shroud block (under the tank: its side group drops by 1)
   //   4–4.3    the body on the centre plane: frame, engine, tank and shrouds, seat, side panels, plate,
-  //            bars, then their graphics
-  //   4.5–5.1  a wheel and its fender at the near end (within 45° of straight ahead or behind)
+  //            bars, then their graphics (a gas bike's: ./bodies.ts `dirt`, each inked shape's ink
+  //            0.01 under it; the near shroud block 4.16)
+  //   4.5–5.1  a wheel and its fender at the near end (within 45° of straight ahead or behind; a gas
+  //            bike's fender ink 0.01 under its fender)
   //   6–6.4    near-side parts: the near fork leg, swingarm arm, exhaust, side plate
   //   7        the rider (near-side leg and arm, torso, helmet)
+  // A gas dirt bike (2-stroke, 4-stroke) is the art's style (./bodies.ts `dirt` and DIRT, the per-model
+  // table): a dark tyre, a light rim and a three-spoke hub, an inked tapered swingarm, fork tubes (the
+  // model's colour over chrome); tests/bikes.browser.mjs sweeps its draw order.
   // A wheel's level comes from two nested groups with `behind`, pointing out of its end of the bike
   // and 45° to each side: both face the eye (the near end), one does (the side), neither (the far end).
   // A side's parts hang from a group just off the centre plane (x 0: only which side the eye is on counts).
   const hubs: DioramaObject[] = [], ends: DioramaObject[] = [];
-  // The wheel's dish: between the tyre and the rim, so it reads solid, not a hole.
-  const dish = mix(C.tyre, C.rim, 0.42);
+  // A gas dirt bike is drawn in the art's style (./bodies.ts `dirt`): its model's look, or the base.
+  const gas = kind === "2t" || kind === "4t", DL = gas ? dirtLook(model) : null;
+  // The wheel's dish: between the tyre and the rim, so it reads solid, not a hole (a gas bike's is
+  // near the tyre's black, under a light three-spoke hub).
+  const dish = mix(C.tyre, C.rim, DL ? 0.16 : 0.42);
   for (let i = 0; i < 2; i++) {
     const hid = id + ":w" + i, f = i ? 1 : -1;
     const a = d.add({ id: hid + "a", shape: "group", size: [0.2, 0, 0.2], pos: [f * END, 0, END], on: id, behind: END_DROP, pick: false });
@@ -168,7 +206,11 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
       d.add({ id: sid, shape: "group", size: [0.2, 0, 0.2], pos: [0, 0, s * END], on: hid, behind: FACE_DROP, pick: false });
       part([0.52, 0.006, 0.52], [0, 0, z(0.006)], C.rim, { ...o, shape: "cyl", sides: 14, layer: WHEEL + 0.05 });
       part([0.42, 0.01, 0.42], [0, 0, z(0.01)], dish, { ...o, shape: "cyl", sides: 12, layer: WHEEL + 0.06 });
-      for (let k = 0; k < 3; k++) part([0.4, 0.035, 0.012], [0, -0.0175, s * (0.091 - END)], C.metal, { on: sid, rot: [0, 0, (k * PI) / 3], layer: WHEEL + 0.07 });
+      for (let k = 0; k < 3; k++) {
+        if (!DL) part([0.4, 0.035, 0.012], [0, -0.0175, s * (0.091 - END)], C.metal, { on: sid, rot: [0, 0, (k * PI) / 3], layer: WHEEL + 0.07 });
+        // A spoke of the hub: out from the middle to the rim, 120° apart.
+        else part([0.2, 0.05, 0.012], [Math.cos(k * 2.094) * 0.1 + Math.sin(k * 2.094) * 0.025, Math.sin(k * 2.094) * 0.1 - Math.cos(k * 2.094) * 0.025, s * (0.091 - END)], C.rim, { on: sid, rot: [0, 0, k * 2.094], layer: WHEEL + 0.07 });
+      }
       part([0.13, 0.03, 0.13], [0, 0, z(0.03)], C.metal, { ...o, shape: "cyl", sides: 8, layer: WHEEL + 0.08 });
     }
     hubs.push(hub);
@@ -181,13 +223,23 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
   const arm = group(id + ":arm", id);
   const fork = group(id + ":fk", id), slider = group(id + ":sl", id);
   for (const z of [-0.12, 0.12]) {
-    const s = Math.sign(z), k = s < 0 ? "L" : "R";
-    part([0.66, 0.08, 0.06], [0.33, -0.04, z - s * END], C.metal, { on: sideOf(id + ":arm" + k, id + ":arm", s), layer: NEAR });
-    part([0.38, 0.07, 0.07], [0.19, -0.035, z - s * END], C.metal, { on: sideOf(id + ":fk" + k, id + ":fk", s), layer: NEAR });
-    part([0.36, 0.09, 0.09], [0.18, -0.045, z - s * END], C.frame, { on: sideOf(id + ":sl" + k, id + ":sl", s), layer: NEAR + 0.1 });
+    const s = Math.sign(z), k = s < 0 ? "L" : "R", ao = { on: sideOf(id + ":arm" + k, id + ":arm", s), layer: NEAR };
+    const fo = { on: sideOf(id + ":fk" + k, id + ":fk", s), layer: NEAR }, so = { on: sideOf(id + ":sl" + k, id + ":sl", s), layer: NEAR + 0.1 };
+    if (!DL) {
+      part([0.66, 0.08, 0.06], [0.33, -0.04, z - s * END], C.metal, ao);
+      part([0.38, 0.07, 0.07], [0.19, -0.035, z - s * END], C.metal, fo);
+      part([0.36, 0.09, 0.09], [0.18, -0.045, z - s * END], C.frame, so);
+      continue;
+    }
+    // A gas bike: a tapered alloy swingarm, inked; real fork tubes: the fat outer tube from the clamp
+    // (the model's colour: gold on a factory bike) over the chrome inner tube down to a dark axle lug.
+    slab([[0, 0.05], [0.64, 0.025], [0.68, -0.025], [0, -0.06]], 0.05, z - s * END, ALLOY, ao);
+    part([0.09, 0.42, 0.09], [0, 0, z - s * END], DL.fork ?? ALLOY, { ...fo, shape: "cyl", sides: 8, rot: [0, 0, -PI / 2], layer: NEAR + 0.2 });
+    part([0.062, 0.36, 0.062], [0, 0, z - s * END], C.metal, { ...so, shape: "cyl", sides: 8, rot: [0, 0, -PI / 2] });
+    part([0.11, 0.05, 0.08], [0.01, -0.035, z - s * END], C.frame, so);
   }
   // The exhaust runs down the right side.
-  const ex = sideOf(id + ":ex", id, 1), xo = { on: ex, layer: NEAR }, xz = (z: number) => z - END;
+  const ex = sideOf(id + ":ex", id, 1);
   // The fenders (and the tail light) ride with their wheel's level, always just over its tyre.
   const rearEnd = ends[0]!.id!, frontEnd = ends[1]!.id!, eo = 2 * END;
   // An electric or street bike: its own body (./bodies.ts), on the same layers and groups as the gas
@@ -197,37 +249,13 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
   const kit: BodyKit = {
     part, C, body: BODY, near: NEAR, fender: WHEEL + 0.5, inset: END, rear: rearEnd, front: frontEnd, eo,
     side: (s) => (s > 0 ? ex : left || (left = sideOf(id + ":exL", id, -1))),
+    group: (gid, on = id, z = 0, drop = 0) => d.add({ id: id + gid, shape: "group", size: [0.2, 0, 0.2], pos: [0, 0, z * END], on, behind: drop, pick: false }),
+    slab, alloy: ALLOY,
   };
-  const gas = kind === "2t" || kind === "4t", built = gas ? null : body(kind, kit);
+  const built = gas ? dirt(kind as "2t" | "4t", kit, DL!) : body(kind, kit);
   extras(kind, C.up, kit);
-  let fender = built?.fender;
-  if (gas) {
-    // Frame, engine, exhaust.
-    part([0.62, 0.07, 0.1], [0.12, -0.02, 0], C.frame, { rot: [0, 0, -0.45], layer: BODY });
-    part([0.42, 0.3, 0.26], [0.06, -0.42, 0], C.metal, { layer: BODY });
-    if (kind === "2t") {
-      // The expansion chamber: fat under the engine on the right, tapering back to a silencer.
-      part([0.22, 0.42, 0.22], [0.26, -0.36, xz(0.17)], C.pipe, { ...xo, shape: "cyl", sides: 8, top: 0.7, rot: [0, 0, PI / 2 + 0.2] });
-      part([0.4, 0.1, 0.1], [-0.36, -0.05, xz(0.15)], C.pipe, { ...xo, rot: [0, 0, 0.3] });
-      part([0.32, 0.12, 0.12], [-0.52, 0.02, xz(0.15)], C.metal, { ...xo, shape: "cyl", sides: 8, rot: [0, 0, PI / 2 + 0.3], layer: NEAR + 0.1 });
-    } else {
-      // A header round the front, a big silencer up high.
-      part([0.08, 0.32, 0.08], [0.26, -0.44, xz(0.15)], C.pipe, { ...xo, rot: [0, 0, 0.6] });
-      part([0.5, 0.08, 0.08], [-0.12, -0.32, xz(0.15)], C.pipe, { ...xo, rot: [0, 0, 0.32] });
-      part([0.2, 0.42, 0.2], [-0.5, 0.0, xz(0.15)], C.metal, { ...xo, shape: "cyl", sides: 8, rot: [0, 0, PI / 2 + 0.28], layer: NEAR + 0.1 });
-      part([0.1, 0.12, 0.26], [0.02, -0.2, 0], C.metal, { layer: BODY });
-    }
-    // Plastics: tank and shrouds, seat, rear fender (the tail), side panel, front fender, plate, bars.
-    part([0.5, 0.22, 0.4], [0.26, -0.08, 0], C.plastic, { shape: "wedge", rot: [0, PI, 0], layer: BODY });
-    part([0.34, 0.1, 0.42], [0.24, 0.1, 0], C.plastic2, { layer: BODY + 0.05 });
-    part([0.78, 0.08, 0.22], [-0.2, 0.08, 0], C.seat, { layer: BODY });
-    part([0.55, 0.07, 0.2], [-0.62 + eo, 0.06, 0], C.plastic, { shape: "wedge", rot: [0, 0, -0.12], on: rearEnd, layer: WHEEL + 0.5 });
-    part([0.36, 0.2, 0.3], [-0.36, -0.14, 0], C.plastic2, { layer: BODY });
-    fender = part([0.44, 0.05, 0.17], [0.86 - eo, -0.1, 0], C.plastic, { shape: "wedge", rot: [0, PI, 0.1], on: frontEnd, layer: WHEEL + 0.5 });
-    part([0.05, 0.26, 0.28], [0.62, 0.08, 0], C.plate, { rot: [0, 0, -0.35], layer: BODY + 0.05 });
-    part([0.06, 0.06, 0.64], [GRIP[0]!, GRIP[1]! - 0.03, 0], C.frame, { rot: [0.22 * (C.bend ?? 0), 0.3 * (C.bend ?? 0), 0], layer: BODY });
-  }
-  const NP = built?.plates ?? [-0.36, -0.13];
+  const fender = built.fender;
+  const NP = built.plates;
   // The garage's extras: a graphics kit, the side plates and their number, a crack.
   const G2 = C.graphic ?? C.plastic2;
   if (C.gfx === "bolt") {
@@ -261,7 +289,8 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
       });
     }
   }
-  part([0.05, 0.05, 0.05], [-0.9 + eo, 0.08, 0], C.glow, { emissive: true, on: rearEnd, layer: WHEEL + 0.6 });
+  const TL = built.tail ?? [-0.9, 0.08];
+  part([0.05, 0.05, 0.05], [TL[0] + eo, TL[1], 0], C.glow, { emissive: true, on: rearEnd, layer: WHEEL + 0.6 });
 
   // ---- the rider (on the bike, or thrown clear after a crash) ----
   const torso = group(id + ":t", rid);

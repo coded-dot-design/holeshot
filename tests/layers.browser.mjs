@@ -36,14 +36,15 @@ window.load = (i) => {
   const C = { plastic, plastic2, seat: "#202028", frame: "#3a3a4c", tyre: "#15151c", rim: "#b8bccc", metal: "#c9cde6", pipe: "#7e86a8", plate: "#e8e8ee", ink: "#101018",
     jersey: "#2fb4d8", pants: "#e8e8ee", helmet: "#f0f0f4", stripe: "#2f6fd8", visor: "#101018", boots: "#f4f4f8", gloves: "#202028", glow: "#d0d0d8",
     side: "#e8e8ee", sideInk: "#101018", num: 10 + i, gfx: GFX[i % GFX.length], graphic: "#ffd23f" };
-  g = rig(d, "b", C, t.rig, "peak"); bk = bike(flat, t.power, t.shape);
+  g = rig(d, "b", C, t.rig, "peak", m.id); bk = bike(flat, t.power, t.shape);
   const by = (k) => d.get("b" + k), bikeParts = g.parts.filter((p) => !under(p, [g.rider]));
   const side = [["armL", "fkL", "slL", "np-1s", ":exL"], ["armR", "fkR", "slR", "np1s", ":ex"]].map((r) => r.map((k) => by(k.startsWith(":") ? k : ":" + k)).filter(Boolean));
   const hub = [by(":w0"), by(":w1")], end = [by(":w0b"), by(":w1b")];
   const tyre = hub.map((h) => g.parts.find((p) => p.parent === h));
   const wheel = bikeParts.filter((p) => under(p, hub));
-  // A fender: the parts on a wheel's level group that are not the wheel (the tail light aside: tiny).
-  const fender = end.map((e) => bikeParts.filter((p) => p.parent === e && p.size[0] > 0.2));
+  // A fender: the parts on a wheel's level group (or a group on it: a gas bike's front fender) that
+  // are not the wheel (the tail light aside: tiny).
+  const fender = end.map((e) => bikeParts.filter((p) => (p.parent === e || (p.parent?.parent === e && p.parent.shape === "group" && !hub.includes(p.parent))) && p.size[0] > 0.2));
   sets = { bikeParts, side, sideParts: side.map((r) => bikeParts.filter((p) => under(p, r))), tyre, wheel, fender };
   return { kind: t.rig, gfx: C.gfx ?? "none" };
 };

@@ -105,7 +105,13 @@ import { readdirSync, readFileSync } from "node:fs";
 // holeshot.js 224,086 → 225,026): the CONTROLS · HOW TO card in settings (src/data/controls.ts: the keyboard,
 // gamepad and phone bindings the landing also reads; the card and its key-cap CSS); budget 225,000 →
 // 226,000 (about 1 KB of room).
-const BUDGET = 226_000;
+// R36 (the gas dirt bikes in the art's style), on R34: +1,226 B measured (225,558 → 226,784
+// holeshot.js; holeshot.mjs 225,321 → 226,552): bodies.ts `dirt` (the shared base: the inked tank and
+// shroud, seat, side panel, plate, tail and fender, the angled frame, the 2-stroke's chamber, the
+// 4-stroke's header and side silencer, the shroud's colour blocks) and DIRT (the per-model table), the
+// rig's ink slabs and polygon grow, the three-spoke hub, the inked swingarm and the fork tubes, the
+// model id through the scenes; budget 226,000 → 227,800 (about 1 KB of room).
+const BUDGET = 227_800;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

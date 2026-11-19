@@ -298,9 +298,9 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null, mash = false
       arms.push(arm);
     }
     patrols();
-    rigs.push(rig(dio, "bike0", { ...P.kit, ...ctx.look }, ctx.bike.rig, ctx.helmet));
+    rigs.push(rig(dio, "bike0", { ...P.kit, ...ctx.look }, ctx.bike.rig, ctx.helmet, ctx.bike.model.id));
     // Online: every other rider on their own garage bike, in their own colours.
-    if (net) for (let r = 0; r < H; r++) if (r !== seat) rigs.push(rig(dio, "bike" + (r + 1), { ...P.kit, ...net.looks[r]!.look }, net.looks[r]!.rig, net.looks[r]!.helmet));
+    if (net) for (let r = 0; r < H; r++) if (r !== seat) rigs.push(rig(dio, "bike" + (r + 1), { ...P.kit, ...net.looks[r]!.look }, net.looks[r]!.rig, net.looks[r]!.helmet, net.looks[r]!.model));
     dust = pool(dio, DUST, P.smoke, 4);
     spark = pool(dio, SPARK, P.spark, 6);
     water = dio.points({ cap: WATER, color: P.water, layer: 6 });
