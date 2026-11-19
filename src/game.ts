@@ -321,6 +321,8 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     const html = s === "setup" ? setupCard() : s === "garage" ? garageCard() : s === "ride" ? rideCard() : s === "series" ? seriesCard() : s === "settings" ? settingsCard() : s === "controls" ? controlsCard() : s === "result" ? resultCard() : paused ? pauseCard() : "";
     cards.innerHTML = html;
     cards.hidden = !html;
+    // (A new screen opens at its top, not at the scroll the last one was left at.)
+    if (s !== was) cards.scrollTop = 0;
     stage.toggleAttribute("data-menu", s !== "event" && s !== "result");
     const slot = cards.querySelector("canvas-slot");
     if (slot) slot.replaceWith(pv), (pvKey = ""), requestAnimationFrame(preview);

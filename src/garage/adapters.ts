@@ -20,7 +20,8 @@ import { btn, esc, pill, price, swatch } from "../shop/index.ts";
 /** "CHAIN & SPROCKETS" → "Chain & sprockets" (the design's sentence case). */
 export const cap = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
 /** "PINK OUT" → "Pink Out", "YOWLER 125 2T" → "Yowler 125 2T" (names of things). */
-export const words = (s: string) => s.split(" ").map((w) => (/\d/.test(w) ? w : w.charAt(0) + w.slice(1).toLowerCase())).join(" ");
+/** A name in title case; model codes and the class letters stay capitals (YOWLER 125 2T → Yowler 125 2T, MX PEAK → MX Peak). */
+export const words = (s: string) => s.split(" ").map((w) => (/\d|^(MX|SX|KX|YZ|GP|TT)$/.test(w) ? w : w.charAt(0) + w.slice(1).toLowerCase())).join(" ");
 
 export const isE = (b: BikeSave) => CLASSES[modelOf(b.model).cls].motor === "battery";
 export const partName = (b: BikeSave, k: PartId) => (k === "motor" ? MOTOR_NAME[modelOf(b.model).cls] : PART_NAME[k]);
