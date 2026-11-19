@@ -112,7 +112,7 @@ try {
       await until(p, () => window.game && game.getSnapshot().mode === "bigair", null, `${at}: ?mode= starts that event`);
       for (const id of ["mashup", "trackday"]) {
         await p.goto(`${server.url}${BASE}/play/?mode=${id}`);
-        await until(p, () => window.game && game.getSnapshot().mode === id, id, `${at}: ?mode=${id} starts it`);
+        await until(p, (id) => window.game && game.getSnapshot().mode === id, id, `${at}: ?mode=${id} starts it`);
       }
       await p.goto(`${server.url}${BASE}/play/?mode=bigair`);
       await until(p, () => window.game && game.getSnapshot().mode === "bigair", null, `${at}: back to Big Air`);
@@ -164,7 +164,7 @@ try {
   await p.evaluate(() => new Promise((r) => requestIdleCallback(() => r(), { timeout: 2000 })));
   assert.deepEqual(await p.evaluate(() => ({ poster: getComputedStyle(document.querySelector(".dt-poster")).visibility, game: !!document.querySelector("[data-fizlet-host]"), looping: document.getAnimations().filter((a) => a.effect?.target?.closest?.(".phone")).length })), { poster: "visible", game: false, looping: 0 }, "reduced motion: a still poster, no game, a still controls diagram");
   await ctx.close();
-  console.log("Holeshot site: the header wordmark and game-only header, the footer links out, the hero lockup over the demo race (poster first, no touch controls), the controls (key caps, gamepad, the animated rocker), four ways to ride (real modes, soon ones unlinked), the garage's 3 of 6 spots, the brand kit and its downloads, the title, PLAY to /play/, six sections, the measured size, shadows straight down, no DOM VIRUS, no sideways scroll, /play/ setup (the header handle clear of the card) and ?mode=, the reduced-motion poster; 1440 and 390, dark and light; the manifest and the one-time Home Screen tip (phone landscape only).");
+  console.log("Holeshot site: the header wordmark and game-only header, the footer links out, the hero lockup over the demo race (poster first, no touch controls), the controls (key caps, gamepad, the animated rocker), four ways to ride (every entry a live link to a real mode; ?mode=mashup and ?mode=trackday start), the garage's 3 of 6 spots, the brand kit and its downloads, the title, PLAY to /play/, six sections, the measured size, shadows straight down, no DOM VIRUS, no sideways scroll, /play/ setup (the header handle clear of the card) and ?mode=, the reduced-motion poster; 1440 and 390, dark and light; the manifest and the one-time Home Screen tip (phone landscape only).");
 } finally {
   await browser.close();
   await server.close();
