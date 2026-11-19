@@ -51,7 +51,8 @@
 .dh-cards:has(>.dh-garage){display:block;padding:calc(var(--dh-top,0px) + min(6px, var(--dh-top,0px))) 0 0}
 .dh .dh-garage{width:100%;min-height:100%;align-content:start;gap:0;padding:0;border:0;border-radius:0;box-shadow:none;background:var(--shop-bg);color:var(--shop-ink);font-weight:800}
 .dh-ghead{position:sticky;top:0;z-index:8;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:14px 36px 0;background:var(--shop-panel);border-bottom:1.5px solid var(--shop-line)}
-.dh-brand{display:grid;justify-items:start;gap:4px;padding-bottom:14px}
+.dh-brand{display:flex;align-items:center;gap:12px;padding-bottom:14px}
+.dh-brand-t{display:grid;justify-items:start;gap:4px}
 .dh .dh-garage .dh-brand .dh-logo{height:32px;margin:0}
 .dh-brand .shop-eyebrow{display:flex;gap:.9em;font-size:11px}.dh-brand i{font-style:normal}
 .dh-ghead .shop-tabs-big{align-self:end}

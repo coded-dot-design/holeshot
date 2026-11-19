@@ -37,7 +37,12 @@ try {
     await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${name}: loads`);
     const b0 = () => prof(p).then((q) => q.bikes[q.ride]);
 
-    // ---- header ----
+    // ---- header: the app icon, the wordmark, the version, BY DAVID COOLEY, credits, Rider, ⚙, Day / Night ----
+    const H = await $(p, "(() => { const h = root.querySelector('.dh-ghead'), vis = (s) => { const e = h.querySelector(s); return !!e && e.getClientRects().length > 0; }; return { icon: vis('.dh-appicon'), mark: vis('.dh-logo'), text: h.textContent, cr: vis('.dh-cr'), rider: !!h.querySelector('[data-rider]'), riderShown: vis('[data-rider]'), cog: vis('.dh-cog'), theme: vis('.dh-theme') }; })()");
+    assert.ok(H.icon && H.mark && H.cr && H.rider && H.cog && H.theme, `${name}: the header's pieces (${JSON.stringify({ ...H, text: undefined })})`);
+    assert.match(H.text, /V\d+\.\d+\.\d+.*BY DAVID COOLEY/s, `${name}: the version and the byline`);
+    if (name === "desktop") assert.ok(H.riderShown, `${name}: Rider shows`);
+    ok("header: app icon, wordmark, version, BY DAVID COOLEY, credits, Rider, ⚙, Day / Night");
     await press("[data-gtab=showroom]");
     await until(p, "!!root.querySelector('.shop-cat')", `${name}: Showroom tab`);
     await press("[data-gtab=garage]");
@@ -203,6 +208,21 @@ try {
     ok("buy a bike / trade in (Showroom)");
     assert.deepEqual(errs, [], `${name}: no page errors`);
     await ctx.close();
+  }
+  // ---- Day / Night with no page switch: the garage keeps its own key ----
+  {
+    const bare = await serve(".", { "/": page("dark").replace(", onTheme: () => { const h = document.documentElement; h.dataset.theme = h.dataset.theme === \"light\" ? \"dark\" : \"light\"; }", "") });
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    await ctx.addInitScript((s) => localStorage.setItem("holeshot:profile", s), JSON.stringify(SAVE));
+    const p = await ctx.newPage();
+    await p.goto(bare.url + "/");
+    await until(p, "window.game && game.getSnapshot().screen === 'garage'", "bare: loads");
+    assert.match(await $(p, "root.querySelector('.dh-theme').textContent"), /Night/, "bare: the key says Night");
+    await p.locator(".dh-theme").click();
+    await until(p, "root.querySelector('.dh').hasAttribute('data-day') && /Day/.test(root.querySelector('.dh-theme').textContent)", "bare: Day");
+    done.push("Day / Night with no page switch (the game's own key)");
+    await ctx.close();
+    await bare.close();
   }
   // ---- the pit crew: a failed part, no credits → the free basic fix by LET'S RIDE ----
   {

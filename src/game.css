@@ -181,3 +181,5 @@
 .dh-caps{display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center}
 .dh-caps kbd{margin:0;opacity:1;display:inline-grid;place-items:center;min-width:28px;height:28px;padding:0 6px;box-sizing:border-box;border:2px solid var(--rim);border-radius:7px;background:var(--raised);color:var(--ink);font:800 12px ui-monospace,monospace}
 .dh-caps i{font-style:normal;color:var(--muted)}
+.dh-appicon{display:block;flex:none;width:44px;height:44px}
+@media (max-width:620px){.dh-appicon{width:36px;height:36px}}

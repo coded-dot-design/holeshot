@@ -114,7 +114,10 @@ import { readdirSync, readFileSync } from "node:fs";
 // showroom's lists (no longer mounted). Budget 233,000 → 237,500 (about 1.6 KB of room). Merged on
 // main bcd408d with the garage (sell in My Bikes, the old showroom's code deleted): 236,351 B
 // holeshot.js, 236,151 B holeshot.mjs (+11,850 B over main's 224,501; about 1.1 KB of room).
-const BUDGET = 237_500;
+// The app icon in every header (site/public/brand/holeshot-icon.svg inline, 3,393 B, its paths don't
+// share the wordmark's) and the garage's own Day / Night key: +1,255 B measured (236,351 → 237,606
+// holeshot.js); budget 237,500 → 239,000 (about 1.4 KB of room).
+const BUDGET = 239_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;
