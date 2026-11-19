@@ -1,12 +1,12 @@
 // LET'S RIDE, the shell's ride page (owner, 2026-11-19): every way to ride in four groups, each a
 // shelf of tiles with a one-line description. RACE (the SERIES first, then a single RACE, each MX
 // outdoor or SX indoor), ENDLESS (each endless ground, Endless Wheelie City, the mashup to come),
-// FREE RIDE (the maps, Big Air) and TRACK DAY (street bikes on road circuits, to come). Riding online
+// FREE RIDE (the maps, Big Air) and TRACK DAY (street bikes on the road circuits: ./modes/race/circuits.ts). Riding online
 // sits in the groups it belongs to (MX only: SX is solo). Strings in, a string out, like ./series-ui.ts: the shell
-// (./game.ts) owns the clicks (`data-mode`, `data-endless`, `data-map`, `data-go`, `data-venue`,
+// (./game.ts) owns the clicks (`data-mode`, `data-endless`, `data-map`, `data-circuit`, `data-go`, `data-venue`,
 // `data-olkind` on `.ol-open`) and passes its header.
 import { BIOMES } from "./modes/desert/track.ts";
-import { FREE_SX, mode as modeOf } from "./modes/index.ts";
+import { FREE_SX, TRACK_DAY_MAPS, mode as modeOf } from "./modes/index.ts";
 import { mapTiles } from "./modes/freeride/picker.ts";
 import type { Venue } from "./modes/race/venue.ts";
 import { K_ENDLESS, K_JAM, K_RACE } from "./net.ts";
@@ -22,6 +22,8 @@ export interface RideView {
   bike: string;
   /** Each endless ground's best distance, in the rider's units ("desert", …, "city"). */
   best: (key: string) => string;
+  /** Track Day: the rider's best lap on a circuit ("0:18.4"), or "" for none. */
+  lap?: (circuit: string) => string;
   /** Test credits: online is off. */
   inf: boolean;
   note: string;
@@ -51,6 +53,6 @@ export function rideCard(head: string, v: RideView) {
     + tile(`data-mode="bigair"`, "BIG AIR", esc(modeOf("bigair").blurb), "A MINUTE · FIVE JUDGES")
     + online(K_JAM, "A Free Ride jam or Big Air with friends: the most points wins.", v.inf));
   const day = group("day", "TRACK DAY", "Street bikes on road circuits: lap times, braking points, knee down.",
-    soon("ROAD CIRCUITS", "Street bikes on tarmac, lap after lap."));
+    TRACK_DAY_MAPS.map((m) => tile(`data-circuit="${m.id}"`, m.name, esc(m.blurb), v.lap?.(m.id) ? `BEST LAP ${v.lap(m.id)}` : `3 LAPS · ${m.kind}`)).join(""));
   return `<div class="dh-card dh-ridec" data-screen="ride">${head}<p class="dh-sub">On your ${esc(v.bike)}.</p><div class="dh-grps">${race}${endless}${free}${day}</div><p class="dh-sub dh-keys">Keys: ↑/W lean forward · ↓/S lean back · ←→/AD steer · Space gas · K brake · L trick or hop · C combo trick (endless) · P pause</p>${v.note ? `<p class="dh-sub dh-note" role="status">${esc(v.note)}</p>` : ""}</div>`;
 }

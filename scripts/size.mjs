@@ -87,7 +87,12 @@ import { readdirSync, readFileSync } from "node:fs";
 // R21 (freestyle tricks in Big Air), on 0.6.0: +2,870 B measured (210,553 → 213,423 .mjs): the trick ladder, the whip and the scorer
 // (bigair/tricks.ts), eleven rider poses and the bike's turn (bigair/fmx.ts), the rig's freestyle
 // channels and joined spread arms, the callout wiring; budget 211,700 → 215,000 (about 1.6 KB of room).
-const BUDGET = 215_000;
+// R23 Track Day, on 0.6.1: +4,938 B measured (213,623 → 218,561 holeshot.js): three paved
+// circuits' plans, the course's asphalt, run-off and road-corner speeds, the staggered grid, the
+// scene's kerbs, edge lines, chequer, grid boxes, pit lane, gantry and start lights, pit wall,
+// garages, grandstands and tyre walls, two palettes, the mode, the rivals, the road penalty, the best
+// lap per circuit and the ride page's circuit tiles; budget 215,000 → 220,500 (about 1.9 KB of room).
+const BUDGET = 220_500;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

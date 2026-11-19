@@ -1,8 +1,23 @@
 # Changelog
 
-## Unreleased
+## 0.7.0 — 2026-11-19
 
 - **The landing page, second pass: the game is the theme.** The attract race rides behind the hero again, with the brand over it (the lockup in the h1, the hook, PLAY) on a scrim that keeps the copy readable in dark and light. The hero paints first with a still of that race (`shots/hero.jpg`, `hero-800.jpg` for phones); the game's module loads after the page's load and an idle moment, never on the critical path, and fades in over the poster once it rides (reduced motion or Save-Data keep the poster; the demo's touch controls stay hidden). The box-art cover moves out of the hero into the brand kit, where it is shown whole. The brand kit adds the HOLESHOT cartridge (the lime shell, the cover on its label, vertical depth only; a 2× transparent PNG, lazy, downloadable). The header is about the game only (How to play, Controls, Ways to ride, Garage, Brand, the theme, PLAY); the source, Fizlet and David Cooley links move to a new footer, and there is no DOM VIRUS link or wording. New **Controls**: key caps from the game's real bindings, the gamepad, and an animated phone diagram of the stick and the throttle rocker (gas, the seam's wheelie, sliding onto COMBO with the gas held, the stick's bunny-hop flick), captioned step by step, a still labelled diagram under reduced motion. **Ways to ride** follows the game's grouping (Race: MX, SX and the series; Endless: the desert's grounds and Endless Wheelie City; Free Ride and Big Air, with its freestyle ladder; Mashup and Track Day marked coming soon, unlinked) with in-game stills (`shots/modes/`, 17–33 KB each, lazy; `node scripts/shots.mjs modes`, which never writes the owner's `og.jpg`). How to play is a numbered flow of tilted stickers with icons under the cover's striped sun; the garage says it plainly, from the game's economy: 3 spots to start, up to 6, the extra spots at 2,500, 5,000 and 10,000 credits, earned in every mode. Every hard shadow on the site falls straight down (Fizlet's `--shadow-x: 0; --shadow-y: 1`, through the Board UI kit's `--bui-sx`/`--bui-sy`), and the PLAY sticker drops its call ring. Measured (Chromium, local, 3 runs each, the two builds back to back): first load 63.0 KB gzip at 390 and 89.3 KB at 1440 (was 23.4 KB: the poster JPEG replaces the SVG cover as the first paint); LCP (the poster) median 420 ms at 390 with 4× CPU (was 436 ms) and 208 ms at 1440 (was 228 ms); the game (~200 KB gzip) now arrives after load and idle instead of on scroll (267 KB at 390 and 294 KB at 1440 after 4 s, was 24.6 KB).
+- **Track Day: street bikes on paved circuits.** Three original road circuits (`game.start("trackday",
+  { map })`): MERIDIAN RING (fast, 361 units a lap, a 122-unit main straight: the supersport and the
+  naked are flat out on it, 23.5 and 24.9 of 25.1), KNOTWORKS (technical, 290: two chicanes, a
+  hairpin, square corners) and BOTTLECAP (kart-tight, 177, for the mini). Asphalt and run-off in
+  rolling grass, red and white kerbs, edge lines, a chequered line, grid boxes, a gantry whose start
+  lights come on with the countdown and go out at GO, a pit lane, pit wall and garages, grandstands,
+  tyre walls; dark (a night race) and light. A staggered grid, three laps, places, lap times (BEST
+  LAP! when it beats your best) and the best lap kept per circuit (`stats.best["lap:<circuit>"]`: an
+  additive key, no profile version step). Rivals: street bikes of your class. Street bikes ride as
+  tuned; a dirt bike may ride on knobblies (`ROAD_FX`: 85 % grip, 88 % brakes) against its own class
+  on the same tyres. Pays as a race does. Solo only; no Track Day series. A scripted fast lap on the
+  mini, the supersport and the naked laps every circuit with 0 excursions and 0 crashes
+  (tests/trackday.test.mjs); new goldens for the circuits and a race on each, the old ones unchanged.
+  LET'S RIDE's TRACK DAY group now holds the three circuits' tiles (BEST LAP once ridden) in place of
+  COMING SOON. Budget 215,000 → 220,500 (+4,938 B measured over 0.6.1).
 
 ## 0.6.1 — 2026-11-19
 

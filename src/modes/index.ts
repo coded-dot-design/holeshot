@@ -9,6 +9,9 @@ import { makeMap, RIDE_MAPS, type RideMap } from "./freeride/maps.ts";
 import { mountAir } from "./bigair/scene.ts";
 import { mountCity } from "./wheelie/scene.ts";
 import { desertTrack, BIOMES, DESERT_SEED } from "./desert/track.ts";
+import { TRACK_DAY, TRACK_DAY_BLURB, circuit, trackDayRivals } from "./race/circuits.ts";
+import { roadPower } from "../model/families.ts";
+import { lapKey } from "../model/economy.ts";
 
 /** Race tracks (id → plan). MX: the fixed loop made MX-sized (./race/venue.ts); SX: the stadium tracks. */
 export const TRACKS: TrackPlan[] = [mxPlan(MOTO_TRACK)];
@@ -74,4 +77,18 @@ export const MODES: Mode[] = [
     start: (ctx) => mountCity(ctx),
   },
 ];
-export const mode = (id: string) => MODES.find((m) => m.id === id) ?? MODES[0]!;
+/** TRACK DAY: three laps against three rivals on paved road circuits (./race/circuits.ts), street
+ *  bikes on their own rubber (a dirt bike may ride, on knobblies: ../model/families.ts ROAD_FX). Not on
+ *  the RIDE menu's list (the menu gives it its own tile); `mode("trackday")` finds it. Solo only. */
+export const TRACK_DAY_MODE: Mode = {
+  id: "trackday", name: "TRACK DAY", blurb: "Street bikes on paved circuits: a grid start, three laps against three rivals of your class, lap times and a best lap kept per circuit.",
+  maps: TRACK_DAY.map((t) => ({ id: t.id, name: t.name })),
+  start: (ctx) => mountTrack(ctx, makeTrack(circuit(ctx.map)), false, trackDayRivals(ctx.bike.model, roadPower)),
+};
+/** Track Day's circuits for the ride page (id, name, blurb, its character: FAST, TECHNICAL, KART). */
+export const TRACK_DAY_MAPS = TRACK_DAY.map((t, k) => ({ id: t.id, name: t.name, blurb: TRACK_DAY_BLURB[t.id] ?? "", kind: ["FAST", "TECHNICAL", "KART"][k] ?? "" }));
+/** A lap time as the ride page shows it ("0:18.4"; "" for none). */
+export const lapClock = (s: number) => (s > 0 ? `${(s / 60) | 0}:${(s % 60).toFixed(1).padStart(4, "0")}` : "");
+/** The rider's best lap on a Track Day circuit (seconds; 0 for none), from the profile's `stats.best`. */
+export const trackDayBest = (best: Record<string, number>, map?: string) => best[lapKey(circuit(map).id)] ?? 0;
+export const mode = (id: string) => MODES.find((m) => m.id === id) ?? (id === "trackday" ? TRACK_DAY_MODE : MODES[0]!);

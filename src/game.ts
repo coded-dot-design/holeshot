@@ -17,7 +17,7 @@ import { MOTOR_NAME, PARTS, PART_NAME } from "./data/economy.ts";
 import { PAINTS, SWATCHES } from "./data/looks.ts";
 import { tierFor, useNames } from "./data/names.ts";
 import { touchLog } from "./debug/touchlog.ts";
-import { mode as modeOf } from "./modes/index.ts";
+import { lapClock, mode as modeOf, trackDayBest } from "./modes/index.ts";
 import type { ModeCtx, ModeId, ModeRun, RunStats } from "./modes/mode.ts";
 import { venueOf, type Venue } from "./modes/race/venue.ts";
 import { paintMaps } from "./modes/freeride/picker.ts";
@@ -223,7 +223,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   const pitKey = () => (pitReady(profile) ? `<p class="dh-row"><button type="button" class="bui-key dh-pit">PIT CREW: FREE BASIC FIX</button></p>` : "");
   // (The lockup, "by David Cooley", sits above LET'S RIDE where the dock has room: ./garage/garage.css.)
   const garageCard = () => garageView(profile, gui, head(), LOCKUP + letsRide, note, pitKey());
-  const rideCard = () => rideScreen(head(["garage", "GARAGE", "LET'S RIDE"]), { bike: bikeLine(), best: (k) => km(profile.stats.far[k] ?? 0), inf, note });
+  const rideCard = () => rideScreen(head(["garage", "GARAGE", "LET'S RIDE"]), { bike: bikeLine(), best: (k) => km(profile.stats.far[k] ?? 0), lap: (c) => lapClock(trackDayBest(profile.stats.best, c)), inf, note });
   /** The series shown: the championship under way's venue, else the one picked on LET'S RIDE. */
   const seriesAt = (): Venue => (profile.series.run ? venueOf(profile.series.run.venue) : seriesVenue);
   const seriesCard = () => seriesScreen(profile, head(["ride", "LET'S RIDE", `SERIES · ${seriesAt().toUpperCase()}`]), "", note, seriesAt());
@@ -313,7 +313,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       seed: opt.seed ?? ((o.seed ?? 20261114) + profile.stats.events * 7919) >>> 0,
       map: opt.map,
       venue: runVenue,
-      best: profile.stats.far[farKey(id, opt.map)] ?? 0,
+      best: id === "trackday" ? trackDayBest(profile.stats.best, opt.map) : profile.stats.far[farKey(id, opt.map)] ?? 0,
       units: profile.settings.units,
       auto: opt.auto ?? !!o.attract,
       attract: !!o.attract,
@@ -401,6 +401,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     if (t.classList.contains("ol-open")) return openRoom(d.olkind ? Number(d.olkind) : undefined);
     if (d.mode) return startEvent(d.mode as ModeId, d.venue ? { venue: d.venue as Venue } : {});
     if (d.endless) return startEvent("desert", { map: d.endless });
+    if (d.circuit) return startEvent("trackday", { map: d.circuit });
     if (d.map) return startEvent("freeride", { map: d.map, venue: d.venue === "sx" ? "sx" : "mx" });
     if (d.seriesEnter) {
       const p = enterSeries(profile, d.seriesEnter as TierId, ((o.seed ?? 20261114) ^ Math.imul(profile.stats.events + 1, 0x9e3779b1) ^ Math.imul(profile.series.titles + 7, 0x85ebca6b)) >>> 0, seriesVenue);

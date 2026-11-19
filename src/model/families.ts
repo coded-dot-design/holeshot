@@ -1,5 +1,6 @@
 // The bike families' rules, pure: which upgrade fits which bike, where a street bike belongs, and
-// what the dirt does to one. Gas dirt bikes and electrics ride every mode as tuned; a street bike is
+// what the dirt does to one. Gas dirt bikes and electrics ride every mode as tuned (but for Track
+// Day's circuits, on knobblies: ROAD_FX); a street bike is
 // built for Wheelie City's asphalt (its road tyres, short stiff springs and long gearing): ridden in
 // a dirt mode it slides (less grip), skips (less travel) and cases sooner. The shell asks before a
 // street bike goes on the dirt (`dirtWarning`), and every screen (solo and online) tunes the same
@@ -12,11 +13,18 @@ import { perHour, speed, type Units } from "./units.ts";
 import { pace, timeTo } from "./pace.ts";
 
 /** The modes on asphalt (everything else is dirt, sand or a jump yard). */
-export const STREET_MODES: readonly ModeId[] = ["wheelie", "endcity"];
+export const STREET_MODES: readonly ModeId[] = ["wheelie", "endcity", "trackday"];
 /** Whether mode `id` is on the dirt. */
 export const onDirt = (id: ModeId) => !STREET_MODES.includes(id);
 /** A street bike on the dirt (× on the number named): road tyres slide, short springs bottom out. */
 export const DIRT_FX = { grip: 0.72, travel: 0.8, caseDrop: 0.85, brake: 0.8 };
+/** A dirt bike (gas or electric) on Track Day's circuits (× on the number named): knobblies squirm on
+ *  asphalt at track speeds (less grip in the corners) and the long springs dive under braking. Wheelie
+ *  City is the dirt bikes' playground too and stays as tuned: only the circuit, where corner speed and
+ *  braking are the whole race, asks for road rubber. */
+export const ROAD_FX = { grip: 0.85, brake: 0.88 };
+/** A dirt bike's engine and tyres on Track Day's asphalt (ROAD_FX). Pure. */
+export const roadPower = (p: Tuned["power"]): Tuned["power"] => ({ ...p, grip: p.grip * ROAD_FX.grip, brake: p.brake * ROAD_FX.brake });
 /** The before-you-ride line when a street bike is picked for a dirt mode. */
 export const DIRT_LINE = "Street bike on dirt? It won't perform well.";
 
@@ -33,6 +41,7 @@ export const dirtWarning = (m: Model, mode: ModeId) => family(m) === "street" &&
 /** The tuned bike as it rides in mode `mode`: a street bike on the dirt loses grip, travel, its case
  *  line and some braking; everything else is as tuned. Pure (a new Tuned only when it changes). */
 export function onGround(t: Tuned, mode: ModeId): Tuned {
+  if (mode === "trackday" && family(t.model) !== "street") return { ...t, power: roadPower(t.power) };
   if (family(t.model) !== "street" || !onDirt(mode)) return t;
   const D = DIRT_FX;
   return {
