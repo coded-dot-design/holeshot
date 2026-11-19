@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.6 — 2026-11-19
 
 - **Big Air is an endless line.** No more oval: a roll-in deck and a hill down for speed, then a
   steel kicker and a tabletop landing every so often, forever, with banks either side and a stadium
