@@ -125,6 +125,8 @@ import { readdirSync, readFileSync } from "node:fs";
 // BACKDROP chip and the saved pick): +1,215 B measured (237,606 → 238,821 holeshot.js; the module
 // 1,195 B gzip on its own); budget 239,000 → 240,500. Rebased on main b22a85f (the CONTROLS card,
 // main 225,026 B): 239,748 B holeshot.js, 239,570 B holeshot.mjs (+14,722 B over main; about 0.75 KB of room).
+// Rebased on main b8ede1e (Fizlet 0.27.0, main 225,552 B): 239,828 B holeshot.js, 239,650 B holeshot.mjs
+// (+14,276 B over main; about 0.67 KB of room).
 const BUDGET = 240_500;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
