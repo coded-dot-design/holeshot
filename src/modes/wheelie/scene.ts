@@ -185,11 +185,31 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
   });
   const c = controls(engine, { keys: { left: [], right: [], fwd: [], back: [], gas: [], brake: [], hop: [], reset: [], combo: [] }, target: play });
   const GAS = c.id("gas"), BRAKE = c.id("brake"), HOPK = c.id("hop"), RESETK = c.id("reset"), COMBOK = c.id("combo");
-  // No pad keys: the TRICK (the combo button) and the HOP are bubbles out of the rocker, each only when it is any use.
-  // No pad keys: HOP and COMBO are stuck to the gas side of the rocker.
+  // No pad keys: COMBO slides out of the rocker's gas side; the hop is a back-then-forward flick of the stick (or L).
   const thePad = pad(engine, c, { scheme: "stick", actions: [], host: stage });
   thePad.el.classList.add("wc-pad");
-  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal, combo: "combo", hop: "hop" });
+  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal, combo: "combo" });
+  // The bunny hop on the stick, as on a real bike: a quick pull back (the front comes up), then a push
+  // forward, the whole flick within FLICK_MS of the pull starting. Only started with both wheels down:
+  // in a wheelie or in the air the stick only balances, so rocking back and forth never hops. Holding back
+  // longer is leaning, not a flick. L (and a pad's button) still hop.
+  const FLICK_MS = 350;
+  let backFrom = -1, flicks = 0;
+  const flick = (lean: number) => {
+    const now = performance.now();
+    if (lean < -0.6) {
+      // A flick only starts with both wheels down (the pull itself then lifts the front, as it should).
+      if (backFrom < 0 && !bike.air && bike.nose <= 0.12) backFrom = now;
+      return false;
+    }
+    if (lean > 0.45 && backFrom >= 0) {
+      const ok = now - backFrom <= FLICK_MS;
+      backFrom = -1;
+      return ok && (flicks++, true);
+    }
+    if (lean > -0.2 && backFrom >= 0 && now - backFrom > FLICK_MS) backFrom = -1;
+    return false;
+  };
   const coarse = matchMedia("(pointer: coarse)"), walkHud = walkUi(hud, () => coarse.matches && !ctx.attract);
   if (ctx.attract) thePad.el.hidden = true;
   const vox = voice();
@@ -1404,7 +1424,7 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
         I[1] = Math.max(c.down(BRAKE) ? 1 : 0, GP[3]!);
         I[2] = -GP[1]! || (stick ? -c.stick.y : c.axis("back", "fwd"));
         I[3] = GP[0]! || (stick ? c.stick.x : c.axis("left", "right"));
-        I[4] = c.hit(HOPK) || GP[4]! > 0.5 ? 1 : 0;
+        I[4] = c.hit(HOPK) || GP[4]! > 0.5 || (stick && flick(I[2]!)) ? 1 : 0;
       }
       if (paused || ended) I[0] = I[1] = I[2] = I[3] = I[4] = 0;
       const ph = S[0]!;
@@ -1518,7 +1538,7 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
       const ph = S[0]!;
       return {
         phase: ph === READY ? "ready" : ph === RUN || ph === CRASH ? "run" : ph === DONE ? "done" : "idle", walking: bike.b.walking, clock: S[1]!, score: sc[SC]!, combo: sc[CB]!, trick: sc[ON] === 1, nose: bike.nose, view: view ? "chase" : "map", speed: bike.b.speed, crashes, grumps: S[4]!, best: sc[BEST_W]!, ended,
-        gas: I[0]!, brake: I[1]!, air: bike.air, drag: run.HD[1]!, hold: run.HD[0]!, stunt: run.st.trick, whip: run.st.whip,
+        gas: I[0]!, brake: I[1]!, air: bike.air, flicks, drag: run.HD[1]!, hold: run.HD[0]!, stunt: run.st.trick, whip: run.st.whip,
         far: run.far, endless: true, towns: S[S_TOWNS]!, inTown: run.inTown, near: cop.S[NEAR]!, heat: cop.S[HEAT]!, stars: cop.S[STARS]!, units: cop.chasing, risk: cop.S[HOT]!, escapes: cop.S[ESC]!, tickets: cop.S[TIX]!, x: bike.b.pos[0]!, z: bike.b.pos[2]!, objects: dio.stats.objects, faces: dio.stats.faces, ground: tv.stats.faces, ribbons: rib.stats.quads, tiles: run.win.stats[0]!,
       };
     },
@@ -1542,7 +1562,7 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
       I[1] = Math.max(c.down(BRAKE) ? 1 : 0, GP[3]!);
       I[2] = -GP[1]! || (stick ? -c.stick.y : c.axis("back", "fwd"));
       I[3] = GP[0]! || (stick ? c.stick.x : c.axis("left", "right"));
-      I[4] = c.hit(HOPK) || GP[4]! > 0.5 ? 1 : 0;
+      I[4] = c.hit(HOPK) || GP[4]! > 0.5 || (stick && flick(I[2]!)) ? 1 : 0;
       const again = resetQ === 1 || c.hit(RESETK) || GP[6]! > 0.5;
       resetQ = 0;
       if (paused) I.fill(0);

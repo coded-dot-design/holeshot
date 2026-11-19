@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.4 — 2026-11-19
+
+- **The bunny hop is a stick flick** in Wheelie City, as on a real bike: a quick pull back (the front
+  comes up), then a push forward, the whole flick within 0.35 s. It only starts with both wheels
+  down, so balancing a wheelie (rocking back and forth with the front up) never hops, and holding
+  back is still just leaning. L still hops on a keyboard. The HOP button is gone from the pedal.
+
 ## 0.5.3 — 2026-11-19
 
 - **The gas never gets stuck dead on a phone.** iOS can end a touch without telling the rocker the
