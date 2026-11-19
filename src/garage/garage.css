@@ -63,7 +63,8 @@
 .dh-ghead .dh-cog{min-width:48px;padding:0}.dh-ghead .dh-cog svg{width:22px;height:22px}
 .dh-ghead .dh-theme{min-width:9em;justify-content:start;gap:.8em;padding:0 22px;font-weight:700}
 .dh-ghead .dh-theme i{font-style:normal;color:var(--shop-bar)}
-.dh-bays .shop-row-e{display:flex;gap:8px;justify-content:end;flex-wrap:wrap}
+/* A bay's keys stack (Select bike or RIDES NEXT over Sell), so the name keeps the row's width. */
+.dh-bays .shop-row-e{display:flex;flex-direction:column;align-items:stretch;gap:8px}
 /* Two columns: the bike panel (sticky where the screen is tall enough) and the tabs. */
 @media (min-height:700px){.dh-bikep{position:sticky;top:110px}}
 .dh-gwrap{display:grid;grid-template-columns:minmax(0,480px) minmax(0,1fr);gap:30px;padding:30px 36px 40px;align-items:start}
@@ -90,7 +91,13 @@
 .dh-tag{margin-top:2px}
 .dh-gbody>.dh-alert{margin:0}
 .dh-oldshow{display:grid;gap:12px}
-@media (max-width:1100px){.dh-gwrap{grid-template-columns:minmax(0,400px) minmax(0,1fr);gap:20px;padding-inline:20px}.dh-ghead{padding-inline:20px}.shop-barrow,.shop-colhead{grid-template-columns:minmax(0,1fr) minmax(60px,1fr) 3.5em minmax(8em,auto)}}
+/* Tablets: the header's keys go to icons (Rider's helmet, ☀ / ☾) so the tabs keep their line, and the
+   condition rows narrow; under 960 px they stack as on phones (name and %, the bar, the key). */
+@media (max-width:1100px){.dh-gwrap{grid-template-columns:minmax(0,400px) minmax(0,1fr);gap:20px;padding-inline:20px}.dh-ghead{grid-template-columns:auto minmax(0,1fr) auto;padding-inline:20px}.dh-brand .shop-eyebrow{white-space:nowrap}.dh .dh-ghead .shop-tabs-big{flex-wrap:nowrap;gap:0 32px}
+.dh .dh-ghead .dh-cr{padding:0 16px}.dh-ghead .dh-who>span{display:none}
+.dh-ghead .dh-theme{min-width:48px;justify-content:center;padding:0}.dh-ghead .dh-theme span{display:none}
+.shop .shop-barrow,.shop .shop-colhead{grid-template-columns:minmax(7em,1fr) minmax(48px,1fr) 3.2em minmax(7.5em,auto);gap:6px 12px}}
+@media (max-width:960px){.shop .shop-colhead{display:none}.shop .shop-barrow{grid-template-columns:minmax(0,1fr) auto}.shop .shop-barrow .shop-meter{grid-column:1/-1;grid-row:2}.shop .shop-barrow .shop-barrow-a{grid-column:1/-1}}
 /* Phone: the header compacts (logo, credits, Day / Night; the tabs under it), the sections stack and
    My Bikes rises as a bottom sheet (../shop/shop.css). */
 @media (max-width:820px){
@@ -104,7 +111,9 @@
 .dh-hkeys{gap:8px}
 .dh-ghead .dh-who{display:none}
 .dh .dh-ghead .dh-cr{padding:0 14px;font-size:16px}
-.dh-ghead .dh-theme{min-width:0;padding:0 14px}.dh-ghead .dh-theme i{display:none}
+.dh-ghead .dh-theme{min-width:44px;justify-content:center;padding:0}.dh-ghead .dh-theme span{display:none}
+.dh-brand,.dh-brand-t{min-width:0}.dh-brand{gap:8px}
+.dh .dh-ghead .dh-brand .dh-logo{width:100%;max-width:114px;height:auto}
 .dh-ghead .dh-cog{min-width:44px}
 .dh-gwrap{grid-template-columns:minmax(0,1fr);gap:16px;padding:12px 12px 28px}
 .dh-bikep{position:static;padding:10px 0 14px;gap:12px}
@@ -116,7 +125,7 @@
 .shop .shop-seg{gap:8px}.shop .shop-seg-k{font-size:17px;min-height:48px}
 .shop .shop-tabs{gap:4px 22px}.shop .shop-tab{font-size:16px}
 .shop .shop-h2{font-size:26px}
-.shop-colhead{display:none}
+.shop .shop-colhead{display:none}
 .shop .shop-barrow{grid-template-columns:minmax(0,1fr) auto;gap:6px 12px}
 .shop .shop-barrow .shop-meter{grid-column:1/-1;grid-row:2}
 .shop .shop-barrow .shop-barrow-a{grid-column:1/-1}

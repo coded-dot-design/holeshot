@@ -41,7 +41,8 @@
    race keys and Play online full width under their words, the controls a compact strip. */
 @media (max-width:820px){
 .dh .dh-rhead .dh-back{grid-column:1/-1;grid-row:2;margin:0 0 8px;min-height:44px;font-size:15px;padding:0 16px}
-.dh .dh-ride .dh-brand .dh-logo{height:24px}
+.dh-rhead{grid-template-columns:minmax(0,1fr) auto}
+.dh .dh-ride .dh-brand .dh-logo{width:100%;max-width:114px;height:auto}
 .dh-rwrap{gap:14px;padding:16px 16px 20px}
 .dh-rtitle{flex-direction:column;align-items:start}
 .dh-rtitle .shop-h1{font-size:34px}

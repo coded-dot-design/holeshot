@@ -122,7 +122,7 @@
 .shop .shop-title .shop-eyebrow{display:flex;gap:.9em;font-size:15px}
 .shop .shop-title .shop-eyebrow i{font-style:normal}
 .shop .shop-name{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:40px;line-height:1.05;color:var(--shop-ink);overflow-wrap:anywhere}
-.shop .shop-no{color:var(--shop-price)}
+.shop .shop-no{flex:none;white-space:nowrap;color:var(--shop-price)}
 .shop .shop-title-s .shop-name{font-size:24px}
 .shop .shop-turn{position:relative;min-width:0}
 .shop .shop-arrow{position:absolute;top:50%;translate:0 -50%;width:44px;height:44px;display:grid;place-items:center;padding:0;border:1.5px solid var(--shop-line);border-radius:6px;background:var(--shop-panel);font-size:24px;font-weight:800;}
