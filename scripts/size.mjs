@@ -84,10 +84,10 @@ import { readdirSync, readFileSync } from "node:fs";
 // (src/logo.ts: the L1 wordmark in the header, the lockup with "by David Cooley" in the garage, paths
 // only, one letter path drawn five times): +933 B → 210,753 B; budget 210,000 → 211,700 (about
 // 0.9 KB of room).
-// R21 (freestyle tricks in Big Air), on 0.6.0: +MEASURED: the trick ladder, the whip and the scorer
+// R21 (freestyle tricks in Big Air), on 0.6.0: +2,870 B measured (210,553 → 213,423 .mjs): the trick ladder, the whip and the scorer
 // (bigair/tricks.ts), eleven rider poses and the bike's turn (bigair/fmx.ts), the rig's freestyle
-// channels and joined spread arms, the callout wiring; budget 211,700 → BUDGETNEW.
-const BUDGET = 214_000;
+// channels and joined spread arms, the callout wiring; budget 211,700 → 215,000 (about 1.6 KB of room).
+const BUDGET = 215_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;
