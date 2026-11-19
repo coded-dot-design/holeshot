@@ -57,7 +57,7 @@ const ways = [
     items: [['Free Ride', `${freeCount} maps, MX and SX`, 'freeride'], ['Big Air', 'an endless straight of jumps sized to your bike; five judges pay', 'bigair']] },
   { id: 'trackday', name: 'TRACK DAY', tone: 'lime', soon: true,
     line: 'Street bikes on road circuits.',
-    items: [['Track Day', 'coming soon', '']] },
+    items: [['Road circuits', 'street bikes on tarmac, kerbs and corners: coming soon', '']] },
 ].map((w) => ({ ...w, items: w.items.map(([name, note, mode]) => ({ name, note, mode: mode && has(mode) ? mode : '' })) }));
 const classes = Object.values(CLASSES).map((c) => ({ ...c, models: MODELS.filter((m) => m.cls === c.id), starter: STARTERS.find((m) => m.cls === c.id) }));
 const makers = new Set(MODELS.map((m) => makerOf(m).name)).size;
@@ -184,7 +184,7 @@ const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound'
       </div>
       <p class="meta garage-count">{words[makers]} makers · {MODELS.length} bikes</p>
       <ul class="makers">
-        {classes.map((c, i) => <li class={`sticker tone-${['lime', 'hot', 'cyan', 'sun', 'lime'][i % 5]}`}><p class="meta">{c.name}</p><h3>{c.maker}</h3><p>{c.motto}</p><p class="models">{c.starter ? <><b>Starter:</b> {c.starter.name} · </> : <b>In the showroom: </b>}{c.models.map((m) => m.name).join(' · ')}</p></li>)}
+        {classes.map((c, i) => <li class={`sticker tone-${['lime', 'hot', 'cyan', 'sun', 'lime'][i % 5]}`}><p class="meta">{c.name}</p><h3>{c.maker}</h3><p>{c.motto}</p><p class="models">{c.starter ? <><b>Starter:</b> {c.starter.name} · </> : <b>In the showroom: </b>}{c.models.filter((m) => m !== c.starter).map((m) => m.name).join(' · ')}</p></li>)}
       </ul>
     </div>
   </section>
@@ -202,8 +202,8 @@ const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound'
         <div class="brand-side">
           <figure class="panel brand-logo">
             <div class="brand-tiles">
-              <div class="brand-tile on-dark"><img src={base('brand/holeshot-lockup.svg')} alt="The HOLESHOT lockup on dark" width="625" height="184" loading="lazy" decoding="async" /></div>
-              <div class="brand-tile on-light"><img src={base('brand/holeshot-lockup.svg')} alt="The HOLESHOT lockup on light" width="625" height="184" loading="lazy" decoding="async" /></div>
+              <div class="brand-tile on-dark"><img src={base('brand/holeshot-lockup.svg')} alt="The HOLESHOT lockup on dark" width="629" height="185" loading="lazy" decoding="async" /></div>
+              <div class="brand-tile on-light"><img src={base('brand/holeshot-lockup.svg')} alt="The HOLESHOT lockup on light" width="629" height="185" loading="lazy" decoding="async" /></div>
             </div>
             <figcaption><b>Logo · L1 lockup</b> <span>lime letters, pink drop, ink outline; the credit on the cyan tab</span><span class="dl"><a href={base('brand/holeshot-lockup.svg')} download>Lockup SVG</a><a href={base('brand/holeshot-wordmark.svg')} download>Wordmark SVG</a></span></figcaption>
           </figure>
@@ -259,7 +259,7 @@ const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound'
     (window as unknown as { hero: unknown }).hero = game;
     // The demo rides itself: no touch controls (the pad, the throttle rocker and its hint) over it.
     const style = document.createElement("style");
-    style.textContent = ".ba-pad,.hs-rocker{display:none!important}";
+    style.textContent = ".ba-pad,.bui-pad,.hs-rocker{display:none!important}";
     host.querySelector("[data-fizlet-host]")?.shadowRoot?.append(style);
     // Swap the poster for the race once it rides (two frames in, so the canvas has drawn).
     const ready = () => (game.run && game.run.state.speed > 0 ? hero.setAttribute("data-live", "") : requestAnimationFrame(ready));

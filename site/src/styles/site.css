@@ -36,6 +36,9 @@ em{font-style:normal;color:var(--hot)}
    behind the copy: left on wide screens, bottom on phones. */
 .dt-hero{--hs-ink:#f6f3ff;--hs-soft:#e4dcff;--hs-rim:#07060f;--scrim:#0d0b1c;position:relative;overflow:hidden;isolation:isolate;display:grid;align-items:center;min-height:min(860px,calc(100svh - 66px));background:#0d0b1c;border-bottom:2px solid var(--line);color:var(--hs-ink)}
 .dt-stage,.dt-poster{position:absolute;inset:0;z-index:0}
+/* Wide screens: the race rides right of the copy (its left edge fades under the scrim); the stage keeps
+   the game's wide frame (no letterbox), its right side running off the page. */
+@media (min-width:821px){.dt-stage,.dt-poster{left:20%;right:auto;width:max(80%,calc(min(860px,100svh) * 1.8));-webkit-mask:linear-gradient(90deg,#0000,#000 18%);mask:linear-gradient(90deg,#0000,#000 18%)}}
 .dt-poster{transition:opacity .7s ease,visibility 0s .7s}.dt-poster img{display:block;width:100%;height:100%;object-fit:cover;object-position:62% 50%}
 .dt-hero[data-live] .dt-poster{opacity:0;visibility:hidden}
 .dt-scrim{position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(90deg,color-mix(in srgb,var(--scrim) 90%,transparent) 0%,color-mix(in srgb,var(--scrim) 74%,transparent) 36%,color-mix(in srgb,var(--scrim) 18%,transparent) 60%,transparent 74%)}
@@ -59,7 +62,7 @@ html.bui[data-theme="light"] .dt-hero .lead{text-shadow:none}
 html.bui[data-theme="light"] .dt-copy .eyebrow .dot{background:var(--hot)}
 .bui .start-key{display:inline-grid;justify-items:center;gap:2px;min-width:200px;padding:16px 30px;text-decoration:none;background:var(--lime);color:#07060f;border:3px solid var(--rim);border-radius:18px;box-shadow:calc(6px * var(--bui-sx)) calc(6px * var(--bui-sy)) 0 var(--bui-shadow);rotate:-2deg}
 html.bui[data-theme="light"] .start-key{background:var(--lime)}
-.bui .start-key b{font:900 44px/1 var(--round);letter-spacing:.06em;color:#07060f}.bui .start-key span{font:800 12px var(--mono);letter-spacing:.08em;color:#07060f}
+.bui .start-key b{font:900 44px/1 var(--round);letter-spacing:.06em;color:#07060f}.bui .start-key span{font:800 12px var(--mono);letter-spacing:.08em;color:#07060f;white-space:nowrap}
 .bui .start-key:hover{translate:0 -2px;box-shadow:calc(8px * var(--bui-sx)) calc(8px * var(--bui-sy)) 0 var(--bui-shadow)}
 .bui .start-key:active{translate:0 6px;box-shadow:none}
 
@@ -87,20 +90,20 @@ html.bui[data-theme="light"] .bands::before{opacity:.22}
 .ctl-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:24px;margin-top:30px;align-items:start}
 .ctl-keys h3,.ctl-phone h3{font-size:26px}
 .kgroup{margin-top:18px}.kgroup ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px}
-.kgroup li{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center}
-.kgroup .caps{display:flex;flex-wrap:wrap;gap:5px;align-items:center;min-width:92px}
-.kgroup kbd{display:inline-grid;place-items:center;min-width:32px;height:32px;padding:0 6px;box-sizing:border-box;border:2px solid var(--rim);border-radius:8px;background:var(--raised);color:var(--ink);font:800 13px var(--mono);box-shadow:var(--drop-s)}
+.kgroup li{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center}
+.kgroup .caps{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.kgroup kbd{margin:0;opacity:1;display:inline-grid;place-items:center;min-width:32px;height:32px;padding:0 6px;box-sizing:border-box;border:2px solid var(--rim);border-radius:8px;background:var(--raised);color:var(--ink);font:800 13px var(--mono);box-shadow:var(--drop-s)}
 .kgroup kbd.wide{padding:0 10px}
 .kgroup .caps i{font:800 14px var(--mono);color:var(--muted);font-style:normal}
 .kgroup .what{display:grid;line-height:1.25}.kgroup .what b{font:900 16px var(--round)}.kgroup .what small{color:var(--muted);font-size:13px}
-.kgroup.pad .padlist{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 18px;font-size:14px;color:var(--muted)}
+.kgroup.pad .padlist{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 18px;font-size:14px;color:var(--muted)}.kgroup.pad li{display:block}
 .kgroup.pad b{color:var(--ink);font-family:var(--round)}
 .ctl-phone{margin:0;display:grid;gap:14px}
 .ctl-sub{margin:0!important}
 .ctl-phone figcaption{margin:0}
 /* The phone: a sideways screen with the stick (left) and the throttle rocker (right), drawn as in the
    game (src/game.css .hs-rocker, src/modes/stunts.css .hs-rcombo), one 10 s loop. */
-.phone{position:relative;width:min(100%,380px);aspect-ratio:380/214;margin:0 auto;border:5px solid #0b0a14;border-radius:30px;background:#0b0a14;box-shadow:var(--drop)}
+.phone{position:relative;width:min(100%,420px);aspect-ratio:380/214;margin:0 auto;border:5px solid #0b0a14;border-radius:30px;background:#0b0a14;box-shadow:var(--drop)}
 .ph-screen{position:absolute;inset:4px 12px;border-radius:20px;overflow:hidden;background:linear-gradient(180deg,#1a1038 0 40%,#2a1550 40% 62%,#4a1d6b 62% 80%,#7a2378 80%);container-type:inline-size}
 .ph-stick{position:absolute;left:7%;bottom:9%;width:84px;height:84px;border-radius:50%;border:3px solid #ffffff55;background:#0b0a1488}
 .ph-knob{position:absolute;left:50%;top:50%;width:38px;height:38px;margin:-19px 0 0 -19px;border-radius:50%;background:#e9e6ff;border:3px solid #0b0a14;animation:ph-knob 10s infinite}
@@ -123,6 +126,7 @@ html.bui[data-theme="light"] .bands::before{opacity:.22}
 .ph-steps li{counter-increment:s;display:block;padding:6px 10px 6px 40px;position:relative;border:2px solid transparent;border-radius:10px;color:var(--muted);font-size:15px;line-height:1.35}
 .ph-steps li::before{content:counter(s);position:absolute;left:8px;top:6px;width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:var(--raised);color:var(--ink);font:900 12px var(--mono);border:2px solid var(--rim)}
 .ph-steps b{color:var(--ink);font-family:var(--round)}
+.ph-steps li{--on:color-mix(in srgb,var(--lime) 20%,var(--surface))}
 .ph-steps li{animation:10s infinite}
 .ph-steps li:nth-child(1){animation-name:ph-s1}.ph-steps li:nth-child(2){animation-name:ph-s2}.ph-steps li:nth-child(3){animation-name:ph-s3}.ph-steps li:nth-child(4){animation-name:ph-s4}.ph-steps li:nth-child(5){animation-name:ph-s5}
 /* The loop: 8% gas · 28% the seam (wheelie) · 50% onto COMBO, the gas held · 64% back · 74–86% the stick flicks back, then forward. */
@@ -133,11 +137,11 @@ html.bui[data-theme="light"] .bands::before{opacity:.22}
 @keyframes ph-combo{0%,6%,70%,100%{opacity:0;transform:translate(26px,40px) scale(.4)}10%,66%{opacity:1;transform:none}49.9%,60.1%{background:#ffd166;box-shadow:0 3px 0 #0b0a14;translate:0 0}50%,60%{background:#3bff9b;box-shadow:none;translate:0 3px}}
 @keyframes ph-knob{0%,74%,90%,100%{transform:none}78%{transform:translateY(20px)}82%{transform:translateY(-20px)}86%{transform:none}}
 @keyframes ph-thumbl{0%,71%{opacity:0;transform:scale(1.4)}74%{opacity:1;transform:none}78%{transform:translateY(20px)}82%{transform:translateY(-20px)}86%{opacity:1;transform:none}90%,100%{opacity:0;transform:scale(1.4)}}
-@keyframes ph-s1{0%,7%,25%,100%{border-color:#0000;background:#0000}8%,24%{border-color:var(--rim);background:var(--raised)}}
-@keyframes ph-s2{0%,27%,44%,100%{border-color:#0000;background:#0000}28%,43%{border-color:var(--rim);background:var(--raised)}}
-@keyframes ph-s3{0%,47%,62%,100%{border-color:#0000;background:#0000}48%,61%{border-color:var(--rim);background:var(--raised)}}
-@keyframes ph-s4{0%,62%,71%,100%{border-color:#0000;background:#0000}63%,70%{border-color:var(--rim);background:var(--raised)}}
-@keyframes ph-s5{0%,72%,92%,100%{border-color:#0000;background:#0000}73%,91%{border-color:var(--rim);background:var(--raised)}}
+@keyframes ph-s1{0%,7%,25%,100%{border-color:#0000;background:#0000}8%,24%{border-color:var(--lime);background:var(--on)}}
+@keyframes ph-s2{0%,27%,44%,100%{border-color:#0000;background:#0000}28%,43%{border-color:var(--lime);background:var(--on)}}
+@keyframes ph-s3{0%,47%,62%,100%{border-color:#0000;background:#0000}48%,61%{border-color:var(--lime);background:var(--on)}}
+@keyframes ph-s4{0%,62%,71%,100%{border-color:#0000;background:#0000}63%,70%{border-color:var(--lime);background:var(--on)}}
+@keyframes ph-s5{0%,72%,92%,100%{border-color:#0000;background:#0000}73%,91%{border-color:var(--lime);background:var(--on)}}
 /* Reduced motion: a still, labelled diagram (gas held, the combo out). */
 @media (prefers-reduced-motion:reduce){.phone *,.ph-steps li{animation:none!important}.ph-dot{display:none}.ph-combo{opacity:1}}
 
@@ -145,9 +149,10 @@ html.bui[data-theme="light"] .bands::before{opacity:.22}
    name on a sticker over the shot. */
 .ways{list-style:none;margin:30px 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:30px 26px}
 .way{display:grid;grid-template-rows:auto 1fr;border:3px solid var(--rim);border-radius:18px;background:var(--surface);box-shadow:var(--drop-l);overflow:hidden}
-.way-shot{position:relative;aspect-ratio:16/9;background:#0d0b1c;border-bottom:3px solid var(--rim)}
-.way-shot>img{display:block;width:100%;height:100%;object-fit:cover}
-.way-shot .way-inset{position:absolute;right:14px;top:14px;width:36%;height:auto;aspect-ratio:16/10;border:3px solid var(--rim);border-radius:10px;rotate:3deg;box-shadow:var(--drop-s)}
+.way-shot{position:relative;aspect-ratio:16/8.4;background:#0d0b1c;border-bottom:3px solid var(--rim)}
+.way-shot>img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 0}
+/* (The stills' ride meter sits on the canvas, bottom left: the top-anchored crop and the name sticker cover it.) */
+.way-shot .way-inset{position:absolute;right:14px;top:14px;width:36%;height:auto;aspect-ratio:16/8.4;object-fit:cover;object-position:50% 0;border:3px solid var(--rim);border-radius:10px;rotate:3deg;box-shadow:var(--drop-s)}
 .way-name{position:absolute;left:12px;bottom:10px;margin:0;padding:6px 14px 4px;background:var(--tone);color:#0b0a14;border:3px solid var(--rim);border-radius:10px;font-size:clamp(24px,3vw,34px);letter-spacing:.02em;rotate:-3deg;box-shadow:var(--drop-s)}
 .chip-soon{position:absolute;right:14px;bottom:14px;padding:4px 9px;border:2px solid var(--rim);border-radius:8px;background:#f6f3ff;color:#0b0a14;font:900 11px var(--mono);letter-spacing:.1em;rotate:2deg}
 .chip-soon.small{position:static;rotate:none;font-size:10px;padding:3px 7px;background:var(--raised);color:var(--muted)}
@@ -171,7 +176,7 @@ html.bui[data-theme="light"] .bands::before{opacity:.22}
 .spots li{display:grid;place-items:center;aspect-ratio:1.25;border-radius:12px;font:900 26px var(--round)}
 .spots .open{background:var(--lime);color:#0b0a14;border:3px solid var(--rim);box-shadow:var(--drop-s)}
 .spots .locked{border:3px dashed var(--muted);color:var(--muted);position:relative}
-.spots .locked::after{content:"WIN IT";position:absolute;bottom:6px;font:900 9px var(--mono);letter-spacing:.1em}
+.spots .locked::after{content:"EARN IT";position:absolute;bottom:6px;font:900 9px var(--mono);letter-spacing:.1em}
 .garage-count{margin:30px 0 0}
 .makers{list-style:none;margin:16px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px}
 .makers li{rotate:-.8deg}.makers li:nth-child(even){rotate:.9deg}
@@ -194,15 +199,16 @@ html.bui[data-theme="light"] .bands::before{opacity:.22}
 
 @media (max-width:1000px){.site-nav{display:none}.head-keys{margin-left:auto}.flow{grid-template-columns:repeat(2,minmax(0,1fr))}.flow li:nth-child(2)::after{display:none}.flow li:nth-child(even){margin-top:0}.ctl-grid,.split{grid-template-columns:1fr}}
 @media (max-width:820px){
-.dt-hero{align-items:end;min-height:calc(100svh - 66px)}
-.dt-scrim{background:linear-gradient(0deg,color-mix(in srgb,var(--scrim) 94%,transparent) 0%,color-mix(in srgb,var(--scrim) 82%,transparent) 48%,color-mix(in srgb,var(--scrim) 30%,transparent) 68%,transparent 84%)}
-.dt-copy{padding:24px 0 30px}
+.dt-hero{display:block;min-height:0}
+.dt-stage,.dt-poster{bottom:auto;height:52svh}
+.dt-scrim{background:linear-gradient(180deg,#0000 0 calc(52svh - 250px),color-mix(in srgb,var(--scrim) 70%,transparent) calc(52svh - 130px),var(--scrim) 52svh)}
+.dt-copy{padding:calc(52svh - 160px) 0 34px}
 .dt-live{top:12px;bottom:auto;right:12px}
 .ways,.garage-head{grid-template-columns:1fr}
 .foot-grid{grid-template-columns:1fr 1fr}.foot-brand{grid-column:1/-1}}
-@media (max-width:560px){.brand small{display:none}.brand-mark{height:22px}.head-keys{gap:6px}.section{padding:56px 0}.hero-lockup{margin-left:-6px}
+@media (max-width:560px){.bands::before{width:300px;right:-110px;top:-70px}.brand small{display:none}.brand-mark{height:22px}.head-keys{gap:6px}.section{padding:56px 0}.hero-lockup{margin-left:-6px}
 .flow{grid-template-columns:1fr;gap:28px}.flow li::after{display:none}.flow li,.flow li:nth-child(even){rotate:0deg}
-.kgroup ul,.kgroup.pad .padlist{grid-template-columns:1fr}
+.kgroup ul,.kgroup.pad .padlist{grid-template-columns:1fr}.kgroup li{grid-template-columns:132px 1fr}
 .dt-hero .lead{font-size:16px;margin-bottom:22px}.bui .start-key{min-width:170px;padding:12px 24px}.bui .start-key b{font-size:36px}}
 /* The game page: the stage is the screen under the header. */
 .play-stage{position:relative;height:100svh;min-height:420px;background:#0d0b1c}
