@@ -22,7 +22,7 @@ import type { ModeCtx, ModeId, ModeRun, RunStats } from "./modes/mode.ts";
 import { venueOf, type Venue } from "./modes/race/venue.ts";
 import { paintMaps } from "./modes/freeride/picker.ts";
 import { rideCard as rideScreen } from "./ride-ui.ts";
-import { LOCKUP, WORDMARK } from "./logo.ts";
+import { WORDMARK } from "./logo.ts";
 import { exportCode, importCode, load, local, newBike, ready, riding, save, setup, fresh, type Profile, type Store, type RiderKit } from "./model/profile.ts";
 import { testCredits, topUp } from "./model/testcredits.ts";
 import { tune } from "./model/tune.ts";
@@ -31,7 +31,8 @@ import { apply, pitFix, pitReady, settle, type ModeResult } from "./model/econom
 import type { Buy } from "./model/garage.ts";
 import { after, ride as garageRide } from "./model/upkeep.ts";
 import { portraitOf } from "./garage/portrait.ts";
-import { bayInfo, garageCard as garageView, garageClick, garageUI, pvName, pvOf, riskCard, shown, type Pv } from "./garage/view.ts";
+import { bayInfo, garageCard as garageView, garageClick, garageUI, pvName, pvOf, riskCard, showroomView, shown, type Pv } from "./garage/view.ts";
+import { cta as lkCta, tabs as lkTabs } from "./locker/ui.ts";
 import { lookOf } from "./garage/look.ts";
 import { bar, esc, num } from "./html.ts";
 import { enter as enterSeries, recordRound, retire as retireSeries, roundStats } from "./model/series.ts";
@@ -121,6 +122,8 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   let screen: Screen = "setup", run: ModeRun | null = null, runMode: ModeId = "race", runMap: string | undefined, paused = false, result: ModeResult | null = null, note = "";
   const gui = garageUI(inf);
   type StartOpt = { map?: string; seed?: number; auto?: boolean; venue?: Venue };
+  /** The garage key just pressed (its data attributes), to give the focus back after the redraw. */
+  let refocus = "";
   let pending: [ModeId, StartOpt] | null = null, sure = false, runSeed = 0, runVenue: Venue = "mx", seriesVenue: Venue = "mx";
   /** Where ⚙ settings goes back to (the screen it was opened from). */
   let setFrom: Screen = "garage";
@@ -201,7 +204,14 @@ export function createHoleshot(o: HoleshotOptions = {}) {
    *  the name, ⚙ settings and the theme key. Sticky, so the way back stays in reach. */
   const head = (back?: [Screen, string, string]) => `<header class="dh-top${back ? " dh-sticky" : ""}">${back ? `<button type="button" class="bui-key dh-back" data-go="${back[0]}">← ${back[1]}</button><b class="dh-h dh-title">${back[2]}</b>` : WORDMARK}${inf ? `<span class="dh-chip dh-cr" title="Test credits: nothing is saved">◈ ∞</span><span class="dh-chip dh-test" title="?credits=inf: nothing is saved, online is off">TEST CREDITS ∞</span>` : `<span class="dh-chip dh-cr" title="Credits">◈ ${num(profile.credits)}</span>`}${profile.name ? `<span class="dh-chip dh-who">${portraitOf(profile.kit)}${esc(profile.name)}</span>` : ""}${screen === "settings" ? "" : `<button type="button" class="bui-key dh-icon dh-cog" data-go="settings" aria-label="Settings">${ICON.cog}</button>`}${o.onTheme ? `<button type="button" class="bui-key dh-icon dh-theme" aria-label="Light or dark">${ICON.theme}</button>` : ""}</header>`;
   /** The garage's one main action. */
-  const letsRide = `<button type="button" class="bui-key bui-sticker-key bui-call dh-letsride" data-go="ride"><b>LET'S RIDE</b><small>RACE · ENDLESS · FREE RIDE · TRACK DAY</small></button>`;
+  const letsRide = lkCta("LET'S RIDE", "dh-letsride", "RACE · ENDLESS · FREE RIDE · TRACK DAY", 'data-go="ride"');
+  /** The garage's header: the logo with the version and the byline, the Garage / Showroom tabs, the
+   *  credits, the rider (to the rider's gear), ⚙ settings (the CONTROLS / HOW TO card lives there)
+   *  and the Day / Night key. */
+  const garageHead = () => {
+    const day = pageTheme() === "light";
+    return `<header class="dh-top dh-ghead"><span class="dh-brand">${WORDMARK}<small class="lk-eyebrow">V${__VERSION__}<i aria-hidden="true">·</i>BY DAVID COOLEY</small></span>${lkTabs([["garage", "Garage"], ["showroom", "Showroom"]], gui.tab === "showroom" ? "showroom" : "garage", "gtab", "Garage or showroom", true)}<span class="dh-hkeys">${inf ? `<span class="dh-chip dh-cr" title="Test credits: nothing is saved">◆ ∞</span><span class="dh-chip dh-test" title="?credits=inf: nothing is saved, online is off">TEST CREDITS ∞</span>` : `<span class="dh-chip dh-cr" title="Credits">◆ ${num(profile.credits)}</span>`}<button type="button" class="lk-btn dh-who" data-rider aria-label="Rider gear">${portraitOf(profile.kit)}<span>${esc(profile.name ? profile.name.charAt(0) + profile.name.slice(1).toLowerCase() : "Rider")}</span></button><button type="button" class="lk-btn dh-icon dh-cog" data-go="settings" aria-label="Settings">${ICON.cog}</button>${o.onTheme ? `<button type="button" class="lk-btn dh-theme" aria-label="Light or dark"><i aria-hidden="true">${day ? "☀" : "☾"}</i>${day ? "Day" : "Night"}</button>` : ""}</span></header>`;
+  };
   const bikeLine = () => {
     const b = riding(profile), m = modelOf(b.model);
     return `${makerOf(m).name} ${m.name} · #${b.look.number}`;
@@ -224,7 +234,10 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   }
   const pitKey = () => (pitReady(profile) ? `<p class="dh-row"><button type="button" class="bui-key dh-pit">PIT CREW: FREE BASIC FIX</button></p>` : "");
   // (The lockup, "by David Cooley", sits above LET'S RIDE where the dock has room: ./garage/garage.css.)
-  const garageCard = () => garageView(profile, gui, head(), LOCKUP + letsRide, note, pitKey());
+  const garageCard = () => garageView(profile, gui, garageHead(), letsRide, note, pitKey());
+  /** THE SHOWROOM SEAM: the Showroom tab mounts whatever showroom the game has into its host. Swap
+   *  the module here (render + init with the host and the state accessors); nothing else changes. */
+  const mountShowroom = (host: HTMLElement) => { host.innerHTML = showroomView(profile, gui.all); };
   const rideCard = () => rideScreen(head(["garage", "GARAGE", "LET'S RIDE"]), { bike: bikeLine(), best: (k) => km(profile.stats.far[k] ?? 0), lap: (c) => lapClock(trackDayBest(profile.stats.best, c)), inf, note });
   /** The series shown: the championship under way's venue, else the one picked on LET'S RIDE. */
   const seriesAt = (): Venue => (profile.series.run ? venueOf(profile.series.run.venue) : seriesVenue);
@@ -275,10 +288,15 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     stage.toggleAttribute("data-menu", s !== "event" && s !== "result");
     const slot = cards.querySelector("canvas-slot");
     if (slot) slot.replaceWith(pv), (pvKey = ""), requestAnimationFrame(preview);
+    const sr = s === "garage" ? cards.querySelector<HTMLElement>(".dh-showroom") : null;
+    if (sr) mountShowroom(sr);
     if (s === "ride") paintMaps(cards, pageTheme() === "dark");
     note = "";
     // (Into the garage from elsewhere, LET'S RIDE takes the focus: its one main action.)
-    const first = (s === "garage" && was !== "garage" ? cards.querySelector<HTMLElement>(".dh-letsride") : null) ?? cards.querySelector<HTMLElement>(".dh-go, [aria-pressed=true], button, input");
+    // (Within the garage, the focus stays on the key that was pressed, redrawn: or the open menu's first row.)
+    const again = s === "garage" && was === "garage" ? (gui.menu ? cards.querySelector<HTMLElement>(".lk-menu-i, .lk-sheet .lk-x") : refocus ? cards.querySelector<HTMLElement>(refocus) : null) : null;
+    refocus = "";
+    const first = again ?? (s === "garage" && was !== "garage" ? cards.querySelector<HTMLElement>(".dh-letsride") : null) ?? cards.querySelector<HTMLElement>(".dh-go, [aria-pressed=true], button, input");
     if (s !== "event") first?.focus({ preventScroll: true });
     engine.wake();
   }
@@ -379,6 +397,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   cards.addEventListener("focusin", (e) => peek(pvOf(e.target as Element), true), sig);
   cards.addEventListener("focusout", (e) => !cards.contains(e.relatedTarget as Node) && peek(null), sig);
   cards.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && screen === "garage" && gui.menu) return e.stopPropagation(), (gui.menu = ""), show("garage");
     if (e.key !== "Escape" || screen !== "garage" || !gui.trial) return;
     gui.trial = gui.peek = null;
     say("Preview cancelled");
@@ -397,6 +416,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     if (t.classList.contains("dh-theme")) return o.onTheme?.();
     if (d.go === "series" && d.venue) seriesVenue = d.venue as Venue;
     if (d.go) return show(d.go as Screen);
+    refocus = [...t.attributes].filter((a) => a.name.startsWith("data-") && a.name !== "data-sure").map((a) => `[${a.name}="${CSS.escape(a.value)}"]`).join("");
     const g = screen === "garage" ? garageClick(profile, gui, t, cards) : null;
     if (g) return g.buy ? did(g.buy[0], g.buy[1]) : (g.profile && ((profile = g.profile), keep()), show("garage"));
     if (t.classList.contains("dh-risk-go") && pending) return (sure = true), startEvent(pending[0], pending[1]);

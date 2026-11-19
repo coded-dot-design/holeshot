@@ -1,30 +1,17 @@
-/* The garage's sheet (src/garage/view.ts): part states (worn amber, may-fail red, failed struck),
-   tyre compound and tune chips, the try-on bar, the service log, the showroom by class. Board UI
-   tokens and the shell's palette (--hot, --cy, --lime) only. */
+/* The garage's layout over the locker (../locker/ui.css) and HOLESHOT's tokens: the game re-points the
+   locker's bar, price and go colours at its own palette (--cy, --hot, --k-go: one source). Part
+   states (worn amber, may-fail red), the old showroom's cards (until the new module lands), the
+   rider's portrait. Layout only beyond that. */
+.dh .lk{--lk-bar:var(--cy);--lk-price:var(--hot);--lk-go:var(--k-go);--lk-warn:var(--amber)}
 .dh{--amber:#ffb23d}
 .dh[data-day]{--amber:#b86a00}
-.dh-bar[data-state=worn] i{background:linear-gradient(90deg,var(--amber) calc(var(--v) * 100%),color-mix(in srgb,var(--rim) 12%,transparent) 0)}
-.dh-bar[data-state=risk] i,.dh-bar[data-state=failed] i{background:linear-gradient(90deg,var(--hot) calc(var(--v) * 100%),color-mix(in srgb,var(--hot) 18%,transparent) 0)}
-.dh-bar[data-state=failed] b{text-decoration:line-through}
-.dh-pcol{display:grid;gap:4px;min-width:0}
 .dh-tag{justify-self:start;padding:1px 7px;border:2px solid var(--rim);border-radius:6px;font-size:10px;letter-spacing:.08em;background:var(--amber);color:var(--rim)}
 .dh-tag[data-state=risk],.dh-tag[data-state=failed]{background:var(--hot);color:#fff}
 .dh-tag[data-state=risk]{animation:dh-blink 1.2s steps(2,jump-none) infinite}
 @keyframes dh-blink{50%{opacity:.55}}
 @media (prefers-reduced-motion:reduce){.dh-tag[data-state=risk]{animation:none}}
 .dh-alert{padding:8px 12px;border:2.5px solid var(--rim);border-radius:10px;background:color-mix(in srgb,var(--hot) 20%,var(--surface));font-weight:800;font-size:13px}
-.dh-chips{display:flex;flex-wrap:wrap;gap:6px}
-.dh .dh-mini{min-height:44px;min-width:44px;padding:2px 10px;display:grid;justify-items:center;align-content:center;font-size:12px;letter-spacing:.04em}
-.dh-mini small{font-size:10px;opacity:.85}
-.dh-mini small[data-short]{color:var(--hot)}
-.dh-list>li.dh-setup{grid-template-columns:1fr;gap:4px}
 .dh-blurb{color:var(--muted);font-weight:700;font-size:12px}
-.dh-try{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:8px 10px;border:2.5px dashed var(--rim);border-radius:12px;background:color-mix(in srgb,var(--cy) 16%,var(--surface))}
-.dh-try>span{flex:1 1 12em;font-size:13px}
-.dh-swk[data-try]{outline:3px dashed var(--hot);outline-offset:2px}
-.dh-log{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:12px}
-.dh-log li{display:grid;grid-template-columns:5.5em minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:3px 0;border-bottom:1.5px dashed color-mix(in srgb,var(--rim) 30%,transparent)}
-.dh-log small{color:var(--muted);letter-spacing:.06em}
 .dh-classes{gap:4px}
 .dh-classes>li.dh-class{display:block}
 .dh-show>li[data-locked]{opacity:.7}
@@ -42,32 +29,7 @@
 .dh-pace-s dd{font-size:12px}
 .dh-pay li[data-loss]{color:var(--hot)}
 .dh-risk{width:min(100%,560px)}
-@media (max-width:620px){.dh-log li{grid-template-columns:4.5em minmax(0,1fr) auto}}
 .dh-maker{display:inline-block;width:14px;height:14px;margin-right:6px;vertical-align:-1px;border:2px solid var(--rim);border-radius:4px;background:linear-gradient(135deg,var(--a) 55%,var(--b) 0)}
-/* The dock (R14): the turntable, the bike shown and its pace, your bikes, the pinned preview and the
-   garage tabs stay at the top of the card while the lists scroll under it. --dh-top is the room a
-   host page keeps clear at the top (the site's header handle); the dock's upward shadow hides the
-   lists in that gap. On short screens the dock compacts: a smaller turntable, the info on one line. */
-.dh-dock{position:sticky;top:-16px;z-index:3;display:grid;gap:10px;margin:-6px -18px 0;padding:6px 18px 12px;background:var(--surface);border-bottom:2.5px solid var(--rim);box-shadow:0 8px 12px -10px color-mix(in srgb,#07060f 60%,transparent)}
-.dh-dock::before{content:"";position:absolute;inset:auto 0 100%;height:var(--dh-top,0px);background:var(--surface)}
-.dh-garage>.dh-top{position:relative;z-index:4}
-.dh-dock .dh-bay{align-items:start}
-.dh-pvinfo{display:grid;gap:4px;min-width:0}
-.dh-bayline{font-size:12px;letter-spacing:.06em;color:var(--muted);overflow-wrap:anywhere}
-.dh-pvtag{display:inline-block;padding:1px 7px;border:2px solid var(--rim);border-radius:6px;background:var(--hot);color:#fff;font-size:10px;letter-spacing:.1em;vertical-align:1px}
-.dh-pvinfo:has(.dh-pvtag) .dh-big{color:var(--hot)}
-.dh-pace-bay dd{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 5px}
-.dh-pace dd em{font-style:normal;font-size:11px;letter-spacing:.02em}
-.dh-pace dd em[data-d=up]{color:var(--k-go,#39ffb0)}
-.dh[data-day] .dh-pace dd em[data-d=up]{color:#11823b}
-.dh-pace dd em[data-d=down]{color:var(--hot)}
-.dh-pace dd em[data-d=same]{color:var(--muted)}
-.dh-pin{display:grid;grid-template-columns:minmax(0,1fr) auto auto;border-style:solid;background:color-mix(in srgb,var(--hot) 14%,var(--surface))}
-.dh-pin>span{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:14px}
-.dh .dh-pin .dh-go{font-size:14px;padding:0 14px}
-.dh-gbody{display:grid;gap:12px;min-width:0}
-/* The lists: section headings, one card shape for every bike (maker swatch, name, family/maker line,
-   stars and price, the key top-right, blurb, bars, pace). */
 .dh-clh{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin:14px 0 6px;padding-bottom:4px;border-bottom:2px solid color-mix(in srgb,var(--rim) 35%,transparent);font-size:14px;color:var(--ink)}
 .dh-clh small{font-size:11px;letter-spacing:.1em;color:var(--muted)}
 .dh-show{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px}
@@ -79,56 +41,86 @@
 .dh-bc-head b{font-size:15px;line-height:1.15}
 .dh-bc .dh-buy{min-width:7.5em}
 .dh-stars span{color:var(--hot);letter-spacing:.06em}
-.dh-list>li[data-pv^="mod:"]{cursor:pointer;border-radius:10px}
-.dh-list>li[data-pv^="mod:"]:hover{background:color-mix(in srgb,var(--cy) 10%,transparent)}
-/* The header's cluster: credits, the test chip, the rider and the theme key, one height. */
-.dh-top .dh-chip{box-sizing:border-box;min-height:44px;border-radius:10px;font-size:14px}
-.dh-top .dh-test{border-style:dashed;font-size:12px}
-.dh-top .dh-theme{margin-left:2px}
-@media (max-width:620px){
-.dh-dock{top:-10px;margin-inline:-12px;padding-inline:12px}
-.dh-pin{grid-template-columns:1fr 1fr;gap:6px 8px;padding:6px 8px}.dh-pin>span{grid-column:1/-1}.dh-pin .dh-buy{min-width:0}
-.dh-dock .dh-preview{aspect-ratio:auto;height:min(22svh,200px)}
-.dh .dh-letsride{min-height:50px;margin-top:0;padding:6px 12px}
-.dh .dh-letsride b{font-size:21px}
-.dh .dh-letsride small{display:none}
-.dh-bayblurb{display:none}
-.dh-pvinfo{grid-template-columns:minmax(0,1fr)}
-.dh-pvinfo .dh-big{font-size:20px}
-.dh-dock .dh-slots{flex-wrap:nowrap;overflow-x:auto;margin:0;padding-bottom:2px}
-.dh-dock .dh-slot-k{flex:none;min-width:6em}
-.dh-dock .dh-slot-k small:last-child{display:none}
-.dh-garage .dh-logo{height:22px}
-.dh-lockup{display:none}
-.dh-garage .dh-top .dh-logo{visibility:visible}
-.dh-top .dh-chip{min-height:40px;font-size:12px;padding:.3em .5em}
-.dh-top .dh-test{font-size:10px}
-}
-@media (max-height:620px){
-.dh-lockup{display:none}
-.dh-garage .dh-top .dh-logo{visibility:visible}
-.dh-dock{gap:6px;padding-bottom:8px}
-.dh-dock .dh-preview{aspect-ratio:auto;height:min(36svh,170px)}
-.dh .dh-letsride{min-height:44px;margin-top:0;padding:4px 12px}
-.dh .dh-letsride b{font-size:18px}
-.dh .dh-letsride small{display:none}
-.dh-bayblurb{display:none}
-.dh-pvinfo{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
-.dh-pvinfo .dh-big{font-size:18px}
-.dh-pvinfo .dh-pace{flex:1 1 100%}
-.dh-pace-bay>div{padding:2px 6px}
-.dh-pace-bay dd{font-size:13px}
-.dh-dock .dh-slots{flex-wrap:nowrap;overflow-x:auto;margin:0}
-.dh-dock .dh-slot-k{flex:none;min-width:6em;padding:2px 10px}
-.dh-dock .dh-slot-k small:last-child{display:none}
-}
 /* The racer's helmet portrait (./portrait.ts): beside the name in the top bar, and big in the bay while
    dressing the rider, on the preview's tinted tile so a dark shell still reads; the shadow falls straight down. */
-.dh-who .dh-helm{inline-size:1.9em;block-size:1.4em;margin-block:-.2em;flex:none}
 .dh-face{margin:0;display:flex;align-items:center;gap:10px}
 .dh-face .dh-helm{inline-size:104px;block-size:78px;flex:none;padding:4px 6px;box-sizing:border-box;border:2px solid var(--rim);border-radius:12px;background:linear-gradient(180deg,color-mix(in srgb,var(--cy) 22%,var(--raised)),var(--raised));box-shadow:calc(3px * var(--bui-sx)) calc(3px * var(--bui-sy)) 0 var(--bui-shadow)}
 .dh-face figcaption{font-weight:800;letter-spacing:.06em;overflow-wrap:anywhere}
 @media (max-width:620px){.dh-face .dh-helm{inline-size:72px;block-size:54px;padding:2px 4px}}
-/* The helmet row's keys show each shape in your helmet's colours. */
-.dh-swk i.dh-swh{width:40px;height:30px;border:0;border-radius:0;background:none}
-.dh-swh .dh-helm{width:100%;height:100%;display:block}
+/* The page: a full-bleed sheet under a sticky header. */
+.dh-cards:has(>.dh-garage){padding:var(--dh-top,0px) 0 0;place-items:stretch}
+.dh .dh-garage{width:100%;min-height:100%;align-content:start;gap:0;padding:0;border:0;border-radius:0;box-shadow:none;background:var(--lk-bg);color:var(--lk-ink);font-weight:800}
+.dh-ghead{position:sticky;top:0;z-index:8;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:14px 36px 0;background:var(--lk-panel);border-bottom:1.5px solid var(--lk-line)}
+.dh-brand{display:grid;justify-items:start;gap:4px;padding-bottom:14px}
+.dh .dh-garage .dh-brand .dh-logo{visibility:visible;height:32px;margin:0}
+.dh-brand .lk-eyebrow{display:flex;gap:.9em;font-size:11px}.dh-brand i{font-style:normal}
+.dh-ghead .lk-tabs-big{align-self:end}
+.dh-hkeys{display:flex;justify-content:end;align-items:center;gap:12px;padding-bottom:14px}
+.dh .dh-ghead .dh-cr{min-height:44px;padding:0 26px;border:0;border-radius:6px;background:var(--lk-go);color:var(--lk-go-ink);font-size:20px}
+.dh .dh-ghead .dh-test{min-height:44px;border-radius:6px}
+.dh-ghead .dh-who .dh-helm{inline-size:1.6em;block-size:1.2em}
+.dh-ghead .dh-cog{min-width:48px;padding:0}.dh-ghead .dh-cog svg{width:22px;height:22px}
+.dh-ghead .dh-theme{min-width:9em;justify-content:start;gap:.8em;padding:0 22px;font-weight:700}
+.dh-ghead .dh-theme i{font-style:normal;color:var(--lk-bar)}
+/* Two columns: the bike panel (sticky) and the tabs. */
+.dh-gwrap{display:grid;grid-template-columns:minmax(0,480px) minmax(0,1fr);gap:30px;padding:30px 36px 40px;align-items:start}
+.dh-bikep{position:sticky;top:110px;display:grid;gap:16px;padding:14px 0 18px;border-radius:14px}
+.dh-bikep>*{margin-inline:16px}
+.dh-bikep>.lk-turn{margin-inline:0}
+.dh-bikebar{justify-content:space-between}
+.dh-bikebar .lk-drop{min-width:9.5em}
+.dh-bays>.lk-sheet{position:absolute;z-index:20;top:calc(100% + 14px);left:-2px;width:min(440px,calc(100vw - 32px))}
+.dh-bikep .lk-turn .dh-preview{display:block;width:100%;aspect-ratio:16/11;border:0;border-radius:0;background:var(--lk-tile)}
+.dh-pvinfo{display:grid;gap:14px;min-width:0}
+.dh-bayline{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--lk-mute)}
+.dh-bikep .lk-cta-w{margin-top:24px}
+.dh-bikep .dh-pit{width:100%}
+.dh-gbody{display:grid;gap:22px;align-content:start;min-width:0}
+.dh-gbody>.lk-heading{margin-top:12px}
+.dh-gbody .lk-h3{font-size:26px}
+.dh-cond{padding:14px 24px}
+.dh-feelc{padding:24px 20px}
+.dh-log{padding:20px 22px 8px}
+.dh-note:empty{display:none}
+.dh-kitart{width:96px;height:96px}
+.lk-tile-art .dh-helm{width:110px;height:84px}
+.dh-tag{margin-top:2px}
+.dh-gbody>.dh-alert{margin:0}
+.dh-oldshow{display:grid;gap:12px}
+@media (max-width:1100px){.dh-gwrap{grid-template-columns:minmax(0,400px) minmax(0,1fr);gap:20px;padding-inline:20px}.dh-ghead{padding-inline:20px}.lk-barrow,.lk-colhead{grid-template-columns:minmax(0,1fr) minmax(60px,1fr) 3.5em minmax(8em,auto)}}
+/* Phone: the header compacts (logo, credits, Day / Night; the tabs under it), the sections stack and
+   My Bikes rises as a bottom sheet (../locker/ui.css). */
+@media (max-width:820px){
+.dh-ghead{grid-template-columns:minmax(0,1fr) auto;padding:10px 16px 0;gap:4px 8px}
+.dh-ghead .lk-tabs-big{grid-column:1/-1;grid-row:2;justify-content:space-around}
+.dh-ghead .lk-tabs-big .lk-tab{font-size:18px;padding-bottom:10px}
+.dh-brand,.dh-hkeys{padding-bottom:4px}
+.dh .dh-garage .dh-brand .dh-logo{height:24px}
+.dh-brand .lk-eyebrow{font-size:9px}.dh-brand .lk-eyebrow :is(i,span){display:none}
+.dh-hkeys{gap:8px}
+.dh-ghead .dh-who{display:none}
+.dh .dh-ghead .dh-cr{padding:0 14px;font-size:16px}
+.dh-ghead .dh-theme{min-width:0;padding:0 14px}.dh-ghead .dh-theme i{display:none}
+.dh-ghead .dh-cog{min-width:44px}
+.dh-gwrap{grid-template-columns:minmax(0,1fr);gap:16px;padding:12px 12px 28px}
+.dh-bikep{position:static;padding:10px 0 14px;gap:12px}
+.dh-bikep>*{margin-inline:12px}
+.dh-bikep .lk-cta-w{margin-top:4px}
+.lk .lk-name{font-size:30px}
+.lk .lk-seg{gap:8px}.lk .lk-seg-k{font-size:17px;min-height:48px}
+.lk .lk-tabs{gap:4px 22px}.lk .lk-tab{font-size:16px}
+.lk .lk-h2{font-size:26px}
+.lk-colhead{display:none}
+.lk .lk-barrow{grid-template-columns:minmax(0,1fr) auto;gap:6px 12px}
+.lk .lk-barrow .lk-meter{grid-column:1/-1;grid-row:2}
+.lk .lk-barrow .lk-barrow-a{grid-column:1/-1}
+.lk .lk-bars-loose .lk-btn{min-width:0}
+.dh-cond{padding:8px 14px}
+.lk .lk-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.lk .lk-feel{grid-template-columns:minmax(0,1fr);gap:10px}
+.lk .lk-opts{gap:6px}.lk .lk-opts .lk-btn{padding:0 8px;font-size:14px}
+.lk .lk-stat dd{font-size:18px}
+.lk .lk-row:has(.lk-row-m){grid-template-columns:minmax(0,1fr) auto}.lk .lk-row-m{grid-column:1;grid-row:2;font-size:13px}.lk .lk-row-e{grid-row:1/3;grid-column:2}
+.lk .lk-table{font-size:15px}.lk .lk-table td:first-child{width:3.5em}
+.lk .lk-foot{gap:8px}.lk .lk-foot>span{width:100%}.lk .lk-foot>span>.lk-btn{flex:1}
+}
