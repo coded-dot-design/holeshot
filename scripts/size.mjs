@@ -111,7 +111,9 @@ import { readdirSync, readFileSync } from "node:fs";
 // The showroom on the shop (pages 29–34): +4,694 B measured (holeshot.mjs 230,945 → 235,639; holeshot.js
 // 231,180 → 235,852): the shop's catalogue + compare screen (src/shop/catalogue.ts, 7.7 KB minified,
 // and its layout sheet), the bike adapter 2.1 KB, the rig stills 1.2 KB, buyInto, less the old
-// showroom's lists (no longer mounted). Budget 233,000 → 237,500 (about 1.6 KB of room).
+// showroom's lists (no longer mounted). Budget 233,000 → 237,500 (about 1.6 KB of room). Merged on
+// main bcd408d with the garage (sell in My Bikes, the old showroom's code deleted): 236,351 B
+// holeshot.js, 236,151 B holeshot.mjs (+11,850 B over main's 224,501; about 1.1 KB of room).
 const BUDGET = 237_500;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
