@@ -77,27 +77,45 @@ try {
     const L0 = await layout(p);
     assert.deepEqual(L0, { small: [], sideways: false }, `${name}: garage keys ≥ 44 px, no sideways scroll`);
     await shot(p, `${name}-2-garage-warnings`);
+    // ---- My Bikes: the bays sheet (a popover at 1440, a bottom sheet at 390), the expansion, Escape closes it ----
+    await click(p, "[data-bays]");
+    await until(p, "!!root.querySelector('.lk-sheet')", `${name}: My Bikes opens`);
+    const bays = await $(p, "[...root.querySelectorAll('.lk-sheet .lk-row')].map((r) => r.textContent)");
+    assert.ok(bays.length === 3 && /^BAY 1.*#23.*Rides next$/.test(bays[0]) && bays.slice(1).every((b) => /Empty bay\+ Add bike$/.test(b)), `${name}: three bays, yours rides next (${bays})`);
+    assert.match(await $(p, "root.querySelector('.lk-expand').textContent"), /Garage expansion.*Bay 4 of 6.*Unlock/s, `${name}: the expansion`);
+    if (touch) assert.equal(await $(p, "getComputedStyle(root.querySelector('.lk-sheet')).position"), "fixed", `${name}: a bottom sheet`);
+    await shot(p, `${name}-2b-my-bikes`);
+    await $(p, "root.querySelector('.lk-sheet .lk-x').focus()");
+    await p.keyboard.press("Escape");
+    await until(p, "!root.querySelector('.lk-sheet') && game.getSnapshot().screen === 'garage'", `${name}: Escape closes My Bikes`);
     // ---- service, tyres, damage, a tune choice, a mod ----
     // ---- PACE: measured 0–30 / 0–60 mph and the top (as shown, mph by default); the gearing moves it ----
-    const pace = () => $(p, "[...root.querySelectorAll('.dh-gbody .dh-pace:not(.dh-pace-s) dd')].map((d) => d.textContent)");
+    const pace = () => $(p, "[...root.querySelectorAll('.dh-pace-bay .lk-stat dd')].map((d) => d.textContent)");
     const P0 = await pace();
     assert.equal(P0.length, 3, `${name}: three pace numbers`);
-    assert.match(P0[2], /^\d+ MPH$/, `${name}: top speed in mph`);
+    assert.match(P0[2], /^\d+ mph$/, `${name}: top speed in mph`);
     let q = await prof(p), c = q.credits;
     await click(p, "[data-service=chain]");
     q = await prof(p);
     assert.ok(q.bikes[0].parts.chain === 1 && q.credits < c, `${name}: chain serviced`);
+    await click(p, "[data-gmenu=tyre]");
+    assert.equal(await $(p, "root.querySelectorAll('.lk-menu [data-tyre]').length"), 3, `${name}: the tyre compound menu lists three`);
     await click(p, "[data-tyre=soft]");
     q = await prof(p);
     assert.deepEqual([q.bikes[0].tyre, q.bikes[0].parts.tyres], ["soft", 1], `${name}: soft tyres`);
     await click(p, "[data-fix=bars]");
+    await click(p, "[data-gsub=tune]");
     await click(p, "[data-setup=gearing][data-id=tall]");
+    await click(p, "[data-gsub=up]");
+    await click(p, "[data-pv='mod:power']");
+    await until(p, "!!root.querySelector('.lk-preview [data-mod=power]')", `${name}: the upgrade preview with its key`);
     await click(p, "[data-mod=power]");
     q = await prof(p);
     assert.deepEqual([q.bikes[0].dmg.bars, q.bikes[0].gearing, q.bikes[0].mods.power], [0, "tall", 1], `${name}: bars, gearing, stage 1`);
     assert.ok(parseInt((await pace())[2]) > parseInt(P0[2]), `${name}: tall gearing (and fixes) raise the measured top: ${P0[2]} → ${(await pace())[2]}`);
     assert.deepEqual(q.bikes[0].log.slice(0, 5).map((l) => l[1]), ["mod:power:1", "setup:gearing:tall", "fix:bars", "svc:tyres:soft", "svc:chain"], `${name}: the service log`);
-    assert.match(await $(p, "root.querySelector('.dh-log').textContent"), /CONTROLLER STAGE 1.*GEARING: TALL.*BENT BARS FIXED.*NEW TYRES \(SOFT\).*CHAIN & SPROCKETS SERVICED/s);
+    await click(p, "[data-gsub=log]");
+    assert.match(await $(p, "root.querySelector('.dh-log').textContent"), /Controller stage 1 fitted.*Gearing changed to tall.*Bent bars fixed.*New tyres \(soft\).*Chain & sprockets serviced/s);
     await $(p, "root.querySelector('.dh-garage').scrollIntoView()");
     await shot(p, `${name}-3-serviced`);
     // ---- paint & kit: try on, then buy ----
@@ -106,8 +124,8 @@ try {
     await p.waitForTimeout(150);
     const ink0 = await ink(p);
     c = (await prof(p)).credits;
-    await click(p, "[data-dress=paint][data-id=magma]");
-    await until(p, "!!root.querySelector('.dh-try')", `${name}: trying on`);
+    await $(p, "root.querySelector(\"[data-page='1']\")?.click()"), await click(p, "[data-dress=paint][data-id=magma]");
+    await until(p, "!!root.querySelector('.lk-pin')", `${name}: trying on`);
     await p.waitForTimeout(200);
     assert.notEqual(await ink(p), ink0, `${name}: the preview shows the paint before you buy`);
     q = await prof(p);
@@ -116,11 +134,11 @@ try {
     await click(p, "[data-buytrial]");
     q = await prof(p);
     assert.ok(q.bikes[0].look.paint === "magma" && q.credits < c && q.owned.includes("paint:magma"), `${name}: bought`);
-    await click(p, "[data-dress=paint][data-id=acid]");
-    await click(p, "[data-dress=paint][data-id=magma]");
+    await $(p, "root.querySelector(\"[data-page='0']\")?.click()"), await click(p, "[data-dress=paint][data-id=acid]");
+    await $(p, "root.querySelector(\"[data-page='1']\")?.click()"), await click(p, "[data-dress=paint][data-id=magma]");
     q = await prof(p);
-    assert.ok(!(await $(p, "!!root.querySelector('.dh-try')")) && q.bikes[0].look.paint === "magma", `${name}: owned: switches back for free`);
-    for (const [slot, id] of [["graphics", "circuit"], ["plate", "neon"]]) await click(p, `[data-dress=${slot}][data-id=${id}]`), await click(p, "[data-buytrial]");
+    assert.ok(!(await $(p, "!!root.querySelector('.lk-pin')")) && q.bikes[0].look.paint === "magma", `${name}: owned: switches back for free`);
+    for (const [slot, id] of [["graphics", "circuit"], ["plate", "neon"]]) await click(p, "[data-gmenu=slot]"), await click(p, `[data-gslot=${slot}]`), await click(p, `[data-dress=${slot}][data-id=${id}]`), await click(p, "[data-buytrial]");
     await click(p, "[data-look=rider]");
     await click(p, "[data-dress=helmet][data-id=spike]");
     await click(p, "[data-buytrial]");
@@ -158,7 +176,7 @@ try {
     assert.deepEqual(errs, [], `${name}: no page errors`);
     await ctx.close();
   }
-  console.log("Holeshot garage: warnings and the before-you-ride card, service, tyre compounds, damage, tune, mods, the service log, try-on then buy, graphics, plate, helmet, outfits, the showroom (locked tiers, buy, sell); 1440 and 390.");
+  console.log("Holeshot garage: warnings and the before-you-ride card, service, tyre compounds, damage, tune, mods, the service log, the tyre compound menu, tuning, the upgrade preview, try-on then buy, the paint menu, graphics, plate, helmet, outfits, the showroom (locked tiers, buy, sell); 1440 and 390.");
 } finally {
   await browser.close();
   await server.close();

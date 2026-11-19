@@ -48,7 +48,7 @@
 .dh-face figcaption{font-weight:800;letter-spacing:.06em;overflow-wrap:anywhere}
 @media (max-width:620px){.dh-face .dh-helm{inline-size:72px;block-size:54px;padding:2px 4px}}
 /* The page: a full-bleed sheet under a sticky header. */
-.dh-cards:has(>.dh-garage){padding:var(--dh-top,0px) 0 0;place-items:stretch}
+.dh-cards:has(>.dh-garage){display:block;padding:var(--dh-top,0px) 0 0}
 .dh .dh-garage{width:100%;min-height:100%;align-content:start;gap:0;padding:0;border:0;border-radius:0;box-shadow:none;background:var(--lk-bg);color:var(--lk-ink);font-weight:800}
 .dh-ghead{position:sticky;top:0;z-index:8;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:14px 36px 0;background:var(--lk-panel);border-bottom:1.5px solid var(--lk-line)}
 .dh-brand{display:grid;justify-items:start;gap:4px;padding-bottom:14px}
@@ -62,14 +62,15 @@
 .dh-ghead .dh-cog{min-width:48px;padding:0}.dh-ghead .dh-cog svg{width:22px;height:22px}
 .dh-ghead .dh-theme{min-width:9em;justify-content:start;gap:.8em;padding:0 22px;font-weight:700}
 .dh-ghead .dh-theme i{font-style:normal;color:var(--lk-bar)}
-/* Two columns: the bike panel (sticky) and the tabs. */
+/* Two columns: the bike panel (sticky where the screen is tall enough) and the tabs. */
+@media (min-height:700px){.dh-bikep{position:sticky;top:110px}}
 .dh-gwrap{display:grid;grid-template-columns:minmax(0,480px) minmax(0,1fr);gap:30px;padding:30px 36px 40px;align-items:start}
-.dh-bikep{position:sticky;top:110px;display:grid;gap:16px;padding:14px 0 18px;border-radius:14px}
+.dh-bikep{display:grid;gap:16px;padding:14px 0 18px;border-radius:14px}
 .dh-bikep>*{margin-inline:16px}
 .dh-bikep>.lk-turn{margin-inline:0}
 .dh-bikebar{justify-content:space-between}
 .dh-bikebar .lk-drop{min-width:9.5em}
-.dh-bays>.lk-sheet{position:absolute;z-index:20;top:calc(100% + 14px);left:-2px;width:min(440px,calc(100vw - 32px))}
+@media (min-width:621px){.dh-bays>.lk-sheet{position:absolute;z-index:20;top:calc(100% + 14px);left:-2px;width:min(440px,calc(100vw - 32px))}}
 .dh-bikep .lk-turn .dh-preview{display:block;width:100%;aspect-ratio:16/11;border:0;border-radius:0;background:var(--lk-tile)}
 .dh-pvinfo{display:grid;gap:14px;min-width:0}
 .dh-bayline{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--lk-mute)}
@@ -97,6 +98,7 @@
 .dh-brand,.dh-hkeys{padding-bottom:4px}
 .dh .dh-garage .dh-brand .dh-logo{height:24px}
 .dh-brand .lk-eyebrow{font-size:9px}.dh-brand .lk-eyebrow :is(i,span){display:none}
+.dh-bikep .lk-cta-sub{font-size:10px;letter-spacing:.02em}.lk .lk-stat dt{font-size:10px;letter-spacing:.04em}
 .dh-hkeys{gap:8px}
 .dh-ghead .dh-who{display:none}
 .dh .dh-ghead .dh-cr{padding:0 14px;font-size:16px}
