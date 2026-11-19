@@ -103,7 +103,7 @@ html.bui[data-theme="light"] .bands::before{opacity:.22}
 .ctl-phone figcaption{margin:0}
 /* The phone: a sideways screen with the stick (left) and the throttle rocker (right), drawn as in the
    game (src/game.css .hs-rocker, src/modes/stunts.css .hs-rcombo), one 10 s loop. */
-.phone{position:relative;width:min(100%,420px);aspect-ratio:380/214;margin:0 auto;border:5px solid #0b0a14;border-radius:30px;background:#0b0a14;box-shadow:var(--drop)}
+.phone{position:relative;width:min(100%,420px);height:220px;box-sizing:border-box;margin:0 auto;border:5px solid #0b0a14;border-radius:30px;background:#0b0a14;box-shadow:var(--drop)}
 .ph-screen{position:absolute;inset:4px 12px;border-radius:20px;overflow:hidden;background:linear-gradient(180deg,#1a1038 0 40%,#2a1550 40% 62%,#4a1d6b 62% 80%,#7a2378 80%);container-type:inline-size}
 .ph-stick{position:absolute;left:7%;bottom:9%;width:84px;height:84px;border-radius:50%;border:3px solid #ffffff55;background:#0b0a1488}
 .ph-knob{position:absolute;left:50%;top:50%;width:38px;height:38px;margin:-19px 0 0 -19px;border-radius:50%;background:#e9e6ff;border:3px solid #0b0a14;animation:ph-knob 10s infinite}
@@ -116,7 +116,7 @@ html.bui[data-theme="light"] .bands::before{opacity:.22}
 .ph-rocker .rz-seam svg{width:16px;height:16px}
 .ph-combo{position:absolute;top:-46px;right:30px;width:44px;height:44px;box-sizing:border-box;display:grid;place-items:center;align-content:center;border:3px solid #0b0a14;border-radius:50%;background:#ffd166;color:#0b0a14;box-shadow:0 3px 0 #0b0a14;animation:ph-combo 10s infinite}
 .ph-combo svg{width:16px;height:16px;display:block}.ph-combo i{font:900 7px/1 var(--round);letter-spacing:.04em;font-style:normal}
-.ph-dot{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;background:#ffffffb0;border:3px solid #fff;box-shadow:0 0 0 4px #ffffff40;pointer-events:none;opacity:0}
+.ph-dot{position:absolute;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;background:#ffffff55;border:3px solid #fff;box-shadow:0 0 0 4px #ffffff30;pointer-events:none;opacity:0}
 .ph-dot-r{left:0;top:0;animation:ph-thumb 10s infinite}
 .ph-dot-l{left:50%;top:50%;animation:ph-thumbl 10s infinite}
 .ph-tag{position:absolute;font:900 9px/1 var(--mono);letter-spacing:.08em;color:#e4dcff;white-space:nowrap}
@@ -127,8 +127,7 @@ html.bui[data-theme="light"] .bands::before{opacity:.22}
 .ph-steps li::before{content:counter(s);position:absolute;left:8px;top:6px;width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:var(--raised);color:var(--ink);font:900 12px var(--mono);border:2px solid var(--rim)}
 .ph-steps b{color:var(--ink);font-family:var(--round)}
 .ph-steps li{--on:color-mix(in srgb,var(--lime) 20%,var(--surface))}
-.ph-steps li{animation:10s infinite}
-.ph-steps li:nth-child(1){animation-name:ph-s1}.ph-steps li:nth-child(2){animation-name:ph-s2}.ph-steps li:nth-child(3){animation-name:ph-s3}.ph-steps li:nth-child(4){animation-name:ph-s4}.ph-steps li:nth-child(5){animation-name:ph-s5}
+.ph-steps li:nth-child(1){animation:ph-s1 10s infinite}.ph-steps li:nth-child(2){animation:ph-s2 10s infinite}.ph-steps li:nth-child(3){animation:ph-s3 10s infinite}.ph-steps li:nth-child(4){animation:ph-s4 10s infinite}.ph-steps li:nth-child(5){animation:ph-s5 10s infinite}
 /* The loop: 8% gas · 28% the seam (wheelie) · 50% onto COMBO, the gas held · 64% back · 74–86% the stick flicks back, then forward. */
 @keyframes ph-thumb{0%{opacity:0;transform:translate(23px,52px) scale(1.4)}8%{opacity:1;transform:translate(23px,23px) scale(1)}22%{transform:translate(23px,23px)}28%,42%{transform:translate(23px,60px)}47%{transform:translate(23px,23px)}51%,60%{transform:translate(-6px,-22px)}64%,68%{opacity:1;transform:translate(23px,23px) scale(1)}72%,100%{opacity:0;transform:translate(23px,23px) scale(1.4)}}
 @keyframes ph-gas{0%,7.9%,68.1%,100%{background:#0000;color:#8d88b8;box-shadow:inset 0 -4px 0 #0b0a1473}8%,68%{background:#3bff9b;color:#0b0a14;box-shadow:none}}
