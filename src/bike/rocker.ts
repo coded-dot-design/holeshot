@@ -174,9 +174,14 @@ export function rocker(c: Controls, host: HTMLElement, o: { reduced?: boolean; s
   };
   const slot = (id: number) => (ID[0] === id ? 0 : ID[1] === id ? 1 : -1);
   const opt = o.signal ? { signal: o.signal } : undefined;
+  /** Whether (x, y) is on the pill itself (a press there is always gas, brake or both, never a bubble). */
+  const onPill = (x: number, y: number) => {
+    const r = el.getBoundingClientRect();
+    return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+  };
   el.addEventListener("pointerdown", (e) => {
     e.preventDefault();
-    const bi = bubAt(e.clientX, e.clientY);
+    const bi = onPill(e.clientX, e.clientY) ? -1 : bubAt(e.clientX, e.clientY);
     if (bi >= 0 && CID[bi]! < 0) {
       CID[bi] = e.pointerId;
       try { el.setPointerCapture(e.pointerId); } catch { /* synthetic */ }
@@ -184,8 +189,8 @@ export function rocker(c: Controls, host: HTMLElement, o: { reduced?: boolean; s
       return follow(bi, e.clientX, e.clientY);
     }
     if (bi >= 0) return;
-    const k = ID[0]! < 0 ? 0 : ID[1]! < 0 ? 1 : -1;
-    if (k < 0) return;
+    let k = ID[0]! < 0 ? 0 : ID[1]! < 0 ? 1 : -1;
+    if (k < 0) (ID[0] = ID[1] = -1), (OV[0] = OV[1] = 0), (k = 0);
     ID[k] = e.pointerId;
     OV[k] = 0;
     Z[k] = zoneY(e.clientY);
@@ -213,6 +218,7 @@ export function rocker(c: Controls, host: HTMLElement, o: { reduced?: boolean; s
   };
   el.addEventListener("pointerup", up, opt);
   el.addEventListener("pointercancel", up, opt);
+  el.addEventListener("lostpointercapture", up, opt);
   el.addEventListener("contextmenu", (e) => e.preventDefault(), opt);
   return {
     el,
