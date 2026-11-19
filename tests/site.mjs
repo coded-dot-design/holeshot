@@ -4,7 +4,7 @@
 // brand: the poster paints first, then the attract race starts on its own (no scroll) and replaces
 // it (drawn, riding, its HUD and touch controls hidden), under the lockup in the h1, the title, the
 // hook and a PLAY link to /play/; the controls (the key caps, the gamepad, the animated rocker); the
-// ways to ride (four groups, every live link a real mode, the coming-soon ones unlinked); the garage
+// ways to ride (four groups, every entry a live link to a real mode: ?mode= for each, Mashup and Track Day included); the garage
 // (3 spots to start, up to 6); the brand kit (eight colours, every download served); built on Fizlet
 // with the measured size, by David Cooley, linked; every hard shadow straight down (Fizlet's
 // language); no DOM VIRUS; no sideways scroll. Reduced motion: the still poster, no game, the controls
@@ -79,8 +79,8 @@ try {
       assert.match(m.play, /\/play\/$/, `${at}: PLAY links to /play/`);
       assert.ok(m.playSize && m.sections && m.by, `${at}: PLAY ≥ 44 px, six sections, by David Cooley (linked)`);
       assert.equal(m.ways, 4, `${at}: four ways to ride`);
-      assert.deepEqual([...new Set(m.rides)].sort(), ["bigair", "desert", "endcity", "freeride", "race"], `${at}: every live mode has a ride link, and only real modes`);
-      assert.deepEqual(m.soon, [["Mashup", false], ["Road circuits", false]], `${at}: the coming-soon entries, unlinked`);
+      assert.deepEqual([...new Set(m.rides)].sort(), ["bigair", "desert", "endcity", "freeride", "mashup", "race", "trackday"], `${at}: every live mode has a ride link, and only real modes`);
+      assert.deepEqual(m.soon, [], `${at}: no coming-soon entries (Mashup and Track Day are live)`);
       assert.ok(m.caps >= 20 && ["Space", "J", "K", "Shift", "W", "S", "A", "D", "L", "C", "R", "V", "M", "P", "Esc"].every((k) => m.capText.split(" ").includes(k)), `${at}: the key caps: ${m.capText}`);
       assert.ok(m.rocker && m.looping > 0, `${at}: the rocker diagram (three zones, COMBO), animated`);
       assert.match(m.garage, /Three spots to start\. Grow to six\./, `${at}: the garage's spots`);
@@ -110,6 +110,12 @@ try {
       if (SHOTS) await p.waitForTimeout(300), await p.screenshot({ path: `${SHOTS}/play-garage-${w}-${theme}.png` });
       await p.goto(`${server.url}${BASE}/play/?mode=bigair`);
       await until(p, () => window.game && game.getSnapshot().mode === "bigair", null, `${at}: ?mode= starts that event`);
+      for (const id of ["mashup", "trackday"]) {
+        await p.goto(`${server.url}${BASE}/play/?mode=${id}`);
+        await until(p, () => window.game && game.getSnapshot().mode === id, id, `${at}: ?mode=${id} starts it`);
+      }
+      await p.goto(`${server.url}${BASE}/play/?mode=bigair`);
+      await until(p, () => window.game && game.getSnapshot().mode === "bigair", null, `${at}: back to Big Air`);
       const pad = await p.evaluate(() => !!document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".ba-pad").offsetParent);
       if (touch) assert.equal(pad, true, `${at}: the pad on a phone`);
       if (SHOTS) {

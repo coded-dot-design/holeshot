@@ -18,7 +18,7 @@ import { ICON_GAS, ICON_BRAKE, ICON_SEAM, ICON_COMBO } from '../../../src/bike/r
 const description = 'Holeshot is a dirt bike game on a tabletop: one bike and a garage, races and a race series at MX and SX, Endless rides (the dunes, a quarry, woods, a night park and Endless Wheelie City) that never end, Free Ride maps and a Big Air straight of jumps. Earn in every mode, wear out tyres and top ends, rebuild, mod and paint. Free in the browser, by David Cooley, built on Fizlet.';
 const kb = (GZIP / 1024).toFixed(1);
 const words = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
-const has = (id: string) => MODES.some((m) => m.id === id);
+const has = (id: string) => MODES.some((m) => m.id === id) || id === 'trackday';
 // How to play: four stickers in a row, each with its icon (inline SVG, currentColor).
 const ico = (d: string) => `<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 const steps = [
@@ -52,13 +52,13 @@ const ways = [
     items: [['Race MX', 'outdoors', 'race'], ['Race SX', 'in the stadium', 'race'], ['Series MX · SX', `championships of ${rounds[0]} to ${rounds[1]} rounds, a points table`, 'race']] },
   { id: 'endless', name: 'ENDLESS', tone: 'sun', shot: 'endless-desert', alt: 'Endless Desert: a rider crossing the dune sea under a purple sky', inset: 'endcity', insetAlt: 'Endless Wheelie City: a wheelie down a long road',
     line: 'No edge, no clock. How far can you go?',
-    items: [['Endless Desert', `${words[BIOMES.length]!.toLowerCase()} grounds: ${BIOMES.map((b) => b.name.replace(/^THE /, '').toLowerCase()).join(', ')}`, 'desert'], ['Endless Wheelie City', 'roads, towns and fields; lose the neon patrol', 'endcity'], ['Mashup', 'coming soon', '']] },
+    items: [['Endless Desert', `${words[BIOMES.length]!.toLowerCase()} grounds: ${BIOMES.map((b) => b.name.replace(/^THE /, '').toLowerCase()).join(', ')}`, 'desert'], ['Endless Wheelie City', 'roads, towns and fields; lose the neon patrol', 'endcity'], ['Endless Mashup', 'one endless world: the city, then out along the trail to the dunes, the mountains, the quarry or the park, and a city again', 'mashup']] },
   { id: 'free', name: 'FREE RIDE', tone: 'cyan', shot: 'freeride', alt: 'Free Ride: a rider on the night park map beside a neon-lit wall', inset: 'bigair', insetAlt: 'Big Air: a trick called out over a kicker',
     line: 'Saddle time, air, wheelies and tricks. No laps.',
     items: [['Free Ride', `${freeCount} maps, MX and SX`, 'freeride'], ['Big Air', 'an endless straight of jumps sized to your bike; freestyle: an 11-trick ladder on C or the TRICK button, whips and flip combos; five judges pay', 'bigair']] },
-  { id: 'trackday', name: 'TRACK DAY', tone: 'lime', soon: true,
+  { id: 'trackday', name: 'TRACK DAY', tone: 'lime',
     line: 'Street bikes on road circuits.',
-    items: [['Road circuits', 'street bikes on tarmac, kerbs and corners: coming soon', '']] },
+    items: [['Road circuits', 'street bikes on three paved circuits: a grid start, three laps against three rivals, a best lap per circuit', 'trackday']] },
 ].map((w) => ({ ...w, items: w.items.map(([name, note, mode]) => ({ name, note, mode: mode && has(mode) ? mode : '' })) }));
 const classes = Object.values(CLASSES).map((c) => ({ ...c, models: MODELS.filter((m) => m.cls === c.id), starter: STARTERS.find((m) => m.cls === c.id) }));
 const makers = new Set(MODELS.map((m) => makerOf(m).name)).size;
@@ -150,7 +150,7 @@ const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound'
     <div class="wrap">
       <p class="eyebrow"><span class="index">03</span> WAYS TO RIDE</p>
       <h2 id="modes-title">Race it. Ride it forever. Fly it.</h2>
-      <p class="sub">{words[MODES.length]} modes and the race series, live today. Mashup and Track Day are on the way.</p>
+      <p class="sub">{words[MODES.length + 1]} modes and the race series, all live today.</p>
       <ul class="ways">
         {ways.map((w) => (
           <li class={`way tone-${w.tone}${w.soon ? ' soon' : ''}`} id={`way-${w.id}`}>
