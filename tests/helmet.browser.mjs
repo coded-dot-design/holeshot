@@ -15,7 +15,7 @@ import { serve, launchOptions } from "./serve.mjs";
 
 const entry = `
 import { diorama } from "@fzlt/core/diorama";
-import { rig, T_HANDSTAND } from "./src/bike/rig.ts";
+import { rig, lensOf, T_HANDSTAND } from "./src/bike/rig.ts";
 import { bike, TWO_STROKE } from "./src/bike/bike.ts";
 const cv = document.getElementById("cv"), d = diorama(cv, { light: [-0.4, 1, 0.6], ambient: 0.55, maxDpr: 1 });
 const W = 360, H = 360;
@@ -30,7 +30,7 @@ function setup(helmet) {
   const g = rig(d, "b", C, "2t", helmet), bk = bike(flat, TWO_STROKE);
   const head = d.get("b:h"), shell = g.parts.filter((p) => p.parent === head && p.shape === "cyl" && p.color === C.helmet);
   const face = g.parts.filter((p) => under(p, "b:hf"));
-  const lens = face.filter((p) => p.color === C.visor || p.emissive);
+  const lens = face.filter((p) => p.color === lensOf(C.visor) || p.emissive);
   return { g, bk, head, shell, face, lens, rest: face.filter((p) => !lens.includes(p)) };
 }
 let R = null, now = "";
