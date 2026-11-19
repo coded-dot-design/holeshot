@@ -177,6 +177,7 @@ try {
     await click(p, "[data-gtab=garage]");
     // ---- and the ride goes now: nothing at risk ----
     await click(p, "[data-go=ride]");
+    await click(p, "[data-rtab=free]");
     await click(p, "[data-mode=bigair]");
     await until(p, "game.getSnapshot().screen === 'event'", `${name}: no risk, straight in`);
     await p.waitForTimeout(1200);
