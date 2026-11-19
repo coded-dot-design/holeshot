@@ -53,8 +53,8 @@ test("the sim and generator modules call no builtin transcendental maths (render
 });
 
 test("the sims import only Fizlet bricks whose sim path is pure arithmetic", () => {
-  const sim = ["bike/bike.ts", "modes/race/course.ts", "modes/race/generate.ts", "modes/freeride/maps.ts", "modes/freeride/session.ts", "modes/freeride/jam.ts", "modes/bigair/show.ts", "modes/bigair/tricks.ts", "modes/wheelie/city.ts", "modes/wheelie/hoods.ts", "modes/wheelie/cops.ts", "modes/wheelie/ride.ts", "modes/wheelie/tricks.ts", "modes/meter.ts", "model/tune.ts", "online/match.ts", "online/rollback.ts", "net.ts"];
-  const ok = new Set(["@fzlt/core/terrain", "@fzlt/core/steer", "@fzlt/core/kernel", "@fzlt/core/presence"]);
+  const sim = ["bike/bike.ts", "modes/race/course.ts", "modes/race/generate.ts", "modes/freeride/maps.ts", "modes/freeride/session.ts", "modes/freeride/jam.ts", "modes/bigair/show.ts", "modes/bigair/tricks.ts", "modes/wheelie/city.ts", "modes/wheelie/hoods.ts", "modes/wheelie/cops.ts", "modes/wheelie/ride.ts", "modes/wheelie/tricks.ts", "modes/meter.ts", "model/tune.ts", "online/match.ts", "net.ts"];
+  const ok = new Set(["@fzlt/core/terrain", "@fzlt/core/steer", "@fzlt/core/kernel", "@fzlt/core/presence", "@fzlt/core/presence/rollback"]);
   for (const f of sim) {
     const bricks = [...readFileSync(join(SRC, f), "utf8").matchAll(/from "(@fzlt\/core[^"]*)"/g)].map((m) => m[1]);
     for (const b of bricks) assert.ok(ok.has(b), `${f} imports ${b}: check its sim path is pure arithmetic, then allow it here`);

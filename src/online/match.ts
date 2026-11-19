@@ -1,5 +1,5 @@
 // An online match, headless: the frames every screen runs, the same on every screen. A match is one
-// rollback link (./rollback.ts) over the room for as long as the room lasts, and its frames are:
+// rollback link (@fzlt/core/presence/rollback) over the room for as long as the room lasts, and its frames are:
 //   HELLO  frames 0..HELLO_FRAMES-1 carry every seat's hello (../net.ts: name, garage bike, look);
 //          nothing moves. On frame HELLO_FRAMES (once every hello is final) every screen builds the
 //          same ride from the host's pick, the room's seed and those bikes.

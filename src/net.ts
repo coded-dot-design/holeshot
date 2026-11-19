@@ -1,7 +1,7 @@
 // HOLESHOT online: two to four screens over a fizlet-rooms room (@fzlt/core/presence's `join` for the
 // room and its lobby, the same room server Dune Hop, Salvo Bay and Battlefield Blitz use). The sims
 // are deterministic, so only inputs travel: each frame every seat's inputs packed in 32 bits, the
-// room's 12-byte INPUT message. ./online/rollback.ts runs each frame at once with this screen's own
+// room's 12-byte INPUT message. @fzlt/core/presence/rollback runs each frame at once with this screen's own
 // input and a guess for the others'; ./online/match.ts is the match those frames run (the hello, the
 // ride, the result, the next ride). This file is the wire: the input bits, the host's pick (one byte,
 // on the room's START), and the hello: the first HELLO_FRAMES frames carry three bytes each of every
@@ -142,7 +142,7 @@ export function hashOf(bytes: Uint8Array[]) {
   for (const b of bytes) h = hash32(b, h);
   return h >>> 0;
 }
-export { rollback, type Rollback } from "./online/rollback.ts";
+export { rollback, type Rollback } from "@fzlt/core/presence/rollback";
 
 /** The room: `url` (wss://…), room `room`, `size` seats (every screen asks the same size: the room
  *  refuses a different one), an invite code. `want` seats start it (the host's ask: 0 waits for the

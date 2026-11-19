@@ -11,7 +11,7 @@
 // and, at the end, every screen's state compared byte for byte (the desync check too).
 // `--net lockstep` runs the race on presence's lockstep (every frame waits for every input: what a
 // plain lockstep would feel like, the "before"); the default runs the match on the rollback link
-// (src/online/match.ts, src/online/rollback.ts). As a gate (no --net) it asserts the rollback bars.
+// (src/online/match.ts, @fzlt/core/presence/rollback). As a gate (no --net) it asserts the rollback bars.
 import assert from "node:assert/strict";
 import { roomServer, CODE } from "./room-server.mjs";
 const N = await import("../src/net.ts");
@@ -78,12 +78,11 @@ async function ride(P, room) {
         hooks: { events: () => {} },
       });
       // The first time a frame runs on this screen (live) with its own input: the input is on screen.
-      const step0 = mt.link.system.step;
       let shown = 0;
-      mt.link.system.step = () => {
-        step0();
+      // A system added after the link's runs after it each engine step.
+      e.add({ step() {
         for (; shown < mt.link.frame; shown++) if (m.sampled[shown] > 0) m.lat.push(performance.now() - m.sampled[shown]), (m.sampled[shown] = 0);
-      };
+      } });
       m.mt = mt;
       m.rb = mt.link;
       m.bytes = () => [mt.arena];
