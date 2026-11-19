@@ -25,6 +25,19 @@
 
 ## 0.6.0 — 2026-11-19
 
+- **Endless Mashup** (mode id `mashup`): one endless world whose biome changes by region. Big
+  Voronoi regions (a jittered 1,600-unit lattice, every region over 1 km across) are the city (Endless
+  Wheelie City's open world), the dunes (the Endless dune sea), the mountains (the endless woods'
+  ground ×1.8 wide, ×2.6 high), the quarry and the park, coloured so riding out one way cycles them
+  (east: city, dunes, mountains, city, quarry, park). Nothing is forked: the open world composes with
+  a biome field (`src/modes/mashup/field.ts`, the `Mix` hook in `open.ts`) that blends heights, the
+  face palette (dithered) and the scenery's density over a 160-unit band; the roads run on as dirt
+  trails past the city (their own ribbon, no lane paint). Towns, roundabouts and road kickers (and so
+  the patrol, heat and tickets) only deep in city regions; out in the wild, big airs and flips land
+  points; the wild regions' cactus stands, pines, rocks, beacons and pylons are pooled. A toast on
+  entering a region, distance and its own best (`stats.far.mashup`, additive: no profile version
+  step). Solo only. Endless Wheelie City without the field is unchanged (goldens). Tests:
+  `tests/mashup.test.mjs`.
 - **New icon and share image.** The app icon is a lime setting sun with pink stripes and a wheelie silhouette on a cyan horizon (all icon sizes, maskable and Apple touch); the share image is the new launch cover's landscape cut; the cover art is in `site/public/shots/cover.jpg`.
 - **The landing page wears the brand.** The header shows the HOLESHOT wordmark (lime letters, pink drop, ink outline; named for screen readers) beside the icon. The hero leads with the lockup in the h1, the hook, a lime PLAY and the box-art cover (an SVG, 6 KB gzip) on the cover's sunset bands, with a pale sunset in the light theme. The live demo race moves to its own "Watch a race" band and starts, with its module, only when scrolled to, without touch controls over it. A first view now loads about 25 KB gzip instead of about 282 KB. A new Brand section near the bottom shows the lockup on dark and light, the app icon, the cover and the eight-colour palette, with "by David Cooley", and every file can be downloaded from `site/public/brand/`.
 - **The garage is home; LET'S RIDE is its one main key** (owner, 2026-11-19). The row of four top

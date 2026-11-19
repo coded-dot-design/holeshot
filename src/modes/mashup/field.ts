@@ -121,8 +121,7 @@ export function field(seed: number) {
    *  ground scatter, thinned by the biome's weight at each spot (so it thins out across a border),
    *  off the trails. Into out (IS numbers an item) from n, at most cap; returns the new count. */
   const scatter: Scatter = (Wd, x, z, R, out, n, cap) => {
-    const XH = Wd.XH, RQ = Wd.RQ;
-    // The lattice in each biome's own (spread) coordinates: the cells round (x, z) for each wild biome near.
+        // The lattice in each biome's own (spread) coordinates: the cells round (x, z) for each wild biome near.
     X[0] = x; X[1] = z; at();
     for (let b = 0; b < NBIOME; b++) CW[b] = X[7 + b]!;
     const far = X[6]! > 2 * R + BAND + 4 * FCELL * 2;
@@ -144,7 +143,7 @@ export function field(seed: number) {
         }
       }
       // The ground scatter: a 16-unit lattice (the mountains' pines, the odd rock and cactus).
-      const p = b === M_PEAKS ? 0.3 : b === M_DUNES ? 0.06 : b === M_QUARRY ? 0.08 : 0;
+      const p = b === M_PEAKS ? 0.8 : b === M_DUNES ? 0.25 : b === M_QUARRY ? 0.22 : b === M_PARK ? 0.12 : 0;
       if (!p) continue;
       const FC = 16, fi0 = Math.floor((x - R) / FC) | 0, fi1 = Math.floor((x + R) / FC) | 0, fj0 = Math.floor((z - R) / FC) | 0, fj1 = Math.floor((z + R) / FC) | 0;
       for (let j = fj0; j <= fj1; j++) for (let i = fi0; i <= fi1; i++) {
@@ -153,8 +152,11 @@ export function field(seed: number) {
         const px = (i + 0.15 + hashI(i, j, bs + 382) * HI * 0.7) * FC, pz = (j + 0.15 + hashI(i, j, bs + 383) * HI * 0.7) * FC, ex = px - x, ez = pz - z;
         if (ex * ex + ez * ez > R * R) continue;
         if (n >= cap) return n;
-        const kind = b === M_PEAKS ? I_PINE : b === M_DUNES && r < 0.035 ? I_CACTUS : I_ROCK;
-        n = put(Wd, out, n, b, kind, px, pz, hashI(i, j, bs + 384), 6e9 + b * 1e8 + mod(i * 7919 + j * 104729, 1e8));
+        const kind = b === M_PEAKS ? I_PINE : b === M_DUNES && r < 0.09 ? I_CACTUS : b === M_PARK ? I_CONE : I_ROCK, key = 6e9 + b * 1e8 + mod(i * 7919 + j * 104729, 1e7) * 4;
+        n = put(Wd, out, n, b, kind, px, pz, hashI(i, j, bs + 384), key);
+        // The mountains: a stand of pines (one more beside it, now and then a third).
+        if (b === M_PEAKS && n < cap) n = put(Wd, out, n, b, I_PINE, px + 2.1, pz + 1.3, hashI(i, j, bs + 385), key + 1);
+        if (b === M_PEAKS && r < 0.4 && n < cap) n = put(Wd, out, n, b, I_PINE, px - 1.4, pz + 2.4, hashI(i, j, bs + 386), key + 2);
       }
     }
     return n;

@@ -67,6 +67,14 @@ with that group's kind picked; online rides MX, SX is solo). `?mode=<id>` on /pl
   (a trick out too: a BACKFLIP NAC-NAC). Tuck the trick in and straighten the whip before the
   landing or it is a bail. Clean landings that did something build the combo (×2 to ×6), the judges
   mark each one, and five judges score the run and pay.
+- **Endless Mashup**: one endless world that changes as you ride. The plane is cut into big regions
+  (each well over a kilometre across): the city (Endless Wheelie City's roads, towns and patrol), the
+  dunes (the Endless dune sea), the mountains (the endless woods' hills, scaled up, under pines), the
+  quarry and the park; ride far one way and they cycle (east: city, dunes, mountains, city, quarry,
+  park, city…). Borders blend over a band about 160 m wide: the ground, the colours and the scenery
+  change smoothly, and the roads run on out of town as dirt trails. In the city it is Endless Wheelie
+  City (towns, heat, tickets, the patrol, hand drags); out in the wild, big airs and flips pay. The
+  same controls everywhere; "ENTERING THE DUNES" as you cross; distance and its own best. Solo.
 - **Endless Wheelie City**: an open world of roads, towns and fields that never ends, in every
   direction (the same world on every screen): long smooth roads sweep across rolling fields
   (highways, smaller roads branching off, junctions and roundabouts, kickers now and then on the

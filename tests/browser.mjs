@@ -125,7 +125,7 @@ try {
     assert.equal(s.bike.parts.tyres, 1, `${name}: NEW SET`);
     assert.ok(s.credits < before.credits, `${name}: paid for`);
     // ---- the other modes, each on the same bike ----
-    for (const id of ["freeride", "bigair", "endcity"]) {
+    for (const id of ["freeride", "bigair", "endcity", "mashup"]) {
       const pre = await snap(p);
       await p.evaluate((id) => game.start(id, { auto: true }), id);
       await until(p, () => game.getSnapshot().run && game.getSnapshot().run.speed > 2, null, `${name}: ${id} rides`);

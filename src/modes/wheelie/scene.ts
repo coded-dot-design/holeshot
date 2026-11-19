@@ -126,7 +126,7 @@ const POOL = new Int32Array(NITEM);
 [[I_HOUSE, 20], [I_HOUSE2, 16], [I_SHOP, 10], [I_DINER, 2], [I_STORE, 5], [I_GAS, 2], [I_FLATS, 7], [I_TOWER, 5], [I_WARE, 4], [I_BARN, 3], [I_SILO, 3], [I_TREE, 44], [I_PINE, 24], [I_ROCK, 14], [I_HAY, 14], [I_LAMP, 40], [I_SIGN, 8], [I_MAIL, 18], [I_BENCH, 10], [I_CAR, 14], [I_FENCE, 28], [I_CONE, 8], [I_ISLE, 3], [I_DOG, 2], [I_KICK, 3]].forEach(([k, v]) => (POOL[k!] = v!));
 /** The Endless Mashup's pool: the city's, plus the wild regions' cactus stands, pines, rocks and pylons. */
 const POOL_M = POOL.slice();
-[[I_CACTUS, 36], [I_PINE, 64], [I_ROCK, 36], [I_CONE, 24], [I_BARN, 4]].forEach(([k, v]) => (POOL_M[k!] = v!));
+[[I_CACTUS, 40], [I_PINE, 110], [I_ROCK, 50], [I_CONE, 30], [I_BARN, 4]].forEach(([k, v]) => (POOL_M[k!] = v!));
 /** Occlusion: a building in front of the bike fades to GHOST over OCC_T seconds. */
 const GHOST = 0.1, OCC_T = 0.15;
 /** Within this of a building's footprint the bike is up against it (its radius 0.45 and a margin). */
