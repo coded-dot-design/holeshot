@@ -74,7 +74,7 @@ html.bui[data-theme="light"] .panel{box-shadow:5px 5px 0 var(--ink)}
 @media (max-width:1000px){.cards,.modes{grid-template-columns:repeat(2,minmax(0,1fr))}.cards.three{grid-template-columns:repeat(2,minmax(0,1fr))}.split{grid-template-columns:1fr}.site-nav{display:none}.head-keys{margin-left:auto}}
 @media (max-width:560px){.cards,.modes,.cards.three{grid-template-columns:1fr}.brand small{display:none}.section{padding:52px 0}
 .dt-hero{min-height:calc(100svh - 66px);align-items:end}.dt-hero::before{background:linear-gradient(0deg,color-mix(in srgb,#0d0b1c 88%,transparent) 0%,color-mix(in srgb,#0d0b1c 55%,transparent) 42%,transparent 70%)}.dt-copy{padding:24px 0 28px}}
-@media (pointer:coarse) and (max-width:900px){[data-app] .site-head,.head-handle{display:none}[data-app] .play-stage{height:100svh}.play-host{--dh-top:0px}}
+@media (pointer:coarse) and (max-width:900px){[data-app] .site-head,.head-handle{display:none}[data-app] .play-stage{height:100svh;min-height:0}.play-host{--dh-top:0px}}
 [data-app] .head-keys{margin-left:auto}
 .bui .start-key{background:#39ffb0}.bui .start-key b,.bui .start-key span{color:#07060f}
 .brand b{white-space:nowrap}

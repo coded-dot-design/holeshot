@@ -12,19 +12,20 @@
 import type { Controls } from "@fzlt/core/input";
 
 /** Zones of the pill, top to bottom, as fractions of its height: gas above SEAM0, brake below SEAM1. */
-export const SEAM0 = 0.4, SEAM1 = 0.62;
+export const SEAM0 = 72 / 188, SEAM1 = 116 / 188; // the rows in src/game.css: 72px gas, 44px seam, 72px brake
 /** What a finger at fraction `f` (0 top .. 1 bottom) of the pill asks for: 1 gas, 2 brake, 3 both. */
 export const zoneAt = (f: number) => (f < SEAM0 ? 1 : f > SEAM1 ? 2 : 3);
 
 export const ICON_GAS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-6 0 2 1 3 2 3 0-4-1-6 1-9z" fill="currentColor"/></svg>';
 export const ICON_BRAKE = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="12" cy="5.6" r="1.3" fill="currentColor"/><circle cx="18.4" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="18.4" r="1.3" fill="currentColor"/><circle cx="5.6" cy="12" r="1.3" fill="currentColor"/></svg>';
 export const ICON_SEAM = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 18c2-7 5-11 13-13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><circle cx="6" cy="19" r="3" fill="currentColor"/></svg>';
+export const ICON_HOP = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 5 12h4v6h6v-6h4z" fill="currentColor"/></svg>';
 export const ICON_COMBO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.6 6.2 6.7.6-5.1 4.4 1.6 6.6L12 16.3 6.2 19.8l1.6-6.6L2.7 8.8l6.7-.6z" fill="currentColor"/></svg>';
 const HINT_KEY = "holeshot:rocker-seam";
 
 /** Mount the rocker in `host` (the pad's element): drives `gas` and `brake` on `c`. */
-export function rocker(c: Controls, host: HTMLElement, o: { reduced?: boolean; signal?: AbortSignal; gas?: string; brake?: string; combo?: string } = {}) {
-  const gi = o.gas ?? "gas", bi = o.brake ?? "brake", ci = o.combo ?? "";
+export function rocker(c: Controls, host: HTMLElement, o: { reduced?: boolean; signal?: AbortSignal; gas?: string; brake?: string; combo?: string; hop?: string } = {}) {
+  const gi = o.gas ?? "gas", bi = o.brake ?? "brake", ci = o.combo ?? "", hi = o.hop ?? "";
   const el = document.createElement("div");
   el.className = "hs-rocker";
   el.setAttribute("role", "group");
@@ -43,6 +44,25 @@ export function rocker(c: Controls, host: HTMLElement, o: { reduced?: boolean; s
     el.classList.add("hs-hascombo");
     el.append(cb);
   }
+  // The hop button (only where the mode has one): stuck to the gas side, always there; tap it, or
+  // slide the gas thumb onto it (the gas stays on).
+  let hb: HTMLElement | null = null;
+  if (hi) {
+    hb = document.createElement("b");
+    hb.className = "hs-rhop";
+    hb.setAttribute("role", "img");
+    hb.setAttribute("aria-label", "Hop: tap, or slide the gas thumb onto it (L)");
+    hb.innerHTML = ICON_HOP + "<i>HOP</i>";
+    el.classList.add("hs-hascombo");
+    el.append(hb);
+  }
+  const onHop = (x: number, y: number) => {
+    if (!hb) return false;
+    const r = hb.getBoundingClientRect(), p = 8;
+    return x >= r.left - p && x <= r.right + p && y >= r.top - p && y <= r.bottom + p;
+  };
+  const HID = new Int32Array([-1]);
+  let hop = false;
   const onCombo = (x: number, y: number) => {
     if (!cb || !gas) return false;
     const r = cb.getBoundingClientRect(), p = 10;
@@ -65,6 +85,8 @@ export function rocker(c: Controls, host: HTMLElement, o: { reduced?: boolean; s
     if (b !== brake) (brake = b), c.press(bi, b);
     const cm = !!ci && (CID[0]! >= 0 || (ID[0]! >= 0 && OV[0] === 1) || (ID[1]! >= 0 && OV[1] === 1));
     if (cm !== combo) (combo = cm), c.press(ci, cm), el.dataset.combo = cm ? "1" : "";
+    const hp = !!hi && (HID[0]! >= 0 || (ID[0]! >= 0 && OV[0] === 2) || (ID[1]! >= 0 && OV[1] === 2));
+    if (hp !== hop) (hop = hp), c.press(hi, hp), el.dataset.hop = hp ? "1" : "";
     if (zz !== zone) {
       if (zone !== 0 && zz !== 0 && !o.reduced && typeof navigator.vibrate === "function") try { navigator.vibrate(8); } catch { /* none */ }
       zone = zz;
@@ -89,8 +111,15 @@ export function rocker(c: Controls, host: HTMLElement, o: { reduced?: boolean; s
       try { el.setPointerCapture(e.pointerId); } catch { /* synthetic */ }
       return apply();
     }
-    const k = ID[0]! < 0 ? 0 : ID[1]! < 0 ? 1 : -1;
-    if (k < 0) return;
+    if (HID[0]! < 0 && onHop(e.clientX, e.clientY)) {
+      HID[0] = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch { /* synthetic */ }
+      return apply();
+    }
+    // A new press always lands: if both finger slots are taken, they are stale (iOS can drop a touch
+    // without a pointerup), so they are cleared first.
+    let k = ID[0]! < 0 ? 0 : ID[1]! < 0 ? 1 : -1;
+    if (k < 0) (ID[0] = ID[1] = -1), (OV[0] = OV[1] = 0), (k = 0);
     ID[k] = e.pointerId;
     OV[k] = 0;
     Z[k] = zoneAt(frac(e.clientY));
@@ -101,12 +130,13 @@ export function rocker(c: Controls, host: HTMLElement, o: { reduced?: boolean; s
     const k = slot(e.pointerId);
     if (k < 0) return;
     // Slid onto the combo button: the gas stays on (the zone is kept) while it is over it.
-    OV[k] = onCombo(e.clientX, e.clientY) ? 1 : 0;
+    OV[k] = onCombo(e.clientX, e.clientY) ? 1 : onHop(e.clientX, e.clientY) ? 2 : 0;
     if (!OV[k]) Z[k] = zoneAt(frac(e.clientY));
     apply();
   }, opt);
   const up = (e: PointerEvent) => {
     if (CID[0] === e.pointerId) return void ((CID[0] = -1), apply());
+    if (HID[0] === e.pointerId) return void ((HID[0] = -1), apply());
     const k = slot(e.pointerId);
     if (k < 0) return;
     if (k === 0 && ID[1]! >= 0) (ID[0] = ID[1]!), (Z[0] = Z[1]!), (OV[0] = OV[1]!), (ID[1] = -1), (OV[1] = 0);
@@ -115,6 +145,8 @@ export function rocker(c: Controls, host: HTMLElement, o: { reduced?: boolean; s
   };
   el.addEventListener("pointerup", up, opt);
   el.addEventListener("pointercancel", up, opt);
+  // iOS can end a captured touch with only lostpointercapture (a card over the pad, the page hidden).
+  el.addEventListener("lostpointercapture", up, opt);
   el.addEventListener("contextmenu", (e) => e.preventDefault(), opt);
   return {
     el,
@@ -125,7 +157,7 @@ export function rocker(c: Controls, host: HTMLElement, o: { reduced?: boolean; s
     /** The combo button (null without one). */
     comboEl: cb,
     /** Let go (a pause, leaving). */
-    release() { ID[0] = ID[1] = CID[0] = -1; OV[0] = OV[1] = 0; apply(); },
+    release() { ID[0] = ID[1] = CID[0] = HID[0] = -1; OV[0] = OV[1] = 0; apply(); },
   };
 }
 export type Rocker = ReturnType<typeof rocker>;

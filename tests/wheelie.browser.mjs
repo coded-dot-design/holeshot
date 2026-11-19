@@ -41,7 +41,8 @@ try {
     await p.evaluate(() => game.start("endcity"));
     if (touch) {
       const pad = await p.evaluate(() => { const r = document.querySelector("[data-fizlet-host]").shadowRoot, keys = [...r.querySelectorAll(".wc-pad .bui-pad-keys button")].map((b) => b.getAttribute("aria-label")); return { stick: !!r.querySelector(".wc-pad .bui-pad-stick, .wc-pad [class*=stick]"), keys }; });
-      assert.ok(pad.stick && pad.keys.length === 1 && /hop/i.test(pad.keys[0]), `${name}: the pad: a stick, HOP (gas and brake on the rocker): ${JSON.stringify(pad)}`);
+      assert.ok(pad.stick && pad.keys.length === 0, `${name}: the pad: a stick, no keys (HOP and COMBO on the rocker): ${JSON.stringify(pad)}`);
+      assert.ok(await p.evaluate(() => !!document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".hs-rocker .hs-rhop")), `${name}: HOP stuck to the rocker`);
       const gas = await p.evaluate(() => { const r = document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".hs-rocker").getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height * 0.15]; });
       const cdp = await ctx.newCDPSession(p);
       await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: gas[0], y: gas[1], id: 1 }] });

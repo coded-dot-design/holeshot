@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.3 — 2026-11-19
+
+- **The gas never gets stuck dead on a phone.** iOS can end a touch without telling the rocker the
+  finger lifted (a card over the pad, a lost capture); its two finger slots then stayed taken and
+  every new press was ignored. A lost capture now ends the finger, and a new press always lands
+  (stale slots are cleared first).
+- **HOP stuck to the gas pedal** in Wheelie City, beside COMBO: tap it, or slide the gas thumb onto
+  it (the gas stays on). No separate HOP key in the middle of the screen.
+- **The pedal per the asks:** gas and brake square (round top and bottom ends), the seam between,
+  a held zone lights and presses in (its lip goes; the pill itself does not move). A smaller pill on
+  short screens (a phone on its side) so it never runs off the bottom, and the play area fits a
+  landscape phone (it had a 420 px floor, taller than the screen).
+
 ## 0.5.2 — 2026-11-19
 
 - **Gas and brake back to 0.4.0's rocker on phones.** The 0.5.0 rocker (the TRICK/HOP bubbles on a

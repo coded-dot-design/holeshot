@@ -186,10 +186,10 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
   const c = controls(engine, { keys: { left: [], right: [], fwd: [], back: [], gas: [], brake: [], hop: [], reset: [], combo: [] }, target: play });
   const GAS = c.id("gas"), BRAKE = c.id("brake"), HOPK = c.id("hop"), RESETK = c.id("reset"), COMBOK = c.id("combo");
   // No pad keys: the TRICK (the combo button) and the HOP are bubbles out of the rocker, each only when it is any use.
-  const ICON_HOP = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 5 12h4v6h6v-6h4z" fill="currentColor"/></svg>';
-  const thePad = pad(engine, c, { scheme: "stick", actions: [{ intent: "hop", label: "", icon: ICON_HOP, name: "Hop (L)", key: "L", role: "aim" }], host: stage });
+  // No pad keys: HOP and COMBO are stuck to the gas side of the rocker.
+  const thePad = pad(engine, c, { scheme: "stick", actions: [], host: stage });
   thePad.el.classList.add("wc-pad");
-  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal, combo: "combo" });
+  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal, combo: "combo", hop: "hop" });
   const coarse = matchMedia("(pointer: coarse)"), walkHud = walkUi(hud, () => coarse.matches && !ctx.attract);
   if (ctx.attract) thePad.el.hidden = true;
   const vox = voice();

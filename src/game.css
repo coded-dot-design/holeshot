@@ -112,14 +112,23 @@
 .dh-looks>li{grid-template-columns:1fr}
 .dh-logo{font-size:22px}
 }
-.dh .hs-rocker{pointer-events:auto;z-index:1;position:relative;flex:none;inline-size:72px;block-size:clamp(150px,34cqh,210px);margin-block-end:max(4px,env(safe-area-inset-bottom));margin-inline-end:max(2px,env(safe-area-inset-right));display:grid;grid-template-rows:40fr 22fr 38fr;border:3px solid #0b0a14;border-radius:36px;background:#1b1838;box-shadow:0 5px 0 #0b0a14;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;align-self:flex-end}
-.dh .hs-rz{display:grid;place-items:center;color:#8d88b8}
+/* The throttle rocker (src/bike/rocker.ts): gas on top, brake below, both square (as tall as the pill is
+   wide; the pill's ends round), the seam (both: the wheelie) between. A held zone lights and presses
+   in (its lip goes); the pill itself never moves under the thumb. */
+.dh .hs-rocker{--rw:72px;pointer-events:auto;z-index:1;position:relative;flex:none;inline-size:var(--rw);display:grid;grid-template-rows:var(--rw) calc(var(--rw) * 11 / 18) var(--rw);margin-block-end:max(10px,env(safe-area-inset-bottom));margin-inline-end:max(4px,env(safe-area-inset-right));border:3px solid #0b0a14;border-radius:999px;background:#1b1838;box-shadow:0 5px 0 #0b0a14;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;align-self:flex-end}
+.dh .hs-rocker:is([data-zone="1"],[data-zone="2"],[data-zone="3"]){box-shadow:0 2px 0 #0b0a14}
+/* Short screens (a phone on its side): a smaller pill, same proportions, so it never runs off the bottom. */
+@media (max-height:520px){.dh .hs-rocker{--rw:52px}.dh .hs-rz svg{inline-size:24px;block-size:24px}}
+.dh .hs-rz{display:grid;place-items:center;color:#8d88b8;box-shadow:inset 0 -4px 0 #0b0a1473}
+.dh .hs-rz-gas{border-radius:calc(var(--rw) / 2) calc(var(--rw) / 2) 0 0}
+.dh .hs-rz-brake{border-radius:0 0 calc(var(--rw) / 2) calc(var(--rw) / 2)}
 .dh .hs-rz svg{inline-size:30px;block-size:30px}
 .dh .hs-rz-seam{background:repeating-linear-gradient(-45deg,#ffffff10 0 6px,#0000 6px 12px);border-block:2px dashed #ffffff40}
 .dh .hs-rz-seam svg{inline-size:22px;block-size:22px}
-.dh .hs-rocker[data-zone="1"] .hs-rz-gas,.dh .hs-rocker[data-zone="3"] .hs-rz-gas{background:#3bff9b;color:#0b0a14}
-.dh .hs-rocker[data-zone="2"] .hs-rz-brake,.dh .hs-rocker[data-zone="3"] .hs-rz-brake{background:#ff4f5e;color:#0b0a14}
-.dh .hs-rocker[data-zone="3"] .hs-rz-seam{background:#ffd166;color:#0b0a14}
+.dh .hs-rocker[data-zone="1"] .hs-rz-gas,.dh .hs-rocker[data-zone="3"] .hs-rz-gas{background:#3bff9b;color:#0b0a14;box-shadow:none}
+.dh .hs-rocker[data-zone="2"] .hs-rz-brake,.dh .hs-rocker[data-zone="3"] .hs-rz-brake{background:#ff4f5e;color:#0b0a14;box-shadow:none}
+.dh .hs-rocker[data-zone="3"] .hs-rz-seam{background:#ffd166;color:#0b0a14;box-shadow:none}
+.dh .hs-rocker[data-zone="1"] .hs-rz-gas svg,.dh .hs-rocker[data-zone="2"] .hs-rz-brake svg,.dh .hs-rocker[data-zone="3"] .hs-rz svg{translate:0 2px}
 .dh .hs-rhint{position:absolute;inset-inline-end:calc(100% + 8px);inset-block-start:42%;inline-size:9.5em;padding:4px 8px;border:2px solid #0b0a14;border-radius:10px;background:#ffd166;color:#0b0a14;font-size:11px;line-height:1.2;text-align:center;text-transform:uppercase;pointer-events:none}
 .dh .hs-rocker:has(.hs-rhint:not([hidden])){overflow:visible}
 /* The stick: the same size in landscape as in portrait, with the rocker's bottom and side buffer. */

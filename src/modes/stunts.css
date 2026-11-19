@@ -10,12 +10,15 @@
 .dh .hs-call[hidden],.dh .hs-call :empty{display:none}
 /* The COMBO button: tucked into the gas zone; with the gas held it slides out to 10–12 o'clock. */
 .dh .hs-rocker.hs-hascombo{overflow:visible}
-.dh .hs-rocker.hs-hascombo .hs-rz-gas{border-start-start-radius:33px;border-start-end-radius:33px}
-.dh .hs-rocker.hs-hascombo .hs-rz-brake{border-end-start-radius:33px;border-end-end-radius:33px}
 .dh .hs-rcombo{position:absolute;inset-block-start:-58px;inset-inline-end:46px;inline-size:60px;block-size:60px;display:grid;place-items:center;align-content:center;gap:0;border:3px solid #0b0a14;border-radius:50%;background:#ffd166;color:#0b0a14;box-shadow:0 4px 0 #0b0a14;translate:34px 56px;scale:.4;opacity:0;pointer-events:none;transition:translate .16s ease-out,scale .16s ease-out,opacity .12s}
 .dh .hs-rcombo svg{inline-size:22px;block-size:22px}
 .dh .hs-rcombo i{font-style:normal;font-size:9px;font-weight:900;letter-spacing:.06em}
 .dh .hs-rocker[data-zone="1"] .hs-rcombo,.dh .hs-rocker[data-zone="3"] .hs-rcombo,.dh .hs-rocker[data-combo="1"] .hs-rcombo{translate:0 0;scale:1;opacity:1}
+/* The HOP button: stuck to the gas side at 9 o'clock, always there; lit while held. */
+.dh .hs-rhop{position:absolute;inset-block-start:4px;inset-inline-end:calc(100% + 6px);inline-size:56px;block-size:56px;display:grid;place-items:center;align-content:center;border:3px solid #0b0a14;border-radius:50%;background:#ff7a8a;color:#0b0a14;box-shadow:0 4px 0 #0b0a14;pointer-events:auto}
+.dh .hs-rhop svg{inline-size:20px;block-size:20px}
+.dh .hs-rhop i{font-style:normal;font-size:9px;font-weight:900;letter-spacing:.06em}
+.dh .hs-rocker[data-hop="1"] .hs-rhop{background:#3bff9b;box-shadow:none;translate:0 3px}
 .dh .hs-rocker[data-combo="1"] .hs-rcombo{background:#3bff9b;box-shadow:none;translate:0 3px}
 @media (prefers-reduced-motion:reduce){.dh .hs-rcombo{transition:none}.dh .hs-call.hs-pop b{animation:none}}
 .dh .mt-chip[hidden]{display:none}

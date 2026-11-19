@@ -1,7 +1,7 @@
 // The throttle rocker on a touch screen (Playwright touch, 390 portrait and 844 landscape): one finger
 // down at the top is gas only; slid (never lifted) to the middle it is gas and brake together; to the
 // bottom, brake only; back up, gas. A second finger on the pill adds the brake while the first holds the
-// gas. Icons only, each with an aria-label; the pill is at least 64 × 150 px; the first-time hint goes
+// gas. Icons only, each with an aria-label; the pill is at least 64 × 150 px (52 × 130 on a short screen); the first-time hint goes
 // once the seam is used. Then the hand drag in Endless Wheelie City is reached and held with the
 // rocker alone (one thumb: gas, the seam to feather), the HAND DRAG chip shows ×10. In Race and Big
 // Air the same rocker drives the bike. MEDIA=<dir> records the 390 clip with a touch dot drawn.
@@ -38,7 +38,7 @@ try {
     assert.ok(a.keys.every((k) => k.svg && k.l), `${name}: every pad key an icon with a label: ${JSON.stringify(a.keys)}`);
     assert.ok(a.hint, `${name}: the first-time hint`);
     const r = await pill(p);
-    assert.ok(r.w >= 64 && r.h >= 150 && r.x + r.w <= viewport.width && r.y + r.h <= viewport.height, `${name}: the pill ${r.w}×${r.h} at ${r.x},${r.y}`);
+    assert.ok((viewport.height < 520 ? r.w >= 52 && r.h >= 130 : r.w >= 64 && r.h >= 150) && r.x + r.w <= viewport.width && r.y + r.h <= viewport.height, `${name}: the pill ${r.w}×${r.h} at ${r.x},${r.y}`);
     const X = r.x + r.w / 2, at = (f) => r.y + r.h * f;
     // ---- one finger: top, seam, bottom, top: never lifted ----
     await touch("touchStart", [{ x: X, y: at(0.15), id: 1 }]);
