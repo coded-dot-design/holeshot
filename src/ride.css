@@ -1,4 +1,4 @@
-/* LET'S RIDE (./ride-ui.ts): layout only, over the shop's pieces and tokens (./shop/shop.css; the game
+/* LET'S RIDE (./ride-ui.ts): layout only, over the shop's pieces and tokens (../vendor/shop/shop.css; the game
    re-points them in ./garage/garage.css). A full-bleed page under the garage's sticky header (with
    ← Garage in place of its tabs): the title row, the tabs, the tab's list, WITH FRIENDS, the controls. */
 .dh-cards:has(>.dh-ride){display:block;padding:var(--dh-top,0px) 0 0}

@@ -16,6 +16,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci --no-audit --no-fund
+      # The shop (vendor/shop/) is a synced copy: it must match its ORIGIN.json.
+      - run: node vendor/shop/check.mjs
       # Typecheck, build dist/ (committed: it must be the build of this commit), size.
       - run: npm run check
       - run: git diff --exit-code -- dist

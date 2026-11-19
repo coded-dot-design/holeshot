@@ -33,7 +33,7 @@ import type { Buy } from "./model/garage.ts";
 import { after, ride as garageRide } from "./model/upkeep.ts";
 import { portraitOf } from "./garage/portrait.ts";
 import { bayInfo, garageCard as garageView, garageClick, garageUI, pvName, pvOf, riskCard, shown, type Pv } from "./garage/view.ts";
-import { cta as shopCta, tabs as shopTabs } from "./shop/index.ts";
+import { cta as shopCta, tabs as shopTabs } from "../vendor/shop/shop.js";
 import { lookOf } from "./garage/look.ts";
 import { mountShowroom as mountSr, showroomState } from "./garage/showroom.ts";
 import { rigKit } from "./garage/snap.ts";

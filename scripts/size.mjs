@@ -112,14 +112,14 @@ import { readdirSync, readFileSync } from "node:fs";
 // rig's ink slabs and polygon grow, the three-spoke hub, the inked swingarm and the fork tubes, the
 // model id through the scenes; budget 226,000 → 227,800 (about 1 KB of room).
 // R35 (the garage UI rebuild on the shop's pieces), on main bcd408d: +7,507 B measured (224,501 → 232,008
-// holeshot.js; holeshot.mjs 224,293 → 231,797): the shop (src/shop/: its pieces and flows 3.4 KB,
+// holeshot.js; holeshot.mjs 224,293 → 231,797): the shop (then src/shop/, now vendor/shop/: its pieces and flows 3.4 KB,
 // its tokens and sheet 3.5 KB gzip on their own), the garage's adapters and new screens (the header,
 // the bike panel, My Bikes and the expansion, the tyre compound menu, the upgrade preview, the paged
 // paint grid and menu, rider gear, outfits' art, the phone sheet), less the old dock, keys and
 // swatch rows' CSS; the old showroom stays mounted until the new module swaps in. Budget 225,000 →
 // 233,000 (about 1 KB of room).
 // The showroom on the shop (pages 29–34): +4,694 B measured (holeshot.mjs 230,945 → 235,639; holeshot.js
-// 231,180 → 235,852): the shop's catalogue + compare screen (src/shop/catalogue.ts, 7.7 KB minified,
+// 231,180 → 235,852): the shop's catalogue + compare screen (then src/shop/catalogue.ts, now vendor/shop/; 7.7 KB minified,
 // and its layout sheet), the bike adapter 2.1 KB, the rig stills 1.2 KB, buyInto, less the old
 // showroom's lists (no longer mounted). Budget 233,000 → 237,500 (about 1.6 KB of room). Merged on
 // main bcd408d with the garage (sell in My Bikes, the old showroom's code deleted): 236,351 B
@@ -140,6 +140,9 @@ import { readdirSync, readFileSync } from "node:fs";
 // rows, the page's words, WITH FRIENDS, the controls strip (from src/data/controls.ts), the shop's
 // row / figure / list pieces and the ride sheet, Track Day online (the race's sim on a road circuit,
 // its room pick), less the old ride tiles' and the map picker's CSS. Budget 242,500 → 243,500 (about 1 KB of room).
+// The shop from vendor/shop/ (synced from the factory, e74dcea; src/shop/ deleted), on main c4287c5:
+// +100 B measured (holeshot.js 243,114 → 243,214; holeshot.mjs 242,908 → 243,008), the vendored copy
+// arrives minified and is minified again with the game. Budget unchanged (about 0.3 KB of room).
 const BUDGET = 243_500;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {

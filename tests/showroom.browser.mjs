@@ -1,4 +1,4 @@
-// The showroom (src/garage/showroom.ts on the shop's catalogue, src/shop/catalogue.ts) in
+// The showroom (src/garage/showroom.ts on the shop's catalogue, vendor/shop/) in
 // Chromium, at 1440 (mouse) and 390 (touch): the filters (All types, All brands) narrow the cards
 // and "Showing n of 19" says so; More bikes pages to all nineteen; a card's picture puts that bike on
 // the turntable (the render changes) and in the preview's title; Compare with … opens the comparison

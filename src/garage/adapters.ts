@@ -1,4 +1,4 @@
-// HOLESHOT onto the shop (../shop/index.ts): its bikes, wear, crash damage, tune, mods, paint,
+// HOLESHOT onto the shop (../../vendor/shop/): its bikes, wear, crash damage, tune, mods, paint,
 // helmets and outfits as the shop's plain data. Every number comes from the game's own model
 // (../model/garage.ts prices, ../model/tune.ts feel, ../model/pace.ts pace); nothing here decides a
 // rule. The `attrs` are the garage's routing (./view.ts garageClick).
@@ -14,8 +14,8 @@ import { atRisk, failChance, partState } from "../model/upkeep.ts";
 import { cosmeticPrice, fits, fixPrice, modPrice, partPrice, setupPrice, spotPrice, tradeValue, type Slot } from "../model/garage.ts";
 import { helmetSVG } from "./portrait.ts";
 import { helmetOf } from "./look.ts";
-import type { Bay, Item, Slot as LkSlot, Upgrade, Wear } from "../shop/index.ts";
-import { btn, esc, pill, price, swatch } from "../shop/index.ts";
+import type { Bay, Item, Slot as LkSlot, Upgrade, Wear } from "../../vendor/shop/shop.js";
+import { btn, esc, pill, price, swatch } from "../../vendor/shop/shop.js";
 
 /** "CHAIN & SPROCKETS" → "Chain & sprockets" (the design's sentence case). */
 export const cap = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();

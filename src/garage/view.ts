@@ -1,4 +1,4 @@
-// The garage: the shop (../shop/) with HOLESHOT's adapters (./adapters.ts) and its layout. Left,
+// The garage: the shop (../../vendor/shop/) with HOLESHOT's adapters (./adapters.ts) and its layout. Left,
 // the bike panel (My Bikes and its bays, the turntable with ‹ ›, the bike's name and pace, LET'S
 // RIDE); right, PARTS & MODS (Condition with the tyre compound menu and crash damage, Tuning with
 // the ride feel, Upgrades with a preview, Service log) and PAINT & KIT (the bike's paint menu and
@@ -18,8 +18,7 @@ import { atRisk, failChance, failName, warnings } from "../model/upkeep.ts";
 import { DIRT_LINE } from "../model/families.ts";
 import { BACKDROPS, nextBackdrop } from "./backdrop.ts";
 import { buySpot, cosmeticPrice, choose, dress, fits, modPrice, repair, sell, service, setChoice, tryOn, unlocked, upgrade, type Buy, type Slot } from "../model/garage.ts";
-import { baysSheet, condition, itemGrid, upgrades as upgradeList } from "../shop/index.ts";
-import { btn, card, chip, chips, cta, drop, feel, heading, menu, pill, price, seg, stat, stats, table, tabs, title, turntable } from "../shop/index.ts";
+import { baysSheet, btn, card, chip, chips, condition, cta, drop, feel, heading, itemGrid, menu, pill, price, seg, stat, stats, table, tabs, title, turntable, upgrades as upgradeList } from "../../vendor/shop/shop.js";
 import { RIDER_SLOTS, SLOT_NAME, bays, bikeItems, bikeSlots, cap, damageRows, feelRows, isE, modKey, modName, modStage, outfitItems, pace, partName, riderItems, riderSlots, setups, tyreItems, upgradeItems, wearRows, words, type BikeSlot, type RiderSlot } from "./adapters.ts";
 
 /** What the turntable can preview: a cosmetic (its slot), a mod's next level, or a showroom bike. */

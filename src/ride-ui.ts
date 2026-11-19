@@ -1,7 +1,7 @@
 // LET'S RIDE, the shell's ride page (owner's design, 2026-11-19): the title row (your bike), four
 // segmented tabs (Race · Endless · Free Ride · Track Day), each a "Choose a …" list of destinations,
 // then a WITH FRIENDS card (its Play online opens the room card on the tab's kind) and the controls
-// strip. Built only from the shop's pieces (./shop/): the page adds layout (./ride.css). Strings in, a
+// strip. Built only from the shop's pieces (../vendor/shop/): the page adds layout (./ride.css). Strings in, a
 // string out, like ./series-ui.ts: the shell (./game.ts) owns the clicks (`data-rtab`, `data-mode`,
 // `data-endless`, `data-map`, `data-circuit`, `data-go`, `data-venue`, `data-olkind` on `.ol-open`)
 // and passes its header. Every number comes from the game: bests, best laps, seats, the online bonus.
@@ -11,7 +11,7 @@ import type { Venue } from "./modes/race/venue.ts";
 import { K_ENDLESS, K_JAM, K_RACE, K_TRACKDAY, SEATS } from "./net.ts";
 import { ONLINE } from "./data/economy.ts";
 import { KEYS } from "./data/controls.ts";
-import { btn, card, esc, figure, footbar, heading, list, row, seg, title } from "./shop/index.ts";
+import { btn, card, esc, figure, footbar, heading, list, row, seg, title } from "../vendor/shop/shop.js";
 
 export const VENUES: { id: Venue; name: string; where: string }[] = [
   { id: "mx", name: "MX", where: "Outdoor" },

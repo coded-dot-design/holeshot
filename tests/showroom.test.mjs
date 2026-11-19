@@ -1,11 +1,11 @@
-// The showroom's logic: the shop catalogue's pure parts (src/shop/catalogue.ts: facets, filters,
+// The showroom's logic: the shop catalogue's pure parts (vendor/shop/shop.js: facets, filters,
 // deltas, the comparison's one line) and Holeshot's adapter (src/garage/showroom.ts: every card number
 // is the game's own: roster price and tier, the tuned feel, the pace measured on the sim) and buying
 // into a bay (src/model/garage.ts buyInto: the first empty bay, or a trade-in that keeps the bay).
 import test from "node:test";
 import assert from "node:assert/strict";
 
-const C = await import("../src/shop/catalogue.ts");
+const C = await import("../vendor/shop/shop.js");
 const { itemOf, paceStats } = await import("../src/garage/showroom.ts");
 const { MODELS, model } = await import("../src/data/roster.ts");
 const { tune } = await import("../src/model/tune.ts");

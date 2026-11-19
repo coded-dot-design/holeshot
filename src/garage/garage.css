@@ -1,4 +1,4 @@
-/* The garage's layout over the shop (../shop/shop.css) and HOLESHOT's tokens: the game re-points the
+/* The garage's layout over the shop (../../vendor/shop/shop.css) and HOLESHOT's tokens: the game re-points the
    shop's bar, price and go colours at its own palette (--cy, --hot, --k-go: one source). Part
    states (worn amber, may-fail red), the old showroom's cards (until the new module lands), the
    rider's portrait. Layout only beyond that. */
@@ -99,7 +99,7 @@
 .shop .shop-barrow,.shop .shop-colhead{grid-template-columns:minmax(7em,1fr) minmax(48px,1fr) 3.2em minmax(7.5em,auto);gap:6px 12px}}
 @media (max-width:960px){.shop .shop-colhead{display:none}.shop .shop-barrow{grid-template-columns:minmax(0,1fr) auto}.shop .shop-barrow .shop-meter{grid-column:1/-1;grid-row:2}.shop .shop-barrow .shop-barrow-a{grid-column:1/-1}}
 /* Phone: the header compacts (logo, credits, Day / Night; the tabs under it), the sections stack and
-   My Bikes rises as a bottom sheet (../shop/shop.css). */
+   My Bikes rises as a bottom sheet (../../vendor/shop/shop.css). */
 @media (max-width:820px){
 .dh-ghead{grid-template-columns:minmax(0,1fr) auto;padding:10px 16px 0;gap:4px 8px}
 .dh-ghead .shop-tabs-big{grid-column:1/-1;grid-row:2;justify-content:space-around}

@@ -1,4 +1,4 @@
-// Holeshot's showroom: the shop's catalogue + compare screen (../shop/catalogue.ts) fed with the
+// Holeshot's showroom: the shop's catalogue + compare screen (../../vendor/shop/) fed with the
 // game's bikes. Every number is the game's: the price and tier from the roster (../data/roster.ts),
 // Pull / Top / Light from the tuned bike's feel (../model/tune.ts), 0–30 / 0–60 and the top speed
 // from the pace measured on the sim (../model/pace.ts, 0–50 / 0–100 km/h in Metric), the trade-in
@@ -11,7 +11,7 @@ import { tune } from "../model/tune.ts";
 import { paceOf } from "../model/families.ts";
 import { perHour } from "../model/units.ts";
 import { baysOf, tradeValue, unlocked, type Buy } from "../model/garage.ts";
-import { catalogueState, mountCatalogue, type CatalogueItem, type CatalogueSlot, type CatalogueState, type StatDef } from "../shop/catalogue.ts";
+import { catalogueState, mountCatalogue, type CatalogueItem, type CatalogueSlot, type CatalogueState, type StatDef } from "../../vendor/shop/shop.js";
 import { snap } from "./snap.ts";
 
 /** What the showroom needs from the shell. */
