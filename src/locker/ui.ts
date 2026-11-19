@@ -61,8 +61,8 @@ export const need = (pr: number, credits: number) => (pr > credits ? `<p class="
 export const menu = (o: { title?: string; items: { label: string; meta?: string; on?: boolean; attrs?: string }[]; label: string; cls?: string }) =>
   `<div class="lk-menu${o.cls ? " " + o.cls : ""}" role="menu" aria-label="${esc(o.label)}">${o.title ? `<b class="lk-h3">${esc(o.title)}</b>` : ""}${o.items.map((i) => `<button type="button" class="lk-menu-i" role="menuitemradio" aria-checked="${!!i.on}"${at(i.attrs)}><span>${esc(i.label)}${i.on ? ' <i aria-hidden="true">✓</i>' : ""}</span>${i.meta ? `<small>${esc(i.meta)}</small>` : ""}</button>`).join("")}</div>`;
 
-/** A dropdown/filter key that opens a menu: `drop("Paint scheme", 'data-gmenu="paint"', open)`; `soft` tints it (My Bikes while open). */
-export const drop = (label: string, attrs: string, open = false) => `<button type="button" class="lk-drop" aria-haspopup="menu" aria-expanded="${open}"${at(attrs)}>${esc(label)} <i aria-hidden="true">▾</i></button>`;
+/** A dropdown/filter key that opens a menu: `drop("Paint scheme", 'data-gmenu="paint"', open)` (tinted while open); `"lk-drop-text"` for the in-line text kind ("Hard compound ▾"). */
+export const drop = (label: string, attrs: string, open = false, cls = "") => `<button type="button" class="lk-drop${cls ? " " + cls : ""}" aria-haspopup="menu" aria-expanded="${open}"${at(attrs)}>${esc(label)} <i aria-hidden="true">▾</i></button>`;
 
 /** A check toggle ("Owned only"): `check("Owned only", on, "data-owned")`. */
 export const check = (label: string, on: boolean, attrs: string) => `<button type="button" class="lk-btn lk-check" role="checkbox" aria-checked="${on}"${at(attrs)}><i aria-hidden="true">${on ? "✓" : ""}</i>${esc(label)}</button>`;
@@ -103,8 +103,8 @@ export const cta = (label: string, cls = "", sub = "", attrs = "") =>
 /** Stars: `stars(2)` → ★★☆☆ (of 4, with its words for screen readers). */
 export const stars = (n: number, of = 4) => `<span class="lk-stars" role="img" aria-label="Tier ${n} of ${of}">${"★".repeat(n)}<i>${"☆".repeat(Math.max(0, of - n))}</i></span>`;
 
-/** A small pill tag: `pill("Preview")`, `pill("Rides next", "plain")`. */
-export const pill = (t: string, kind = "") => `<b class="lk-pill"${kind ? ` data-kind="${kind}"` : ""}>${esc(t)}</b>`;
+/** A small pill tag: `pill("Preview")`, `pill("Rides next", "plain")`; `cls` adds a hook class. */
+export const pill = (t: string, kind = "", cls = "") => `<b class="lk-pill${cls ? " " + cls : ""}"${kind ? ` data-kind="${kind}"` : ""}>${esc(t)}</b>`;
 
 /** A bar along the bottom of a panel (the pinned preview: "Previewing Gridline" · Cancel · Buy): `footbar("Previewing Gridline", keys)`. */
 export const footbar = (text: string, keys: string, attrs = "") => `<div class="lk-foot"${at(attrs)}><b>${text}</b><span>${keys}</span></div>`;
