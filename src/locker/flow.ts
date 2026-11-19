@@ -28,7 +28,7 @@ export function itemGrid(o: {
   const tiles = shown.map((x) => tile({ name: x.name, art: x.art, price: x.price, owned: x.owned, equipped: x.equipped, on: o.trying?.id === x.id, attrs: x.attrs, big: o.big }));
   const left = list.length - from - shown.length;
   const paging = pages > 1 ? `<div class="lk-paging"><small class="lk-sub">${from + 1}–${from + shown.length} of ${list.length} ${esc(o.pageWord)}</small>${pg < pages - 1 ? btn(`Next ${Math.min(o.per, left)} ${o.pageWord} ›`, o.pageAttrs(pg + 1)) : btn(`‹ Previous ${o.per}`, o.pageAttrs(pg - 1))}</div>` : "";
-  const t = o.trying, foot = t ? footbar(`Previewing ${esc(t.name)}`, btn(c.cancel, o.cancelAttrs) + price({ label: c.buy, price: t.price, credits: o.credits, attrs: o.buyAttrs, go: true }), 'role="group" aria-label="Preview"') + need(t.price, o.credits) : "";
+  const t = o.trying, foot = t ? `<div class="lk-pin">${footbar(`Previewing ${esc(t.name)}`, btn(c.cancel, o.cancelAttrs) + price({ label: c.buy, price: t.price, credits: o.credits, attrs: o.buyAttrs, go: true }), 'role="group" aria-label="Preview"')}${need(t.price, o.credits)}</div>` : "";
   return `${heading(o.title, o.count)}${bar}${shown.length ? grid(tiles, o.cols, o.title) : `<p class="lk-sub">${esc(o.empty ?? "Nothing here yet.")}</p>`}${paging}${foot}`;
 }
 const checkKey = (label: string, o: { on: boolean; attrs: string }) => `<button type="button" class="lk-btn lk-check" role="checkbox" aria-checked="${o.on}" ${o.attrs}><i aria-hidden="true">${o.on ? "✓" : ""}</i>${esc(label)}</button>`;

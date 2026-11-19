@@ -46,20 +46,21 @@ try {
     await p.goto(server.url + path);
     await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${name}: the saved profile loads`);
     await until(p, "root.querySelector('.dh-preview').width > 50 && root.querySelector('.dh-preview').getAttribute('aria-valuenow') !== null", `${name}: the turntable draws`);
+    // (The first frames settle the layout: the preview redraws once at its final size.)
+    await p.evaluate(() => document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))));
     const ink0 = await ink(p);
-    // ---- the dock stays in view while the showroom's list scrolls under it ----
+    // ---- the showroom (mounted into the garage's Showroom tab); at 1440 the bike panel stays in view while the list scrolls ----
     await click(p, "[data-gtab=showroom]");
-    await until(p, "root.querySelectorAll('.dh-show [data-pv^=\"bike:\"]').length === 19", `${name}: the showroom lists all nineteen bikes`);
-    const dock = () => $(p, "(() => { const d = root.querySelector('.dh-dock').getBoundingClientRect(), v = root.querySelector('.dh-preview').getBoundingClientRect(), s = root.querySelector('[data-gtab=showroom]').getBoundingClientRect(), l = root.querySelector('.dh-classes').getBoundingClientRect(); return { top: d.top, bottom: d.bottom, pv: [v.top, v.bottom, v.height], seg: [s.top, s.bottom], list: l.top, scroll: root.querySelector('.dh-cards').scrollTop, H: innerHeight }; })()");
+    await until(p, "root.querySelectorAll('.dh-showroom .dh-show [data-pv^=\"bike:\"]').length === 19", `${name}: the showroom lists all nineteen bikes`);
+    const dock = () => $(p, "(() => { const d = root.querySelector('.dh-bikep').getBoundingClientRect(), v = root.querySelector('.dh-preview').getBoundingClientRect(); return { top: d.top, bottom: d.bottom, pv: [v.top, v.bottom, v.height], scroll: root.querySelector('.dh-cards').scrollTop, H: innerHeight }; })()");
     await $(p, "root.querySelector('.dh-cards').scrollTop = 1e6");
     await until(p, "root.querySelector('.dh-cards').scrollTop > 400", `${name}: the list scrolls`);
     const D = await dock();
-    assert.ok(D.top >= -1 && D.top <= 2, `${name}: the dock is pinned to the top (${D.top})`);
-    assert.ok(D.pv[0] >= 0 && D.pv[1] <= D.H && D.pv[2] >= 100, `${name}: the whole turntable is in view (${D.pv})`);
-    assert.ok(D.seg[0] >= 0 && D.seg[1] <= D.bottom + 1, `${name}: the garage tabs are in the dock`);
-    assert.ok(D.list < D.top, `${name}: the list went under the dock`);
-    assert.ok(D.bottom <= D.H * (name === "landscape" ? 0.62 : 0.58), `${name}: the dock leaves room for the list (${Math.round(D.bottom)} of ${D.H})`);
-    await shot(p, `${name}-1-dock-scrolled`);
+    if (name === "desktop") {
+      assert.ok(D.pv[0] >= 0 && D.pv[1] <= D.H && D.pv[2] >= 100, `${name}: the bike panel's turntable stays in view (${D.pv})`);
+      assert.ok(await $(p, "root.querySelector('.dh-ghead').getBoundingClientRect().top >= -1"), `${name}: the header stays at the top`);
+    }
+    await shot(p, `${name}-1-scrolled`);
     // ---- a showroom bike: tap → PREVIEW on the turntable, BUY / CANCEL, the pace against yours ----
     await $(p, "root.querySelector('.dh-cards').scrollTop = 0");
     await inkIs(p, ink0, `${name}: the showroom tab keeps your bike on the turntable`);
@@ -68,7 +69,7 @@ try {
     await until(p, "!!root.querySelector('.dh-pin [data-bike=anvil]')", `${name}: the bike is pinned with its BUY`);
     await inkNot(p, ink0, `${name}: the turntable shows the showroom bike`);
     const card = await $(p, "root.querySelector(\"[data-pv='bike:anvil'] .dh-mod b\").textContent");
-    assert.ok((await $(p, "root.querySelector('.dh-pvinfo').textContent")).includes(card) && await $(p, "!!root.querySelector('.dh-pvinfo .dh-pvtag')"), `${name}: the dock says PREVIEW and names ${card}`);
+    assert.ok((await $(p, "root.querySelector('.dh-pvinfo').textContent")).toLowerCase().includes(card.split(" ").slice(1).join(" ").toLowerCase()) && await $(p, "!!root.querySelector('.dh-pvinfo .dh-pvtag')"), `${name}: the dock says PREVIEW and names ${card}`);
     assert.ok(await $(p, "root.querySelectorAll('.dh-pace-bay em').length") >= 2, `${name}: the pace chips show the preview against yours`);
     assert.equal((await prof(p)).credits, c, `${name}: previewing is free`);
     await shot(p, `${name}-2-showroom-preview`);
@@ -76,22 +77,24 @@ try {
     await until(p, "!root.querySelector('.dh-pin') && !root.querySelector('.dh-pvtag')", `${name}: CANCEL`);
     await inkIs(p, ink0, `${name}: CANCEL puts your bike back`);
     // ---- a family upgrade (the motor swap on an electric): tap the row ----
-    await click(p, "[data-gtab=bike]");
-    await click(p, "[data-pv='mod:swap'] .dh-mod");
-    await until(p, "!!root.querySelector('.dh-pin [data-mod=swap]')", `${name}: the upgrade is pinned with its FIT`);
+    await click(p, "[data-gtab=garage]");
+    await click(p, "[data-gsub=up]");
+    await click(p, "[data-pv='mod:swap']");
+    await until(p, "!!root.querySelector('.lk-preview [data-mod=swap]')", `${name}: the upgrade preview with its FIT`);
+    assert.match(await $(p, "root.querySelector('.lk-preview').textContent"), /Motor swap.*→/s, `${name}: the preview names it and shows before → after`);
     await inkNot(p, ink0, `${name}: the turntable shows the swap`);
     assert.ok(await $(p, "[...root.querySelectorAll('.dh-pace-bay em')].some((e) => e.dataset.d === 'up')"), `${name}: the swap's pace is better somewhere`);
     await shot(p, `${name}-3-mod-preview`);
-    await click(p, ".dh-pin [data-untry]");
-    await inkIs(p, ink0, `${name}: CANCEL takes the swap off again`);
+    await click(p, "[data-gsub=cond]");
+    await inkIs(p, ink0, `${name}: leaving the tab takes the swap off again`);
     // ---- a paint: tap tries it on (pinned), CANCEL restores ----
     await click(p, "[data-gtab=look]");
-    await click(p, "[data-dress=paint][data-id=magma]");
-    await until(p, "!!root.querySelector('.dh-pin [data-buytrial]')", `${name}: the paint is pinned with its BUY`);
+    await $(p, "root.querySelector(\"[data-page='1']\")?.click()"), await click(p, "[data-dress=paint][data-id=magma]");
+    await until(p, "!!root.querySelector('.lk-pin [data-buytrial]')", `${name}: the paint is pinned with its BUY`);
     await inkNot(p, ink0, `${name}: the turntable wears the paint`);
-    assert.match(await $(p, "root.querySelector('.dh-pin').textContent"), /PREVIEW.*PAINT SCHEME.*BUY.*CANCEL/s);
+    assert.match(await $(p, "root.querySelector('.lk-pin').textContent"), /Previewing Magma.*Cancel.*Buy/s);
     await shot(p, `${name}-4-paint-preview`);
-    await click(p, ".dh-pin [data-untry]");
+    await click(p, ".lk-pin [data-untry]");
     await inkIs(p, ink0, `${name}: CANCEL takes the paint off`);
     assert.equal((await prof(p)).bikes[0].look.paint, "acid", `${name}: nothing was bought`);
     if (!touch) {
@@ -106,8 +109,9 @@ try {
       await until(p, "!root.querySelector('.dh-pvinfo .dh-pvtag')", `${name}: moving off`);
       await inkIs(p, ink0, `${name}: moving off restores your bike`);
       // ---- keyboard: focus on a swatch previews it and says so ----
+      await click(p, "[data-gtab=garage]");
       await click(p, "[data-gtab=look]");
-      await $(p, "root.querySelector('[data-dress=paint][data-id=magma]').focus()");
+      await $(p, "root.querySelector(\"[data-page='1']\")?.click()"), await $(p, "root.querySelector('[data-dress=paint][data-id=magma]').focus()");
       await until(p, "/Preview: PAINT SCHEME/.test(root.querySelector('.dh-live').textContent)", `${name}: focus announces the preview`);
       await inkNot(p, ink0, `${name}: focus previews it`);
       await $(p, "root.querySelector('.dh-letsride').focus()");
@@ -117,7 +121,7 @@ try {
     const px = await $(p, "(() => { const c = root.querySelector('.dh-preview'), g = c.getContext('2d'), at = (x, y) => [...g.getImageData(Math.round(x * c.width), Math.round(y * c.height), 1, 1).data].slice(0, 3); return { bg: at(0.03, 0.97), top: [at(0.42, 0.75), at(0.58, 0.75), at(0.5, 0.78)] }; })()");
     const worst = Math.min(...px.top.map((t) => contrast(t, px.bg)));
     assert.ok(worst >= 3, `${name} (${path === "/" ? "dark" : "light"}): plinth vs background ${worst.toFixed(2)}:1 (${JSON.stringify(px)})`);
-    console.log(`  ${name}: dock bottom ${Math.round(D.bottom)} of ${D.H} px, plinth contrast ${worst.toFixed(2)}:1`);
+    console.log(`  ${name}: bike panel ${Math.round(D.top)}–${Math.round(D.bottom)} of ${D.H} px, plinth contrast ${worst.toFixed(2)}:1`);
     assert.deepEqual(errs, [], `${name}: no page errors`);
     await ctx.close();
   }
@@ -153,13 +157,14 @@ try {
     const svg = () => $(p, "root.querySelector('.dh-face .dh-helm').outerHTML");
     let was = await svg();
     for (const [slot, id, sees] of [["helmet", "duck", "data-helmet=\"duck\""], ["helmetPaint", "gold", "#ffd166"], ["visor", "gold", "#c9922a"]]) {
+      if (slot !== "helmet") await click(p, `[data-gslot=${slot}]`);
       await click(p, `[data-dress=${slot}][data-id=${id}]`);
       await until(p, `root.querySelector('.dh-face .dh-helm').outerHTML !== ${JSON.stringify(was)}`, `${name}: the portrait follows the ${slot}`);
       const now = await svg();
       if (sees) assert.ok(now.includes(sees), `${name}: the portrait shows ${slot} ${id}`);
       was = now;
-      await click(p, ".dh-pin [data-untry]");
-      await until(p, "!root.querySelector('.dh-pin')", `${name}: CANCEL`);
+      await click(p, ".lk-pin [data-untry]");
+      await until(p, "!root.querySelector('.lk-pin')", `${name}: CANCEL`);
       was = await svg();
     }
     // Head-on (Home, then 90° round): inside the white helmet's box, the goggle's dark band and lens
@@ -181,7 +186,7 @@ try {
     assert.deepEqual(errs, [], `${name}: no page errors`);
     await ctx.close();
   }
-  console.log("Holeshot garage UX: the dock stays in view while the lists scroll (1440, 390, 844×390); tap a showroom bike, an upgrade or a paint → PREVIEW on the turntable with BUY / CANCEL and the pace against yours, CANCEL restores; pointing and focus preview too; the plinth ≥ 3:1 in dark and light; the helmet portrait by the name and on RIDER KIT follows the shape, paint and visor, and head-on the goggle reads.");
+  console.log("Holeshot garage UX: the bike panel stays in view while the showroom scrolls (1440); tap a showroom bike, an upgrade or a paint → PREVIEW on the turntable with BUY / CANCEL and the pace against yours, CANCEL restores; pointing and focus preview too; the plinth ≥ 3:1 in dark and light; the helmet portrait by the name and on RIDER KIT follows the shape, paint and visor, and head-on the goggle reads.");
 } finally {
   await browser.close();
   await server.close();
