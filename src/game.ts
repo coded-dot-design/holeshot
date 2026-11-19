@@ -15,6 +15,7 @@ import { CLASSES, STARTERS, makerOf, model as modelOf } from "./data/roster.ts";
 import { MOTOR_NAME, PARTS, PART_NAME } from "./data/economy.ts";
 import { PAINTS, SWATCHES } from "./data/looks.ts";
 import { tierFor, useNames } from "./data/names.ts";
+import { touchLog } from "./debug/touchlog.ts";
 import { MODES, mode as modeOf } from "./modes/index.ts";
 import type { ModeCtx, ModeId, ModeRun, RunStats } from "./modes/mode.ts";
 import { mapsCard, paintMaps } from "./modes/freeride/picker.ts";
@@ -95,6 +96,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   const inf = !o.attract && testCredits(typeof location === "object" ? location.search : "");
   // The names shown (./data/names.ts): REAL only with ?names=real or test credits, else the build's; never saved.
   useNames(tierFor(typeof location === "object" ? location.search : ""));
+  if (!o.attract) touchLog(typeof location === "object" ? location.search : "");
   const real = inf ? structuredClone(loaded.profile) : null;
   let profile = inf ? topUp(loaded.profile) : loaded.profile;
   if (o.attract) profile = setup(profile, { starter: STARTERS[0]!.id, paint: "pinkout", number: 7, name: "DEMO" });
