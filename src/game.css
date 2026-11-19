@@ -112,35 +112,19 @@
 .dh-looks>li{grid-template-columns:1fr}
 .dh-logo{font-size:22px}
 }
-/* The throttle rocker (src/bike/rocker.ts): one pill under the right thumb, gas at the top, brake at the
-   bottom (both square: as tall as the pill is wide; the pill's ends fully round), the seam (both: the
-   wheelie) in the middle; icons only. A held zone lights and presses in (its raised lip goes, the pill
-   sinks: Board UI press language). The bubbles (TRICK, HOP) pop out of its side on a slime tether. */
-.dh .hs-rocker{--rw:72px;pointer-events:auto;z-index:1;position:relative;flex:none;inline-size:var(--rw);display:grid;grid-template-rows:var(--rw) 44px var(--rw);margin-block-end:max(10px,env(safe-area-inset-bottom));margin-inline-end:max(4px,env(safe-area-inset-right));border:3px solid #0b0a14;border-radius:999px;background:#1b1838;box-shadow:0 5px 0 #0b0a14;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;align-self:flex-end;transition:translate 60ms,box-shadow 60ms}
-.dh .hs-rocker:is([data-zone="1"],[data-zone="2"],[data-zone="3"]){box-shadow:0 1px 0 #0b0a14;translate:0 4px}
-.dh .hs-rz{display:grid;place-items:center;color:#8d88b8;box-shadow:inset 0 -4px 0 #0b0a1473}
-.dh .hs-rz-gas{border-radius:calc(var(--rw) / 2) calc(var(--rw) / 2) 0 0}
-.dh .hs-rz-brake{border-radius:0 0 calc(var(--rw) / 2) calc(var(--rw) / 2)}
-.dh .hs-rz svg{inline-size:30px;block-size:30px;transition:translate 60ms}
+.dh .hs-rocker{pointer-events:auto;z-index:1;position:relative;flex:none;inline-size:72px;block-size:clamp(150px,34cqh,210px);margin-block-end:max(4px,env(safe-area-inset-bottom));margin-inline-end:max(2px,env(safe-area-inset-right));display:grid;grid-template-rows:40fr 22fr 38fr;border:3px solid #0b0a14;border-radius:36px;background:#1b1838;box-shadow:0 5px 0 #0b0a14;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;align-self:flex-end}
+.dh .hs-rz{display:grid;place-items:center;color:#8d88b8}
+.dh .hs-rz svg{inline-size:30px;block-size:30px}
 .dh .hs-rz-seam{background:repeating-linear-gradient(-45deg,#ffffff10 0 6px,#0000 6px 12px);border-block:2px dashed #ffffff40}
 .dh .hs-rz-seam svg{inline-size:22px;block-size:22px}
-.dh .hs-rocker[data-zone="1"] .hs-rz-gas,.dh .hs-rocker[data-zone="3"] .hs-rz-gas{background:#3bff9b;color:#0b0a14;box-shadow:none}
-.dh .hs-rocker[data-zone="2"] .hs-rz-brake,.dh .hs-rocker[data-zone="3"] .hs-rz-brake{background:#ff4f5e;color:#0b0a14;box-shadow:none}
-.dh .hs-rocker[data-zone="3"] .hs-rz-seam{background:#ffd166;color:#0b0a14;box-shadow:none}
-.dh .hs-rocker[data-zone="1"] .hs-rz-gas svg,.dh .hs-rocker[data-zone="2"] .hs-rz-brake svg,.dh .hs-rocker[data-zone="3"] .hs-rz svg{translate:0 2px}
-.dh .hs-rhint{position:absolute;inset-inline-end:calc(100% + 8px);inset-block-start:58%;inline-size:9.5em;padding:4px 8px;border:2px solid #0b0a14;border-radius:10px;background:#ffd166;color:#0b0a14;font-size:11px;line-height:1.2;text-align:center;text-transform:uppercase;pointer-events:none}
-.dh .hs-tether{position:absolute;left:0;top:0;inline-size:1px;block-size:1px;overflow:visible;pointer-events:none;z-index:1}
-.dh .hs-slime{fill:#ffd166;stroke:#0b0a14;stroke-width:2.5;stroke-linejoin:round}
-.dh .hs-slime[data-slot="1"]{fill:#ff7a8a}
-.dh .hs-bub{position:absolute;inline-size:60px;block-size:60px;margin:-30px 0 0 -30px;display:grid;place-items:center;align-content:center;border:3px solid #0b0a14;border-radius:50%;background:#ffd166;color:#0b0a14;box-shadow:0 4px 0 #0b0a14;z-index:2;scale:.3;opacity:0;pointer-events:none;transition:scale .18s cubic-bezier(.3,1.6,.5,1),opacity .12s,translate 60ms}
-.dh .hs-bub[data-slot="1"]{background:#ff7a8a}
-.dh .hs-bub svg{inline-size:22px;block-size:22px}
-.dh .hs-bub i{font-style:normal;font-size:9px;font-weight:900;letter-spacing:.06em}
-.dh .hs-bub.hs-out{scale:1;opacity:1;pointer-events:auto}
-.dh .hs-bub.hs-on{background:#3bff9b;box-shadow:none;translate:0 3px}
+.dh .hs-rocker[data-zone="1"] .hs-rz-gas,.dh .hs-rocker[data-zone="3"] .hs-rz-gas{background:#3bff9b;color:#0b0a14}
+.dh .hs-rocker[data-zone="2"] .hs-rz-brake,.dh .hs-rocker[data-zone="3"] .hs-rz-brake{background:#ff4f5e;color:#0b0a14}
+.dh .hs-rocker[data-zone="3"] .hs-rz-seam{background:#ffd166;color:#0b0a14}
+.dh .hs-rhint{position:absolute;inset-inline-end:calc(100% + 8px);inset-block-start:42%;inline-size:9.5em;padding:4px 8px;border:2px solid #0b0a14;border-radius:10px;background:#ffd166;color:#0b0a14;font-size:11px;line-height:1.2;text-align:center;text-transform:uppercase;pointer-events:none}
+.dh .hs-rocker:has(.hs-rhint:not([hidden])){overflow:visible}
 /* The stick: the same size in landscape as in portrait, with the rocker's bottom and side buffer. */
 .dh .bui-pad .bui-stick{--u:.72px;margin-block-end:max(10px,env(safe-area-inset-bottom));margin-inline-start:max(4px,env(safe-area-inset-left))}
-@media (prefers-reduced-motion:reduce){.dh .hs-bub,.dh .hs-rocker,.dh .hs-rz svg{transition:none}}
+@media (prefers-reduced-motion:reduce){.dh .hs-rz svg{transition:none}}
 /* Walking the bike (src/bike/walk-ui.ts): the WALK chip by the top chips, the one-time touch hint. */
 .dh .hs-walk{position:absolute;inset-inline-start:50%;inset-block-start:calc(12px + 3.2em);translate:-50% 0;padding:.25em .7em;border:2px solid #0b0a14;border-radius:8px;background:#22e6ff;color:#0b0a14;font-size:12px;font-weight:900;letter-spacing:.08em;pointer-events:none;z-index:3}
 .dh .hs-walkhint{position:absolute;inset-inline-start:50%;inset-block-end:34%;translate:-50% 0;margin:0;padding:4px 10px;border:2px solid #0b0a14;border-radius:10px;background:#ffd166;color:#0b0a14;font-size:11px;font-weight:800;line-height:1.2;text-align:center;text-transform:uppercase;white-space:nowrap;pointer-events:none;z-index:3}

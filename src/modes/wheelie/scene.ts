@@ -20,7 +20,7 @@ import { terrainView, type TerrainView } from "@fzlt/core/terrain";
 import { roadRibbons } from "./ribbons.ts";
 import { chase } from "@fzlt/core/drive";
 import { controls } from "@fzlt/core/input";
-import { rocker, ICON_TRICK, ICON_HOP, B_TRICK, B_HOP } from "../../bike/rocker.ts";
+import { rocker } from "../../bike/rocker.ts";
 import { pad } from "@fzlt/core/pad";
 import { sound } from "@fzlt/core/sound";
 import {
@@ -186,17 +186,10 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
   const c = controls(engine, { keys: { left: [], right: [], fwd: [], back: [], gas: [], brake: [], hop: [], reset: [], combo: [] }, target: play });
   const GAS = c.id("gas"), BRAKE = c.id("brake"), HOPK = c.id("hop"), RESETK = c.id("reset"), COMBOK = c.id("combo");
   // No pad keys: the TRICK (the combo button) and the HOP are bubbles out of the rocker, each only when it is any use.
-  const thePad = pad(engine, c, { scheme: "stick", actions: [], host: stage });
+  const ICON_HOP = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 5 12h4v6h6v-6h4z" fill="currentColor"/></svg>';
+  const thePad = pad(engine, c, { scheme: "stick", actions: [{ intent: "hop", label: "", icon: ICON_HOP, name: "Hop (L)", key: "L", role: "aim" }], host: stage });
   thePad.el.classList.add("wc-pad");
-  const rock = rocker(c, thePad.el, {
-    reduced: ctx.reduced,
-    signal: engine.signal,
-    bubbles: [
-      { intent: "combo", slot: 0, icon: ICON_TRICK, word: "TRICK", name: "Trick: slide the gas thumb onto it, or tap it; hold for more points (C)" },
-      { intent: "hop", slot: 1, icon: ICON_HOP, word: "HOP", name: "Hop: slide the gas thumb onto it, or tap it (L)" },
-    ],
-  });
-  let trickOut = false;
+  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal, combo: "combo" });
   const coarse = matchMedia("(pointer: coarse)"), walkHud = walkUi(hud, () => coarse.matches && !ctx.attract);
   if (ctx.attract) thePad.el.hidden = true;
   const vox = voice();
@@ -1440,10 +1433,6 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
       if (moving) e.busy(), (dirty = true), (hudDirty = true);
     },
     render() {
-      // The rocker's bubbles: TRICK in the air or in a wheelie past 10 o'clock, HOP on the ground otherwise.
-      const live = S[0] === RUN && !bike.b.crashed && !paused && !ended && !ctx.attract;
-      trickOut = live && (bike.air || bike.nose > (trickOut ? 0.4 : 0.52));
-      rock.want(trickOut ? B_TRICK : live ? B_HOP : 0);
       if (hudDirty) (hudDirty = false), hudWrite();
       if (!dirty) return;
       dirty = false;

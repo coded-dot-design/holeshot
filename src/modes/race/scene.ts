@@ -15,7 +15,7 @@ import { diorama, type DioramaObject } from "@fzlt/core/diorama";
 import { terrainView, type TerrainView } from "@fzlt/core/terrain";
 import { chase } from "@fzlt/core/drive";
 import { controls } from "@fzlt/core/input";
-import { rocker, ICON_TRICK, B_TRICK } from "../../bike/rocker.ts";
+import { rocker } from "../../bike/rocker.ts";
 import { pad } from "@fzlt/core/pad";
 import { sound } from "@fzlt/core/sound";
 import { LOOP, ENDO, CASE, BAIL, type Power } from "../../bike/bike.ts";
@@ -187,8 +187,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   });
   thePad.el.classList.add("mt-pad");
   // Endless: the TRICK bubble (the combo button) pops out of the rocker in the air and in a wheelie past 10 o'clock.
-  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal, bubbles: endless ? [{ intent: "combo", slot: 0, icon: ICON_TRICK, word: "TRICK", name: "Trick: slide the gas thumb onto it, or tap it; hold for more points (C)" }] : [] });
-  let trickOut = false;
+  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal, combo: endless ? "combo" : "" });
   // Walking the bike: the WALK chip, and on a touch screen the one-time "stick back" hint.
   const coarse = matchMedia("(pointer: coarse)"), walkHud = walkUi(hud, () => coarse.matches && !ctx.attract);
   if (ctx.attract) thePad.el.hidden = true;
@@ -845,7 +844,6 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       if (moving) e.busy(), (dirty = true), (hudDirty = true);
     },
     render() {
-      if (endless) (trickOut = sim.phase === RACE && !me.crashed && !paused && !ended && (me.air > 0.05 || me.rel > (trickOut ? 0.4 : 0.52))), rock.want(trickOut ? B_TRICK : 0);
       if (hudDirty) (hudDirty = false), hudWrite();
       vox.set(me.rpm, me.throttle, (sim.phase === RACE || sim.phase === GRID) && !me.crashed && !paused && !ended, me.gear, me.speed);
       if (!dirty) return;

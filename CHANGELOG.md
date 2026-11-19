@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.2 — 2026-11-19
+
+- **Gas and brake back to 0.4.0's rocker on phones.** The 0.5.0 rocker (the TRICK/HOP bubbles on a
+  slime tether, square zones) did not answer on iPhone Safari: presses reached it but never became
+  gas or brake. It is rolled back to 0.4.0's rocker, which worked there: the COMBO button slides out
+  of the gas side again, Wheelie City has its HOP key and Big Air its TRICK key. The rest of 0.5.0's
+  phone work stays (the ☰ menu, the chips up top, cards clear of the controls, the callout fix, Add
+  to Home Screen). The bubbles come back once they are proven on a real iPhone;
+  `tests/controls.browser.mjs` (their spec) is out of `test:browser` until then.
+- **`?touchlog`** on the page shows an on-screen log of touches, what they hit and what the rocker
+  made of them (for debugging controls on a real phone).
+
 ## 0.5.1 — 2026-11-19
 
 - **Solid wheels.** Each tyre is one closed band (tread and both sidewalls); the rim ring, a solid

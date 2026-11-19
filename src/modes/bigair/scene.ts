@@ -14,7 +14,7 @@ import { diorama } from "@fzlt/core/diorama";
 import { terrainView, type TerrainView } from "@fzlt/core/terrain";
 import { chase } from "@fzlt/core/drive";
 import { controls } from "@fzlt/core/input";
-import { rocker, B_TRICK } from "../../bike/rocker.ts";
+import { rocker } from "../../bike/rocker.ts";
 import { pad } from "@fzlt/core/pad";
 import { sound } from "@fzlt/core/sound";
 import { LOOP, ENDO, CASE, BAIL } from "../../bike/bike.ts";
@@ -94,12 +94,14 @@ export function mountAir(ctx: ModeCtx): ModeRun {
   const ICON_TRICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 3 7 7 .6-5.4 4.6 1.7 7.3L12 17.6 5.7 21.5l1.7-7.3L2 9.6 9 9z" fill="currentColor"/></svg>';
   const thePad = pad(engine, c, {
     scheme: "stick",
-    // Gas and brake on the throttle rocker (../../bike/rocker.ts); the TRICK a bubble out of it in the air.
-    actions: [],
+    // Gas and brake on the throttle rocker (../../bike/rocker.ts); TRICK an icon key beside it.
+    actions: [
+      { intent: "trick", label: "", icon: ICON_TRICK, name: "Trick (L)", key: "L", role: "flag", hold: true },
+    ],
     host: stage,
   });
   thePad.el.classList.add("ba-pad");
-  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal, bubbles: [{ intent: "trick", slot: 0, icon: ICON_TRICK, word: "TRICK", name: "Trick: slide the gas thumb onto it, or tap it; hold it in the air (L)" }] });
+  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal });
   // Walking the bike: the WALK chip, and on a touch screen the one-time "stick back" hint.
   const coarse = matchMedia("(pointer: coarse)"), walkHud = walkUi(hud, () => coarse.matches && !ctx.attract);
   if (ctx.attract) thePad.el.hidden = true;
@@ -507,7 +509,6 @@ export function mountAir(ctx: ModeCtx): ModeRun {
       if (moving) e.busy(), (dirty = true), (hudDirty = true);
     },
     render() {
-      rock.want(show.phase === RUN && me.air > 0.12 && !me.crashed && !paused && !ended ? B_TRICK : 0);
       if (hudDirty) (hudDirty = false), hudWrite();
       vox.set(me.rpm, me.throttle, (show.phase === RUN || show.phase === READY) && !me.crashed && !paused && !ended, me.gear, me.speed);
       if (!dirty) return;

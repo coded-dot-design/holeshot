@@ -37,11 +37,11 @@ try {
     s0 = (await snap(p)).run;
     assert.ok(s0.objects > 500 && s0.faces > 300 && s0.tiles >= 1 && s0.inTown, `${name}: the world is drawn round it, in the first town (${s0.objects} objects, ${s0.faces} faces)`);
     await p.evaluate(() => game.leave());
-    // ---- by hand: the keys or the pad (a stick and the rocker; HOP and TRICK are the rocker's bubbles) ----
+    // ---- by hand: the keys or the pad (a stick and three keys, as ever) ----
     await p.evaluate(() => game.start("endcity"));
     if (touch) {
-      const pad = await p.evaluate(() => { const r = document.querySelector("[data-fizlet-host]").shadowRoot, keys = [...r.querySelectorAll(".wc-pad .bui-pad-keys button")].map((b) => b.getAttribute("aria-label")), bubs = [...r.querySelectorAll(".hs-rocker .hs-bub")].map((b) => b.getAttribute("aria-label")); return { stick: !!r.querySelector(".wc-pad .bui-pad-stick, .wc-pad [class*=stick]"), keys, bubs }; });
-      assert.ok(pad.stick && pad.keys.length === 0 && pad.bubs.length === 2 && /^Trick/.test(pad.bubs[0]) && /^Hop/.test(pad.bubs[1]), `${name}: the pad: a stick and the rocker (no keys; TRICK and HOP its bubbles): ${JSON.stringify(pad)}`);
+      const pad = await p.evaluate(() => { const r = document.querySelector("[data-fizlet-host]").shadowRoot, keys = [...r.querySelectorAll(".wc-pad .bui-pad-keys button")].map((b) => b.getAttribute("aria-label")); return { stick: !!r.querySelector(".wc-pad .bui-pad-stick, .wc-pad [class*=stick]"), keys }; });
+      assert.ok(pad.stick && pad.keys.length === 1 && /hop/i.test(pad.keys[0]), `${name}: the pad: a stick, HOP (gas and brake on the rocker): ${JSON.stringify(pad)}`);
       const gas = await p.evaluate(() => { const r = document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".hs-rocker").getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height * 0.15]; });
       const cdp = await ctx.newCDPSession(p);
       await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: gas[0], y: gas[1], id: 1 }] });
