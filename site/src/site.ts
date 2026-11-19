@@ -7,7 +7,6 @@ export const FIZLET: string = build.fizlet;
 export const GZIP: number = build.gzip["holeshot.mjs"];
 export const REPO = "https://github.com/coded-dot-design/holeshot";
 export const FIZLET_URL = "https://fizlet.com/";
-export const HUB = "https://domvirus.com/";
 // The fizlet-rooms server for online play (owner-deployed; ?rooms= on the play page overrides it).
 export const ROOMS: string = import.meta.env.PUBLIC_ROOMS_URL || "wss://fizlet-rooms.fizlet.workers.dev";
 export const base = (path = "") => `${import.meta.env.BASE_URL.replace(/\/$/, "")}/${path}`;

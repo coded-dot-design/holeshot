@@ -1,11 +1,12 @@
 ---
 // Every page: a Board UI root (<html class="bui">) wearing the Fizlet kit's tokens; the theme is
-// shared with the DOM VIRUS family (localStorage "dom-virus:theme"), dark by default. The game page
+// remembered (localStorage "dom-virus:theme", the key the saved choice already lives under), dark by default.
+// The header is about the game only (its sections, the theme, PLAY); the links out live in the footer. The game page
 // (`app`) tucks the header away behind a small handle and has no header keys: the game has its own
 // light/dark key, and Play and the source link are no use mid-game.
 import '@fzlt/core/ui/board-ui.css';
 import '../styles/site.css';
-import { VERSION, REPO, HUB, base } from '../site';
+import { VERSION, REPO, FIZLET_URL, base } from '../site';
 import Wordmark from '../components/Wordmark.astro';
 const { title, description, page = 'home', app = false } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
@@ -52,20 +53,41 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
         </a>
         <nav class="site-nav" aria-label="Site">
           <a href={base('#how')}>How to play</a>
-          <a href={base('#modes')}>Modes</a>
+          <a href={base('#controls')}>Controls</a>
+          <a href={base('#modes')}>Ways to ride</a>
           <a href={base('#garage')}>Garage</a>
-          <a href={base('#fizlet')}>Built on Fizlet</a>
           <a href={base('#brand')}>Brand</a>
         </nav>
         {!app && <div class="head-keys">
-          <a class="bui-key bui-icon-key" href={REPO} aria-label="Source on GitHub"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02a9.6 9.6 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/></svg></a>
           <button class="bui-key bui-icon-key" type="button" data-theme-toggle aria-label="Switch light or dark"><span class="theme-dark" aria-hidden="true">☾</span><span class="theme-light" aria-hidden="true">☀</span></button>
           <a class="bui-key bui-arcade bui-go play-key" href={base('play/')}>▶ Play</a>
         </div>}
       </div>
     </header>
     <main id="main"><slot /></main>
-    {!app && <footer class="site-foot"><div class="wrap"><p><b>Holeshot</b> · a game by <a href="https://fizlet.com/people/david-cooley/">David Cooley</a> · built on <a href="https://fizlet.com/">Fizlet</a></p><p><a href={base('play/')}>Play</a> · <a href={REPO}>Source (MIT)</a></p></div></footer>}
+    {!app && <footer class="site-foot">
+      <div class="wrap foot-grid">
+        <div class="foot-brand">
+          <a class="brand" href={base()} aria-label="Holeshot home"><img src={base('icon.svg')} alt="" width="36" height="36" loading="lazy" /><span><Wordmark id="hs-wm-foot" class="brand-mark" /><small>V{VERSION} · BY DAVID COOLEY</small></span></a>
+          <p>A game by <a href="https://fizlet.com/people/david-cooley/">David Cooley</a>. Free in your browser.</p>
+        </div>
+        <nav class="foot-col" aria-label="The game">
+          <p class="meta">THE GAME</p>
+          <a href={base('play/')}>Play</a>
+          <a href={base('#how')}>How to play</a>
+          <a href={base('#controls')}>Controls</a>
+          <a href={base('#modes')}>Ways to ride</a>
+          <a href={base('#garage')}>Garage</a>
+          <a href={base('#brand')}>Brand kit</a>
+        </nav>
+        <nav class="foot-col" aria-label="Elsewhere">
+          <p class="meta">ELSEWHERE</p>
+          <a href={FIZLET_URL}>Built on Fizlet ↗</a>
+          <a href={REPO}>Source on GitHub (MIT) ↗</a>
+          <a href="https://fizlet.com/people/david-cooley/">David Cooley ↗</a>
+        </nav>
+      </div>
+    </footer>}
     <script>
       import { toggleTheme } from "../theme";
       document.querySelector("[data-theme-toggle]")?.addEventListener("click", toggleTheme);

@@ -1,107 +1,191 @@
 ---
-// Holeshot, the landing page. The hero is the brand: the lockup (in the h1), the hook, PLAY and the
-// box-art cover on a sunset like the cover's. Below it, the game itself: a race on the autopilot in
-// the chase view, started when it scrolls near; reduced motion shows a still poster that links to /play/.
+// Holeshot, the landing page. The hero is the game: the attract race rides behind the brand (the
+// lockup in the h1, the hook, PLAY) under a scrim that keeps the copy readable in both themes. The
+// hero paints first with a still of that race (the poster); the game's module loads after the page's
+// load and an idle moment, never on the critical path, and replaces the poster once it draws. Reduced
+// motion (or Save-Data) keeps the poster. Then: how to play (a numbered flow), the controls (the real
+// key bindings, a gamepad, and an animated throttle rocker for phones), the ways to ride (the game's
+// grouping, with in-game stills), the garage, the brand kit, built on Fizlet.
 import Base from '../layouts/Base.astro';
 import Wordmark from '../components/Wordmark.astro';
-import { base, GZIP, FIZLET, REPO } from '../site';
+import { base, GZIP, FIZLET } from '../site';
 import { CLASSES, MODELS, STARTERS, makerOf } from '../../../src/data/roster.ts';
-import { MODES } from '../../../src/modes/index.ts';
-const description = 'Holeshot is a dirt bike game on a tabletop: one bike and a garage, races against rivals, a race series on a new track every round, five free-ride maps, Endless (the dunes, a quarry, woods and a night park that never end), a Big Air show and Endless Wheelie City (an open world of roads, towns and fields that never ends). Earn credits, wear out tyres and top ends, rebuild, mod and paint. Free in the browser, by David Cooley, built on Fizlet.';
+import { MODES, FREE_MAPS, FREE_SX } from '../../../src/modes/index.ts';
+import { BIOMES } from '../../../src/modes/desert/track.ts';
+import { TIERS } from '../../../src/data/series.ts';
+import { ICON_GAS, ICON_BRAKE, ICON_SEAM, ICON_COMBO } from '../../../src/bike/rocker.ts';
+const description = 'Holeshot is a dirt bike game on a tabletop: one bike and a garage, races and a race series at MX and SX, Endless rides (the dunes, a quarry, woods, a night park and Endless Wheelie City) that never end, Free Ride maps and a Big Air straight of jumps. Earn in every mode, wear out tyres and top ends, rebuild, mod and paint. Free in the browser, by David Cooley, built on Fizlet.';
 const kb = (GZIP / 1024).toFixed(1);
-const steps = [
-  ['PICK YOUR BIKE', 'One bike to start: a peaky 2-stroke, a torquey 4-stroke, a light e-bike or an electric dirt bike. Paint it, number it, pick your jersey. That bike rides every event.'],
-  ['RIDE IT', 'Space is the gas, K the brake, W and S your weight (back lifts the front; in the air it pitches the bike), A and D steer; gas and brake together pop a wheelie. On a phone: the stick leans and steers, and one throttle rocker under the right thumb: slide up for gas, down for brake, the middle for both, without lifting. Overshot something? Stopped with no gas, hold W or S (the stick forward or back) and the rider puts a foot down and walks the bike out, backwards too.'],
-  ['EARN', 'Races and series rounds pay by place, Big Air by the judges, Endless Wheelie City by points (hold a wheelie past 12 o\'clock for a ×10 hand drag; stop and the neon patrol tickets you), Free Ride a little for saddle time. Crash and you tumble, get back up, and keep riding.'],
-  ['WRENCH', 'Every lap wears the bike: tyres lose grip, a 2-stroke\'s top end loses pull, seals blow and it cases sooner. Buy new tyres, rebuild the motor, add mods, change the paint and the kit.'],
-];
-const classes = Object.values(CLASSES).map((c) => ({ ...c, models: MODELS.filter((m) => m.cls === c.id), starter: STARTERS.find((m) => m.cls === c.id) }));
 const words = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+const has = (id: string) => MODES.some((m) => m.id === id);
+// How to play: four stickers in a row, each with its icon (inline SVG, currentColor).
+const ico = (d: string) => `<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const steps = [
+  ['PICK YOUR BIKE', 'A peaky 2-stroke, a torquey 4-stroke, a light e-bike or an electric dirt bike. Paint it, number it, pick your jersey. That bike rides every event.', ico('<circle cx="6" cy="16" r="3.5"/><circle cx="18" cy="16" r="3.5"/><path d="M6 16l4-7h5l3 7M10 9 8.5 6H6M15 9l1.5-3h2"/>'), 'lime'],
+  ['RIDE IT', 'Race rivals, ride ground that never ends, fly the Big Air line, wheelie through town. Crash and you tumble, get back up, and keep riding.', ico('<path d="M5 21V4"/><path d="M5 4h13l-3 4 3 4H5"/>'), 'hot'],
+  ['EARN', 'Every mode pays: places in races and series rounds, the judges in Big Air, points for wheelies and tricks, saddle time in Free Ride.', ico('<circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M9 9.5c0-1.2 1.3-2 3-2s3 .8 3 2-1.3 1.8-3 2.2-3 1-3 2.3 1.3 2 3 2 3-.8 3-2"/>'), 'cyan'],
+  ['WRENCH', 'Every lap wears the bike: tyres lose grip, a top end loses pull, seals blow. Buy tyres, rebuild the motor, add mods, change the paint and the kit.', ico('<path d="M14.5 5.5a4 4 0 0 0 4.9 4.9L21 12l-9 9-3-3 9-9-1.6-1.6a4 4 0 0 0-4.9-4.9l2.5 2.5-1.4 1.4z" transform="translate(-2 -1)"/>'), 'sun'],
+];
+// The keyboard, from the game's own bindings (src/modes/*/scene.ts MAP, the play pages' labels).
+const keys: { group: string; rows: [string[], string, string?][] }[] = [
+  { group: 'RIDE', rows: [[['Space', 'J'], 'Gas'], [['K', 'Shift'], 'Brake'], [['W', 'S', '↑', '↓'], 'Lean', 'back lifts the front; in the air it pitches the bike'], [['A', 'D', '←', '→'], 'Steer'], [['Space', '+', 'K'], 'Wheelie', 'gas and brake together']] },
+  { group: 'TRICKS', rows: [[['L'], 'Hop', 'every endless ride; a trick in Big Air (L or E)'], [['C'], 'Combo trick', 'hold for more points'], [['R'], 'Reset', 'back to the last good spot']] },
+  { group: 'GAME', rows: [[['V'], 'View', 'chase cam or the map'], [['M'], 'Mute'], [['P', 'Esc'], 'Pause']] },
+];
+// The gamepad (src/bike/kit.ts gamepad()).
+const pad = [['Left stick', 'lean and steer'], ['RT or A', 'gas'], ['LT or B', 'brake'], ['X, Y or RB', 'trick or hop'], ['LB', 'combo'], ['Back', 'reset']];
+// The phone demo's steps (one loop, the captions light in turn).
+const phone = [
+  ['Thumb on GAS', 'the top zone lights: go.'],
+  ['Slide to the middle', 'the seam is gas and brake at once: a wheelie.'],
+  ['Slide onto COMBO', 'it pops out of the gas side; the gas stays held.'],
+  ['Slide back', 'onto the gas, never lifting.'],
+  ['Flick the stick', 'back, then forward, fast: a bunny hop.'],
+];
+// The ways to ride: the game's grouping. Live entries link to /play/?mode=; SOON ones are not built yet.
+const freeCount = FREE_MAPS.length + FREE_SX.length;
+const rounds = [Math.min(...TIERS.map((t) => t.rounds)), Math.max(...TIERS.map((t) => t.rounds))];
+const ways = [
+  { id: 'race', name: 'RACE', tone: 'hot', shot: 'race-mx', alt: 'A Race in Holeshot: riders through a neon-edged motocross turn at night', inset: 'race-sx', insetAlt: 'Supercross: the stadium track under the lights',
+    line: 'Three laps against three rivals on bikes of your class. Places pay.',
+    items: [['Race MX', 'outdoors', 'race'], ['Race SX', 'in the stadium', 'race'], ['Series MX · SX', `championships of ${rounds[0]} to ${rounds[1]} rounds, a points table`, 'race']] },
+  { id: 'endless', name: 'ENDLESS', tone: 'sun', shot: 'endless-desert', alt: 'Endless Desert: a rider crossing the dune sea under a purple sky', inset: 'endcity', insetAlt: 'Endless Wheelie City: a wheelie down a long road',
+    line: 'No edge, no clock. How far can you go?',
+    items: [['Endless Desert', `${words[BIOMES.length]!.toLowerCase()} grounds: ${BIOMES.map((b) => b.name.replace(/^THE /, '').toLowerCase()).join(', ')}`, 'desert'], ['Endless Wheelie City', 'roads, towns and fields; lose the neon patrol', 'endcity'], ['Mashup', 'coming soon', '']] },
+  { id: 'free', name: 'FREE RIDE', tone: 'cyan', shot: 'freeride', alt: 'Free Ride: a rider on the night park map beside a neon-lit wall', inset: 'bigair', insetAlt: 'Big Air: a trick called out over a kicker',
+    line: 'Saddle time, air, wheelies and tricks. No laps.',
+    items: [['Free Ride', `${freeCount} maps, MX and SX`, 'freeride'], ['Big Air', 'an endless straight of jumps sized to your bike; five judges pay', 'bigair']] },
+  { id: 'trackday', name: 'TRACK DAY', tone: 'lime', soon: true,
+    line: 'Street bikes on road circuits.',
+    items: [['Track Day', 'coming soon', '']] },
+].map((w) => ({ ...w, items: w.items.map(([name, note, mode]) => ({ name, note, mode: mode && has(mode) ? mode : '' })) }));
+const classes = Object.values(CLASSES).map((c) => ({ ...c, models: MODELS.filter((m) => m.cls === c.id), starter: STARTERS.find((m) => m.cls === c.id) }));
+const makers = new Set(MODELS.map((m) => makerOf(m).name)).size;
+// The garage's room: 3 spots to start, up to 6 (the game's garage, R17).
+const SPOTS = 3, SPOTS_MAX = 6;
 const palette = [['Logo lime', '#B6F23A'], ['Drop pink', '#FF4FA8'], ['Credit cyan', '#22E6FF'], ['Sun yellow', '#FFD166'], ['Stripe pink', '#E23D8A'], ['Dusk purple', '#3A1D6E'], ['Night navy', '#1A1038'], ['Ink', '#0B0A14']];
 const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound', 'ui'];
 ---
 <Base title="Holeshot · one bike, every kind of dirt" description={description}>
+  <Fragment slot="head">
+    <link rel="preload" as="image" href={base('shots/hero.jpg')} media="(min-width: 701px)" fetchpriority="high" />
+    <link rel="preload" as="image" href={base('shots/hero-800.jpg')} media="(max-width: 700px)" fetchpriority="high" />
+  </Fragment>
   <section class="dt-hero" aria-labelledby="dt-title">
-    <div class="wrap hero-grid">
-      <div class="dt-copy">
-        <p class="eyebrow"><span class="dot"></span> A FIZLET GAME · BY DAVID COOLEY</p>
-        <h1 id="dt-title"><span class="sr">Holeshot.</span><Wordmark tab id="hs-wm-hero" class="hero-lockup" /><em>One bike. Every kind of dirt.</em></h1>
-        <p class="lead">A dirt bike game on a tabletop. Pick one bike, race it, fly it, wheelie it through town, and keep it alive in the garage: tyres, rebuilds, mods and paint, paid for with what you win.</p>
-        <div class="dt-ctas">
-          <a class="bui-key bui-sticker-key bui-call start-key" href={base('play/')}><b>PLAY</b><span>free · in your browser</span></a>
-          <a class="dt-watch" href="#race">or watch a race ↓</a>
-        </div>
+    <div class="dt-stage" id="dt-hero" aria-hidden="true"></div>
+    <picture class="dt-poster">
+      <source media="(max-width: 700px)" srcset={base('shots/hero-800.jpg')} width="800" height="900" />
+      <img src={base('shots/hero.jpg')} alt="" width="1600" height="900" fetchpriority="high" decoding="async" />
+    </picture>
+    <div class="dt-scrim" aria-hidden="true"></div>
+    <div class="wrap dt-copy">
+      <p class="eyebrow"><span class="dot"></span> A FIZLET GAME · BY DAVID COOLEY</p>
+      <h1 id="dt-title"><span class="sr">Holeshot.</span><Wordmark tab id="hs-wm-hero" class="hero-lockup" /><em>One bike. Every kind of dirt.</em></h1>
+      <p class="lead">A dirt bike game on a tabletop. Pick one bike, race it, fly it, wheelie it through town, and keep it alive in the garage, paid for with what you win.</p>
+      <div class="dt-ctas">
+        <a class="bui-key bui-sticker-key start-key" href={base('play/')}><b>PLAY</b><span>free · in your browser</span></a>
+        <a class="dt-watch" href="#controls">How do I ride? ↓</a>
       </div>
-      <a class="hero-cover" href={base('play/')} tabindex="-1" aria-hidden="true"><span class="hero-sun"></span><img src={base('brand/holeshot-cover.svg')} alt="" width="800" height="1200" fetchpriority="high" decoding="async" /></a>
     </div>
+    <p class="dt-live" aria-hidden="true"><span class="dot"></span> LIVE · THE REAL GAME ON AUTOPILOT</p>
   </section>
 
-  <section class="demo-band" id="race" aria-labelledby="race-title">
-    <div class="wrap demo-head">
-      <p class="eyebrow"><span class="dot"></span> LIVE · THE REAL GAME, ON AUTOPILOT</p>
-      <h2 id="race-title">Watch a race.</h2>
-    </div>
-    <div class="demo-frame">
-      <div class="dt-stage" id="dt-hero" aria-label="Holeshot demo race"></div>
-      <a class="dt-poster" href={base('play/')} hidden><img src={base('shots/hero.jpg')} alt="Holeshot: four dirt bikes racing at night on a neon-edged motocross track on a tabletop" width="1600" height="900" loading="lazy" /></a>
-    </div>
-  </section>
-
-  <section class="section" id="how">
+  <section class="section bands" id="how">
     <div class="wrap">
       <p class="eyebrow"><span class="index">01</span> HOW TO PLAY</p>
       <h2>Ride it, earn it, wrench it.</h2>
-      <ol class="cards">
-        {steps.map(([k, b], i) => <li class="panel"><span class="n">0{i + 1}</span><h3>{k}</h3><p>{b}</p></li>)}
+      <ol class="flow">
+        {steps.map(([k, b, icon, tone], i) => <li class={`sticker tone-${tone}`}><span class="num" aria-hidden="true">{i + 1}</span><span class="ic" set:html={icon}></span><h3>{k}</h3><p>{b}</p></li>)}
       </ol>
     </div>
   </section>
 
-  <section class="section" id="modes">
+  <section class="section" id="controls" aria-labelledby="controls-title">
     <div class="wrap">
-      <p class="eyebrow"><span class="index">02</span> THE EVENTS</p>
-      <h2>{['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'][MODES.length]} ways to ride.</h2>
-      <ol class="modes">
-        {MODES.map((m) => (
-          <li class="panel">
-            <h3>{m.name}</h3>
-            <p>{m.blurb}</p>
-            <p class="meta">{m.maps.length > 1 ? `${m.maps.length} maps` : m.maps[0]!.name}</p>
-            <a class="bui-key bui-arcade bui-sys" href={base(`play/?mode=${m.id}`)}>Ride it</a>
+      <p class="eyebrow"><span class="index">02</span> CONTROLS</p>
+      <h2 id="controls-title">Thumbs or keys.</h2>
+      <div class="ctl-grid">
+        <div class="panel ctl-keys">
+          <h3>Keyboard</h3>
+          {keys.map((g) => (
+            <div class="kgroup">
+              <p class="meta">{g.group}</p>
+              <ul>
+                {g.rows.map(([ks, what, note]) => <li><span class="caps">{ks.map((k) => (k === '+' ? <i>+</i> : <kbd class={k.length > 2 ? 'wide' : undefined}>{k}</kbd>))}</span><span class="what"><b>{what}</b>{note && <small>{note}</small>}</span></li>)}
+              </ul>
+            </div>
+          ))}
+          <div class="kgroup pad">
+            <p class="meta">GAMEPAD</p>
+            <ul class="padlist">{pad.map(([b, what]) => <li><b>{b}</b> {what}</li>)}</ul>
+          </div>
+        </div>
+        <figure class="panel ctl-phone">
+          <h3>Phone</h3>
+          <p class="ctl-sub">The stick under your left thumb leans and steers. Under your right: one throttle rocker. Slide, never lift.</p>
+          <div class="phone" role="img" aria-label="A phone held sideways: the stick on the left; on the right the throttle rocker, gas on top, the middle seam for a wheelie, brake below, and the COMBO button that slides out of the gas side.">
+            <div class="ph-screen">
+              <div class="ph-stick"><span class="ph-knob"></span><span class="ph-dot ph-dot-l"></span><b class="ph-tag ph-tag-l">STICK</b></div>
+              <div class="ph-rocker">
+                <span class="rz rz-gas" set:html={ICON_GAS}></span>
+                <span class="rz rz-seam" set:html={ICON_SEAM}></span>
+                <span class="rz rz-brake" set:html={ICON_BRAKE}></span>
+                <b class="ph-combo"><span set:html={ICON_COMBO}></span><i>COMBO</i></b>
+                <span class="ph-dot ph-dot-r"></span>
+                <b class="ph-tag t-gas">GAS</b><b class="ph-tag t-seam">WHEELIE</b><b class="ph-tag t-brake">BRAKE</b>
+              </div>
+            </div>
+          </div>
+          <figcaption>
+            <ol class="ph-steps">{phone.map(([k, b]) => <li><b>{k}</b> {b}</li>)}</ol>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="section bands" id="modes" aria-labelledby="modes-title">
+    <div class="wrap">
+      <p class="eyebrow"><span class="index">03</span> WAYS TO RIDE</p>
+      <h2 id="modes-title">Race it. Ride it forever. Fly it.</h2>
+      <p class="sub">{words[MODES.length]} modes and the race series, live today. Mashup and Track Day are on the way.</p>
+      <ul class="ways">
+        {ways.map((w) => (
+          <li class={`way tone-${w.tone}${w.soon ? ' soon' : ''}`} id={`way-${w.id}`}>
+            <div class="way-shot">
+              {w.shot ? <img src={base(`shots/modes/${w.shot}.jpg`)} alt={w.alt} width="720" height="450" loading="lazy" decoding="async" /> : <span class="way-road" aria-hidden="true"></span>}
+              {w.inset && <img class="way-inset" src={base(`shots/modes/${w.inset}.jpg`)} alt={w.insetAlt} width="720" height="450" loading="lazy" decoding="async" />}
+              <h3 class="way-name">{w.name}</h3>
+              {w.soon && <span class="chip-soon">COMING SOON</span>}
+            </div>
+            <div class="way-body">
+              <p class="way-line">{w.line}</p>
+              <ul class="way-items">
+                {w.items.map((it) => <li><b>{it.name}</b> <span>{it.note}</span>{it.mode ? <a class="go" href={base(`play/?mode=${it.mode}`)} aria-label={`Ride ${it.name}`}>Ride ▸</a> : <span class="chip-soon small">SOON</span>}</li>)}
+              </ul>
+            </div>
           </li>
         ))}
-      </ol>
-      <p class="soon">And the SERIES: championships of four to six rounds, a new generated track every round, rivals and a points table.</p>
-    </div>
-  </section>
-
-  <section class="section" id="garage">
-    <div class="wrap">
-      <p class="eyebrow"><span class="index">03</span> THE GARAGE</p>
-      <h2>{words[new Set(MODELS.map((m) => makerOf(m).name)).size]} makers. {MODELS.length} bikes. Room for three.</h2>
-      <ul class="cards">
-        {classes.map((c) => <li class="panel"><p class="meta">{c.name}</p><h3>{c.maker}</h3><p>{c.motto}</p><p class="meta">{c.starter ? `Starter: ${c.starter.name} · ` : 'In the showroom: '}{c.models.map((m) => m.name).join(' · ')}</p></li>)}
       </ul>
     </div>
   </section>
 
-  <section class="section" id="fizlet">
-    <div class="wrap split">
-      <div>
-        <p class="eyebrow"><span class="index">04</span> BUILT ON FIZLET</p>
-        <h2>No libraries. {kb} KB.</h2>
-        <p>Holeshot is built on <a href="https://fizlet.com/">Fizlet</a>, the micro animation and game engine for the DOM, and nothing else: no framework, no 3D library, no images in the game. The tracks, the bikes and the riders are drawn by Fizlet's bricks on one canvas.</p>
-        <p>The whole game, its Fizlet bricks and its Board UI styles: <b>{GZIP.toLocaleString('en-US')} bytes gzip</b> (measured at build, Fizlet {FIZLET}).</p>
-        <ul class="bricks">{bricks.map((b) => <li><code>@fzlt/core/{b}</code></li>)}</ul>
+  <section class="section" id="garage" aria-labelledby="garage-title">
+    <div class="wrap">
+      <p class="eyebrow"><span class="index">04</span> THE GARAGE</p>
+      <div class="garage-head">
+        <div>
+          <h2 id="garage-title">{words[SPOTS]} spots to start. Grow to {words[SPOTS_MAX]!.toLowerCase()}.</h2>
+          <p class="sub">You start with one bike and room for {words[SPOTS]!.toLowerCase()}. Every mode pays: races, series rounds, Endless rides, tricks. Spend it on bikes, parts, paint and more garage spots, up to {words[SPOTS_MAX]!.toLowerCase()} as you win.</p>
+        </div>
+        <ol class="spots" aria-label={`${SPOTS} garage spots to start, up to ${SPOTS_MAX}`}>
+          {Array.from({ length: SPOTS_MAX }, (_, i) => <li class={i < SPOTS ? 'open' : 'locked'}><span>{i + 1}</span></li>)}
+        </ol>
       </div>
-      <div class="panel lit by">
-        <p class="eyebrow"><b>BY DAVID COOLEY</b></p>
-        <p>Made by teen game creator <a href="https://fizlet.com/people/david-cooley/">David Cooley</a>, who loves doing wheelies on his gas and electric bikes.</p>
-        <h3>It started as three tiny games.</h3>
-        <p>Holeshot grew out of three pieces in Fizlet's Daily: Moto Track, Big Air and Wheelie City. They shared one bike; now they share one garage.</p>
-        <p><a href={REPO}>Source on GitHub (MIT)</a></p>
-        <a class="bui-key bui-arcade bui-go" href={base('play/')}>▶ Play Holeshot</a>
-      </div>
+      <p class="meta garage-count">{words[makers]} makers · {MODELS.length} bikes</p>
+      <ul class="makers">
+        {classes.map((c, i) => <li class={`sticker tone-${['lime', 'hot', 'cyan', 'sun', 'lime'][i % 5]}`}><p class="meta">{c.name}</p><h3>{c.maker}</h3><p>{c.motto}</p><p class="models">{c.starter ? <><b>Starter:</b> {c.starter.name} · </> : <b>In the showroom: </b>}{c.models.map((m) => m.name).join(' · ')}</p></li>)}
+      </ul>
     </div>
   </section>
 
@@ -118,8 +202,8 @@ const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound'
         <div class="brand-side">
           <figure class="panel brand-logo">
             <div class="brand-tiles">
-              <div class="brand-tile on-dark"><img src={base('brand/holeshot-lockup.svg')} alt="The HOLESHOT lockup on dark" width="625" height="169" loading="lazy" decoding="async" /></div>
-              <div class="brand-tile on-light"><img src={base('brand/holeshot-lockup.svg')} alt="The HOLESHOT lockup on light" width="625" height="169" loading="lazy" decoding="async" /></div>
+              <div class="brand-tile on-dark"><img src={base('brand/holeshot-lockup.svg')} alt="The HOLESHOT lockup on dark" width="625" height="184" loading="lazy" decoding="async" /></div>
+              <div class="brand-tile on-light"><img src={base('brand/holeshot-lockup.svg')} alt="The HOLESHOT lockup on light" width="625" height="184" loading="lazy" decoding="async" /></div>
             </div>
             <figcaption><b>Logo · L1 lockup</b> <span>lime letters, pink drop, ink outline; the credit on the cyan tab</span><span class="dl"><a href={base('brand/holeshot-lockup.svg')} download>Lockup SVG</a><a href={base('brand/holeshot-wordmark.svg')} download>Wordmark SVG</a></span></figcaption>
           </figure>
@@ -141,25 +225,49 @@ const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound'
       </div>
     </div>
   </section>
+
+  <section class="section" id="fizlet">
+    <div class="wrap split">
+      <div>
+        <p class="eyebrow"><span class="index">06</span> BUILT ON FIZLET</p>
+        <h2>No libraries. {kb} KB.</h2>
+        <p>Holeshot is built on <a href="https://fizlet.com/">Fizlet</a>, the micro animation and game engine for the DOM, and nothing else: no framework, no 3D library, no images in the game. The tracks, the bikes and the riders are drawn by Fizlet's bricks on one canvas.</p>
+        <p>The whole game, its Fizlet bricks and its Board UI styles: <b>{GZIP.toLocaleString('en-US')} bytes gzip</b> (measured at build, Fizlet {FIZLET}).</p>
+        <ul class="bricks">{bricks.map((b) => <li><code>@fzlt/core/{b}</code></li>)}</ul>
+      </div>
+      <div class="sticker tone-lime by">
+        <p class="eyebrow"><b>BY DAVID COOLEY</b></p>
+        <p>Made by teen game creator <a href="https://fizlet.com/people/david-cooley/">David Cooley</a>, who loves doing wheelies on his gas and electric bikes.</p>
+        <h3>It started as three tiny games.</h3>
+        <p>Holeshot grew out of three pieces in Fizlet's Daily: Moto Track, Big Air and Wheelie City. They shared one bike; now they share one garage.</p>
+        <a class="bui-key bui-arcade bui-go" href={base('play/')}>▶ Play Holeshot</a>
+      </div>
+    </div>
+  </section>
 </Base>
 
 <script>
-  const host = document.getElementById("dt-hero")!;
-  const poster = document.querySelector<HTMLElement>(".dt-poster")!;
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) poster.hidden = false;
-  else {
-    // The race starts when its band comes near the screen, so the brand hero paints first.
-    // The game's module loads then too (a dynamic import: nothing of it on the first paint).
-    const io = new IntersectionObserver(async (es) => {
-      if (!es.some((e) => e.isIntersecting)) return;
-      io.disconnect();
-      const { createHoleshot } = await import("../../../dist/holeshot.mjs");
-      (window as unknown as { hero: unknown }).hero = createHoleshot({ host, attract: true, sound: false });
-      // The demo rides itself: no touch controls (the pad, the throttle rocker and its hint) over it.
-      const style = document.createElement("style");
-      style.textContent = ".ba-pad,.hs-rocker{display:none!important}";
-      host.querySelector("[data-fizlet-host]")?.shadowRoot?.append(style);
-    }, { rootMargin: "0px" });
-    io.observe(host);
+  // The hero's race: after the page has loaded and gone idle (never on the critical path), unless
+  // the reader asked for less motion or less data. The poster stays until the game has drawn.
+  const host = document.getElementById("dt-hero")!, hero = host.closest<HTMLElement>(".dt-hero")!;
+  const nav = navigator as Navigator & { connection?: { saveData?: boolean } };
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches || !!nav.connection?.saveData;
+  const idle = (fn: () => void) => ("requestIdleCallback" in window ? requestIdleCallback(fn, { timeout: 1500 }) : setTimeout(fn, 200));
+  async function start() {
+    const { createHoleshot } = await import("../../../dist/holeshot.mjs");
+    const game = createHoleshot({ host, attract: true, sound: false });
+    (window as unknown as { hero: unknown }).hero = game;
+    // The demo rides itself: no touch controls (the pad, the throttle rocker and its hint) over it.
+    const style = document.createElement("style");
+    style.textContent = ".ba-pad,.hs-rocker{display:none!important}";
+    host.querySelector("[data-fizlet-host]")?.shadowRoot?.append(style);
+    // Swap the poster for the race once it rides (two frames in, so the canvas has drawn).
+    const ready = () => (game.run && game.run.state.speed > 0 ? hero.setAttribute("data-live", "") : requestAnimationFrame(ready));
+    requestAnimationFrame(ready);
+  }
+  if (!still) {
+    const go = () => idle(() => void start());
+    if (document.readyState === "complete") go();
+    else addEventListener("load", go, { once: true });
   }
 </script>
