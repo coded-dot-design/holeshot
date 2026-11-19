@@ -8,6 +8,9 @@ import { CLASSES, MODELS, makerOf, model as modelOf } from "../data/roster.ts";
 import { DAMAGE_NAME, FAIL, GARAGE_MAX, MODS, MOTOR_NAME, PARTS, PART_NAME, SERVICE_BELOW, SETUPS, TYRES, UNLOCK, type DamageId, type ModId, type PartId, type SetupId, type TyreId } from "../data/economy.ts";
 import { GRAPHICS, HELMETS, OUTFITS, PAINTS, PATTERNS, PLASTICS, PLATES, SWATCHES, VISORS, paint as paintOf, swatch } from "../data/looks.ts";
 import { bar, esc, num } from "../html.ts";
+import { helmetSVG, portraitOf } from "./portrait.ts";
+import { helmetOf } from "./look.ts";
+import type { RigHelmet } from "../bike/rig.ts";
 import { newBike, riding, type BikeSave, type Profile } from "../model/profile.ts";
 import { tune, type Tuned } from "../model/tune.ts";
 import { paceRow } from "../model/pace.ts";
@@ -98,10 +101,10 @@ function partsTab(p: Profile, b: BikeSave) {
   return `${banner}<div class="dh-cols"><section><b class="dh-h2">CONDITION</b><ul class="dh-list">${parts}</ul><b class="dh-h2">CRASH DAMAGE</b><ul class="dh-list">${dmg}</ul><b class="dh-h2">SERVICE LOG</b>${log}</section><section><b class="dh-h2">TUNE</b><ul class="dh-list">${setups}</ul><b class="dh-h2">MODS</b><ul class="dh-list">${mods}</ul><b class="dh-h2">PACE</b>${paceDl(t, unitsOf(p))}<b class="dh-h2">FEEL</b><div class="dh-feel">${bar(t.feel.pull, "PULL")}${bar(t.feel.top, "TOP SPEED")}${bar(t.feel.grip, "GRIP")}${bar(t.feel.susp, "SUSPENSION")}${bar(t.feel.brakes, "BRAKES")}${bar(t.feel.light, "LIGHT")}</div></section></div>`;
 }
 
-type Swk = { id: string; name: string; a: string; b?: string };
+type Swk = { id: string; name: string; a: string; b?: string; icon?: string };
 function lookTab(p: Profile, b: BikeSave, ui: GarageUI) {
   const k = p.kit, pt = paintOf(b.look.paint), s = shown(p, { ...ui, peek: null }), sb = riding(s), tr = ui.trial;
-  const row = (slot: Slot, list: Swk[], on: string) => `<li><b class="dh-h3">${SLOT_NAME[slot]}</b><span class="dh-swrow">${list.map((x) => { const pr = cosmeticPrice(p, slot, x.id), trying = !!tr && tr[0] === slot && tr[1] === x.id; return `<button type="button" class="dh-swk" data-dress="${slot}" data-id="${x.id}" data-pv="${slot}:${x.id}" aria-pressed="${x.id === on}"${trying ? " data-try" : ""} style="--a:${x.a};--b:${x.b ?? x.a}" aria-label="${x.name}${pr ? `, ${pr} credits` : ""}"><i></i><small>${x.name}</small>${pr ? `<em>◈${pr}</em>` : ""}</button>`; }).join("")}</span></li>`;
+  const row = (slot: Slot, list: Swk[], on: string) => `<li><b class="dh-h3">${SLOT_NAME[slot]}</b><span class="dh-swrow">${list.map((x) => { const pr = cosmeticPrice(p, slot, x.id), trying = !!tr && tr[0] === slot && tr[1] === x.id; return `<button type="button" class="dh-swk" data-dress="${slot}" data-id="${x.id}" data-pv="${slot}:${x.id}" aria-pressed="${x.id === on}"${trying ? " data-try" : ""} style="--a:${x.a};--b:${x.b ?? x.a}" aria-label="${x.name}${pr ? `, ${pr} credits` : ""}"><i${x.icon ? ' class="dh-swh"' : ""}>${x.icon ?? ""}</i><small>${x.name}</small>${pr ? `<em>◈${pr}</em>` : ""}</button>`; }).join("")}</span></li>`;
   const sw = (on: (x: (typeof SWATCHES)[number]) => Swk = (x) => ({ id: x.id, name: x.name, a: x.hex })) => SWATCHES.map(on);
   let rows = "";
   if (ui.look === "bike") {
@@ -111,8 +114,8 @@ function lookTab(p: Profile, b: BikeSave, ui: GarageUI) {
       + row("plate", PLATES.map((x) => ({ id: x.id, name: x.name, a: x.plate || pt.plate, b: x.ink || pt.ink })), sb.look.plate)
       + `<li><b class="dh-h3">NUMBER</b><span class="dh-swrow"><input class="dh-numin" type="number" min="1" max="99" value="${b.look.number}" aria-label="Plate number" /><button type="button" class="bui-key dh-buy" data-number>SET${cost(cosmeticPrice(p, "number", ""), true)}</button></span></li>`;
   } else if (ui.look === "rider") {
-    const sk = s.kit;
-    rows = row("helmet", HELMETS.map((h) => ({ id: h.id, name: h.name, a: swatch(sk.helmetPaint).hex })), sk.helmet) + row("helmetPaint", sw(), sk.helmetPaint) + row("visor", VISORS.map((x) => ({ id: x.id, name: x.name, a: x.hex })), sk.visor)
+    const sk = s.kit, hc = helmetOf(sk);
+    rows = row("helmet", HELMETS.map((h) => ({ id: h.id, name: h.name, a: swatch(sk.helmetPaint).hex, icon: helmetSVG(hc, h.id as RigHelmet) })), sk.helmet) + row("helmetPaint", sw(), sk.helmetPaint) + row("visor", VISORS.map((x) => ({ id: x.id, name: x.name, a: x.hex })), sk.visor)
       + row("jersey", sw(), sk.jersey) + row("pattern", PATTERNS.map((x) => ({ id: x.id, name: x.name, a: swatch(sk.jersey).hex, b: x.id === "solid" ? swatch(sk.jersey).hex : x.id === "stripe" ? swatch(sk.helmetPaint).hex : x.id === "split" ? swatch(sk.pants).hex : x.id === "accent" ? swatch(sk.gloves).hex : "#7fe9ff" })), sk.pattern)
       + row("pants", sw(), sk.pants) + row("boots", sw(), sk.boots) + row("gloves", sw(), sk.gloves);
   } else {
@@ -167,7 +170,9 @@ export function bayInfo(p: Profile, ui: GarageUI) {
   const v = ui.peek ?? ui.trial, s = shown(p, ui), b = riding(s), m = modelOf(b.model), u = unitsOf(p);
   const now = paceRow(tune(riding(p)), u), next = v ? paceRow(tune(b), u) : now;
   const chips = `<dl class="dh-pace dh-pace-bay" aria-label="${v ? "Pace of the preview, against yours" : "Pace, measured"}">${next.map(([k, val], i) => `<div><dt>${k}</dt><dd>${val}${v ? delta(now[i]![1], val, i === 2) : ""}</dd></div>`).join("")}</dl>`;
-  return `<small class="dh-bayline">${v ? `<b class="dh-pvtag">PREVIEW</b> ${v[0] === "bike" ? `SHOWROOM · ${CLASSES[m.cls].name}` : v[0] === "own" ? `YOUR BIKES · ${CLASSES[m.cls].name}` : esc(pvName(p, v))}` : `${CLASSES[m.cls].name} · ${makerOf(m).name}`}</small><b class="dh-big">${v && (v[0] === "bike" || v[0] === "own") ? `${makerOf(m).name} ` : ""}${m.name} <i>#${b.look.number}</i></b><p class="dh-sub dh-bayblurb">${esc(m.blurb)}</p>${chips}`;
+  // Dressing the rider: their helmet portrait (the racer's profile picture), from the kit as shown.
+  const face = ui.tab === "look" && ui.look !== "bike" ? `<figure class="dh-face">${portraitOf(s.kit, "Your helmet")}<figcaption>${esc(p.name || "RIDER")}</figcaption></figure>` : "";
+  return `${face}<small class="dh-bayline">${v ? `<b class="dh-pvtag">PREVIEW</b> ${v[0] === "bike" ? `SHOWROOM · ${CLASSES[m.cls].name}` : v[0] === "own" ? `YOUR BIKES · ${CLASSES[m.cls].name}` : esc(pvName(p, v))}` : `${CLASSES[m.cls].name} · ${makerOf(m).name}`}</small><b class="dh-big">${v && (v[0] === "bike" || v[0] === "own") ? `${makerOf(m).name} ` : ""}${m.name} <i>#${b.look.number}</i></b><p class="dh-sub dh-bayblurb">${esc(m.blurb)}</p>${chips}`;
 }
 /** The pinned preview's bar: what it is, BUY (or APPLY, or the price it needs) and CANCEL. */
 function pinBar(p: Profile, ui: GarageUI) {

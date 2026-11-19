@@ -15,11 +15,17 @@ export function mix(hex: string, to: string, t: number) {
   return "#" + ((1 << 24) | (c(16) << 16) | (c(8) << 8) | c(0)).toString(16).slice(1);
 }
 
+/** The helmet's paint, its stripe (the jersey pattern's colour), the visor tint and the shape, from the kit. */
+export function helmetOf(k: Profile["kit"]) {
+  const helmet = swatch(k.helmetPaint).hex, vis = visorOf(k.visor).hex;
+  const stripe = k.pattern === "stripe" ? helmet : k.pattern === "split" ? swatch(k.pants).hex : k.pattern === "accent" ? swatch(k.gloves).hex : k.pattern === "neon" ? vis : swatch(k.jersey).hex;
+  return { helmet, stripe, visor: vis, shape: (HELMETS.find((h) => h.id === k.helmet)?.id ?? "peak") as RigHelmet };
+}
+
 /** The bike's and rider's colours for the rig, from the profile. */
 export function lookOf(p: Profile): { look: ModeCtx["look"]; helmet: RigHelmet; number: number } {
   const b = riding(p), pt = paintOf(b?.look.paint ?? "gridline"), k = p.kit, L = b?.look;
-  const jersey = swatch(k.jersey).hex, pants = swatch(k.pants).hex, helmet = swatch(k.helmetPaint).hex, gloves = swatch(k.gloves).hex, vis = visorOf(k.visor).hex;
-  const stripe = k.pattern === "stripe" ? helmet : k.pattern === "split" ? pants : k.pattern === "accent" ? gloves : k.pattern === "neon" ? vis : jersey;
+  const jersey = swatch(k.jersey).hex, pants = swatch(k.pants).hex, gloves = swatch(k.gloves).hex, H = helmetOf(k), helmet = H.helmet, stripe = H.stripe, vis = H.visor;
   const own = L && L.plastics !== "scheme" ? PLASTICS.find((x) => x.id === L.plastics)?.hex : "";
   const decal = PLATES.find((x) => x.id === (L?.plate ?? "scheme"));
   const crack = b?.dmg.plastics ?? 0, dull = (c: string) => (crack > 0.05 ? mix(c, "#6b6880", 0.35 * crack) : c);
@@ -30,7 +36,7 @@ export function lookOf(p: Profile): { look: ModeCtx["look"]; helmet: RigHelmet; 
       gfx: L?.graphics ?? "none", graphic: pt.plastic2 === (own || pt.plastic) ? pt.plate : pt.plastic2, side: plate, sideInk: ink, num: L?.number ?? 7,
       bend: b?.dmg.bars ?? 0, cracks: crack, up: b ? tune(b).up : undefined,
     },
-    helmet: (HELMETS.find((h) => h.id === k.helmet)?.id ?? "peak") as RigHelmet,
+    helmet: H.shape,
     number: L?.number ?? 7,
   };
 }

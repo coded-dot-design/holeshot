@@ -122,3 +122,13 @@
 .dh-dock .dh-slot-k{flex:none;min-width:6em;padding:2px 10px}
 .dh-dock .dh-slot-k small:last-child{display:none}
 }
+/* The racer's helmet portrait (./portrait.ts): beside the name in the top bar, and big in the bay while
+   dressing the rider, on the preview's tinted tile so a dark shell still reads; the shadow falls straight down. */
+.dh-who .dh-helm{inline-size:1.9em;block-size:1.4em;margin-block:-.2em;flex:none}
+.dh-face{margin:0;display:flex;align-items:center;gap:10px}
+.dh-face .dh-helm{inline-size:104px;block-size:78px;flex:none;padding:4px 6px;box-sizing:border-box;border:2px solid var(--rim);border-radius:12px;background:linear-gradient(180deg,color-mix(in srgb,var(--cy) 22%,var(--raised)),var(--raised));box-shadow:calc(3px * var(--bui-sx)) calc(3px * var(--bui-sy)) 0 var(--bui-shadow)}
+.dh-face figcaption{font-weight:800;letter-spacing:.06em;overflow-wrap:anywhere}
+@media (max-width:620px){.dh-face .dh-helm{inline-size:72px;block-size:54px;padding:2px 4px}}
+/* The helmet row's keys show each shape in your helmet's colours. */
+.dh-swk i.dh-swh{width:40px;height:30px;border:0;border-radius:0;background:none}
+.dh-swh .dh-helm{width:100%;height:100%;display:block}

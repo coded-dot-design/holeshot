@@ -30,6 +30,7 @@ import { dirtWarning, onGround } from "./model/families.ts";
 import { apply, pitFix, pitReady, settle, type ModeResult } from "./model/economy.ts";
 import type { Buy } from "./model/garage.ts";
 import { after, ride as garageRide } from "./model/upkeep.ts";
+import { portraitOf } from "./garage/portrait.ts";
 import { bayInfo, garageCard as garageView, garageClick, garageUI, pvName, pvOf, riskCard, shown, type Pv } from "./garage/view.ts";
 import { lookOf } from "./garage/look.ts";
 import { bar, esc, num } from "./html.ts";
@@ -149,7 +150,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     if (!pv.isConnected || !ready(profile)) return;
     const r = pv.getBoundingClientRect(), w = Math.round(r.width), h = Math.round(r.height);
     if (w < 10 || h < 10) return;
-    const P2 = screen === "garage" ? shown(profile, gui) : profile, b = riding(P2), t = tune(b), L2 = lookOf(P2), key = JSON.stringify([w, h, b.model, b.look, b.dmg, b.mods, P2.kit, pageTheme(), pvYaw]);
+    const P2 = screen === "garage" ? shown(profile, gui) : profile, b = riding(P2), t = tune(b), L2 = lookOf(P2), close = screen === "garage" && gui.tab === "look" && gui.look !== "bike", key = JSON.stringify([w, h, b.model, b.look, b.dmg, b.mods, P2.kit, pageTheme(), pvYaw, close]);
     if (key === pvKey) return;
     pvKey = key;
     pdio.resize(w, h, Math.min(2, devicePixelRatio || 1));
@@ -164,7 +165,8 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     const g = rig(pdio, "pv", { ...kit, ...L2.look } as RigColors, t.rig, L2.helmet), bk = makeBike(flat, t.power, t.shape);
     bk.reset(0, 0, 0);
     g.pose(bk, 0.6);
-    Object.assign(pdio.cam, { yaw: pvYaw, pitch: 0.2, dist: 4.9, tx: 0, ty: 0.55, tz: 0, ox: 0, oy: 0, fov: 0.55 });
+    // Dressing the rider (RIDER KIT, OUTFITS), the turntable closes in on them: helmet, kit and boots.
+    Object.assign(pdio.cam, close ? { yaw: pvYaw, pitch: 0.16, dist: 3, tx: 0.05, ty: 0.96, tz: 0, ox: 0, oy: 0, fov: 0.55 } : { yaw: pvYaw, pitch: 0.2, dist: 4.9, tx: 0, ty: 0.55, tz: 0, ox: 0, oy: 0, fov: 0.55 });
     pdio.draw();
   }
   let grip = -1, gx = 0;
@@ -197,7 +199,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   // ---- rendering the cards ----
   /** The header: HOLESHOT on the garage (home), else ← back and the screen's name; then the credits,
    *  the name, ⚙ settings and the theme key. Sticky, so the way back stays in reach. */
-  const head = (back?: [Screen, string, string]) => `<header class="dh-top${back ? " dh-sticky" : ""}">${back ? `<button type="button" class="bui-key dh-back" data-go="${back[0]}">← ${back[1]}</button><b class="dh-h dh-title">${back[2]}</b>` : WORDMARK}${inf ? `<span class="dh-chip dh-cr" title="Test credits: nothing is saved">◈ ∞</span><span class="dh-chip dh-test" title="?credits=inf: nothing is saved, online is off">TEST CREDITS ∞</span>` : `<span class="dh-chip dh-cr" title="Credits">◈ ${num(profile.credits)}</span>`}${profile.name ? `<span class="dh-chip dh-who">${esc(profile.name)}</span>` : ""}${screen === "settings" ? "" : `<button type="button" class="bui-key dh-icon dh-cog" data-go="settings" aria-label="Settings">${ICON.cog}</button>`}${o.onTheme ? `<button type="button" class="bui-key dh-icon dh-theme" aria-label="Light or dark">${ICON.theme}</button>` : ""}</header>`;
+  const head = (back?: [Screen, string, string]) => `<header class="dh-top${back ? " dh-sticky" : ""}">${back ? `<button type="button" class="bui-key dh-back" data-go="${back[0]}">← ${back[1]}</button><b class="dh-h dh-title">${back[2]}</b>` : WORDMARK}${inf ? `<span class="dh-chip dh-cr" title="Test credits: nothing is saved">◈ ∞</span><span class="dh-chip dh-test" title="?credits=inf: nothing is saved, online is off">TEST CREDITS ∞</span>` : `<span class="dh-chip dh-cr" title="Credits">◈ ${num(profile.credits)}</span>`}${profile.name ? `<span class="dh-chip dh-who">${portraitOf(profile.kit)}${esc(profile.name)}</span>` : ""}${screen === "settings" ? "" : `<button type="button" class="bui-key dh-icon dh-cog" data-go="settings" aria-label="Settings">${ICON.cog}</button>`}${o.onTheme ? `<button type="button" class="bui-key dh-icon dh-theme" aria-label="Light or dark">${ICON.theme}</button>` : ""}</header>`;
   /** The garage's one main action. */
   const letsRide = `<button type="button" class="bui-key bui-sticker-key bui-call dh-letsride" data-go="ride"><b>LET'S RIDE</b><small>RACE · ENDLESS · FREE RIDE · TRACK DAY</small></button>`;
   const bikeLine = () => {

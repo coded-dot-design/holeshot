@@ -136,7 +136,52 @@ try {
     console.log(`  ${w} ${path === "/" ? "dark" : "light"}: plinth contrast ${worst.toFixed(2)}:1`);
     await ctx.close();
   }
-  console.log("Holeshot garage UX: the dock stays in view while the lists scroll (1440, 390, 844×390); tap a showroom bike, an upgrade or a paint → PREVIEW on the turntable with BUY / CANCEL and the pace against yours, CANCEL restores; pointing and focus preview too; the plinth ≥ 3:1 in dark and light.");
+  // ---- the rider's helmet: the portrait (the racer's profile picture) beside the name and big while
+  // dressing the rider, coloured and shaped live from the kit; the turntable closes in on the rider, and
+  // head-on the goggle (its band, the lens, the glint) reads on the helmet, never just a blob ----
+  for (const [path, w, h, theme] of [["/", 1440, 900, "dark"], ["/day", 1440, 900, "light"], ["/day", 390, 844, "light"], ["/", 390, 844, "dark"]]) {
+    const name = `${w} ${theme}`, ctx = await browser.newContext({ viewport: { width: w, height: h }, hasTouch: w < 500, isMobile: w < 500 });
+    await ctx.addInitScript((s) => localStorage.setItem("holeshot:profile", s), JSON.stringify(SAVE));
+    const p = await ctx.newPage(), errs = [];
+    p.on("pageerror", (e) => errs.push(e.message));
+    await p.goto(server.url + path);
+    await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${name}: loads`);
+    assert.ok(await $(p, "!!root.querySelector('.dh-who .dh-helm[data-helmet=peak]')"), `${name}: the name chip wears the helmet portrait`);
+    await click(p, "[data-gtab=look]");
+    await click(p, "[data-look=rider]");
+    await until(p, "!!root.querySelector('.dh-face .dh-helm[role=img]')", `${name}: RIDER KIT shows the big portrait`);
+    const svg = () => $(p, "root.querySelector('.dh-face .dh-helm').outerHTML");
+    let was = await svg();
+    for (const [slot, id, sees] of [["helmet", "duck", "data-helmet=\"duck\""], ["helmetPaint", "gold", "#ffd166"], ["visor", "gold", "#c9922a"]]) {
+      await click(p, `[data-dress=${slot}][data-id=${id}]`);
+      await until(p, `root.querySelector('.dh-face .dh-helm').outerHTML !== ${JSON.stringify(was)}`, `${name}: the portrait follows the ${slot}`);
+      const now = await svg();
+      if (sees) assert.ok(now.includes(sees), `${name}: the portrait shows ${slot} ${id}`);
+      was = now;
+      await click(p, ".dh-pin [data-untry]");
+      await until(p, "!root.querySelector('.dh-pin')", `${name}: CANCEL`);
+      was = await svg();
+    }
+    // Head-on (Home, then 90° round): inside the white helmet's box, the goggle's dark band and lens
+    // (measured: 11–33 % of the box; the helmet before the goggle was 1–4 %, its edges only).
+    await $(p, "root.querySelector('.dh-preview').focus()");
+    await p.keyboard.press("Home");
+    for (let i = 0; i < 6; i++) await p.keyboard.press("ArrowLeft");
+    await until(p, "root.querySelector('.dh-preview').getAttribute('aria-valuenow') === '81'", `${name}: the turntable faces the rider head-on`);
+    const face = await $(p, `(() => { const c = root.querySelector('.dh-preview'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, W = c.width, H = Math.round(c.height * 0.5);
+      let x0 = W, x1 = -1, y0 = H, y1 = -1;
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = (y * W + x) * 4; if (d[i] > 200 && d[i + 1] > 200 && d[i + 2] > 200 && Math.abs(d[i] - d[i + 2]) < 24) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } }
+      let dark = 0, n = 0;
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const i = (y * W + x) * 4; n++; if (Math.max(d[i], d[i + 1], d[i + 2]) < 60) dark++; }
+      return { box: [x0, y0, x1, y1], share: n ? dark / n : 0 }; })()`);
+    assert.ok(face.box[2] > face.box[0] && face.share > 0.08, `${name}: head-on, the goggle reads on the helmet (${(face.share * 100).toFixed(1)}% of the helmet's box, ${face.box})`);
+    console.log(`  ${name}: head-on goggle ${(face.share * 100).toFixed(1)}% of the helmet`);
+    await p.keyboard.press("Home");
+    await shot(p, `rider-${w}-${theme}`);
+    assert.deepEqual(errs, [], `${name}: no page errors`);
+    await ctx.close();
+  }
+  console.log("Holeshot garage UX: the dock stays in view while the lists scroll (1440, 390, 844×390); tap a showroom bike, an upgrade or a paint → PREVIEW on the turntable with BUY / CANCEL and the pace against yours, CANCEL restores; pointing and focus preview too; the plinth ≥ 3:1 in dark and light; the helmet portrait by the name and on RIDER KIT follows the shape, paint and visor, and head-on the goggle reads.");
 } finally {
   await browser.close();
   await server.close();

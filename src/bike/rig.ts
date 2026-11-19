@@ -39,6 +39,14 @@ export type RigKind = "2t" | "4t" | BodyKind;
  *  open-face shell with goggles, a peak with a fin on top, a peak with a row of spikes. */
 export type RigHelmet = "peak" | "duck" | "dome" | "retro" | "fin" | "spike";
 
+/** The goggle's frame and strap colour: the stripe, or (a stripe near the shell's own colour) a dark
+ *  band on a light shell and a light one on a dark shell, so the goggle always reads. */
+export function bandOf(helmet: string, stripe: string) {
+  const x = parseInt(helmet.slice(1), 16), y = parseInt(stripe.slice(1), 16);
+  const near = Math.abs((x >> 16) - (y >> 16)) + Math.abs(((x >> 8) & 255) - ((y >> 8) & 255)) + Math.abs((x & 255) - (y & 255)) < 90;
+  return !near ? stripe : (x >> 16) * 0.3 + ((x >> 8) & 255) * 0.59 + (x & 255) * 0.11 > 110 ? "#14121f" : "#e8e6f0";
+}
+
 /** Seven-segment digits (a, b, c, d, e, f, g as bits) for the side plates' numbers. */
 const SEG = [0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f];
 
@@ -100,8 +108,8 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
   const rid = id + ":r";
   const rider = d.add({ id: rid, shape: "group", size: [0.6, 0, 0.5], on: id });
   const parts: DioramaObject[] = [];
-  const part = (size: number[], pos: number[], color: string, o: { shape?: "box" | "wedge" | "cyl"; on?: string; rot?: number[]; sides?: number; top?: number; emissive?: boolean; layer?: number } = {}) => {
-    const p = d.add({ shape: o.shape || "box", size, pos, rot: o.rot, on: o.on || id, color, sides: o.sides, top: o.top, emissive: o.emissive, layer: o.layer, pick: false });
+  const part = (size: number[], pos: number[], color: string, o: { shape?: "box" | "wedge" | "cyl" | "prism"; on?: string; rot?: number[]; sides?: number; top?: number; outline?: number[][]; emissive?: boolean; layer?: number } = {}) => {
+    const p = d.add({ shape: o.shape || "box", size, pos, rot: o.rot, on: o.on || id, color, sides: o.sides, top: o.top, outline: o.outline, emissive: o.emissive, layer: o.layer, pick: false });
     parts.push(p);
     return p;
   };
@@ -244,16 +252,38 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
   const torso = group(id + ":t", rid);
   part([TORSO, 0.2, 0.32], [TORSO / 2, -0.1, 0], C.jersey, { on: id + ":t" });
   part([0.12, 0.21, 0.33], [TORSO * 0.62, -0.105, 0], C.stripe, { on: id + ":t", layer: 5 });
-  const head = group(id + ":h", rid);
-  part([0.28, 0.27, 0.26], [0.02, -0.04, 0], C.helmet, { shape: "cyl", sides: 8, on: id + ":h" });
-  part([0.05, 0.1, 0.19], [0.15, 0.06, 0], C.visor, { on: id + ":h", layer: 6 });
-  const round = helmet === "dome" || helmet === "retro";
-  if (!round) part([helmet === "duck" ? 0.32 : 0.2, 0.035, 0.2], [helmet === "duck" ? 0.22 : 0.16, 0.2, 0], C.stripe, { on: id + ":h", rot: [0, 0, helmet === "duck" ? -0.18 : -0.3], layer: 6 });
-  else part([0.3, 0.06, 0.24], [0.0, 0.1, 0], C.helmet, { shape: "cyl", sides: 8, on: id + ":h", layer: 5 });
-  if (helmet === "fin") part([0.24, 0.1, 0.03], [-0.02, 0.15, 0], C.stripe, { on: id + ":h", rot: [0, 0, 0.1], layer: 7, emissive: true });
-  if (helmet === "spike") for (let i = 0; i < 3; i++) part([0.05, 0.08, 0.04], [-0.08 + i * 0.08, 0.2 - i * 0.01, 0], C.stripe, { shape: "cyl", sides: 4, top: 0, on: id + ":h", layer: 7 });
-  if (helmet === "retro") part([0.06, 0.05, 0.28], [0.02, 0.04, 0], C.stripe, { on: id + ":h", layer: 6 });
-  else part([0.14, 0.11, 0.16], [0.17, -0.06, 0], C.helmet, { shape: "wedge", rot: [0, PI, 0], on: id + ":h" });
+  // The helmet, shaped like the game art's: a round shell (a drum and a crown), the goggle strap
+  // round it, then the face on a group in front of the shell (`behind`: over the shell facing the
+  // eye, under it facing away): the goggle's frame, its lens (the visor tint) standing proud of the
+  // shell with a glint that reads on a dark visor, the chin bar jutting forward and down, and the
+  // long peak raking forward and up off the crown (side profiles, prisms turned on their side).
+  const head = group(id + ":h", rid), hf = id + ":hf", ho = { on: id + ":h" }, fo = { on: hf };
+  const dome = helmet === "dome", open = helmet === "retro";
+  // The goggle's frame and strap: the stripe, or (a stripe the shell's own colour) a dark or light band.
+  const band = bandOf(C.helmet, C.stripe);
+  /** A side profile ([x, y] points, front +x) as a prism `w` wide, centred across the head. */
+  const profile = (pts: number[][], w: number, color: string, layer: number) => part([0, w, 0], [0, 0, -w / 2], color, { ...fo, shape: "prism", outline: pts.map(([x, y]) => [x!, -y!]), rot: [PI / 2, 0, 0], layer });
+  part([0.29, 0.2, 0.27], [0.02, -0.05, 0], C.helmet, { ...ho, shape: "cyl", sides: 10, top: 0.92 });
+  part([0.27, 0.09, 0.25], [0.02, 0.15, 0], C.helmet, { ...ho, shape: "cyl", sides: 10, top: 0.6 });
+  d.add({ id: hf, shape: "group", size: [0.2, 0, 0.2], pos: [END, 0, 0], on: id + ":h", behind: 1, pick: false });
+  if (dome) {
+    // A street full-face: a wide visor, a flush chin, a stripe over the crown.
+    part([0.03, 0.105, 0.24], [0.145, 0.03, 0], band, { ...fo, layer: 7.2 });
+    part([0.035, 0.085, 0.22], [0.155, 0.04, 0], C.visor, { ...fo, layer: 7.3 });
+    part([0.17, 0.014, 0.06], [0.01, 0.228, 0], C.stripe, { ...ho, layer: 7.1 });
+  } else {
+    part([0.3, 0.05, 0.28], [0.02, 0.045, 0], band, { ...ho, shape: "cyl", sides: 10, layer: 7.1 });
+    part([0.06, 0.1, 0.22], [0.14, 0.035, 0], band, { ...fo, layer: 7.2 });
+    part([0.03, 0.068, 0.17], [0.166, 0.051, 0], C.visor, { ...fo, layer: 7.3 });
+  }
+  part([0.008, 0.018, 0.045], [dome ? 0.174 : 0.182, 0.095, 0.05], mix(C.visor, "#ffffff", 0.72), { ...fo, layer: 7.4, emissive: true });
+  if (open) part([0.04, 0.075, 0.15], [0.13, -0.045, 0], "#2a2233", { ...fo, layer: 7.2 });
+  else profile(dome ? [[0.12, 0.045], [0.18, 0.025], [0.165, -0.045], [0.04, -0.05]] : [[0.12, 0.06], [0.21, 0.03], [0.185, -0.045], [0.04, -0.05]], dome ? 0.22 : 0.19, C.helmet, 7.25);
+  if (!dome) profile(helmet === "duck" ? [[0, 0.25], [0.15, 0.255], [0.38, 0.275], [0.37, 0.235], [0.14, 0.19], [0.04, 0.2]]
+    : open ? [[0.02, 0.215], [0.17, 0.22], [0.2, 0.2], [0.13, 0.18], [0.06, 0.18]]
+    : [[0, 0.25], [0.14, 0.255], [0.3, 0.295], [0.29, 0.25], [0.13, 0.19], [0.04, 0.2]], open ? 0.24 : 0.21, C.stripe, 7.35);
+  if (helmet === "fin") part([0.24, 0.1, 0.03], [-0.05, 0.215, 0], C.stripe, { ...ho, rot: [0, 0, 0.1], layer: 7.1, emissive: true });
+  if (helmet === "spike") for (let i = 0; i < 3; i++) part([0.05, 0.08, 0.04], [-0.1 + i * 0.07, 0.225 - i * 0.008, 0], C.stripe, { ...ho, shape: "cyl", sides: 4, top: 0, layer: 7.1 });
   // Each side's leg and arm hang from a side group at the hip's offset across the bike (x 0, y 0, z
   // ±0.15: nothing along it, so the test is which side of the bike's centre plane the eye is on, at any
   // yaw and pitch). On the far side it drops under every bike part (`behind`: 7 → 0.5), so the far leg
@@ -336,7 +366,7 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
     const tilt0 = 0.75 - 0.35 * lean + 0.25 * stand - 0.6 * back + 0.35 * tuck + E[T_BODY]!, tilt = tilt0 + (PI - 0.25 - tilt0) * hs, ta = PI / 2 - tilt;
     torso.pos[0] = hx; torso.pos[1] = hy; torso.rot[2] = ta;
     const sx = hx + Math.cos(ta) * (TORSO - 0.05), sy = hy + Math.sin(ta) * (TORSO - 0.05);
-    head.pos[0] = hx + Math.cos(ta) * (TORSO + 0.06); head.pos[1] = hy + Math.sin(ta) * (TORSO + 0.06) - 0.02; head.rot[2] = ta - PI / 2 + 0.15;
+    head.pos[0] = hx + Math.cos(ta) * (TORSO + 0.06); head.pos[1] = hy + Math.sin(ta) * (TORSO + 0.06) - 0.02; head.rot[2] = ta - PI / 2 + 0.15 + Math.min(0.55, Math.max(0, PI / 2 - ta) * 0.6);
     for (let s = 0; s < 2; s++) {
       const side = s ? 1 : -1;
       // Legs: hip to peg (knee forward); feet off, the foot goes back and out (a plank, a split).
