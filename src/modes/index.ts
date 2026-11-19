@@ -48,7 +48,7 @@ export const MODES: Mode[] = [
     start: (ctx) => mountTrack(ctx, desertTrack(DESERT_SEED, ctx.map), true, []),
   },
   {
-    id: "bigair", name: "BIG AIR", blurb: "A minute in the arena: two kickers, four tricks, flips. Five judges pay.",
+    id: "bigair", name: "BIG AIR", blurb: "A minute down an endless line of big kickers, sized for your bike: a roll-in for speed, landings you never miss at full gas, four tricks, flips. Five judges pay.",
     maps: [{ id: "arena", name: "THE ARENA" }],
     start: (ctx) => mountAir(ctx),
   },

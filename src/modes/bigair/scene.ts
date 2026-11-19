@@ -1,7 +1,9 @@
-// Big Air: a freestyle show on a tabletop, on the player's own bike (from Fizlet's Big Air gallery
-// piece). An oval of packed dirt in a little arena: two big steel kickers, each throwing you over a
-// gap onto a dirt landing, a crowd stand along the far side; at night the steel glows with neon and
-// the stand twinkles, by day it is pastel low-poly. A minute from the first gas. In the air hold
+// Big Air: a freestyle show on the player's own bike (from Fizlet's Big Air gallery piece). An
+// endless straight of packed dirt in a stadium (./line.ts): a roll-in deck and a hill down for
+// speed, then a big steel kicker and a tabletop landing every so often, forever, sized for your bike
+// (a full-gas jump lands on the down ramp), banks and a stadium wall either side, crowd stands and
+// light towers along the line; at night the steel glows with neon and the stands twinkle, by day it
+// is pastel low-poly. A minute from the first gas. In the air hold
 // TRICK (L or E) and the stick picks a trick (none: SKY PLANK, forward: LANTERN, back: CANNONBALL,
 // side: PIXEL SPLIT); with no trick the stick pitches the bike (weight back all the way: a flip). Put
 // the trick away and land on the down ramp, clean, to score; land with the trick out and it is a
@@ -24,7 +26,8 @@ import type { ModeCtx, ModeRun } from "../mode.ts";
 import { rig, type Rig, type RigColors } from "../../bike/rig.ts";
 import { pool, voice, gamepad, type Pool } from "../../bike/kit.ts";
 import { TRICKS, CLEAN, SC, CB, PTS, LFLIPS, AIRT, BEST, FLIPS, CLEANS, CRASHES, JUMPS, SEEN } from "./tricks.ts";
-import { DONE, E_CRASH, E_END, E_LAND, E_RESPAWN, E_RESET, E_STUCK, E_START, E_TRICK, HX, HZ, KICK, KICK_L, LAP, NT, READY, RUN, RUN_T, TRACK, TRACK_W, TURN, YAW, airShow, trackEdges } from "./show.ts";
+import { DONE, E_CRASH, E_END, E_LAND, E_RESPAWN, E_RESET, E_STUCK, E_START, E_TRICK, READY, RUN, RUN_T, airShow } from "./show.ts";
+import { BANK_W, HW, LDECK, LKH, LKL, LSP, LX0, ROLL_H, ROLL_X, SCELL, SCOLS, WALL_AT, heightAt } from "./line.ts";
 import { speedo } from "../speedo.ts";
 import { keysHTML, menuKeys, paintMute as paintMuteK, paintView } from "../keys.ts";
 
@@ -51,6 +54,8 @@ const LIGHT: Pal = {
   team: { plastic: "#ff7a59", plastic2: "#ffffff", jersey: "#ff7a59", pants: "#2c3550", helmet: "#ffffff", stripe: "#13a9bb", plate: "#ffffff", ink: "#1b1420" },
 };
 const DUST = 120, SPARK = 60, FANS = 160;
+/** Scenery sets along the line (one per jump: the kicker's posts, the flags, a stand, towers), moved on as you ride. */
+const SETS = 4, SET_FANS = FANS / SETS;
 const CRASH_NAME: Record<number, string> = { [LOOP]: "LOOPED IT!", [ENDO]: "NOSED IN!", [CASE]: "CASED IT!", [BAIL]: "BAILED!", 5: "WIPEOUT!" };
 const KEYS_HINT = "In the air: L + stick for a trick · S held for a flip";
 
@@ -116,13 +121,15 @@ export function mountAir(ctx: ModeCtx): ModeRun {
   const show = airShow(ctx.seed, { power: ctx.bike.power, shape: ctx.bike.shape }), t = show.t, me = show.b, sc = show.sc;
   const dio = diorama(canvas, { light: P.light, ambient: P.amb, background: () => P.table, overlay: drawOverlay, get shadowColor() { return P.shadow; } });
   let tv: TerrainView, dust: Pool, spark: Pool, fans: Pool, g: Rig;
-  const EDGE = trackEdges(t);
+  const G = show.G;
   const rnd = seeded(ctx.seed);
   let sky: CanvasGradient | null = null;
   const STARS = new Float32Array(120);
   for (let i = 0; i < 120; i++) STARS[i] = rnd();
   // The crowd: where each fan's light sits (x, y, z), its colour slot.
   const FAN = new Float64Array(FANS * 3);
+  /** The scenery: its pieces (each its own root), each one's x from its set's kicker and its set; the jump each set stands at. */
+  const PIECES: ReturnType<typeof dio.add>[] = [], PIECE_X: number[] = [], PIECE_Q: number[] = [], SETJ = new Int32Array(SETS).fill(-99);
 
   function buildScene() {
     dio.clear();
@@ -130,45 +137,57 @@ export function mountAir(ctx: ModeCtx): ModeRun {
     dio.cluster("sky", { fixed: -10 });
     dio.cluster("table", { fixed: -5 });
     dio.decal("sky", 0, paintSky);
-    dio.add({ id: "table", size: [HX * 2 + 8, 0.5, HZ * 2 + 9], pos: [0, -1.55, 0.2], color: P.table, cluster: "table", layer: 0, pick: false });
-    dio.add({ id: "plinth", size: [HX * 2 + 0.5, 1.05, HZ * 2 + 0.5], pos: [0, -1.05, 0], color: P.plinth, cluster: "table", layer: 1, pick: false });
-    dio.add({ id: "rim", size: [HX * 2 + 0.7, 0.12, HZ * 2 + 0.7], pos: [0, -0.2, 0], color: P.rim, cluster: "table", layer: 2, emissive: true, pick: false });
     tv = terrainView(dio, t, {
-      bands: [[0.3, P.ground[0]!], [0.5, P.ground[1]!], [0.8, P.ground[2]!], [99, P.crest]], steep: 0.6, steepColor: P.steep, kinds: [P.track, P.steel, P.land],
-      light: P.light, ambient: P.amb, lod: [26, 46], shadows: 2, shadowColor: P.shadow,
+      bands: [[0.55, P.ground[0]!], [1.4, P.ground[1]!], [2.6, P.ground[2]!], [99, P.crest]], steep: 0.6, steepColor: P.steep, kinds: [P.track, P.steel, P.land],
+      light: P.light, ambient: P.amb, lod: [22, 40], shadows: 2, shadowColor: P.shadow, split: "adaptive",
     });
     dio.decal("terrain", 1, paintLines);
-    // The crowd stand along the far side: three stepped rows, the fans' lights over them.
-    for (let k = 0; k < 3; k++) dio.add({ size: [HX * 1.5, 0.45 + k * 0.45, 1.1], pos: [0, -0.2, -HZ + 0.75 - k * 0.32], color: k & 1 ? P.seat : P.stand, pick: false, layer: 1 + k, cluster: "stand" });
-    for (let k = 0; k < 3; k++) dio.add({ size: [HX * 1.5, 0.08, 0.3], pos: [0, 0.25 + k * 0.45, -HZ + 1.15 - k * 0.32], color: P.fans[k]!, emissive: P.night, pick: false, layer: 4 + k, cluster: "stand" });
+    // One scenery set per jump, all alike (every jump is the same shape), positions relative to its
+    // kicker's start: the kicker's posts and neon lights at the lip, flags at the knuckle, a crowd
+    // stand on the far side's outfield, a light tower each side.
+    SETJ.fill(-99);
+    const kx = G[LX0]!, lipX = G[LKL]!, knX = G[LKL]! + G[LDECK]!, sp = G[LSP]!, hAt = (dx: number, z: number) => heightAt(G, kx + dx, z);
+    const standZ = WALL_AT - 1.6, standY = hAt(sp * 0.5, standZ), standL = Math.min(sp * 0.8, 34);
+    // Each piece is its own root (its own depth-sorted cluster, so the bike draws in front of or
+    // behind it right); PIECE holds each one's x from its set's kicker.
+    PIECES.length = 0;
+    PIECE_X.length = 0;
+    const put = (q: number, rel: number, def: Parameters<typeof dio.add>[0]) => {
+      const o = dio.add({ ...def, cluster: `s${q}_${PIECES.length}` });
+      PIECES.push(o), PIECE_X.push(rel), PIECE_Q.push(q);
+      return o;
+    };
+    PIECE_Q.length = 0;
+    for (let q = 0; q < SETS; q++) {
+      for (const side of [-1, 1]) {
+        const z = side * (HW + 0.12), y = hAt(lipX, z), pid = `kp${q}${side}`;
+        put(q, lipX, { id: pid, shape: "cyl", sides: 6, size: [0.18, G[LKH]! + 0.4, 0.18], pos: [0, y - G[LKH]! + 0.1, z], color: P.tower, pick: false });
+        dio.add({ size: [0.26, 0.26, 0.26], on: pid, color: side > 0 ? P.edge : P.edge2, emissive: true, pick: false });
+        const fz = side * (HW + 0.6), fy = hAt(knX, fz), fid = `fl${q}${side}`;
+        put(q, knX, { id: fid, shape: "cyl", sides: 5, size: [0.08, 3.2, 0.08], pos: [0, fy, fz], color: P.tower, pick: false });
+        dio.add({ shape: "wedge", size: [0.7, 0.45, 0.04], pos: [0.35, -0.5, 0], on: fid, color: side > 0 ? P.edge : P.edge2, emissive: P.night, pick: false });
+        // A light tower on the outfield, between this jump and the next.
+        const tz = side * (HW + BANK_W + 2.2), tx = sp * 0.62 + side * 3, tid = `tw${q}${side}`;
+        put(q, tx, { id: tid, shape: "cyl", sides: 6, size: [0.3, 5.4, 0.3], pos: [0, hAt(tx, tz) - 0.1, tz], color: P.tower, pick: false });
+        dio.add({ size: [1.3, 0.5, 0.25], rot: [0, Math.PI / 2, 0], on: tid, color: P.tower, pick: false });
+        dio.add({ size: [1.1, 0.34, 0.27], pos: [0, 0.08, 0], rot: [0, Math.PI / 2, 0], on: tid, color: P.lamp, emissive: true, pick: false, layer: 9 });
+      }
+      // The crowd stand: three stepped rows on the far outfield, across the line from the chase camera (one piece), the fans' lights over them.
+      const sid = `st${q}`;
+      put(q, sp * 0.5, { id: sid, size: [standL, 0.45, 1.1], pos: [0, standY - 0.2, standZ], color: P.stand, pick: false, layer: 1 });
+      for (let k = 1; k < 3; k++) dio.add({ size: [standL, 0.45 + k * 0.45, 1.1], pos: [0, -0.45, k * 0.9], on: sid, color: k & 1 ? P.seat : P.stand, pick: false, layer: 1 + k });
+      for (let k = 0; k < 3; k++) dio.add({ size: [standL, 0.08, 0.3], pos: [0, k * 0.45, -0.4 + k * 0.9], on: sid, color: P.fans[k]!, emissive: P.night, pick: false, layer: 4 + k });
+    }
     for (let i = 0; i < FANS; i++) {
-      const row = i % 3;
-      FAN[i * 3] = -HX * 0.74 + ((i / 3) | 0) * ((HX * 1.48) / (FANS / 3));
-      FAN[i * 3 + 1] = 0.45 + row * 0.45;
-      FAN[i * 3 + 2] = -HZ + 1.1 - row * 0.32;
+      const row = i % 3, n = i % SET_FANS;
+      // Relative to its set's kicker (placeSets adds the set's place).
+      FAN[i * 3] = sp * 0.5 - standL * 0.46 + ((n / 3) | 0) * ((standL * 0.92) / (SET_FANS / 3));
+      FAN[i * 3 + 1] = standY + 0.45 + row * 0.45;
+      FAN[i * 3 + 2] = standZ - 0.4 + row * 0.9;
     }
-    // Light towers at the corners.
-    for (const [x, z] of [[-HX + 1.2, -HZ + 1.6], [HX - 1.2, -HZ + 1.6], [-HX + 1.2, HZ - 1.2], [HX - 1.2, HZ - 1.2]] as const) {
-      const id = "tw" + x + z;
-      dio.add({ id, shape: "cyl", sides: 6, size: [0.3, 4.6, 0.3], pos: [x, t.height(x, z) - 0.1, z], color: P.tower, pick: false });
-      dio.add({ size: [1.3, 0.5, 0.25], rot: [0, Math.atan2(-z, x) + Math.PI / 2, 0], on: id, color: P.tower, pick: false });
-      dio.add({ size: [1.1, 0.34, 0.27], pos: [0, 0.08, 0], rot: [0, Math.atan2(-z, x) + Math.PI / 2, 0], on: id, color: P.lamp, emissive: true, pick: false, layer: 9 });
-    }
-    // The kickers' posts and neon lights at the lip; flags at the landings.
-    for (let k = 0; k < 2; k++) {
-      const s0 = KICK[k]!, i0 = Math.round(s0 / (LAP / NT)) % NT, i1 = Math.round((s0 + KICK_L) / (LAP / NT)) % NT, yaw = YAW[i0]!;
-      for (const side of [-1, 1]) {
-        const x = TRACK[i1 * 2]! + Math.sin(yaw) * side * (TRACK_W / 2 + 0.08), z = TRACK[i1 * 2 + 1]! + Math.cos(yaw) * side * (TRACK_W / 2 + 0.08);
-        dio.add({ shape: "cyl", sides: 6, size: [0.18, 2.9, 0.18], pos: [x, 0.2, z], color: P.tower, pick: false });
-        dio.add({ size: [0.24, 0.24, 0.24], pos: [x, 3.0, z], color: side > 0 ? P.edge : P.edge2, emissive: true, pick: false });
-      }
-      const il = Math.round((s0 + KICK_L + 6.4 + 1.5) / (LAP / NT)) % NT;
-      for (const side of [-1, 1]) {
-        const x = TRACK[il * 2]! + Math.sin(YAW[il]!) * side * (TRACK_W / 2 + 0.5), z = TRACK[il * 2 + 1]! + Math.cos(YAW[il]!) * side * (TRACK_W / 2 + 0.5), id = "fl" + k + side;
-        dio.add({ id, shape: "cyl", sides: 5, size: [0.08, 3.2, 0.08], pos: [x, t.height(x, z), z], color: P.tower, pick: false });
-        dio.add({ shape: "wedge", size: [0.7, 0.45, 0.04], pos: [0.35, 2.7, 0], on: id, color: side > 0 ? P.edge : P.edge2, emissive: P.night, pick: false });
-      }
-    }
+    // The roll-in's start deck: a gantry over it.
+    for (const side of [-1, 1]) dio.add({ size: [0.3, 4.2, 0.3], pos: [ROLL_X + 1.5, ROLL_H - 0.1, side * (HW + 0.4)], color: P.tower, pick: false });
+    dio.add({ size: [0.5, 0.9, HW * 2 + 1.1], pos: [ROLL_X + 1.5, ROLL_H + 3.6, 0], color: P.rim, emissive: P.night, pick: false });
     g = rig(dio, "rider", { ...P.kit, ...ctx.look }, ctx.bike.rig, ctx.helmet);
     dust = pool(dio, DUST, P.dust, 4);
     spark = pool(dio, SPARK, P.spark, 6);
@@ -176,6 +195,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
     fans.P.n = FANS;
     for (let i = 0; i < FANS; i++) (fans.P.x[i] = FAN[i * 3]!), (fans.P.y[i] = FAN[i * 3 + 1]!), (fans.P.z[i] = FAN[i * 3 + 2]!), (fans.P.r[i] = 0.07), (fans.P.a[i] = P.night ? 0.8 : 0.9);
     sky = null;
+    placeSets();
     pose();
   }
 
@@ -189,7 +209,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
   const was = new Float64Array(8).fill(-1);
   const TABLE = { yaw: 0, pitch: 0.78, dist: 40, tx: 0, ty: 0, tz: 0.6, ox: 0, oy: 0, fov: 0.62 };
   // Fixed for the event (no zoom; set once from the stage shape at the start).
-  const chaseO = { dist: 11, pitch: 0.3, lift: 1.2, ahead: 0.35, rate: 3.2, turn: 2.4, side: 1.05, snap: !!ctx.reduced };
+  const chaseO = { dist: 11, pitch: 0.3, lift: 1.2, ahead: 0.35, rate: 3.2, turn: 2.4, side: 0.72, snap: !!ctx.reduced };
   const VEL = new Float64Array(3), CTP = new Float64Array(3), target = { pos: CTP, yaw: 0, vel: VEL };
   // Resizes are debounced; only a new width refits the framing (height-only is the mobile URL bar).
   let rzT: ReturnType<typeof setTimeout> | 0 = 0;
@@ -203,6 +223,20 @@ export function mountAir(ctx: ModeCtx): ModeRun {
   addEventListener("gamepadconnected", () => ((V[6] = 1), engine.wake()), sig);
   engine.signal.addEventListener("abort", () => (ro.disconnect(), mo.disconnect(), vox.close(), rzT && clearTimeout(rzT)), { once: true });
 
+  /** The scenery sets on the jumps round the bike (one behind, the one it is on, two ahead); a set
+   *  that falls behind moves on ahead, and its fans with it. */
+  function placeSets() {
+    const j0 = Math.max(0, show.jump) - 1;
+    for (let q = 0; q < SETS; q++) {
+      // Set q stands at the jump in j0 .. j0 + 3 that is q mod SETS.
+      const j = j0 + ((((q - j0) % SETS) + SETS) % SETS);
+      if (SETJ[q] === j) continue;
+      SETJ[q] = j;
+      const x = G[LX0]! + j * G[LSP]!;
+      for (let n = 0; n < PIECES.length; n++) if (PIECE_Q[n] === q) PIECES[n]!.pos[0] = x + PIECE_X[n]!;
+      for (let n = q * SET_FANS; n < (q + 1) * SET_FANS; n++) fans.P.x[n] = FAN[n * 3]! + x;
+    }
+  }
   /** The rider's trick pose from the trick out and how far (see rig's TRICK_POSE). */
   function pose() {
     const T = g.T, a = show.trickAmount, id = show.trick;
@@ -213,7 +247,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
     else if (id === 3) (T[7] = a), (T[4] = 0.15 * a);
     g.pose(me, me.air > 0 || Math.abs(me.speed) > 4 ? 0.9 : 0.4);
     walkHud.update(me);
-    const x = me.pos[0]!, z = me.pos[2]!, inside = Math.abs(x) < HX && Math.abs(z) < HZ, lift = inside ? me.pos[1]! - t.height(x, z) : 9;
+    const x = me.pos[0]!, z = me.pos[2]!, inside = x > t.x0 && x < t.x0 + SCOLS * SCELL, lift = inside ? me.pos[1]! - t.height(x, z) : 9;
     tv.shadow(0, x, z, 1.0, inside ? Math.max(0, 0.38 - lift * 0.06) : 0);
   }
 
@@ -316,23 +350,24 @@ export function mountAir(ctx: ModeCtx): ModeRun {
   }
 
   function frameTable() {
-    const pts = [-HX - 0.4, -1.1, -HZ - 0.4, HX + 0.4, -1.1, -HZ - 0.4, -HX - 0.4, -1.1, HZ + 0.4, HX + 0.4, -1.1, HZ + 0.4, -HX, 3.4, -HZ, HX, 3.4, -HZ];
+    // The side view: high over the near bank, the line running across the screen, following the bike.
     const W = dio.width, H = dio.height, tall = H / W > 0.75;
-    TABLE.yaw = tall ? -0.5 : 0;
-    TABLE.pitch = tall ? 0.95 : 0.74;
-    TABLE.dist = 40;
-    TABLE.tx = TABLE.ty = TABLE.ox = TABLE.oy = 0;
-    TABLE.tz = 0.6;
-    dio.fit(TABLE, pts, { x0: 8, y0: V[3]!, x1: W - 8, y1: H - V[4]! });
+    TABLE.yaw = tall ? -0.5 : -0.28;
+    TABLE.pitch = tall ? 0.72 : 0.5;
+    TABLE.dist = tall ? 44 : 36;
+    TABLE.ty = 1;
+    TABLE.tz = 0;
+    TABLE.ox = TABLE.oy = 0;
+    TABLE.tx = me.pos[0]! + 8;
     if (!chaseSet) (chaseSet = true), (chaseO.dist = tall ? 12.5 : 11), (chaseO.pitch = tall ? 0.42 : 0.3);
   }
   function stepCam(dt: number) {
     const cam = dio.cam;
     if (!me.crashed) target.yaw = me.yaw;
     const src = me.crashed ? me.rider : me.pos;
-    CTP[0] = Math.max(-HX - 1, Math.min(HX + 1, src[0]!));
+    CTP[0] = src[0]!;
     CTP[1] = Math.max(-1, src[1]! * 0.85);
-    CTP[2] = Math.max(-HZ - 1, Math.min(HZ + 1, src[2]!));
+    CTP[2] = Math.max(-HW - 8, Math.min(HW + 8, src[2]!));
     VEL[0] = me.cy * me.speed; VEL[1] = 0; VEL[2] = -me.sy * me.speed;
     if (view) {
       const m = chase(cam, target, chaseO, dt), k = 1 - Math.exp(-4 * dt);
@@ -341,6 +376,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
       return m || Math.abs(cam.ox) + Math.abs(cam.oy) > 0.2;
     }
     const k = ctx.reduced ? 1 : 1 - Math.exp(-2.6 * dt);
+    TABLE.tx = src[0]! + 8;
     let moving = false;
     for (const key of ["yaw", "pitch", "dist", "tx", "ty", "tz", "ox", "oy"] as const) {
       let d = TABLE[key] - cam[key];
@@ -402,19 +438,25 @@ export function mountAir(ctx: ModeCtx): ModeRun {
       ctx.globalAlpha = 1;
     }
   }
+  /** The line's neon edges, along both sides from behind the bike to far ahead, just over the dirt. */
   function paintLines(ctx: CanvasRenderingContext2D) {
     ctx.lineCap = "round";
-    const f = dio.focal();
+    const f = dio.focal(), x0 = Math.max(ROLL_X, t.x0 + 1), x1 = t.x0 + SCOLS * SCELL - 1;
     for (let side = 0; side < 2; side++) {
       ctx.strokeStyle = side ? P.edge : P.edge2;
-      for (let i = 0; i < NT; i++) {
-        const a = side * NT * 3 + i * 3, b = side * NT * 3 + ((i + 1) % NT) * 3;
-        if (!dio.project(EDGE[a]!, EDGE[a + 1]!, EDGE[a + 2]!, tmp) || tmp[2]! < 0.5 || !dio.project(EDGE[b]!, EDGE[b + 1]!, EDGE[b + 2]!, tmp2) || tmp2[2]! < 0.5) continue;
-        ctx.lineWidth = Math.max(1, (f * 0.16) / tmp[2]!);
-        ctx.beginPath();
-        ctx.moveTo(tmp[0]!, tmp[1]!);
-        ctx.lineTo(tmp2[0]!, tmp2[1]!);
-        ctx.stroke();
+      const z = (side ? 1 : -1) * (HW + 0.05);
+      let pen = false;
+      for (let x = Math.ceil(x0); x <= x1; x += 1) {
+        if (!dio.project(x, t.height(x, z) + 0.04, z, tmp) || tmp[2]! < 0.5) { pen = false; continue; }
+        if (pen) {
+          ctx.lineWidth = Math.max(1, (f * 0.16) / tmp[2]!);
+          ctx.beginPath();
+          ctx.moveTo(tmp2[0]!, tmp2[1]!);
+          ctx.lineTo(tmp[0]!, tmp[1]!);
+          ctx.stroke();
+        }
+        tmp2[0] = tmp[0]!; tmp2[1] = tmp[1]!; tmp2[2] = tmp[2]!;
+        pen = true;
       }
     }
   }
@@ -504,6 +546,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
       if (show.n) events(), (moving = true);
       if (stepFx(dt)) moving = true;
       if (stepCam(dt)) moving = true;
+      placeSets();
       if (shake > 0) (shake = Math.max(0, shake - dt)), (moving = true);
       if (toastT > 0) (toastT = Math.max(0, toastT - dt)), (moving = true), toastT === 0 && (toastEl.hidden = true);
       if (moving) e.busy(), (dirty = true), (hudDirty = true);
@@ -572,7 +615,6 @@ export function mountAir(ctx: ModeCtx): ModeRun {
   engine.busy(2);
   engine.start();
   if (!ctx.attract) play.focus({ preventScroll: true });
-  void TURN;
   return {
     engine,
     get auto() {
@@ -584,7 +626,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
     },
     get state() {
       const S = sc.S, ph = show.phase;
-      return { phase: ph === READY ? "ready" : ph === RUN ? "run" : ph === DONE ? "done" : "idle", speed: me.speed, walking: me.walking, clock: show.clock, score: S[SC]!, combo: S[CB]!, trick: show.trick, air: me.air, crashes: S[CRASHES]!, jumps: S[JUMPS]!, view: view ? "chase" : "arena", judges: sc.JD[5]!, ended };
+      return { phase: ph === READY ? "ready" : ph === RUN ? "run" : ph === DONE ? "done" : "idle", speed: me.speed, walking: me.walking, clock: show.clock, score: S[SC]!, combo: S[CB]!, trick: show.trick, air: me.air, crashes: S[CRASHES]!, jumps: S[JUMPS]!, view: view ? "chase" : "arena", judges: sc.JD[5]!, ended, x: me.pos[0]!, z: me.pos[2]!, far: show.far, jump: show.jump, k: G[0]!, landedOn: show.landedOn, faces: tv.stats.faces, slides: show.strip.stats[0]! };
     },
     get camera() {
       return { dist: view ? dio.cam.dist : chaseO.dist, fov: dio.cam.fov, view: view ? "chase" : "table" };
