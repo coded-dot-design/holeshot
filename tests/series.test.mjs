@@ -129,7 +129,7 @@ test("save: v1 → v2 adds the series (three wins open the Pro Circuit); broken 
   assert.equal(P.VERSION, 6);
   const v1 = { v: 1, name: "OLD", credits: 900, bikes: [{ uid: "b1", model: "anvil" }], stats: { events: 9, wins: 4, earned: 3000, best: { "race:moto-track": 41.2 } } };
   const p = P.migrate(v1);
-  assert.deepEqual(p.series, { best: { rookie: 1 }, titles: 0, run: null, last: null });
+  assert.deepEqual(p.series, { best: { rookie: 1 }, bestSx: {}, titles: 0, run: null, last: null });
   assert.equal(S.unlocked(p.series, "pro"), true);
   assert.deepEqual([p.credits, p.bikes[0].model, p.stats.best["race:moto-track"]], [900, "anvil", 41.2], "the rest kept");
   assert.deepEqual(P.migrate({ ...v1, stats: { wins: 1 } }).series.best, {});

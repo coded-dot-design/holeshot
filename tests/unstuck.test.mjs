@@ -73,7 +73,7 @@ test("race unstuck: R resets on the next step, behind; it never skips ahead", ()
 
 const A = await import("../src/modes/bigair/show.ts");
 
-test("big air unstuck: wedged → the prompt → back to the run-in of the jump; R does it at once", () => {
+test("big air unstuck: wedged → the prompt → back to a run-in on the line; R does it at once", () => {
   const sh = A.airShow(3, { power: t.power, shape: t.shape }), I = new Float64Array(6), b = sh.b;
   sh.go(t.power);
   const run = (n, pin = null) => {
@@ -94,9 +94,10 @@ test("big air unstuck: wedged → the prompt → back to the run-in of the jump;
   const prompt = ev.find((e) => e[0] === A.E_STUCK && e[1] === 1), reset = ev.find((e) => e[0] === A.E_RESET);
   assert.ok(prompt && reset && reset[1] === 2, "the prompt, then the automatic reset");
   assert.ok(prompt[2] / 60 >= 1.9 && reset[2] / 60 >= 3.9 && reset[2] / 60 < 4.6, `prompt ${(prompt[2] / 60).toFixed(2)} s, reset ${(reset[2] / 60).toFixed(2)} s`);
-  const runIns = A.KICK.map((k) => (((k - 10.5) % A.LAP) + A.LAP) % A.LAP);
-  const at = A.sAt(sh.nearIndex());
-  assert.ok(runIns.some((s) => Math.abs(s - at) < 0.6), `on a run-in (${at.toFixed(1)} of ${runIns.map((s) => s.toFixed(1))})`);
+  // Back on the line (Big Air is an endless straight: src/modes/bigair/line.ts): the roll-in deck,
+  // or the deck of the jump before, whose down ramp gives the speed back.
+  const spots = [A.START_X, ...Array.from({ length: 60 }, (_, j) => sh.knuckleAt(j) - 2.5)], at = b.pos[0];
+  assert.ok(spots.some((x) => Math.abs(x - at) < 0.6) && Math.abs(b.pos[2]) < 0.01, `on a run-in (${at.toFixed(1)})`);
   assert.ok(!b.crashed && Math.abs(b.rel) < 0.05, "upright");
   I[0] = 1; I[2] = 0;
   run(60 * 2);

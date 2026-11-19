@@ -45,8 +45,12 @@ pick your jersey and a name. That bike rides every event.
   (the same dune is always the same dune); the bike rides an 80 × 80 unit window of it that slides
   with you. The HUD counts the distance in miles, or kilometres with UNITS set to Metric in SETTINGS (a
   unit is about a metre: the bike's wheelbase is 1.5), and your best distance is kept in the profile. END banks it (Free Ride's pay, plus 20 a km, under its cap).
-- **Big Air**: a minute in the arena, two steel kickers. Hold TRICK in the air and the stick picks
-  one of four tricks; weight all the way back flips it. Five judges score the run and pay.
+- **Big Air**: a minute down an endless straight in a stadium: a roll-in deck and a hill down for
+  speed, then a steel kicker and a tabletop landing every so often, forever, banks either side and a
+  stadium wall past them (you never leave the line or turn round). The jumps are sized by your bike's
+  top speed (every length and height × (top / 17.5)², so the flight is the same shape on any bike): a
+  full-gas jump lands on the landing's down ramp, a short one on its deck. Hold TRICK in the air and
+  the stick picks one of four tricks; weight all the way back flips it. Five judges score the run and pay.
 - **Endless Wheelie City**: an open world of roads, towns and fields that never ends, in every
   direction (the same world on every screen): long smooth roads sweep across rolling fields
   (highways, smaller roads branching off, junctions and roundabouts, kickers now and then on the
@@ -66,8 +70,15 @@ you loop out. A building between the chase camera
   and the bike fades to a ghost (outlined) and comes back when the bike is clear; one the camera is
   all but inside fades out completely.
 - **Series**: three championship tiers (ROOKIE CUP, PRO CIRCUIT, NEON MASTERS) of four to six
-  rounds; every round is a new generated track, harder round by round, against named rivals on
-  modded bikes; points, prizes and a title bonus.
+  rounds, at either venue: **MX** (outdoors: every round a new generated track, harder round by
+  round) or **SX** (the stadium tracks in turn); against named rivals on modded bikes; points, prizes
+  and a title bonus. Each venue unlocks its own tiers.
+- **Venues (MX and SX)**: Race, Series and Free Ride ride either. **MX** is the outdoor tracks made
+  bigger for the fast bikes: straights and turn radii × 1.3, the track 4.6 wide (was 3.4), the
+  berms as high as it is wider; the jumps keep their size. **SX** is two original stadium tracks
+  (NEON DOME, VOLT ARENA): a near-flat floor under the lights between walls, short straights joined by
+  hairpins, rhythm doubles, whoops, a tight triple, a 3.2-wide track; Free Ride SX rides their floors.
+  Online rides MX.
 
 - **Online**: up to four riders, each on their own garage bike (its mods, its wear, its paint and
   your kit travel to every screen). The host picks a **race** on a new generated track (ROOKIE, PRO
@@ -145,6 +156,7 @@ metre each; 1 km = 0.621371 mi). Under `?credits=inf` the switch shows but is no
 import { createHoleshot } from "./dist/holeshot.mjs";
 const game = createHoleshot({ host: document.querySelector("#stage") }); // setup or the menu
 game.start("race");                         // or "freeride", "bigair", "wheelie"
+game.start("race", { venue: "sx" });         // Race, Series and Free Ride: venue "mx" (default) or "sx"
 createHoleshot({ host, attract: true });     // the landing hero: a race on the autopilot
 createHoleshot();                            // a layer over the whole page; Escape gives it back
 ```

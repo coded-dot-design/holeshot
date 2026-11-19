@@ -17,8 +17,8 @@ export const MX_SCALE = 1.3, MX_W = 4.6;
 /** SX: the track's width. */
 export const SX_W = 3.2;
 
-/** A plan made into its MX version: straights, turn radii, feature places and the table scaled, the
- *  track wider. The gate and the lap line stay put (on the first straight); the features keep their
+/** A plan made into its MX version (id + "-mx"): straights, turn radii, feature places and the table
+ *  scaled, the track wider and its berms higher. The gate and the lap line stay put (on the first straight); the features keep their
  *  size. Idempotent per plan (an MX plan is not scaled again). Pure. */
 export function mxPlan(p: TrackPlan, s = MX_SCALE): TrackPlan {
   if (p.venue === "mx" || p.venue === "sx") return p;
@@ -32,7 +32,8 @@ export function mxPlan(p: TrackPlan, s = MX_SCALE): TrackPlan {
   for (let k = 0; k < features.length; k += 3) if (features[k + 1]) features[k + 2] = r3(features[k + 2]! * s);
   const even = (v: number) => Math.ceil((v * s) / 2) * 2;
   return {
-    ...p, venue: "mx", width: MX_W, A: r3(p.A * s), B: r3(p.B * s), RAD: r3(p.RAD * s), plan, features,
+    // Its own id (a best time on the MX loop is not one on the old loop).
+    ...p, id: p.id + "-mx", venue: "mx", width: MX_W, A: r3(p.A * s), B: r3(p.B * s), RAD: r3(p.RAD * s), plan, features,
     start: p.start ? [r3(p.start[0] * s), r3(p.start[1] * s), p.start[2]] : undefined,
     cols: even(p.cols), rows: even(p.rows),
   };

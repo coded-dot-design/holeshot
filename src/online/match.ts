@@ -57,7 +57,8 @@ const mix = (a: number, b: number) => {
 export const rideSeed = (room: number, round: number) => mix(room >>> 0, 7000 + round);
 const TRACKS = new Map<string, Track>(), MAPS = new Map<number, Track | RideMap>();
 /** A race's track: generated from the ride's seed at the tier's difficulty (validated, kept once made),
- *  at the MX venue (../modes/race/venue.ts: online rides MX; SX is solo for now). */
+ *  at the MX venue (../modes/race/venue.ts: online races ride MX; SX is solo for now; the jam keeps
+ *  today's loop). */
 export function raceTrack(seed: number, tier: number, round: number): Track {
   const T = TIERS[tier] ?? TIERS[0]!, d = difficulty({ tier: T.id }, round % T.rounds), key = `${seed}:${d}`;
   let t = TRACKS.get(key);
@@ -73,7 +74,7 @@ export function raceTrack(seed: number, tier: number, round: number): Track {
 export function jamMap(i: number): Track | RideMap {
   const k = Math.max(0, Math.min(JAM_MAPS.length - 1, i));
   let m = MAPS.get(k);
-  if (!m) MAPS.set(k, (m = k ? makeMap(RIDE_MAPS[k - 1]!) : makeTrack(mxPlan(MOTO_TRACK))));
+  if (!m) MAPS.set(k, (m = k ? makeMap(RIDE_MAPS[k - 1]!) : makeTrack(MOTO_TRACK)));
   return m;
 }
 

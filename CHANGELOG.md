@@ -1,5 +1,34 @@
 # Changelog
 
+## Unreleased
+
+- **Big Air is an endless line.** No more oval: a roll-in deck and a hill down for speed, then a
+  steel kicker and a tabletop landing every so often, forever, with banks either side and a stadium
+  wall past them, so a fast bike never flies off the side or has to turn round. The jumps are sized
+  by the bike's top speed (every length and height × (top / 17.5)²: the same flight on any bike, a
+  bigger one for a faster bike): at full gas every bike in the garage lands every jump on the
+  down ramp over 2 km (tests/venue.test.mjs: 26 jumps on the fastest, 67 on the slowest, no crash).
+  The ground streams round the rider (a strip that slides along the line: the desert's pattern),
+  deterministic per bike, zero allocation per step. Tricks, flips, the TRICK key, the minute and the
+  judges are as they were; crowd stands, light towers, posts and flags ride along with the jumps.
+  The Big Air golden (`big air run`) changes: it is a new course.
+- **MX and SX venues** for Race, Series and Free Ride (`game.start(id, { venue: "mx" | "sx" })`, MX
+  by default). **MX** is today's outdoor tracks made bigger for the fast bikes: straights and turn
+  radii × 1.3, the track 4.6 wide (was 3.4), the berms higher to match (the jumps keep their size).
+  A fast rider (full gas to the bike's top, braking for each turn by its radius) on four tracks goes
+  off the track 46 times across the six fastest classes today and 10 times on MX (supersport 7 → 0,
+  naked 15 → 0, the fast 2-stroke 5 → 0, the fast e-moto 19 → 10). **SX** is two original stadium
+  tracks (NEON DOME, VOLT ARENA): a near-flat floor under the lights between walls with lit panels and
+  lighting trusses, short straights and hairpins, rhythm doubles, whoops, a tight triple, a narrower
+  track; every starter finishes three of each clean. Free Ride SX rides their floors.
+- **Series per venue**: an MX and an SX championship (`enter(profile, tier, seed, venue)`); SX rounds
+  take the stadium tracks in turn. A saved series is MX (its best places stay; SX's start empty:
+  `series.bestSx`, added on load, no profile version change).
+- Online races ride MX (deterministic as before); the online jam keeps today's loop; SX is solo for now.
+- Perf (390 px, 4× CPU throttle, the autopilot): a race on MX draws about the same terrain faces a
+  frame as today's loop (2,296 vs 2,205, MX and SX step their detail down sooner) at the same frame
+  p50 (66.7 ms); SX 2,583 faces, p50 66.7 ms; Big Air's p50 50 ms as before.
+
 ## 0.5.5 — 2026-11-19
 
 - **Every endless ride has the same controls as Endless Wheelie City.** The Endless Desert and each
