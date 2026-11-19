@@ -83,6 +83,8 @@ try {
     await press("[data-turn='-1']");
     await until(p, "game.profile.ride === 0", `${name}: ‹ previous bike`);
     ok("turntable ‹ › (swap the bike that rides)");
+    for (const want of ["track", "sunset", "auto"]) await press("[data-backdrop]"), await until(p, `game.profile.settings.backdrop === ${JSON.stringify(want)}`, `${name}: backdrop ${want}`);
+    ok("the turntable's backdrop (Auto · Track · Sunset, saved)");
 
     // ---- My Bikes: select, sell (confirm, trade value), unlock a bay ----
     await press("[data-bays]");

@@ -165,3 +165,5 @@
 .shop .shop-tile-art>svg{width:auto;height:100%;max-width:100%}
 /* A key that reads as a link ("More bikes ↓"): btn(label, attrs, false, "shop-link"). */
 .shop .shop-btn.shop-link{border-color:transparent;background:none;box-shadow:none;color:var(--shop-soft-ink);padding:0 4px}
+.shop .shop-chip{position:absolute;left:10px;bottom:10px;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border:1.5px solid var(--shop-line);border-radius:22px;background:color-mix(in srgb,var(--shop-panel) 88%,transparent);color:var(--shop-ink);font:inherit;font-size:14px;cursor:pointer;transform:none!important;box-shadow:none!important}
+.shop .shop-chip small{font:500 10px/1 var(--shop-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--shop-mute)}

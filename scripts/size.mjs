@@ -116,8 +116,11 @@ import { readdirSync, readFileSync } from "node:fs";
 // holeshot.js, 236,151 B holeshot.mjs (+11,850 B over main's 224,501; about 1.1 KB of room).
 // The app icon in every header (site/public/brand/holeshot-icon.svg inline, 3,393 B, its paths don't
 // share the wordmark's) and the garage's own Day / Night key: +1,255 B measured (236,351 → 237,606
-// holeshot.js); budget 237,500 → 239,000 (about 1.4 KB of room).
-const BUDGET = 239_000;
+// holeshot.js); budget 237,500 → 239,000 (about 1.4 KB of room). The turntable's backdrops (TRACK, an
+// MX day; SUNSET, a synthwave night; AUTO follows Day / Night; diorama shapes, no images; the
+// BACKDROP chip and the saved pick): +1,215 B measured (237,606 → 238,821 holeshot.js; the module
+// 1,195 B gzip on its own); budget 239,000 → 240,500 (about 1.7 KB of room).
+const BUDGET = 240_500;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

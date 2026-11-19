@@ -75,7 +75,7 @@ export interface Profile {
   /** Events since the pit crew last helped. */
   pit: number;
   /** `units`: distances and speeds as shown (display only): miles and mph, or km and km/h. */
-  settings: { sound: boolean; view: "chase" | "table"; units: Units };
+  settings: { sound: boolean; view: "chase" | "table"; units: Units; backdrop?: "auto" | "track" | "sunset" };
   /** The Race Series (./series.ts): best place per tier, titles, the championship under way. */
   series: SeriesSave;
   /** When the last online payouts were (ms since 1970, newest last): the online bonus's hourly cap
@@ -179,7 +179,7 @@ export function normalize(raw: unknown): Profile {
     owned: Array.isArray(o.owned) ? o.owned.filter((s): s is string => typeof s === "string").slice(0, 400) : [],
     stats: { events: int(st.events, 0, 0, 1e9), wins: int(st.wins, 0, 0, 1e9), earned: int(st.earned, 0, 0, 1e12), best, far },
     pit: int(o.pit, 0, 0, 1e6),
-    settings: { sound: set.sound !== false, view: set.view === "table" ? "table" : "chase", units: set.units === "metric" ? "metric" : "imperial" },
+    settings: { sound: set.sound !== false, view: set.view === "table" ? "table" : "chase", units: set.units === "metric" ? "metric" : "imperial", backdrop: set.backdrop === "track" || set.backdrop === "sunset" ? set.backdrop : "auto" },
     series: normSeries(o.series),
     online: (Array.isArray(o.online) ? o.online : []).filter((t): t is number => typeof t === "number" && isFinite(t) && t > 0).slice(-ONLINE.keep),
   };
