@@ -287,7 +287,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   };
 
   // ---- an event ----
-  function startEvent(id: ModeId, opt: { map?: string; seed?: number; auto?: boolean } = {}) {
+  function startEvent(id: ModeId, opt: { map?: string; seed?: number; auto?: boolean; venue?: "mx" | "sx" } = {}) {
     if (!ready(profile)) return show("setup");
     if (id === "series" && !profile.series.run) return show("series");
     // A part that may fail (or has): say so before the ride; RIDE ANYWAY goes on.
@@ -307,6 +307,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       look: L2.look, helmet: L2.helmet, number: L2.number, name: profile.name,
       seed: opt.seed ?? ((o.seed ?? 20261114) + profile.stats.events * 7919) >>> 0,
       map: opt.map,
+      venue: opt.venue,
       best: profile.stats.far[farKey(id, opt.map)] ?? 0,
       units: profile.settings.units,
       auto: opt.auto ?? !!o.attract,

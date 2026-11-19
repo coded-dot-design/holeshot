@@ -90,6 +90,18 @@ const DARK = {
   ],
 };
 export type Pal = typeof DARK;
+/** SX (a stadium, indoors: ./venue.ts): the night show under the roof (dark), the arena with its house
+ *  lights up (light). Packed brown stadium dirt, a concrete floor, the walls in the team colours. */
+const SX_DARK: Partial<Pal> = {
+  sky0: "#04030a", sky1: "#0d0a1c", sky2: "#1d1233", star: "#ffd166", amb: 0.42,
+  ground: ["#2a1d2e", "#2f2133", "#342438"], crest: "#3a2a40", steep: "#1e1424", track: "#4a2f3a", face: "#6a4150",
+  plinth: "#1a1730", rim: "#ff4fa8", table: "#08070f", tuff: "#22e6ff", tuffTop: "#fff2c2", banner: "#ffd166",
+};
+const SX_LIGHT: Partial<Pal> = {
+  sky0: "#4a4f66", sky1: "#6d7290", sky2: "#a9aec8", star: "#ffffff", amb: 0.58,
+  ground: ["#b88a62", "#b28460", "#ac7f5c"], crest: "#c29670", steep: "#8f6648", track: "#9a6a48", face: "#b58058",
+  plinth: "#e9e4f2", rim: "#ff7a59", table: "#c9c4d6", tuff: "#13a9bb", tuffTop: "#ffffff", banner: "#ff7a59",
+};
 const LIGHT: Pal = {
   ...DARK, night: false, light: [0.6, 1, 0.45], amb: 0.54,
   sky0: "#bfe6ff", sky1: "#d9f0ff", sky2: "#fff1dc", star: "#ffffff", grid: "#ffffff",
@@ -137,9 +149,11 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   // Endless Desert: no table, no line; the world streams round the rider (../desert/).
   const endless = "isEndless" in track ? (track as DesertTrack) : null;
   const bp = endless ? biomePal(endless.biome.bi) : null;
-  const DK: Pal = look ? { ...DARK, ...look.dark } : bp ? { ...DARK, ...bp.dark } : DARK, LT: Pal = look ? { ...LIGHT, ...look.light } : bp ? { ...LIGHT, ...bp.light } : LIGHT;
+  // SX: a stadium track (./venue.ts): indoor colours and the stadium's walls.
+  const sx = !map && !endless && (track as Track).venue === "sx";
+  const DK: Pal = look ? { ...DARK, ...look.dark } : bp ? { ...DARK, ...bp.dark } : sx ? { ...DARK, ...SX_DARK } : DARK, LT: Pal = look ? { ...LIGHT, ...look.light } : bp ? { ...LIGHT, ...bp.light } : sx ? { ...LIGHT, ...SX_LIGHT } : LIGHT;
   let P: Pal = document.documentElement.dataset.theme === "light" ? LT : DK;
-  const { HX, HZ, NT, TRACK, YAW } = track, { TURN, LAP, GATE_S, LINE_S } = track as Track;
+  const { HX, HZ, NT, TRACK, YAW } = track, { TURN, LAP, GATE_S, LINE_S } = track as Track, TW = (track as Track).W ?? TRACK_W;
   const me0 = { power: ctx.bike.power, shape: ctx.bike.shape, sweet: ctx.bike.sweet, bar: ctx.bike.bar, hop: ctx.bike.hop };
   // Online: the match's sim (stepped by the rollback link, not here), this screen's seat in it.
   const seat = net ? net.seat : 0, jam = net ? net.ride.jam : null, humans = net ? net.ride.players : 1;
@@ -227,10 +241,12 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       dio.add({ id: "table", size: [HX * 2 + 8, 0.5, HZ * 2 + 7], pos: [0, -1.55, 0.6], color: P.table, cluster: "table", layer: 0, pick: false });
       dio.add({ id: "plinth", size: [HX * 2 + 0.5, 1.05, HZ * 2 + 0.5], pos: [0, -1.05, 0], color: P.plinth, cluster: "table", layer: 1, pick: false });
       dio.add({ id: "rim", size: [HX * 2 + 0.7, 0.12, HZ * 2 + 0.7], pos: [0, -0.2, 0], color: P.rim, cluster: "table", layer: 2, emissive: true, pick: false });
+      if (sx) stadium();
     }
     tv = terrainView(dio, t, {
       bands: endless ? desertBands(P, endless.biome.bi) : look ? look.bands(P as Parameters<typeof look.bands>[0]) : [[0.45, P.ground[0]!], [0.85, P.ground[1]!], [1.25, P.ground[2]!], [99, P.crest]], steep: 0.5, steepColor: P.steep, kinds: look ? look.kinds(P as Parameters<typeof look.kinds>[0]) : [P.track, P.face],
-      light: P.light, ambient: P.amb, lod: endless ? [14, 26] : [24, 44], shadows: RIDERS + 1, shadowColor: P.shadow,
+      light: P.light, ambient: P.amb, lod: endless ? [14, 26] : TW !== TRACK_W ? [19, 36] : [24, 44], shadows: RIDERS + 1, shadowColor: P.shadow,
+      // (MX and SX tracks, on bigger tables, step their detail down sooner: about the same faces a frame.)
       // The endless grounds split each cell along its flatter diagonal (crests fold straight); the
       // window's own height queries (../desert/world.ts) use the same rule, so the bike rides the drawn face.
       split: endless ? "adaptive" : "fixed",
@@ -258,12 +274,33 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     pose();
   }
 
+  /** SX: the stadium round the floor: a wall on each side (the near one low, so the chase camera sees
+   *  over it), a banner strip along each with the sponsor-free panel lights, rigs of lamps overhead. */
+  function stadium() {
+    const walls: [number, number, number, number, number][] = [[0, -HZ - 0.5, HX * 2 + 1.6, 0.6, 2.4], [0, HZ + 0.5, HX * 2 + 1.6, 0.6, 1.1], [-HX - 0.5, 0, 0.6, HZ * 2 + 1.6, 1.8], [HX + 0.5, 0, 0.6, HZ * 2 + 1.6, 1.8]];
+    walls.forEach(([x, z, w, d, h], k) => {
+      dio.add({ id: "sw" + k, size: [w, h, d], pos: [x, -0.6, z], color: P.plinth, cluster: "sw" + k, pick: false });
+      dio.add({ size: [w + 0.02, 0.22, d + 0.02], pos: [0, -0.5, 0], on: "sw" + k, color: k & 1 ? P.banner : P.rim, emissive: P.night, pick: false });
+      // Panels along the wall: lit blocks every few metres.
+      const n = Math.floor(Math.max(w, d) / 4);
+      for (let q = 0; q < n; q++) {
+        const u = (q + 0.5) / n - 0.5;
+        dio.add({ size: [w > d ? 1.6 : w + 0.04, 0.42, w > d ? d + 0.04 : 1.6], pos: [w > d ? u * w : 0, -h * 0.55, w > d ? 0 : u * d], on: "sw" + k, color: q & 1 ? P.edge : P.edge2, emissive: P.night, pick: false });
+      }
+    });
+    // The lighting rigs: two trusses over the floor with their lamps.
+    for (const z of [-HZ * 0.45, HZ * 0.45]) {
+      const id = "truss" + (z > 0 ? 1 : 0);
+      dio.add({ id, size: [HX * 1.6, 0.25, 0.25], pos: [0, 9.5, z], color: P.tower, cluster: id, pick: false });
+      for (let q = 0; q < 6; q++) dio.add({ size: [0.45, 0.3, 0.45], pos: [(q / 5 - 0.5) * HX * 1.5, -0.55, 0], on: id, color: P.lamp, emissive: true, pick: false });
+    }
+  }
   /** The race track's scenery: tuff blocks, light towers, the start gate and the lap line's arch, pylons. */
   function trackScenery() {
     // Tuff blocks round the outside of each turn, glowing at night.
     for (let i = 0; i < NT; i += 3) {
       if (!TURN[i]) continue;
-      const yaw = YAW[i]!, nx = Math.sin(yaw), nz = Math.cos(yaw), d = (TRACK_W / 2 + 1.5) * TURN[i]!, x = TRACK[i * 2]! + nx * d, z = TRACK[i * 2 + 1]! + nz * d, id = "tf" + i;
+      const yaw = YAW[i]!, nx = Math.sin(yaw), nz = Math.cos(yaw), d = (TW / 2 + 1.5) * TURN[i]!, x = TRACK[i * 2]! + nx * d, z = TRACK[i * 2 + 1]! + nz * d, id = "tf" + i;
       dio.add({ id, size: [0.55, 0.32, 0.36], pos: [x, t.height(x, z) - 0.05, z], rot: [0, yaw, 0], color: P.tuff, pick: false });
       dio.add({ size: [0.57, 0.07, 0.38], on: id, color: P.tuffTop, emissive: P.night, pick: false });
     }
@@ -276,7 +313,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     }
     // The start gate: a beam across the track and a drop bar in front of each lane; the lap line's arch.
     {
-      const i = Math.round(GATE_S / (LAP / NT)), x = TRACK[i * 2]!, z = TRACK[i * 2 + 1]!, yaw = YAW[i]!, w = TRACK_W + 0.8;
+      const i = Math.round(GATE_S / (LAP / NT)), x = TRACK[i * 2]!, z = TRACK[i * 2 + 1]!, yaw = YAW[i]!, w = TW + 0.8;
       dio.add({ id: "gate", shape: "group", size: [0.4, 0, w], pos: [x, t.height(x, z), z], rot: [0, yaw, 0], pick: false });
       dio.add({ size: [0.16, 0.12, w], pos: [0.1, 0, 0], on: "gate", color: P.gatePost, pick: false });
       for (const zz of [-w / 2, w / 2]) dio.add({ shape: "cyl", sides: 6, size: [0.2, 0.7, 0.2], pos: [0.1, 0, zz], on: "gate", color: P.gatePost, pick: false });
@@ -289,7 +326,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       }
     }
     {
-      const i = Math.round(LINE_S / (LAP / NT)), x = TRACK[i * 2]!, z = TRACK[i * 2 + 1]!, yaw = YAW[i]!, w = TRACK_W + 1.6;
+      const i = Math.round(LINE_S / (LAP / NT)), x = TRACK[i * 2]!, z = TRACK[i * 2 + 1]!, yaw = YAW[i]!, w = TW + 1.6;
       dio.add({ id: "arch", shape: "group", size: [0.4, 0, w], pos: [x, t.height(x, z), z], rot: [0, yaw, 0], pick: false });
       for (const zz of [-w / 2, w / 2]) dio.add({ shape: "cyl", sides: 6, size: [0.22, 3.1, 0.22], pos: [0.6, 0, zz], on: "arch", color: P.gatePost, pick: false });
       dio.add({ size: [0.2, 0.5, w + 0.2], pos: [0.6, 3.1, 0], on: "arch", color: P.banner, emissive: P.night, pick: false });
@@ -298,7 +335,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     // Pylons along the straights (neon tips at night).
     for (let i = 8; i < NT; i += 14) {
       if (TURN[i]) continue;
-      const yaw = YAW[i]!, side = (i / 14) & 1 ? 1 : -1, d = TRACK_W / 2 + 1.1, x = TRACK[i * 2]! + Math.sin(yaw) * d * side, z = TRACK[i * 2 + 1]! + Math.cos(yaw) * d * side, id = "py" + i;
+      const yaw = YAW[i]!, side = (i / 14) & 1 ? 1 : -1, d = TW / 2 + 1.1, x = TRACK[i * 2]! + Math.sin(yaw) * d * side, z = TRACK[i * 2 + 1]! + Math.cos(yaw) * d * side, id = "py" + i;
       dio.add({ id, shape: "cyl", sides: 6, size: [0.14, 0.8, 0.14], pos: [x, t.height(x, z), z], color: P.gatePost, pick: false });
       dio.add({ shape: "cyl", sides: 6, size: [0.22, 0.16, 0.22], pos: [0, 0, 0], on: id, color: side > 0 ? P.edge : P.edge2, emissive: true, pick: false });
     }

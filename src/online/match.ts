@@ -28,6 +28,7 @@ import { RUN as W_RUN, CRASH as W_CRASH, DONE as W_DONE } from "../modes/wheelie
 import { SB_DIST, SB_BEST, SB_BEST_ID, SB_COMBO, SB_DRAGS, SB_POINTS, SB_TRICKS, type Board } from "./board.ts";
 import { DONE, RACE, makeTrack, motoRace, MOTO_TRACK, type MotoRace, type Track } from "../modes/race/course.ts";
 import { generateTrack } from "../modes/race/generate.ts";
+import { mxPlan } from "../modes/race/venue.ts";
 import { freeJam, type FreeJam } from "../modes/freeride/jam.ts";
 import { makeMap, RIDE_MAPS, type RideMap } from "../modes/freeride/maps.ts";
 import { meter, type Meter } from "../modes/meter.ts";
@@ -55,12 +56,13 @@ const mix = (a: number, b: number) => {
 /** Ride n's seed in a room. */
 export const rideSeed = (room: number, round: number) => mix(room >>> 0, 7000 + round);
 const TRACKS = new Map<string, Track>(), MAPS = new Map<number, Track | RideMap>();
-/** A race's track: generated from the ride's seed at the tier's difficulty (validated, kept once made). */
+/** A race's track: generated from the ride's seed at the tier's difficulty (validated, kept once made),
+ *  at the MX venue (../modes/race/venue.ts: online rides MX; SX is solo for now). */
 export function raceTrack(seed: number, tier: number, round: number): Track {
   const T = TIERS[tier] ?? TIERS[0]!, d = difficulty({ tier: T.id }, round % T.rounds), key = `${seed}:${d}`;
   let t = TRACKS.get(key);
   if (!t) {
-    const plan = generateTrack(seed, d).plan;
+    const plan = mxPlan(generateTrack(seed, d).plan);
     t = makeTrack({ ...plan, id: `online-${T.id}-${round + 1}` });
     if (TRACKS.size > 8) TRACKS.clear();
     TRACKS.set(key, t);
@@ -71,7 +73,7 @@ export function raceTrack(seed: number, tier: number, round: number): Track {
 export function jamMap(i: number): Track | RideMap {
   const k = Math.max(0, Math.min(JAM_MAPS.length - 1, i));
   let m = MAPS.get(k);
-  if (!m) MAPS.set(k, (m = k ? makeMap(RIDE_MAPS[k - 1]!) : makeTrack(MOTO_TRACK)));
+  if (!m) MAPS.set(k, (m = k ? makeMap(RIDE_MAPS[k - 1]!) : makeTrack(mxPlan(MOTO_TRACK))));
   return m;
 }
 

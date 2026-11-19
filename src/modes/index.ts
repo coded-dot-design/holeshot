@@ -3,24 +3,40 @@
 import { MODELS } from "../data/roster.ts";
 import type { Mode, ModeCtx } from "./mode.ts";
 import { makeTrack, MOTO_TRACK, type TrackPlan } from "./race/course.ts";
+import { SX_TRACKS, mxPlan, venueOf, type Venue } from "./race/venue.ts";
 import { mountTrack } from "./race/scene.ts";
 import { makeMap, RIDE_MAPS, type RideMap } from "./freeride/maps.ts";
 import { mountAir } from "./bigair/scene.ts";
 import { mountCity } from "./wheelie/scene.ts";
 import { desertTrack, BIOMES, DESERT_SEED } from "./desert/track.ts";
 
-/** Race tracks (id → plan). Phase 1: the one fixed loop; a generated track is another TrackPlan. */
-export const TRACKS: TrackPlan[] = [MOTO_TRACK];
+/** Race tracks (id → plan). MX: the fixed loop made MX-sized (./race/venue.ts); SX: the stadium tracks. */
+export const TRACKS: TrackPlan[] = [mxPlan(MOTO_TRACK)];
+/** Race tracks by venue. */
+export const VENUE_TRACKS: Record<Venue, TrackPlan[]> = { mx: TRACKS, sx: SX_TRACKS };
+/** A race's track: the map asked for at the venue, else the venue's first (SX: the event seed picks). */
+export const raceTrack = (map: string | undefined, venue: Venue | undefined, seed = 0): TrackPlan => {
+  const v = venueOf(venue), list = VENUE_TRACKS[v];
+  return list.find((t) => t.id === map) ?? (v === "sx" ? list[(seed >>> 0) % list.length]! : list[0]!);
+};
 /** Free Ride maps: map 1 is the race loop (a plan); maps 2–5 are open maps (./freeride/maps.ts),
  *  each built once on first ride and kept (their terrain is pure). */
 export const FREE_MAPS: { id: string; name: string; blurb: string; plan?: TrackPlan; open?: () => RideMap }[] = [
-  { id: "neon-park", name: "NEON LOOP", blurb: "The race loop to yourself: the double, whoops, the triple, the tabletop.", plan: MOTO_TRACK },
+  { id: "neon-park", name: "NEON LOOP", blurb: "The race loop to yourself: the double, whoops, the triple, the tabletop.", plan: TRACKS[0]! },
   ...RIDE_MAPS.map((d) => {
     let m: RideMap | null = null;
     return { id: d.id, name: d.name, blurb: d.blurb, open: () => (m ??= makeMap(d)) };
   }),
 ];
-const freeMap = (id?: string) => {
+/** Free Ride's SX maps: the stadium floor to yourself (the SX tracks, no rivals, no clock). */
+export const FREE_SX: { id: string; name: string; blurb: string; plan: TrackPlan }[] = [
+  { id: "sx-floor", name: "STADIUM FLOOR", blurb: "The NEON DOME's floor to yourself under the lights: the rhythm doubles, whoops, the tight triple, hairpins.", plan: SX_TRACKS[0]! },
+  { id: "sx-volt-floor", name: "VOLT FLOOR", blurb: "The VOLT ARENA to yourself: the tabletop, whoops, the kink and the tight triple.", plan: SX_TRACKS[1]! },
+];
+/** Free Ride's maps by venue (MX: the loop and the four open maps; SX: the stadium floors). */
+export const venueMaps = (venue?: Venue) => (venueOf(venue) === "sx" ? FREE_SX : FREE_MAPS);
+const freeMap = (id?: string, venue?: Venue) => {
+  if (venueOf(venue) === "sx" || FREE_SX.some((m) => m.id === id)) return makeTrack((FREE_SX.find((m) => m.id === id) ?? FREE_SX[0]!).plan);
   const f = FREE_MAPS.find((m) => m.id === id) ?? FREE_MAPS[0]!;
   return f.open ? f.open() : makeTrack(f.plan!);
 };
@@ -35,12 +51,12 @@ export const MODES: Mode[] = [
   {
     id: "race", name: "RACE", blurb: "Three laps against three rivals on stock bikes of your class. Places pay.",
     maps: TRACKS.map((t) => ({ id: t.id, name: t.name })),
-    start: (ctx) => mountTrack(ctx, makeTrack(TRACKS.find((t) => t.id === ctx.map) ?? TRACKS[0]!), false, rivalsFor(ctx)),
+    start: (ctx) => mountTrack(ctx, makeTrack(raceTrack(ctx.map, ctx.venue, ctx.seed)), false, rivalsFor(ctx)),
   },
   {
     id: "freeride", name: "FREE RIDE", blurb: "Five open maps to yourself. No laps, no clock. Saddle time, air, wheelies and tricks pay a little.",
     maps: FREE_MAPS.map((m) => ({ id: m.id, name: m.name })),
-    start: (ctx) => mountTrack(ctx, freeMap(ctx.map), true, []),
+    start: (ctx) => mountTrack(ctx, freeMap(ctx.map, ctx.venue), true, []),
   },
   {
     id: "desert", name: "ENDLESS", blurb: "Ground that never ends: the dune sea, or an endless quarry, woods or night park (each Free Ride map, endless). No edge, no clock. How far can you go?",

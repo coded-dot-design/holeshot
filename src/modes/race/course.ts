@@ -58,6 +58,10 @@ export interface TrackPlan {
   cols: number;
   rows: number;
   seed: number;
+  /** The track's width (TRACK_W if absent: an MX track is wider, ./venue.ts). */
+  width?: number;
+  /** The venue it was built for ("mx" outdoors if absent; "sx" a stadium: ./venue.ts). */
+  venue?: "mx" | "sx";
 }
 /** Moto Track's loop: four straights and four bermed left-handers; a rhythm section of doubles on
  *  the first straight, the whoops on the second, the big triple on the third, the finish tabletop. */
@@ -73,7 +77,7 @@ export const MOTO_TRACK: TrackPlan = {
 /** A track from its plan: the centre line, the profile, the terrain, the rivals' speeds. Pure. */
 export function makeTrack(def: TrackPlan) {
   // ---- the track: a closed centre line, integrated from straights and left turns, resampled ----
-  const { A, B, RAD } = def, DS = 0.5, COLS = def.cols, ROWS = def.rows, HX = (COLS * CELL) / 2, HZ = (ROWS * CELL) / 2;
+  const { A, B, RAD } = def, W = def.width ?? TRACK_W, DS = 0.5, COLS = def.cols, ROWS = def.rows, HX = (COLS * CELL) / 2, HZ = (ROWS * CELL) / 2;
   /** The lap's sections in order: straight length, or a turn. */
   const PLAN = def.plan;
   const LAP = PLAN.reduce<number>((s, v) => s + secLen(v, RAD), 0);
@@ -203,7 +207,7 @@ export function makeTrack(def: TrackPlan) {
   /** near() for the course's build: the same answer wherever the centre line is within NEAR_R (beyond
    *  it, Infinity), from a grid of buckets of the segments round each cell (built once, on the first
    *  build), so building a course costs the cells × a few segments, not the cells × the lap. */
-  const NEAR_R = 4.25, BG = 2;
+  const NEAR_R = W / 2 + 2.55, BG = 2;
   let BK: Int32Array | null = null, BS: Int32Array | null = null;
   const BW = Math.ceil((HX * 2) / BG) + 2, BH = Math.ceil((HZ * 2) / BG) + 2;
   function buckets() {
@@ -240,12 +244,13 @@ export function makeTrack(def: TrackPlan) {
     if (!BK) buckets();
     const t = terrain({ cols: COLS, rows: ROWS, cell: CELL });
     // Rolling dirt round the track, down to the plinth at the edges.
-    t.noise({ seed: def.seed, amp: 1.6, scale: 9, octaves: 3, ridge: 0.2 });
+    // (A stadium floor (SX) is near flat: packed dirt on a concrete floor.)
+    t.noise({ seed: def.seed, amp: def.venue === "sx" ? 0.22 : 1.6, scale: 9, octaves: 3, ridge: 0.2 });
     t.shape((x, z, h) => {
       const ex = Math.min(1, (HX - Math.abs(x)) / 2.6), ez = Math.min(1, (HZ - Math.abs(z)) / 2.6), e = Math.max(0, Math.min(ex, ez));
       return h * e * e * (3 - 2 * e) * 0.9;
     });
-    const half = TRACK_W / 2, edge = 1.8;
+    const half = W / 2, edge = 1.8;
     t.shape((x, z, h) => {
       nearCourse(x, z);
       const d = NR[0]!;
@@ -267,7 +272,7 @@ export function makeTrack(def: TrackPlan) {
         P[j * 2] = TRACK[q]!;
         P[j * 2 + 1] = TRACK[q + 1]!;
       }
-      t.berm(P, { width: TRACK_W + 1.2, height: typeof v === "number" ? 0.75 : v.berm ?? 0.75, side: dir, edge: 1.2 });
+      t.berm(P, { width: W + 1.2, height: typeof v === "number" ? 0.75 : v.berm ?? 0.75, side: dir, edge: 1.2 });
     }
     // Paint: the track's faces, and the features' faces.
     for (let j = 0; j < ROWS; j++)
@@ -283,7 +288,7 @@ export function makeTrack(def: TrackPlan) {
 
   /** The track's two edges, [x, y, z] per point, left then right, just over the dirt. */
   function trackEdges(t: Terrain) {
-    const E = new Float64Array(NT * 6), half = TRACK_W / 2 + 0.05;
+    const E = new Float64Array(NT * 6), half = W / 2 + 0.05;
     for (let i = 0; i < NT; i++) {
       const nx = sin(YAW[i]!), nz = cos(YAW[i]!);
       for (let k = 0; k < 2; k++) {
@@ -326,7 +331,7 @@ export function makeTrack(def: TrackPlan) {
   }
 
   return {
-    def, id: def.id, name: def.name, COLS, ROWS, HX, HZ, LAP, NT, TRACK, YAW, TURN, RADIUS, SECTION, GATE_S, LINE_S, FEATURES, FEATURE_NAMES, FK, PF, NR, FLOOR, WANT, INTO,
+    def, id: def.id, name: def.name, W, venue: def.venue ?? "mx", COLS, ROWS, HX, HZ, LAP, NT, TRACK, YAW, TURN, RADIUS, SECTION, GATE_S, LINE_S, FEATURES, FEATURE_NAMES, FK, PF, NR, FLOOR, WANT, INTO,
     sAt, profile, prof, near, course, trackEdges,
   };
 }

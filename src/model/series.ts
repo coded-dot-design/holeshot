@@ -1,4 +1,5 @@
-// The Race Series, headless: a championship of rounds on generated tracks. The save (a part of the
+// The Race Series, headless: a championship of rounds on generated tracks, at either venue (MX
+// outdoors: generated tracks made MX-sized; SX in a stadium: the SX tracks in turn: ../modes/race/venue.ts). The save (a part of the
 // profile: `profile.series`), which tiers are open, entering one, the next round's track (a seeded
 // generator: the same championship always rides the same tracks), the rivals (named riders on bikes
 // of the player's class, better with the tier), scoring a round into the points table, the
@@ -8,6 +9,7 @@ import { POINTS, RIVAL_NAMES, TIERS, UNLOCK_TOP, tier, type TierId } from "../da
 import { MODELS, type ClassId } from "../data/roster.ts";
 import { generateTrack } from "../modes/race/generate.ts";
 import type { TrackPlan } from "../modes/race/course.ts";
+import { SX_TRACKS, mxPlan, venueOf, type Venue } from "../modes/race/venue.ts";
 import type { RunStats } from "../modes/mode.ts";
 import { newBike, type Profile } from "./profile.ts";
 import { tune, type Tuned } from "./tune.ts";
@@ -15,6 +17,8 @@ import { tune, type Tuned } from "./tune.ts";
 /** A championship under way. Rider 0 is the player; 1..3 the rivals. */
 export interface SeriesRun {
   tier: TierId;
+  /** The venue's championship: "mx" outdoors (every run saved before venues is MX), "sx" the stadium. */
+  venue?: Venue;
   /** Its seed: the tracks, the rivals' names and plates follow from it. */
   seed: number;
   /** Rounds ridden so far (the next round's index). */
@@ -25,8 +29,10 @@ export interface SeriesRun {
   results: number[][];
 }
 export interface SeriesSave {
-  /** The best final place per tier (0 is champion). */
+  /** The best final place per tier (0 is champion): the MX championship's (every save before venues). */
   best: Partial<Record<TierId, number>>;
+  /** The same for the SX championship (added by venues: absent in older saves, normalized to {}). */
+  bestSx: Partial<Record<TierId, number>>;
   /** Championships won. */
   titles: number;
   run: SeriesRun | null;
@@ -38,13 +44,14 @@ const obj = (v: unknown): Record<string, unknown> => (v && typeof v === "object"
 const int = (v: unknown, d: number, lo: number, hi: number) => (typeof v === "number" && isFinite(v) ? Math.max(lo, Math.min(hi, Math.round(v))) : d);
 
 export function freshSeries(): SeriesSave {
-  return { best: {}, titles: 0, run: null, last: null };
+  return { best: {}, bestSx: {}, titles: 0, run: null, last: null };
 }
 /** Repair a saved series (anything → a valid SeriesSave). */
 export function normSeries(raw: unknown): SeriesSave {
-  const o = obj(raw), best: SeriesSave["best"] = {}, b = obj(o.best);
+  const o = obj(raw), best: SeriesSave["best"] = {}, bestSx: SeriesSave["bestSx"] = {}, b = obj(o.best), bx = obj(o.bestSx);
   for (const t of TIERS) if (typeof b[t.id] === "number") best[t.id] = int(b[t.id], 3, 0, 3);
-  return { best, titles: int(o.titles, 0, 0, 1e6), run: normRun(o.run, false), last: normRun(o.last, true) };
+  for (const t of TIERS) if (typeof bx[t.id] === "number") bestSx[t.id] = int(bx[t.id], 3, 0, 3);
+  return { best, bestSx, titles: int(o.titles, 0, 0, 1e6), run: normRun(o.run, false), last: normRun(o.last, true) };
 }
 function normRun(raw: unknown, done: boolean): SeriesRun | null {
   const r = obj(raw);
@@ -59,23 +66,26 @@ function normRun(raw: unknown, done: boolean): SeriesRun | null {
       return a;
     });
     while (results.length < round) results.push([-1, -1, -1, -1]);
-    run = { tier: T.id, seed: int(r.seed, 1, 0, 0xffffffff), round, points, results };
+    run = { tier: T.id, venue: venueOf(r.venue), seed: int(r.seed, 1, 0, 0xffffffff), round, points, results };
   }
   return run;
 }
 
-/** Whether a tier can be entered: the first always, the next once the one before ended in the top two. */
-export function unlocked(s: SeriesSave, id: TierId) {
+/** A venue's best places (MX: `best`, SX: `bestSx`). */
+export const bestOf = (s: SeriesSave, venue: Venue = "mx") => (venue === "sx" ? s.bestSx : s.best);
+/** Whether a tier can be entered at a venue: the first always, the next once the one before (at the same venue) ended in the top two. */
+export function unlocked(s: SeriesSave, id: TierId, venue: Venue = "mx") {
   const T = tier(id);
   if (!T.after) return true;
-  const b = s.best[T.after];
+  const b = bestOf(s, venue)[T.after];
   return b !== undefined && b < UNLOCK_TOP;
 }
 
-/** Enter a tier (only one championship at a time; a locked tier can't be entered). */
-export function enter(p: Profile, id: TierId, seed: number): Profile | null {
-  if (p.series.run || !unlocked(p.series, id)) return null;
-  return { ...p, series: { ...p.series, run: { tier: id, seed: seed >>> 0, round: 0, points: [0, 0, 0, 0], results: [] } } };
+/** Enter a tier at a venue (MX by default; only one championship at a time; a locked tier can't be entered). */
+export function enter(p: Profile, id: TierId, seed: number, venue: Venue = "mx"): Profile | null {
+  const v = venueOf(venue);
+  if (p.series.run || !unlocked(p.series, id, v)) return null;
+  return { ...p, series: { ...p.series, run: { tier: id, venue: v, seed: seed >>> 0, round: 0, points: [0, 0, 0, 0], results: [] } } };
 }
 /** Retire from the championship under way (nothing is paid; the tier stays as it was). */
 export function retire(p: Profile): Profile {
@@ -97,13 +107,14 @@ export const difficulty = (run: Pick<SeriesRun, "tier">, round: number) => {
 export const roundSeed = (run: Pick<SeriesRun, "seed">, round: number) => mix(run.seed, round);
 
 const TRACKS = new Map<string, TrackPlan>();
-/** A round's track (generated, validated; the same every time; kept once made). */
-export function roundTrack(run: Pick<SeriesRun, "tier" | "seed">, round: number): TrackPlan {
-  const seed = roundSeed(run, round), d = difficulty(run, round), key = `${seed}:${d}`;
+/** A round's track (MX: generated, validated, made MX-sized; SX: the SX tracks in turn, from the
+ *  championship's seed; the same every time; kept once made). */
+export function roundTrack(run: Pick<SeriesRun, "tier" | "seed" | "venue">, round: number): TrackPlan {
+  const seed = roundSeed(run, round), d = difficulty(run, round), v = venueOf(run.venue), key = `${v}:${seed}:${d}`;
   let p = TRACKS.get(key);
   if (!p) {
-    p = generateTrack(seed, d).plan;
-    p = { ...p, name: p.name, id: `series-${run.tier}-${round + 1}` };
+    p = v === "sx" ? SX_TRACKS[(run.seed + round) % SX_TRACKS.length]! : mxPlan(generateTrack(seed, d).plan);
+    p = { ...p, name: p.name, id: `series-${v === "sx" ? "sx-" : ""}${run.tier}-${round + 1}` };
     if (TRACKS.size > 24) TRACKS.clear();
     TRACKS.set(key, p);
   }
@@ -180,7 +191,7 @@ export function recordRound(p: Profile, s: RunStats): { profile: Profile; done: 
   if (!run) return { profile: p, done: false, champ: -1 };
   const next = scored(run, s.order ?? roundOrder(s)), T = tier(run.tier);
   if (next.round < T.rounds) return { profile: { ...p, series: { ...p.series, run: next } }, done: false, champ: -1 };
-  const champ = standings(next).findIndex((x) => x.rider === 0), was = p.series.best[run.tier];
-  const best = { ...p.series.best, [run.tier]: was === undefined ? champ : Math.min(was, champ) };
-  return { profile: { ...p, series: { best, titles: p.series.titles + (champ === 0 ? 1 : 0), run: null, last: next } }, done: true, champ };
+  const champ = standings(next).findIndex((x) => x.rider === 0), sx = venueOf(run.venue) === "sx", B = sx ? p.series.bestSx : p.series.best, was = B[run.tier];
+  const best = { ...B, [run.tier]: was === undefined ? champ : Math.min(was, champ) };
+  return { profile: { ...p, series: { best: sx ? p.series.best : best, bestSx: sx ? best : p.series.bestSx, titles: p.series.titles + (champ === 0 ? 1 : 0), run: null, last: next } }, done: true, champ };
 }

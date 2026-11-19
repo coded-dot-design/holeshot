@@ -69,6 +69,8 @@ export interface ModeCtx {
   seed: number;
   /** Which map or track (a mode with several; its default if absent). */
   map?: string;
+  /** Race, Series and Free Ride: the venue, "mx" outdoors (the default) or "sx" a stadium (../modes/race/venue.ts). */
+  venue?: "mx" | "sx";
   /** The rider's best distance in this mode (and biome: the endless modes), for the HUD. */
   best?: number;
   /** Distances and speeds as shown (display only; default Imperial). */
