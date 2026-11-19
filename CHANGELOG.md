@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.5 — 2026-11-19
 
 - **Every endless ride has the same controls as Endless Wheelie City.** The Endless Desert and each
   endless Free Ride ground now hop: a quick back-then-forward flick of the pad's stick (within
