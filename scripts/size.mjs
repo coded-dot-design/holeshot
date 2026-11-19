@@ -80,8 +80,11 @@ import { readdirSync, readFileSync } from "node:fs";
 // Unreleased, r17 (the garage is home, LET'S RIDE in four groups, buyable garage spots), on r18:
 // 209,820 B measured (holeshot.js; +1,738 B over 0.5.6's 208,082: the ride page's groups, tiles,
 // MX/SX keys and their CSS, the sticky ← back header, ⚙, the spots and the v7 step; less the old
-// menu card, the ENDLESS picker card and the map picker's card). Inside the budget (180 B of room).
-const BUDGET = 210_000;
+// menu card, the ENDLESS picker card and the map picker's card). Then the final HOLESHOT logo inline
+// (src/logo.ts: the L1 wordmark in the header, the lockup with "by David Cooley" in the garage, paths
+// only, one letter path drawn five times): +933 B → 210,753 B; budget 210,000 → 211,700 (about
+// 0.9 KB of room).
+const BUDGET = 211_700;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

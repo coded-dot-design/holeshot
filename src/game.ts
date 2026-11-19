@@ -22,6 +22,7 @@ import type { ModeCtx, ModeId, ModeRun, RunStats } from "./modes/mode.ts";
 import { venueOf, type Venue } from "./modes/race/venue.ts";
 import { paintMaps } from "./modes/freeride/picker.ts";
 import { rideCard as rideScreen } from "./ride-ui.ts";
+import { LOCKUP, WORDMARK } from "./logo.ts";
 import { exportCode, importCode, load, local, newBike, ready, riding, save, setup, fresh, type Profile, type Store, type RiderKit } from "./model/profile.ts";
 import { testCredits, topUp } from "./model/testcredits.ts";
 import { tune } from "./model/tune.ts";
@@ -196,7 +197,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   // ---- rendering the cards ----
   /** The header: HOLESHOT on the garage (home), else ← back and the screen's name; then the credits,
    *  the name, ⚙ settings and the theme key. Sticky, so the way back stays in reach. */
-  const head = (back?: [Screen, string, string]) => `<header class="dh-top${back ? " dh-sticky" : ""}">${back ? `<button type="button" class="bui-key dh-back" data-go="${back[0]}">← ${back[1]}</button><b class="dh-h dh-title">${back[2]}</b>` : `<b class="dh-logo">HOLESHOT</b>`}${inf ? `<span class="dh-chip dh-cr" title="Test credits: nothing is saved">◈ ∞</span><span class="dh-chip dh-test" title="?credits=inf: nothing is saved, online is off">TEST CREDITS ∞</span>` : `<span class="dh-chip dh-cr" title="Credits">◈ ${num(profile.credits)}</span>`}${profile.name ? `<span class="dh-chip dh-who">${esc(profile.name)}</span>` : ""}${screen === "settings" ? "" : `<button type="button" class="bui-key dh-icon dh-cog" data-go="settings" aria-label="Settings">${ICON.cog}</button>`}${o.onTheme ? `<button type="button" class="bui-key dh-icon dh-theme" aria-label="Light or dark">${ICON.theme}</button>` : ""}</header>`;
+  const head = (back?: [Screen, string, string]) => `<header class="dh-top${back ? " dh-sticky" : ""}">${back ? `<button type="button" class="bui-key dh-back" data-go="${back[0]}">← ${back[1]}</button><b class="dh-h dh-title">${back[2]}</b>` : WORDMARK}${inf ? `<span class="dh-chip dh-cr" title="Test credits: nothing is saved">◈ ∞</span><span class="dh-chip dh-test" title="?credits=inf: nothing is saved, online is off">TEST CREDITS ∞</span>` : `<span class="dh-chip dh-cr" title="Credits">◈ ${num(profile.credits)}</span>`}${profile.name ? `<span class="dh-chip dh-who">${esc(profile.name)}</span>` : ""}${screen === "settings" ? "" : `<button type="button" class="bui-key dh-icon dh-cog" data-go="settings" aria-label="Settings">${ICON.cog}</button>`}${o.onTheme ? `<button type="button" class="bui-key dh-icon dh-theme" aria-label="Light or dark">${ICON.theme}</button>` : ""}</header>`;
   /** The garage's one main action. */
   const letsRide = `<button type="button" class="bui-key bui-sticker-key bui-call dh-letsride" data-go="ride"><b>LET'S RIDE</b><small>RACE · ENDLESS · FREE RIDE · TRACK DAY</small></button>`;
   const bikeLine = () => {
@@ -220,7 +221,8 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       <p class="dh-row"><button type="submit" class="bui-key dh-go">TO THE GARAGE</button></p>${newer ? `<p class="dh-sub dh-warn">A save from a newer Holeshot is on this device. It is kept as it is; this profile won't be saved over it.</p>` : ""}</form>`;
   }
   const pitKey = () => (pitReady(profile) ? `<p class="dh-row"><button type="button" class="bui-key dh-pit">PIT CREW: FREE BASIC FIX</button></p>` : "");
-  const garageCard = () => garageView(profile, gui, head(), letsRide, note, pitKey());
+  // (The lockup, "by David Cooley", sits above LET'S RIDE where the dock has room: ./garage/garage.css.)
+  const garageCard = () => garageView(profile, gui, head(), LOCKUP + letsRide, note, pitKey());
   const rideCard = () => rideScreen(head(["garage", "GARAGE", "LET'S RIDE"]), { bike: bikeLine(), best: (k) => km(profile.stats.far[k] ?? 0), inf, note });
   /** The series shown: the championship under way's venue, else the one picked on LET'S RIDE. */
   const seriesAt = (): Venue => (profile.series.run ? venueOf(profile.series.run.venue) : seriesVenue);

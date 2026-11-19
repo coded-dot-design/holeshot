@@ -98,11 +98,15 @@
 .dh-dock .dh-slots{flex-wrap:nowrap;overflow-x:auto;margin:0;padding-bottom:2px}
 .dh-dock .dh-slot-k{flex:none;min-width:6em}
 .dh-dock .dh-slot-k small:last-child{display:none}
-.dh-garage .dh-logo{font-size:22px}
+.dh-garage .dh-logo{height:22px}
+.dh-lockup{display:none}
+.dh-garage .dh-top .dh-logo{visibility:visible}
 .dh-top .dh-chip{min-height:40px;font-size:12px;padding:.3em .5em}
 .dh-top .dh-test{font-size:10px}
 }
 @media (max-height:620px){
+.dh-lockup{display:none}
+.dh-garage .dh-top .dh-logo{visibility:visible}
 .dh-dock{gap:6px;padding-bottom:8px}
 .dh-dock .dh-preview{aspect-ratio:auto;height:min(36svh,170px)}
 .dh .dh-letsride{min-height:44px;margin-top:0;padding:4px 12px}
