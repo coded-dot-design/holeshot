@@ -106,6 +106,8 @@
 .dh-ghead .dh-cog{min-width:44px}
 .dh-gwrap{grid-template-columns:minmax(0,1fr);gap:16px;padding:12px 12px 28px}
 .dh-bikep{position:static;padding:10px 0 14px;gap:12px}
+.dh-bikebar{flex-wrap:nowrap}.dh-bikebar .shop-drop{min-width:0;padding:0 16px}.dh-bikebar .shop-sub{font-size:13px;text-align:right}
+.shop .shop-h4{font-size:19px}
 .dh-bikep>*{margin-inline:12px}
 .dh-bikep .shop-cta-w{margin-top:4px}
 .shop .shop-name{font-size:30px}
