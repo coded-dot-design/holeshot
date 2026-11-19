@@ -74,8 +74,10 @@ import { readdirSync, readFileSync } from "node:fs";
 // r12's TRICK/HOP bubbles and tether, the ☰ menu column, the controls' CSS and the Home Screen tip
 // +1,627 on its own; r13's NOD and REAL name tables and the dressing +1,196; r14's garage dock, live
 // preview with BUY/APPLY/CANCEL and pace deltas, the plinth and the card layout +2,246; REAL on every test-credits link +29), plus about
-// 2 KB of room.
-const BUDGET = 207_300;
+// 2 KB of room. r18 (venues and the endless Big Air) +2,139 measured (205,943 → 208,082 .mjs): the
+// Big Air line and its streaming strip, the scenery sets, the SX tracks, the stadium and the venue
+// plumbing; budget 207,300 → 210,000 (about 1.9 KB of room again).
+const BUDGET = 210_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

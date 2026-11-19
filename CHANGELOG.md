@@ -25,6 +25,7 @@
   take the stadium tracks in turn. A saved series is MX (its best places stay; SX's start empty:
   `series.bestSx`, added on load, no profile version change).
 - Online races ride MX (deterministic as before); the online jam keeps today's loop; SX is solo for now.
+- Size: +2,139 B gzip (205,943 → 208,082, the .mjs): the budget goes 207,300 → 210,000 (scripts/size.mjs).
 - Perf (390 px, 4× CPU throttle, the autopilot): a race on MX draws about the same terrain faces a
   frame as today's loop (2,296 vs 2,205, MX and SX step their detail down sooner) at the same frame
   p50 (66.7 ms); SX 2,583 faces, p50 66.7 ms; Big Air's p50 50 ms as before.
