@@ -37,20 +37,20 @@ try {
     await p.goto(server.url + "/");
     await until(p, "window.game && game.getSnapshot().screen !== undefined", `${name}: mounts`);
     await p.evaluate(() => game.setup({ starter: "sparkhound" }));
-    await until(p, "game.getSnapshot().screen === 'menu'", `${name}: menu`);
+    await until(p, "game.getSnapshot().screen === 'garage'", `${name}: menu`);
     assert.equal(await chip(p, name), "0.00 MI", `${name}: Imperial by default`);
     await p.goto(server.url + "/");
-    await until(p, "window.game && game.getSnapshot().screen === 'menu'", `${name}: reload`);
+    await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${name}: reload`);
     assert.equal(await settings(p, name), "UNITS MI · MPH");
     await click(p, ".dh-units");
     assert.equal(await $(p, "root.querySelector('.dh-units').textContent.trim()"), "UNITS KM · KM/H", `${name}: switched`);
     assert.equal(await units(p), "metric", `${name}: saved`);
     await p.goto(server.url + "/");
-    await until(p, "window.game && game.getSnapshot().screen === 'menu'", `${name}: reload`);
+    await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${name}: reload`);
     assert.equal(await chip(p, name), "0.00 KM", `${name}: Metric kept after a reload`);
     // ?money=inf: the switch shows, nothing is saved.
     await p.goto(server.url + "/?money=inf");
-    await until(p, "window.game && game.getSnapshot().screen === 'menu'", `${name}: test credits`);
+    await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${name}: test credits`);
     assert.equal(await settings(p, name), "UNITS KM · KM/H");
     await click(p, ".dh-units");
     assert.equal(await $(p, "root.querySelector('.dh-units').textContent.trim()"), "UNITS MI · MPH");

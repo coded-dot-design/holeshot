@@ -30,7 +30,8 @@ try {
     await p.goto(server.url + "/");
     await until(p, () => window.game, null, `${name}: mounts`);
     await p.evaluate(() => game.setup({ starter: "buzzline", number: 23, name: "KIP" }));
-    await click(p, "[data-go=series]");
+    await click(p, "[data-go=ride]");
+    await click(p, "[data-go=series][data-venue=mx]");
     let s = await snap(p);
     assert.equal(s.screen, "series", `${name}: SERIES`);
     const tiers = await q(p, `(root) => { const r = (e) => e.getBoundingClientRect(); const ks = [...root.querySelectorAll(".dh-card button")]; return { n: root.querySelectorAll("[data-series-enter]").length, open: [...root.querySelectorAll("[data-series-enter]")].map((b) => !b.disabled), big: ks.every((k) => Math.min(r(k).width, r(k).height) >= 44), sideways: root.querySelector(".dh-cards").scrollWidth > innerWidth + 1 }; }`);
@@ -86,7 +87,7 @@ try {
     assert.deepEqual([s.series.round, s.series.points[0]], [2, mine], `${name}: left: the round counts, no points`);
     // ---- a reload keeps the championship ----
     await p.reload();
-    await until(p, () => window.game && game.getSnapshot().screen === "menu", null, `${name}: reload`);
+    await until(p, () => window.game && game.getSnapshot().screen === "garage", null, `${name}: reload`);
     assert.equal((await snap(p)).series.round, 2, `${name}: the championship kept`);
     if (SHOTS) {
       const lp = await ctx.newPage();

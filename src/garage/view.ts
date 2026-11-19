@@ -5,7 +5,7 @@
 // the "before you ride" card when a part may fail. HTML strings, like the rest of the shell's cards;
 // the actions are ../model/garage.ts (pure), so this file only renders and routes.
 import { CLASSES, MODELS, makerOf, model as modelOf } from "../data/roster.ts";
-import { DAMAGE_NAME, FAIL, GARAGE_SLOTS, MODS, MOTOR_NAME, PARTS, PART_NAME, SERVICE_BELOW, SETUPS, TYRES, UNLOCK, type DamageId, type ModId, type PartId, type SetupId, type TyreId } from "../data/economy.ts";
+import { DAMAGE_NAME, FAIL, GARAGE_MAX, MODS, MOTOR_NAME, PARTS, PART_NAME, SERVICE_BELOW, SETUPS, TYRES, UNLOCK, type DamageId, type ModId, type PartId, type SetupId, type TyreId } from "../data/economy.ts";
 import { GRAPHICS, HELMETS, OUTFITS, PAINTS, PATTERNS, PLASTICS, PLATES, SWATCHES, VISORS, paint as paintOf, swatch } from "../data/looks.ts";
 import { bar, esc, num } from "../html.ts";
 import { newBike, riding, type BikeSave, type Profile } from "../model/profile.ts";
@@ -16,7 +16,7 @@ import { atRisk, failChance, failName, partState, warnings } from "../model/upke
 import { DIRT_LINE, paceLine, paceOf } from "../model/families.ts";
 /** The family upgrades (one per family: ../model/families.ts). */
 const UPGRADES: ModId[] = ["wbar", "swap", "bore", "boost"];
-import { buyBike, cosmeticPrice, choose, dress, fits, fixPrice, modPrice, partPrice, repair, sell, service, setChoice, setupPrice, tradeValue, tryOn, unlocked, upgrade, type Buy, type Slot } from "../model/garage.ts";
+import { buyBike, buySpot, spotPrice, cosmeticPrice, choose, dress, fits, fixPrice, modPrice, partPrice, repair, sell, service, setChoice, setupPrice, tradeValue, tryOn, unlocked, upgrade, type Buy, type Slot } from "../model/garage.ts";
 
 /** What the turntable can preview: a cosmetic (its slot), a mod's next level, or a showroom bike. */
 export type Pv = [Slot | "mod" | "bike" | "own", string];
@@ -128,18 +128,18 @@ function nameOf(slot: Slot, id: string) {
 }
 
 function showroomTab(p: Profile, all: boolean) {
-  const full = p.bikes.length >= GARAGE_SLOTS, me = riding(p), trade = tradeValue(me), cr = p.credits, u = unitsOf(p);
+  const full = p.bikes.length >= p.slots, me = riding(p), trade = tradeValue(me), cr = p.credits, u = unitsOf(p);
   const mine = p.bikes.map((x, i) => { const m = modelOf(x.model), v = tradeValue(x); return `<li class="dh-bc" data-pv="own:${i}"><span class="dh-bc-head"><i class="dh-maker" style="--a:${makerOf(m).colors[0]};--b:${makerOf(m).colors[1]}"></i><span class="dh-mod"><small>${CLASSES[m.cls].name} · #${x.look.number}${i === p.ride ? " · RIDES NEXT" : ""}</small><b>${makerOf(m).name} ${m.name}</b><small>Trade-in ◈ ${num(v)} · ${x.events} events</small></span></span><button type="button" class="bui-key dh-buy" data-sell="${i}" ${p.bikes.length > 1 ? "" : "disabled"}>SELL<small class="dh-price">+◈ ${num(v)}</small></button></li>`; }).join("");
   const cls = (Object.keys(CLASSES) as (keyof typeof CLASSES)[]).map((c) => `<li class="dh-class"><h3 class="dh-h2 dh-clh">${CLASSES[c].name} <small>${CLASSES[c].maker}</small></h3><ul class="dh-list dh-show">${MODELS.filter((x) => x.cls === c).map((x) => {
     const t = tune({ ...me, ...blank(x.id) });
     return `<li class="dh-bc" data-pv="bike:${x.id}"${all || unlocked(p, x) ? "" : " data-locked"}><span class="dh-bc-head"><i class="dh-maker" style="--a:${makerOf(x).colors[0]};--b:${makerOf(x).colors[1]}"></i><span class="dh-mod"><small>${CLASSES[x.cls].name} · ${makerOf(x).name}</small><b>${makerOf(x).name} ${x.name}</b><small class="dh-stars"><span aria-label="Tier ${x.tier} of 4">${"★".repeat(x.tier)}${"☆".repeat(4 - x.tier)}</span> · ◈ ${num(x.price)}</small></span></span>${bikeKey(p, x.id, all)}<small class="dh-blurb">${esc(x.blurb)}</small><span class="dh-mini-bars">${bar(t.feel.pull, "PULL")}${bar(t.feel.top, "TOP")}${bar(t.feel.light, "LIGHT")}</span>${paceDl(t, u, "dh-pace dh-pace-s")}</li>`;
   }).join("")}</ul></li>`).join("");
   const prog = `You: ${p.stats.events} events · ◈ ${num(p.stats.earned)} earned.`;
-  return `<p class="dh-sub">${full ? `The garage holds ${GARAGE_SLOTS} bikes: a new one trades in the bike that rides next (◈ ${num(trade)} off), or sell one first.` : "A new bike goes in the empty bay and rides next. Each bike keeps its own parts, mods and paint."} ${prog} Point at a bike (or tap it) to see it on the turntable.</p><h3 class="dh-h2">YOUR BIKES</h3><ul class="dh-list dh-show dh-mine">${mine}</ul><ul class="dh-list dh-classes">${cls}</ul>`;
+  return `<p class="dh-sub">${full ? `The garage holds ${p.slots} bikes: a new one trades in the bike that rides next (◈ ${num(trade)} off)${p.slots < GARAGE_MAX ? ", or buy a spot (+ BUY SPOT, by your bikes)" : ""}, or sell one first.` : "A new bike goes in the empty bay and rides next. Each bike keeps its own parts, mods and paint."} ${prog} Point at a bike (or tap it) to see it on the turntable.</p><h3 class="dh-h2">YOUR BIKES</h3><ul class="dh-list dh-show dh-mine">${mine}</ul><ul class="dh-list dh-classes">${cls}</ul>`;
 }
 /** A showroom bike's key: BUY, TRADE IN (a full garage) or LOCKED (with what opens it). */
 function bikeKey(p: Profile, id: string, all: boolean, go = "") {
-  const x = modelOf(id), full = p.bikes.length >= GARAGE_SLOTS, net = full ? Math.max(0, x.price - tradeValue(riding(p))) : x.price, cr = p.credits, u = UNLOCK[x.tier];
+  const x = modelOf(id), full = p.bikes.length >= p.slots, net = full ? Math.max(0, x.price - tradeValue(riding(p))) : x.price, cr = p.credits, u = UNLOCK[x.tier];
   return !(all || unlocked(p, x)) ? `<button type="button" class="bui-key dh-buy" disabled>LOCKED<small class="dh-price">${u!.events} EVENTS or ◈${num(u!.earned)} EARNED</small></button>`
     : full ? `<button type="button" class="bui-key dh-buy${go}" data-bike="${x.id}" data-trade="${p.ride}">TRADE IN${cost(net, cr >= net)}</button>`
     : `<button type="button" class="bui-key dh-buy${go}" data-bike="${x.id}">BUY${cost(x.price, cr >= x.price)}</button>`;
@@ -181,14 +181,19 @@ function pinBar(p: Profile, ui: GarageUI) {
   return `<div class="dh-try dh-pin" role="group" aria-label="Preview"><span><b class="dh-pvtag">PREVIEW</b> ${esc(pvName(p, v))}</span>${go}<button type="button" class="bui-key dh-buy" data-untry>CANCEL</button></div>`;
 }
 
-/** The garage card: the header and tabs (the shell's), then the dock that stays at the top while the
+/** The next garage spot for sale, as a tile in your bikes (none once the garage holds GARAGE_MAX). */
+function spotKey(p: Profile) {
+  const pr = spotPrice(p);
+  return pr ? `<button type="button" class="bui-key dh-slot-k dh-empty dh-spot" data-spot aria-label="Buy a garage spot: spot ${p.slots + 1} of ${GARAGE_MAX}, ${num(pr)} credits"><small>SPOT ${p.slots + 1} OF ${GARAGE_MAX}</small><b>+ BUY SPOT</b>${cost(pr, p.credits >= pr)}</button>` : "";
+}
+/** The garage card: the header and the LET'S RIDE key (the shell's), then the dock that stays at the top while the
  *  lists scroll under it (the turntable, the bike shown and its pace, your bikes, the pinned
  *  preview's bar, the three garage tabs), then the tab's lists and the note line. */
-export function garageCard(p: Profile, ui: GarageUI, head: string, tabs: string, note: string) {
+export function garageCard(p: Profile, ui: GarageUI, head: string, go: string, note: string, extra = "") {
   const b = riding(p);
-  const bikes = p.bikes.map((x, i) => { const mm = modelOf(x.model), w = atRisk(x).length || x.fail; return `<button type="button" class="bui-key dh-slot-k" data-ride="${i}" aria-pressed="${i === p.ride}"><small>${CLASSES[mm.cls].name}${w ? ' <em class="dh-warn">⚠</em>' : ""}</small><b>${mm.name}</b><small>#${x.look.number}</small></button>`; }).join("") + (p.bikes.length < GARAGE_SLOTS ? `<button type="button" class="bui-key dh-slot-k dh-empty" data-gtab="showroom"><small>EMPTY BAY</small><b>+ BIKE</b></button>` : "");
+  const bikes = p.bikes.map((x, i) => { const mm = modelOf(x.model), w = atRisk(x).length || x.fail; return `<button type="button" class="bui-key dh-slot-k" data-ride="${i}" aria-pressed="${i === p.ride}"><small>${CLASSES[mm.cls].name}${w ? ' <em class="dh-warn">⚠</em>' : ""}</small><b>${mm.name}</b><small>#${x.look.number}</small></button>`; }).join("") + (p.bikes.length < p.slots ? `<button type="button" class="bui-key dh-slot-k dh-empty" data-gtab="showroom"><small>${p.slots - p.bikes.length > 1 ? `${p.slots - p.bikes.length} EMPTY BAYS` : "EMPTY BAY"}</small><b>+ BIKE</b></button>` : "") + spotKey(p);
   const body = ui.tab === "bike" ? partsTab(p, b) : ui.tab === "look" ? lookTab(p, b, ui) : showroomTab(p, ui.all);
-  return `<div class="dh-card dh-garage" data-screen="garage">${head}${tabs}<div class="dh-dock"><div class="dh-bay"><canvas-slot></canvas-slot><div><div class="dh-pvinfo">${bayInfo(p, ui)}</div><div class="dh-slots" role="group" aria-label="Your bikes">${bikes}</div></div></div>${pinBar(p, ui)}<nav class="dh-seg" aria-label="Garage">${([["bike", "PARTS & MODS"], ["look", "PAINT & KIT"], ["showroom", "SHOWROOM"]] as const).map(([v, tx]) => `<button type="button" class="bui-key" data-gtab="${v}" aria-pressed="${v === ui.tab}">${tx}</button>`).join("")}</nav></div><div class="dh-gbody">${body}</div><p class="dh-sub dh-note" role="status">${esc(note)}</p></div>`;
+  return `<div class="dh-card dh-garage" data-screen="garage">${head}<div class="dh-dock"><div class="dh-bay"><canvas-slot></canvas-slot><div><div class="dh-pvinfo">${bayInfo(p, ui)}</div><div class="dh-slots" role="group" aria-label="Your bikes: ${p.bikes.length} of ${p.slots} spots">${bikes}</div>${go}</div></div>${pinBar(p, ui)}<nav class="dh-seg" aria-label="Garage">${([["bike", "PARTS & MODS"], ["look", "PAINT & KIT"], ["showroom", "SHOWROOM"]] as const).map(([v, tx]) => `<button type="button" class="bui-key" data-gtab="${v}" aria-pressed="${v === ui.tab}">${tx}</button>`).join("")}</nav></div>${extra}<div class="dh-gbody">${body}</div><p class="dh-sub dh-note" role="status">${esc(note)}</p></div>`;
 }
 
 /** A click in the garage: a purchase to report ([result, what]), a new profile, or just a redraw
@@ -213,6 +218,7 @@ export function garageClick(p: Profile, ui: GarageUI, t: HTMLElement, root: Pare
   if (d.buytrial !== undefined && isLook(ui.trial)) { const [s, id] = ui.trial; ui.trial = null; return { buy: [dress(p, s, id), "Bought"] }; }
   if (d.untry !== undefined) return (ui.trial = null), {};
   if (d.number !== undefined) return { buy: [dress(p, "number", root.querySelector<HTMLInputElement>(".dh-numin")!.value), "Number set"] };
+  if (d.spot !== undefined) return { buy: [buySpot(p), "Garage spot bought"] };
   if (d.bike) return (ui.trial = null), { buy: [buyBike(p, d.bike, ui.all, d.trade !== undefined ? +d.trade : undefined), d.trade !== undefined ? "Traded in" : "Bought"] };
   if (d.sell) {
     if (d.sure === undefined) return (d.sure = ""), (t.firstChild!.textContent = "SURE? TAP AGAIN"), null;

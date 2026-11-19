@@ -1,8 +1,8 @@
 // The profile (src/model/profile.ts): a fresh profile has no bike until the first-run setup; the
 // setup gives one starter (the cheapest model of its class), its paint and number, the rider's kit;
 // save → load gives it back; `migrate` runs the version steps in order and `normalize` repairs a
-// partial or out-of-range save (a missing part comes back new, a bad number is clamped, a fourth
-// bike is dropped); garbage loads fresh; a save from a newer game is refused and never written over;
+// partial or out-of-range save (a missing part comes back new, a bad number is clamped, bikes past
+// six are dropped); garbage loads fresh; a save from a newer game is refused and never written over;
 // the export code goes round to an equal profile and a typo is caught. The roster and the data file
 // hold 4 classes × 4 models, a 3-bike garage and the rider kit.
 import test from "node:test";
@@ -50,13 +50,13 @@ test("profile: normalize repairs a partial or broken save", () => {
     { uid: "b1", model: "anvil" }, { model: "glidewire" }, { model: "sparkhound" }, { notabike: true },
   ], kit: { helmet: "crown" }, settings: { sound: false } };
   const p = P.migrate(raw);
-  assert.equal(p.bikes.length, 3, "the garage holds three");
+  assert.deepEqual([p.bikes.length, p.slots], [4, 4], "a hand-made save keeps its four bikes: the spots grow to fit (up to six)");
   assert.deepEqual(p.bikes[0].parts, { tyres: 0.4, chain: 1, motor: 1, susp: 1, brakes: 1 }, "missing parts come back new");
   assert.equal(p.bikes[0].mods.power, 3, "mods clamp to their max");
   assert.deepEqual(p.bikes[0].look, { paint: "gridline", number: 99, graphics: "none", plastics: "scheme", plate: "scheme" });
   assert.notEqual(p.bikes[0].uid, p.bikes[1].uid, "uids made unique");
   assert.equal(p.credits, 0);
-  assert.equal(p.ride, 2);
+  assert.equal(p.ride, 3, "clamped to the last bike");
   assert.equal(p.kit.helmet, "peak");
   assert.equal(p.settings.sound, false);
   assert.match(p.name, /^[A-Z.\- ]{1,12}$/);
@@ -95,7 +95,7 @@ test("profile: the export code goes round; a typo is caught", () => {
   p = buyBike(p, "razorhive").profile;
   p = choose(p, 0);
   const code = P.exportCode(p);
-  assert.match(code, /^HS6-[A-Za-z0-9_-]+-[0-9A-Z]{6}$/);
+  assert.match(code, /^HS7-[A-Za-z0-9_-]+-[0-9A-Z]{6}$/);
   assert.deepEqual(P.importCode(code).profile, p);
   assert.deepEqual(P.importCode("DH2" + code.slice(3)).profile, p, "a code from before the rename (DH2-) still imports");
   assert.ok("error" in P.importCode("XX2" + code.slice(3)), "any other prefix does not");

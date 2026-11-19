@@ -10,7 +10,8 @@ import { makeTrack } from "./modes/race/course.ts";
 import { trackSvg } from "./modes/race/preview.ts";
 import { mountTrack } from "./modes/race/scene.ts";
 import { riding, type Profile } from "./model/profile.ts";
-import { difficulty, rivals, roundSeed, roundTrack, standings, unlocked, type SeriesRun } from "./model/series.ts";
+import { bestOf, difficulty, rivals, roundSeed, roundTrack, standings, unlocked, type SeriesRun } from "./model/series.ts";
+import type { Venue } from "./modes/race/venue.ts";
 import type { ModeResult } from "./model/economy.ts";
 
 const num = (n: number) => Math.round(n).toLocaleString("en-US");
@@ -43,19 +44,19 @@ function nextRound(run: SeriesRun) {
 }
 
 /** The SERIES screen. */
-export function seriesCard(p: Profile, head: string, tabs: string, note: string) {
+export function seriesCard(p: Profile, head: string, tabs: string, note: string, venue: Venue = "mx") {
   const S = p.series, run = S.run;
   if (run) {
     const T = tier(run.tier);
     return `<div class="dh-card ds" data-screen="series">${head}${tabs}<b class="dh-h">${T.name}</b><p class="dh-sub">Round ${run.round + 1} of ${T.rounds} · a win pays ◈ ${num(T.prize[0]!)} · champion ◈ ${num(T.bonus[0]!)}. Points ${POINTS.join(" · ")}.</p><div class="ds-cols">${nextRound(run)}<section>${table(p, run, "STANDINGS")}</section></div><p class="dh-row"><button type="button" class="bui-key dh-go" data-series-go>RIDE ROUND ${run.round + 1}</button><button type="button" class="bui-key" data-series-retire>RETIRE</button></p><p class="dh-sub dh-note" role="status">${esc(note)}</p></div>`;
   }
   const tiers = TIERS.map((T) => {
-    const open = unlocked(S, T.id), best = S.best[T.id], after = T.after ? tier(T.after).name : "";
+    const open = unlocked(S, T.id, venue), best = bestOf(S, venue)[T.id], after = T.after ? tier(T.after).name : "";
     const status = best === 0 ? "CHAMPION" : best !== undefined ? `BEST ${ORD[best]}` : open ? "OPEN" : `LOCKED · TOP ${UNLOCK_TOP} IN ${after}`;
     return `<li class="ds-tier"${open ? "" : " data-locked"}><span class="dh-mod"><small>${T.rounds} ROUNDS · ${status}</small><b>${T.name}</b><small>${esc(T.blurb)}</small><small>Win ◈ ${num(T.prize[0]!)} a round · champion ◈ ${num(T.bonus[0]!)}</small></span><button type="button" class="bui-key dh-buy" data-series-enter="${T.id}" ${open ? "" : "disabled"}>${open ? "ENTER" : "LOCKED"}</button></li>`;
   }).join("");
   const last = S.last ? `<section>${table(p, S.last, `LAST: ${tier(S.last.tier).name} · FINAL`)}</section>` : "";
-  return `<div class="dh-card ds" data-screen="series">${head}${tabs}<b class="dh-h">RACE SERIES</b><p class="dh-sub">A championship of rounds on your ${esc(modelOf(riding(p).model).name)}. Every round is a new track, built for the race and ridden before you get it. Points after each round; prize money every round and a bonus for the championship.${S.titles ? ` Titles: ${S.titles}.` : ""}</p><ul class="dh-list ds-tiers">${tiers}</ul>${last}<p class="dh-sub dh-note" role="status">${esc(note)}</p></div>`;
+  return `<div class="dh-card ds" data-screen="series">${head}${tabs}<b class="dh-h">${venue === "sx" ? "SX STADIUM SERIES" : "MX RACE SERIES"}</b><p class="dh-sub">A championship of rounds on your ${esc(modelOf(riding(p).model).name)}. Every round is a new track, built for the race and ridden before you get it. Points after each round; prize money every round and a bonus for the championship.${S.titles ? ` Titles: ${S.titles}.` : ""}</p><ul class="dh-list ds-tiers">${tiers}</ul>${last}<p class="dh-sub dh-note" role="status">${esc(note)}</p></div>`;
 }
 
 /** The standings block on the result card after a round (or the final table). */

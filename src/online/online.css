@@ -52,7 +52,6 @@
 .dh .ol-stand li[data-ai]{opacity:.7}
 .dh .ol-stand span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dh .ol-stand em{font-style:normal}
-.dh .dh-modes .ol-tile .dh-modek{background:color-mix(in srgb,#b18cff 32%,var(--surface))}
 @media (max-width:620px){.dh .ol-board{top:auto;bottom:150px;right:8px}.dh[data-olboard] .ol-board{top:104px;bottom:auto}}
 /* The online result over a ride that goes on: no pad under the card. */
 .dh[data-olres] .mt-pad,.dh[data-olres] .wc-pad,.dh[data-olres] .hs-rocker{display:none}

@@ -4,6 +4,26 @@
 
 - **New icon and share image.** The app icon is a lime setting sun with pink stripes and a wheelie silhouette on a cyan horizon (all icon sizes, maskable and Apple touch); the share image is the new launch cover's landscape cut; the cover art is in `site/public/shots/cover.jpg`.
 - **The landing page wears the brand.** The header shows the HOLESHOT wordmark (lime letters, pink drop, ink outline; named for screen readers) beside the icon. The hero leads with the lockup in the h1, the hook, a lime PLAY and the box-art cover (an SVG, 6 KB gzip) on the cover's sunset bands, with a pale sunset in the light theme. The live demo race moves to its own "Watch a race" band and starts, with its module, only when scrolled to, without touch controls over it. A first view now loads about 25 KB gzip instead of about 282 KB. A new Brand section near the bottom shows the lockup on dark and light, the app icon, the cover and the eight-colour palette, with "by David Cooley", and every file can be downloaded from `site/public/brand/`.
+- **The garage is home; LET'S RIDE is its one main key** (owner, 2026-11-19). The row of four top
+  links (GARAGE · RIDE · SERIES · SETTINGS) and the separate home card are gone. You land in the
+  garage after the setup and on every load, and come back to it after a ride (the result's main key
+  is GARAGE; RIDE AGAIN and LET'S RIDE sit beside it; leaving an online room comes home too).
+  LET'S RIDE is a Board UI sticker key in the garage's dock, so it stays in view while the lists
+  scroll. ⚙ beside the light/dark key opens SETTINGS; every screen past the garage has ← back
+  top-left in a header that sticks to the top; Escape steps back a screen.
+- **LET'S RIDE: four groups**, each with a one-line description and a shelf of tiles: RACE (SERIES
+  first, then RACE, each with an MX outdoor / SX indoor choice), ENDLESS (the Endless Desert and each
+  endless ground, Endless Wheelie City, MASHUP · COMING SOON), FREE RIDE (the five maps with their
+  previews, SX ARENA · COMING SOON, Big Air) and TRACK DAY (road circuits · COMING SOON). Online sits
+  in RACE, ENDLESS and FREE RIDE, each opening the room card with that kind picked. Side by side on a
+  wide screen, stacked on a phone, no sideways scroll. The SX keys show as SOON until the SX tracks
+  land (`SX_READY` in src/ride-ui.ts); the pick reaches a mode as `ModeCtx.venue` ("mx" default:
+  today's tracks), and `game.start(id, { venue })` takes it.
+- **Garage spots: three to start, buy more up to six.** + BUY SPOT by your bikes: the 4th spot is
+  ◈ 2,500, the 5th 5,000, the 6th 10,000 (about 14, 27 and 55 events at the reference player's 183
+  an event: a tier 1, tier 2 and tier 4 bike's price). Test credits buy them too (nothing saved). A
+  full six-bike garage only trades in. Profile v7 (additive: `slots`, three on an old save, or as many
+  as its bikes; no bike dropped; the version step makes an older build leave a six-bike save alone).
 
 ## 0.5.6 — 2026-11-19
 

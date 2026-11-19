@@ -48,8 +48,7 @@ try {
       const p = await ctx.newPage(), errs = [], at = `${vname} ${tier}`;
       p.on("pageerror", (e) => errs.push(e.message));
       await p.goto(server.url + "/" + q);
-      await until(p, "window.game && game.getSnapshot().screen === 'menu'", `${at}: the saved profile loads`);
-      await click(p, "[data-go=garage]");
+      await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${at}: the saved profile loads`);
       await until(p, "game.getSnapshot().screen === 'garage' && root.querySelector('.dh-preview').width > 50", `${at}: the garage`);
       const head = await text(p, ".dh-bay");
       assert.ok(head.includes(bay), `${at}: the bay names the maker (${head.slice(0, 80)})`);

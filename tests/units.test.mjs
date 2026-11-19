@@ -22,7 +22,7 @@ test("units: conversions and labels", () => {
 
 test("units: Imperial by default; Metric saved and loaded; old saves migrate to Imperial", () => {
   assert.equal(P.fresh().settings.units, "imperial");
-  assert.equal(P.VERSION, 6);
+  assert.equal(P.VERSION, 7);
   for (const v of [1, 2, 3, 4, 5]) {
     const p = P.migrate({ v, name: "KIP", credits: 10, settings: { sound: false, view: "table" } });
     assert.equal(p.settings.units, "imperial", `v${v} → Imperial`);

@@ -50,7 +50,7 @@
    lists in that gap. On short screens the dock compacts: a smaller turntable, the info on one line. */
 .dh-dock{position:sticky;top:-16px;z-index:3;display:grid;gap:10px;margin:-6px -18px 0;padding:6px 18px 12px;background:var(--surface);border-bottom:2.5px solid var(--rim);box-shadow:0 8px 12px -10px color-mix(in srgb,#07060f 60%,transparent)}
 .dh-dock::before{content:"";position:absolute;inset:auto 0 100%;height:var(--dh-top,0px);background:var(--surface)}
-.dh-garage>.dh-top,.dh-garage>.dh-tabs{position:relative;z-index:4}
+.dh-garage>.dh-top{position:relative;z-index:4}
 .dh-dock .dh-bay{align-items:start}
 .dh-pvinfo{display:grid;gap:4px;min-width:0}
 .dh-bayline{font-size:12px;letter-spacing:.06em;color:var(--muted);overflow-wrap:anywhere}
@@ -88,7 +88,10 @@
 @media (max-width:620px){
 .dh-dock{top:-10px;margin-inline:-12px;padding-inline:12px}
 .dh-pin{grid-template-columns:1fr 1fr;gap:6px 8px;padding:6px 8px}.dh-pin>span{grid-column:1/-1}.dh-pin .dh-buy{min-width:0}
-.dh-dock .dh-preview{aspect-ratio:auto;height:min(26svh,210px)}
+.dh-dock .dh-preview{aspect-ratio:auto;height:min(22svh,200px)}
+.dh .dh-letsride{min-height:50px;margin-top:0;padding:6px 12px}
+.dh .dh-letsride b{font-size:21px}
+.dh .dh-letsride small{display:none}
 .dh-bayblurb{display:none}
 .dh-pvinfo{grid-template-columns:minmax(0,1fr)}
 .dh-pvinfo .dh-big{font-size:20px}
@@ -102,6 +105,9 @@
 @media (max-height:620px){
 .dh-dock{gap:6px;padding-bottom:8px}
 .dh-dock .dh-preview{aspect-ratio:auto;height:min(36svh,170px)}
+.dh .dh-letsride{min-height:44px;margin-top:0;padding:4px 12px}
+.dh .dh-letsride b{font-size:18px}
+.dh .dh-letsride small{display:none}
 .dh-bayblurb{display:none}
 .dh-pvinfo{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
 .dh-pvinfo .dh-big{font-size:18px}

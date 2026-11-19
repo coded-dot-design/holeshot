@@ -36,7 +36,7 @@ try {
     const p = await ctx.newPage();
     p.on("pageerror", (e) => errors.push(`${name}: ${e.message}`));
     await p.goto(path.startsWith("http") ? path : `${site.url}${path}?rooms=${encodeURIComponent(rooms.url)}`);
-    await until(p, () => window.game && ["menu", "online"].includes(game.getSnapshot().screen), null, `${name} mounts`);
+    await until(p, () => window.game && ["garage", "online"].includes(game.getSnapshot().screen), null, `${name} mounts`);
     return p;
   };
   const RIDES = [...BIOMES.map((b, i) => ({ kind: 4, sub: i, mode: "desert", ground: b.id, name: b.name })), { kind: 5, sub: 0, mode: "endcity", ground: "city", name: "ENDLESS WHEELIE CITY" }];

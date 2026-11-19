@@ -2,7 +2,7 @@
 // come from ../data/economy.ts; a cosmetic bought once is owned (switching back to it is free), and
 // so is a tune choice on the bike it was bought for. Every service, mod, fix and failure goes in the
 // bike's service log (./upkeep.ts logIt).
-import { COSMETIC, DAMAGE_PRICE, GARAGE_SLOTS, MODS, MOTOR_PRICE, PART_PRICE, SERVICE_BELOW, SETUPS, TRADE, TYRES, UNLOCK, type DamageId, type ModId, type PartId, type SetupId, type TyreId } from "../data/economy.ts";
+import { COSMETIC, DAMAGE_PRICE, GARAGE_MAX, GARAGE_SLOTS, MODS, MOTOR_PRICE, PART_PRICE, SERVICE_BELOW, SETUPS, SPOT_PRICE, TRADE, TYRES, UNLOCK, type DamageId, type ModId, type PartId, type SetupId, type TyreId } from "../data/economy.ts";
 import { GRAPHICS, HELMETS, OUTFITS, PAINTS, PATTERNS, PLASTICS, PLATES, SWATCHES, VISORS, type KitSlot, type LookSlot } from "../data/looks.ts";
 import { CLASSES, model, MODELS, type Model } from "../data/roster.ts";
 import { newBike, normalize, riding, type BikeSave, type Profile } from "./profile.ts";
@@ -185,7 +185,7 @@ export function buyBike(p: Profile, modelId: string, all = false, trade?: number
   if (!m) return no("Not in the shop.");
   if (!all && !unlocked(n, m)) { const u = UNLOCK[m.tier]!; return no(`Opens after ${u.events} events or ${u.earned.toLocaleString("en-US")} credits earned.`); }
   const was = riding(n), credit = trade !== undefined && n.bikes[trade] ? tradeValue(n.bikes[trade]!) : 0;
-  if (trade === undefined && n.bikes.length >= GARAGE_SLOTS) return no(`The garage holds ${GARAGE_SLOTS} bikes: trade one in.`);
+  if (trade === undefined && n.bikes.length >= n.slots) return no(n.slots < GARAGE_MAX ? `The garage holds ${n.slots} bikes: buy a spot or trade one in.` : `The garage holds ${GARAGE_MAX} bikes, the most it can: trade one in.`);
   const cost = Math.max(0, m.price - credit);
   if (n.credits < cost) return no(`${cost.toLocaleString("en-US")} credits needed.`);
   if (trade !== undefined && n.bikes[trade]) {
@@ -209,4 +209,15 @@ export function choose(p: Profile, index: number): Profile {
   const n = normalize(p);
   n.ride = Math.max(0, Math.min(n.bikes.length - 1, index | 0));
   return n;
+}
+/** The next garage spot's price (0: the garage is as big as it gets). */
+export const spotPrice = (p: Profile) => (p.slots < GARAGE_MAX ? SPOT_PRICE[Math.max(0, p.slots - GARAGE_SLOTS)] ?? 0 : 0);
+/** Buy one more bike spot (up to GARAGE_MAX), at SPOT_PRICE. */
+export function buySpot(p: Profile): Buy {
+  const n = normalize(p), cost = spotPrice(n);
+  if (!cost) return no(`The garage holds ${GARAGE_MAX} bikes, the most it can.`);
+  if (n.credits < cost) return no(`${cost.toLocaleString("en-US")} credits needed.`);
+  n.slots++;
+  n.credits -= cost;
+  return { ok: true, profile: n, spent: cost };
 }

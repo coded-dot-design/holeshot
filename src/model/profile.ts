@@ -1,4 +1,4 @@
-// The player's profile: one rider, a garage of up to three bikes, credits, stats and settings, as a
+// The player's profile: one rider, a garage of three bike spots (more bought, up to six), credits, stats and settings, as a
 // versioned plain object. Saved on the device (localStorage, every access in try/catch: a private
 // window or blocked storage just means no save) and movable between devices as an export code.
 // `migrate` takes anything that was ever saved (or typed in) and returns a valid current profile:
@@ -6,12 +6,12 @@
 // what is out of range, so a save from before a part or a field existed still loads.
 import type { Units } from "./units.ts";
 import { model, STARTERS } from "../data/roster.ts";
-import { PARTS, START_CREDITS, GARAGE_SLOTS, MODS, SETUPS, TYRES, LOG_MAX, ONLINE, type PartId, type ModId, type TyreId } from "../data/economy.ts";
+import { PARTS, START_CREDITS, GARAGE_SLOTS, GARAGE_MAX, MODS, SETUPS, TYRES, LOG_MAX, ONLINE, type PartId, type ModId, type TyreId } from "../data/economy.ts";
 import { PAINTS, SWATCHES, HELMETS, VISORS, PATTERNS, GRAPHICS, PLASTICS, PLATES } from "../data/looks.ts";
 import { freshSeries, normSeries, type SeriesSave } from "./series.ts";
 import { fitsWhere } from "./families.ts";
 
-export const VERSION = 6;
+export const VERSION = 7;
 /** The endless bests a profile keeps (world units): the ENDLESS grounds and Endless Wheelie City. */
 export const FAR_KEYS = ["desert", "quarry", "forest", "night-park", "city"];
 const farZero = () => Object.fromEntries(FAR_KEYS.map((k) => [k, 0])) as Record<string, number>;
@@ -64,6 +64,8 @@ export interface Profile {
   /** The bike that rides next (an index into bikes). */
   ride: number;
   bikes: BikeSave[];
+  /** Bike spots in the garage (GARAGE_SLOTS at first, bought up to GARAGE_MAX; never fewer than the bikes). */
+  slots: number;
   kit: RiderKit;
   /** What the shop has sold this rider (cosmetic ids by slot, so owned colours cost nothing again). */
   owned: string[];
@@ -97,7 +99,7 @@ export function newBike(modelId: string, uid: string, paint = "gridline", number
 }
 /** A profile before the first-run setup: no name, no bike yet. */
 export function fresh(): Profile {
-  return { v: VERSION, name: "", credits: START_CREDITS, ride: 0, bikes: [], kit: { ...STARTER_KIT }, owned: [], stats: { events: 0, wins: 0, earned: 0, best: {}, far: farZero() }, pit: 0, settings: { sound: true, view: "chase", units: "imperial" }, series: freshSeries(), online: [] };
+  return { v: VERSION, name: "", credits: START_CREDITS, ride: 0, bikes: [], slots: GARAGE_SLOTS, kit: { ...STARTER_KIT }, owned: [], stats: { events: 0, wins: 0, earned: 0, best: {}, far: farZero() }, pit: 0, settings: { sound: true, view: "chase", units: "imperial" }, series: freshSeries(), online: [] };
 }
 /** The first-run setup: your one starter bike, its paint and number, your name and kit colours. */
 export function setup(p: Profile, o: { starter: string; paint: string; number: number; name: string; kit?: Partial<RiderKit> }): Profile {
@@ -149,7 +151,7 @@ function normBike(b: unknown, i: number): BikeSave | null {
 export function normalize(raw: unknown): Profile {
   const o = obj(raw), f = fresh(), k = obj(o.kit), st = obj(o.stats), set = obj(o.settings);
   const sw = SWATCHES.map((s) => s.id);
-  const bikes = (Array.isArray(o.bikes) ? o.bikes : []).map(normBike).filter((b): b is BikeSave => !!b).slice(0, GARAGE_SLOTS);
+  const bikes = (Array.isArray(o.bikes) ? o.bikes : []).map(normBike).filter((b): b is BikeSave => !!b).slice(0, GARAGE_MAX);
   // Unique uids.
   bikes.forEach((b, i) => bikes.slice(0, i).some((a) => a.uid === b.uid) && (b.uid = "b" + (i + 1) + "x"));
   const best: Record<string, number> = {};
@@ -162,6 +164,7 @@ export function normalize(raw: unknown): Profile {
     credits: int(o.credits, f.credits, 0, 9_999_999),
     ride: int(o.ride, 0, 0, Math.max(0, bikes.length - 1)),
     bikes,
+    slots: Math.max(int(o.slots, GARAGE_SLOTS, GARAGE_SLOTS, GARAGE_MAX), bikes.length),
     kit: {
       helmet: oneOf(k.helmet, HELMETS.map((h) => h.id), STARTER_KIT.helmet),
       helmetPaint: oneOf(k.helmetPaint, sw, STARTER_KIT.helmetPaint),
@@ -195,7 +198,10 @@ export type Migration = (old: Record<string, unknown>) => Record<string, unknown
  *  (`stats.best["wheelie:city"]`) carries into Endless Wheelie City's (`"endcity:city"`) when
  *  higher; the old key is kept as it was (read only: nothing writes it now).
  *  5 → 6: display units (`settings.units`). Every existing save gets Imperial (miles, mph), the
- *  default; nothing else changes (distances stay saved in world units). */
+ *  default; nothing else changes (distances stay saved in world units).
+ *  6 → 7: buyable garage spots (`slots`). Every existing save gets the three spots it had (normalize
+ *  raises it to the bikes it holds, should a hand-made save hold more), additive: no bike is dropped. (The step is a
+ *  version so an older build, which keeps three bikes, sees a newer save and leaves it alone.) */
 export const MIGRATIONS: Record<number, Migration> = {
   1: (o) => {
     const wins = typeof (o.stats as { wins?: unknown } | undefined)?.wins === "number" ? ((o.stats as { wins: number }).wins) : 0;
@@ -215,6 +221,7 @@ export const MIGRATIONS: Record<number, Migration> = {
     return { ...o, stats: { ...st, best } };
   },
   5: (o) => ({ ...o, settings: { ...obj(o.settings), units: "imperial" } }),
+  6: (o) => ({ ...o, slots: GARAGE_SLOTS }),
 };
 
 /** Anything ever saved → a current profile, or null when it is not a profile at all or comes from a

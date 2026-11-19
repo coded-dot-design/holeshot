@@ -44,8 +44,7 @@ try {
     const p = await ctx.newPage(), errs = [];
     p.on("pageerror", (e) => errs.push(e.message));
     await p.goto(server.url + path);
-    await until(p, "window.game && game.getSnapshot().screen === 'menu'", `${name}: the saved profile loads`);
-    await click(p, "[data-go=garage]");
+    await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${name}: the saved profile loads`);
     await until(p, "root.querySelector('.dh-preview').width > 50 && root.querySelector('.dh-preview').getAttribute('aria-valuenow') !== null", `${name}: the turntable draws`);
     const ink0 = await ink(p);
     // ---- the dock stays in view while the showroom's list scrolls under it ----
@@ -111,7 +110,7 @@ try {
       await $(p, "root.querySelector('[data-dress=paint][data-id=magma]').focus()");
       await until(p, "/Preview: PAINT SCHEME/.test(root.querySelector('.dh-live').textContent)", `${name}: focus announces the preview`);
       await inkNot(p, ink0, `${name}: focus previews it`);
-      await $(p, "root.querySelector('[data-go=garage]').focus()");
+      await $(p, "root.querySelector('.dh-letsride').focus()");
       await inkIs(p, ink0, `${name}: focus elsewhere restores`);
     }
     // ---- the plinth against the preview's background: 3:1 or more ----
@@ -128,8 +127,7 @@ try {
     await ctx.addInitScript((s) => localStorage.setItem("holeshot:profile", s), JSON.stringify(SAVE));
     const p = await ctx.newPage();
     await p.goto(server.url + path);
-    await until(p, "window.game && game.getSnapshot().screen === 'menu'", "loads");
-    await click(p, "[data-go=garage]");
+    await until(p, "window.game && game.getSnapshot().screen === 'garage'", "loads");
     await until(p, "root.querySelector('.dh-preview').getAttribute('aria-valuenow') !== null && root.querySelector('.dh-preview').width > 50", "draws");
     await until(p, "(() => { const c = root.querySelector('.dh-preview'); return c.getContext('2d').getImageData(c.width >> 1, Math.round(c.height * 0.75), 1, 1).data[3] === 255; })()", "drawn");
     const px = await $(p, "(() => { const c = root.querySelector('.dh-preview'), g = c.getContext('2d'), at = (x, y) => [...g.getImageData(Math.round(x * c.width), Math.round(y * c.height), 1, 1).data].slice(0, 3); return { bg: at(0.03, 0.97), top: [at(0.42, 0.75), at(0.58, 0.75), at(0.5, 0.78)] }; })()");

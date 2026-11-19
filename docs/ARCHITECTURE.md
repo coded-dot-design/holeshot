@@ -9,7 +9,7 @@ physics rides, where the economy's numbers live, and how to add a map or a mode.
 ```
 src/
   index.ts              the public entry: createHoleshot, MODES, the roster
-  game.ts               the shell: profile, menus, garage UI, pause and result cards, event lifecycle
+  game.ts               the shell: profile, the screens (the garage is home; LET'S RIDE; ⚙ settings), pause and result cards, event lifecycle
   game.css              the shell's Board UI styles (each mode scene has its own sheet)
   html.ts               the cards' small HTML helpers (numbers, escaping, a condition bar)
   garage/
@@ -17,6 +17,7 @@ src/
     look.ts             lookOf(profile): the rig's colours (paint, plastics, graphics, plate decal, number, damage)
     garage.css          the garage's sheet
   series-ui.ts          the SERIES screen, the standings on a round's result, starting a round
+  ride-ui.ts            LET'S RIDE: the four groups (RACE, ENDLESS, FREE RIDE, TRACK DAY), MX/SX, SX_READY
   series.css            its sheet
   bike/
     bike.ts             the bike sim: a pure, fixed-step, deterministic dirt bike on a heightfield
@@ -24,7 +25,7 @@ src/
     kit.ts              particle pools, the engine's voice, the gamepad read
   data/
     roster.ts           4 classes × 4 models from 6 makers: names, blurbs, Power curves, suspension, prices, upkeep
-    economy.ts          every number of the economy: start credits, payouts, wear rates, prices, the pit crew
+    economy.ts          every number of the economy: start credits, payouts, wear rates, prices, garage spots, the pit crew
     series.ts           the Race Series: tiers, rounds, points, prizes, bonuses, rivals' names and level
     looks.ts            paint schemes, the rider kit (helmets, visors, colours, patterns)
   model/
@@ -37,7 +38,7 @@ src/
   modes/
     mode.ts             the Mode interface, ModeCtx, ModeRun, RunStats
     meter.ts            the ride meter every mode ticks (seconds, distance, gas, air, wheelie, crashes, hard landings)
-    index.ts            MODES (the RIDE menu), TRACKS (race tracks), FREE_MAPS (free-ride maps)
+    index.ts            MODES (every mode; LET'S RIDE groups them: ../ride-ui.ts), TRACKS (race tracks), FREE_MAPS (free-ride maps)
     race/course.ts      TrackPlan → makeTrack(): centre line, profile, terrain, rival speeds; motoRace()
     race/generate.ts    the seeded track generator: draft → validate (shape + an autopilot race) → TrackPlan
     race/preview.ts     a track from above as an SVG string (the series screen)
@@ -45,7 +46,7 @@ src/
     freeride/session.ts freeRun(): one rider on a track's table or an open map, no laps; tricks
     freeride/maps.ts    the open maps (Dune Sea, the Quarry, Forest Enduro, Night Park): makeMap(def)
     freeride/scenery.ts each open map's look: palette, ground bands, neon lines, scenery, sky
-    freeride/picker.ts  RIDE → FREE RIDE: the map picker with previews (picker.css)
+    freeride/picker.ts  LET'S RIDE → FREE RIDE: a key per map with its preview (picker.css)
     bigair/show.ts      airShow(): the arena and the run; bigair/tricks.ts the air-trick scorer
     bigair/scene.ts     the arena scene (mountAir)
     wheelie/hoods.ts    the four neighbourhoods as data (layouts, humps, street graphs); wheelie/cops.ts the heat and the patrol

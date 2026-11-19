@@ -1,4 +1,4 @@
-// RIDE → FREE RIDE: the map picker. One key per map with a preview: the map seen from above (its
+// LET'S RIDE → FREE RIDE: the maps. One key per map with a preview: the map seen from above (its
 // ground by height, hill-shaded, its painted trail and faces), the ride line in neon, the start
 // marked, and its features listed. Previews are drawn into small canvases after the card mounts,
 // one map per frame (building a map's terrain takes a few tens of ms), and kept per map and theme.
@@ -7,13 +7,12 @@ import { makeTrack, MOTO_TRACK } from "../race/course.ts";
 import { FEATURE_NAMES, type RideMap } from "./maps.ts";
 import { previewColors } from "./scenery.ts";
 
-/** The picker card (the shell passes its header and tabs). */
-export function mapsCard(head: string, tabs: string) {
-  const keys = FREE_MAPS.map((m, i) => {
+/** One key per map (`<li>`s for LET'S RIDE's FREE RIDE group; `cls` on each key). */
+export function mapTiles(cls = "") {
+  return FREE_MAPS.map((m, i) => {
     const tags = m.open ? [...new Set(tagsOf(m.open()))] : ["DOUBLES", "WHOOPS", "TRIPLE", "TABLETOP"];
-    return `<li><button type="button" class="bui-key dh-mapk" data-map="${m.id}"><canvas class="dh-mapv" data-prev="${m.id}" aria-hidden="true"></canvas><b><i>${i + 1}</i> ${m.name}</b><small>${m.blurb}</small><em>${tags.join(" · ")}</em></button></li>`;
+    return `<li><button type="button" class="bui-key dh-mapk ${cls}" data-map="${m.id}"><canvas class="dh-mapv" data-prev="${m.id}" aria-hidden="true"></canvas><b><i>${i + 1}</i> ${m.name}</b><small>${m.blurb}</small><em>${tags.slice(0, 4).join(" · ")}</em></button></li>`;
   }).join("");
-  return `<div class="dh-card dh-mapc" data-screen="maps">${head}${tabs}<p class="dh-row"><button type="button" class="bui-key" data-go="ride">← RIDE</button><b class="dh-h">FREE RIDE · PICK A MAP</b></p><p class="dh-sub">No laps, no clock: ride anywhere. Saddle time, air, wheelies and tricks pay a little; pause and END &amp; BANK.</p><ul class="dh-maps">${keys}</ul></div>`;
 }
 
 /** The features a map is known for (its picker tags). */

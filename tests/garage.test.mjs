@@ -200,8 +200,8 @@ test("save: the garage's fields fill in with defaults (no schema step of their o
   assert.deepEqual(back.profile, P.normalize(q));
   // The series' schema step (1 → 2) and the garage's defaults compose: a v2 save from before the
   // garage (the series record, old mods, no garage fields) gets the same defaults, keeps its series.
-  assert.equal(P.VERSION, 6, "the series' schema, best distance (Endless Desert), the endless bests, the fixed city's best carried over, then the display units; the garage adds no step");
-  assert.equal(p.v, 6);
+  assert.equal(P.VERSION, 7, "the series' schema, best distance (Endless Desert), the endless bests, the fixed city's best carried over, the display units, then the garage spots");
+  assert.equal(p.v, 7);
   assert.deepEqual(p.series.best, {}, "the v1 save went through the series' step");
   const v2 = { ...old, v: 2, series: { best: { rookie: 2 }, titles: 1, run: null, last: null } };
   const p2 = P.migrate(v2), b2 = p2.bikes[0];
@@ -247,4 +247,45 @@ test("roster: nine maker ids (six dirt, three street), shown in the default buil
   for (const m of MODELS) assert.ok(PAINTS.some((x) => x.id === "f-" + m.maker && x.plastic === makerOf(m).colors[0]), `${m.id}: factory paint`);
   const b = G.buyBike(start("anvil", { credits: 9000 }), "glidewire");
   assert.ok(b.ok && riding(b.profile).look.paint === "f-makfox" && b.profile.owned.includes("paint:f-makfox") && riding(b.profile).look.number === 23);
+});
+
+test("garage spots: three to start; buy more up to six at climbing prices; the 7th bike is refused; old saves keep every bike", () => {
+  let p = start("anvil", { credits: 100000 });
+  assert.equal(p.slots, E.GARAGE_SLOTS);
+  assert.deepEqual(E.SPOT_PRICE.length, E.GARAGE_MAX - E.GARAGE_SLOTS);
+  for (let i = 1; i < E.SPOT_PRICE.length; i++) assert.ok(E.SPOT_PRICE[i] > E.SPOT_PRICE[i - 1], "each spot costs more");
+  assert.equal(G.buySpot({ ...p, credits: E.SPOT_PRICE[0] - 1 }).ok, false, "not without the credits");
+  p = G.buyBike(p, "forgeback").profile;
+  p = G.buyBike(p, "razorhive").profile;
+  assert.match(G.buyBike(p, "glidewire").why, /buy a spot or trade one in/);
+  for (const price of E.SPOT_PRICE) {
+    const c = p.credits, r = G.buySpot(p);
+    assert.ok(r.ok && r.spent === price && r.profile.credits === c - price, `spot ${p.slots + 1}: ◈${price}`);
+    p = r.profile;
+    p = G.buyBike(p, MODELS.filter((m) => m.tier <= 2 && !p.bikes.some((b) => b.model === m.id))[0].id).profile;
+  }
+  assert.equal(p.slots, E.GARAGE_MAX);
+  assert.equal(p.bikes.length, E.GARAGE_MAX);
+  assert.equal(G.spotPrice(p), 0);
+  assert.equal(G.buySpot(p).ok, false, "no 7th spot");
+  const seventh = G.buyBike(p, "glidewire");
+  assert.equal(seventh.ok, false, "the 7th bike is refused");
+  assert.match(seventh.why, /6 bikes, the most it can/);
+  assert.ok(G.buyBike(p, "glidewire", false, 0).ok, "a trade-in still works at six");
+  // Selling keeps the spot; the save keeps all six (and the spots) through the export code.
+  const sold = G.sell(p, 1).profile;
+  assert.equal(sold.slots, E.GARAGE_MAX);
+  const back = P.importCode(P.exportCode(p)).profile;
+  assert.equal(back.bikes.length, 6);
+  assert.equal(back.slots, 6);
+  // A v6 save (before spots): three spots; one holding more bikes (hand-made) keeps them all, additive.
+  const v6 = { ...JSON.parse(JSON.stringify(p)), v: 6 };
+  delete v6.slots;
+  const m6 = P.migrate(v6);
+  assert.equal(m6.bikes.length, 6, "no bike dropped");
+  assert.equal(m6.slots, 6);
+  const v6b = { ...v6, bikes: v6.bikes.slice(0, 2) };
+  assert.equal(P.migrate(v6b).slots, E.GARAGE_SLOTS);
+  assert.equal(P.normalize({ ...p, slots: 99 }).slots, E.GARAGE_MAX, "clamped");
+  assert.equal(P.normalize({ ...p, bikes: p.bikes.slice(0, 1), slots: 1 }).slots, E.GARAGE_SLOTS, "never fewer than three");
 });

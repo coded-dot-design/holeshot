@@ -33,20 +33,19 @@ try {
     p.on("pageerror", (e) => errs.push(e.message));
     // ---- the real profile first: its export code ----
     await p.goto(server.url + "/");
-    await until(p, "window.game && game.getSnapshot().screen === 'menu'", `${name}: the saved profile loads`);
+    await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${name}: the saved profile loads`);
     const realCode = await p.evaluate(() => game.exportCode());
     assert.equal(await saved(p), SAVE, `${name}: loading writes nothing`);
 
     // ---- with ?credits=inf ----
     for (const q of ["?credits=inf", "?money=inf"]) {
       await p.goto(server.url + "/" + q);
-      await until(p, "window.game && game.getSnapshot().screen === 'menu'", `${name} ${q}: loads`);
+      await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${name} ${q}: loads`);
       assert.equal((await snap(p)).testCredits, true);
       assert.equal((await snap(p)).credits, MAX);
       assert.equal(await $(p, "root.querySelector('.dh-cr').textContent.trim()"), "◈ ∞", `${name} ${q}: ∞ credits`);
       assert.equal(await $(p, "root.querySelector('.dh-test').textContent.trim()"), "TEST CREDITS ∞", `${name} ${q}: the chip`);
       // The showroom: every bike for sale, each bought in turn (a full garage trades in), every mod maxed.
-      await click(p, "[data-go=garage]");
       await until(p, "game.getSnapshot().screen === 'garage'", `${name}: garage`);
       await click(p, "[data-gtab=showroom]");
       assert.equal(await $(p, "root.querySelectorAll('[data-locked]').length"), 0, `${name}: nothing locked`);
@@ -87,7 +86,7 @@ try {
 
     // ---- without the param: as before ----
     await p.goto(server.url + "/");
-    await until(p, "window.game && game.getSnapshot().screen === 'menu'", `${name}: loads again`);
+    await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${name}: loads again`);
     const s0 = await snap(p);
     assert.equal(s0.testCredits, false);
     assert.equal(s0.credits, 6000, `${name}: the real credits`);

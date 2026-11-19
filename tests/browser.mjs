@@ -142,14 +142,13 @@ try {
       assert.equal(s.bike.model, "sparkhound", `${name}: ${id} on the player's bike`);
       assert.ok(s.bike.parts.tyres < pre.bike.parts.tyres, `${name}: ${id} wears it`);
     }
-    // ---- Free Ride's maps: RIDE → FREE RIDE opens the picker; each open map rides, holds its camera, banks and pays ----
+    // ---- Free Ride's maps: LET'S RIDE shows a key per map in FREE RIDE; each open map rides, holds its camera, banks and pays ----
     await click(p, ".dh-result [data-go=ride]");
-    await click(p, "[data-mode=freeride]");
     const pick = await p.evaluate(() => {
       const root = document.querySelector("[data-fizlet-host]").shadowRoot, keys = [...root.querySelectorAll(".dh-mapk")];
       return { screen: game.getSnapshot().screen, maps: keys.map((k) => k.dataset.map), big: keys.every((k) => Math.min(k.getBoundingClientRect().width, k.getBoundingClientRect().height) >= 44), sideways: root.querySelector(".dh-cards").scrollWidth > innerWidth + 1 };
     });
-    assert.deepEqual(pick, { screen: "maps", maps: ["neon-park", "dune-sea", "quarry", "forest", "night-park"], big: true, sideways: false }, `${name}: the map picker`);
+    assert.deepEqual(pick, { screen: "ride", maps: ["neon-park", "dune-sea", "quarry", "forest", "night-park"], big: true, sideways: false }, `${name}: the Free Ride maps`);
     await until(p, () => [...document.querySelector("[data-fizlet-host]").shadowRoot.querySelectorAll(".dh-mapv")].every((c) => c.width > 30 && c.getContext("2d").getImageData(c.width >> 1, c.height >> 1, 1, 1).data[3] === 255), null, `${name}: every map's preview is drawn`);
     await click(p, "[data-map=forest]");
     s = await snap(p);
@@ -211,7 +210,7 @@ try {
     const code = await p.evaluate(() => game.exportCode());
     const credits = (await snap(p)).credits;
     await p.reload();
-    await until(p, () => window.game && game.getSnapshot().screen === "menu", null, `${name}: reload: the menu (no setup)`);
+    await until(p, () => window.game && game.getSnapshot().screen === "garage", null, `${name}: reload: the menu (no setup)`);
     assert.equal((await snap(p)).credits, credits, `${name}: reload keeps the credits`);
     const other = await browser.newContext({ viewport });
     const q = await other.newPage();

@@ -49,7 +49,7 @@ try {
     const p = await ctx.newPage();
     p.on("pageerror", (e) => errors.push(`${name}: ${e.message}`));
     await p.goto(path.startsWith("http") ? path : `${site.url}${path}${path.includes("?") ? "&" : "?"}rooms=${encodeURIComponent(rooms.url)}`);
-    await until(p, () => window.game && ["menu", "online"].includes(game.getSnapshot().screen), null, `${name} mounts on its garage`);
+    await until(p, () => window.game && ["garage", "online"].includes(game.getSnapshot().screen), null, `${name} mounts on its garage`);
     return p;
   };
   /** RIDE → ONLINE: the name and the code. */
@@ -183,7 +183,7 @@ try {
   await C.context().close();
   await until(A, () => game.getSnapshot().online?.left === 14, null, "A hears B and C left");
   await A.evaluate(() => game.leave());
-  await until(A, () => game.getSnapshot().screen === "ride" && !game.getSnapshot().online, null, "A is back on the RIDE menu");
+  await until(A, () => game.getSnapshot().screen === "garage" && !game.getSnapshot().online, null, "A is back in the garage");
   await until(A, () => game.engine.paused.includes("settled"), null, "and A settles");
   console.log(`✓ B and C leave, A leaves the room: back on the RIDE menu, the page settles (${ms()})`);
   await A.context().close();

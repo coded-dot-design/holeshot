@@ -41,7 +41,7 @@ try {
     const p = await ctx.newPage(), errs = [];
     p.on("pageerror", (e) => errs.push(e.message));
     await p.goto(server.url + path);
-    await until(p, "window.game && game.getSnapshot().screen === 'menu'", `${name}: the saved profile loads`);
+    await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${name}: the saved profile loads`);
     // ---- before you ride: the chain may fail ----
     await click(p, "[data-go=ride]");
     await click(p, "[data-mode=race]");

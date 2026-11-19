@@ -22,7 +22,17 @@ once). Seven makers in all (YAMORI, HONZO, KAWAZAKURA, STARHOWL, SURGE-ON, MACVI
 names: near-names on the web, fully original ones in an app-store build ([docs/names.md](docs/names.md)). Paint it, number it,
 pick your jersey and a name. That bike rides every event.
 
-**Events** (RIDE on the menu), all on your bike:
+**Getting around.** The GARAGE is home: you land there after the first-run setup and on every
+load, and come back to it after every ride. Its one main key, **LET'S RIDE**, opens the ride page
+(← GARAGE top-left, always in view; Escape steps back too). ⚙ beside the light/dark key opens
+SETTINGS. The ride page has four groups, each a line and a shelf of tiles (side by side on a wide
+screen, stacked on a phone): **RACE** (the SERIES first, then a single RACE, each MX outdoor or SX
+indoor; SX shows as SOON until its tracks ride), **ENDLESS** (each endless ground, Endless Wheelie
+City, a MASHUP to come), **FREE RIDE** (each map, an SX arena to come, Big Air) and **TRACK DAY**
+(street bikes on road circuits, to come). Each riding group has its own ONLINE tile (the room card,
+with that group's kind picked). `?mode=<id>` on /play/ still starts that event at once.
+
+**Events**, all on your bike:
 
 - **Race**: the gate, three laps of the Neon Loop (bermed turns, a rhythm section, whoops, a triple,
   the finish tabletop) against three rivals on stock bikes of your class. Places pay.
@@ -35,8 +45,7 @@ pick your jersey and a name. That bike rides every event.
   broken rock; ledges, rubble, boulders, light rigs), THE ENDLESS WOODS (long wooded hills; log
   jumps, roots, rock gardens and stands of neon trees you can hit) and THE NIGHT PARK (nearly flat;
   doubles, rollers, pylon rows, light towers), each in its Free Ride map's colours and its own seed.
-  The phone menu keeps one ENDLESS tile with a picker (four grounds would be four near-identical
-  tiles). The desert, as it was:
+  Each ground is its own tile in LET'S RIDE's ENDLESS group. The desert, as it was:
 - **The Dune Sea** (Endless): a dune sea that never ends. Big rolling dunes across the wind, sharp crests,
   witches'-hat peaks and bowls, and now and then a kicker, a whoop section, a cactus clump, a rock pile
   or a camp with a beacon to ride to; a neon grid over the sand, a haze over the near window and
@@ -94,8 +103,9 @@ you loop out. A building between the chase camera
 **The garage.** Every event wears the bike: tyres lose grip, the chain stretches, a 2-stroke's top
 end (or a 4-stroke's engine, or a battery) loses pull, seals blow and it cases sooner, brakes fade.
 Condition bars show it; you feel it on the track. Buy new tyres, rebuild the motor, service the rest;
-add mods (exhaust or controller, short gearing, suspension); buy another bike (the garage holds
-three, each keeps its own parts, mods and paint) and pick which one rides; change the paint, the
+add mods (exhaust or controller, short gearing, suspension); buy another bike (the garage has
+three spots; + BUY SPOT by your bikes adds a 4th, 5th and 6th for ◈ 2,500, 5,000 and 10,000; each
+bike keeps its own parts, mods and paint) and pick which one rides; change the paint, the
 number and the rider kit (helmet shape and paint, visor, jersey, pattern, pants, boots, gloves). A
 2-stroke rebuilds cheap and often, a 4-stroke rarely and dear. Nobody gets stuck: every finished
 event pays something, a worn bike still rides, and the pit crew fixes you up for free when you've
@@ -154,7 +164,7 @@ metre each; 1 km = 0.621371 mi). Under `?credits=inf` the switch shows but is no
 
 ```js
 import { createHoleshot } from "./dist/holeshot.mjs";
-const game = createHoleshot({ host: document.querySelector("#stage") }); // setup or the menu
+const game = createHoleshot({ host: document.querySelector("#stage") }); // setup or the garage
 game.start("race");                         // or "freeride", "bigair", "wheelie"
 game.start("race", { venue: "sx" });         // Race, Series and Free Ride: venue "mx" (default) or "sx"
 createHoleshot({ host, attract: true });     // the landing hero: a race on the autopilot

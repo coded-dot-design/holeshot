@@ -5,8 +5,15 @@ import type { ClassId } from "./roster.ts";
 
 /** Credits at first run (after the free starter bike and kit). */
 export const START_CREDITS = 200;
-/** Bikes the garage holds. */
+/** Bike spots in the garage at first run; more are bought, one at a time, up to GARAGE_MAX. */
 export const GARAGE_SLOTS = 3;
+/** The most bike spots a garage can have. */
+export const GARAGE_MAX = 6;
+/** The price of the 4th, 5th and 6th spot: each doubles. At about 183 credits an event (the balance
+ *  note at the end), the 4th is about 14 events (a tier 1 bike's price), the 5th about 27 (a tier 2
+ *  bike's), the 6th about 55 (a tier 4 bike's): room for a fourth bike is a mid-game buy, a full
+ *  six-bike garage a late-game goal, and a spot never costs less than the cheapest bike to fill it. */
+export const SPOT_PRICE = [2500, 5000, 10000];
 
 /** The parts every bike wears. `motor` is the class's: a top end, an engine or a battery. */
 export type PartId = "tyres" | "chain" | "motor" | "susp" | "brakes";
