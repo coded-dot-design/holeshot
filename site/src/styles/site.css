@@ -246,7 +246,8 @@ html.bui[data-theme="light"] .bands::before{opacity:.22}
 .brand-tile img{display:block;width:100%;height:auto}
 .brand-tile.on-dark{background:#0b0a14}.brand-tile.on-light{background:#eef0fb}
 .brand-icon img{display:block;width:96px;height:96px}
-.brand-cart img{width:160px;height:auto}
+.brand-cart{order:1;grid-column:1/-1;grid-template-columns:auto 1fr;align-items:center;column-gap:22px}
+.brand-cart img{display:block;width:min(180px,40vw);height:auto;rotate:-3deg;filter:drop-shadow(calc(6px * var(--bui-sx)) calc(6px * var(--bui-sy)) 0 var(--bui-shadow))}
 .brand-palette .meta{margin:0 0 12px}
 .brand-palette ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
 .brand-palette li{display:grid;grid-template-columns:30px 1fr;column-gap:10px;align-items:center;font:800 13px/1.2 var(--round);color:var(--ink)}
