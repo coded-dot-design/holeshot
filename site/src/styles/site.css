@@ -39,7 +39,9 @@ em{font-style:normal;color:var(--hot)}
 /* Wide screens: the race rides right of the copy (its left edge fades under the scrim); the stage keeps
    the game's wide frame (no letterbox), its right side running off the page. */
 @media (min-width:821px){.dt-stage,.dt-poster{left:20%;right:auto;width:max(80%,calc(min(860px,100svh) * 1.8));-webkit-mask:linear-gradient(90deg,#0000,#000 18%);mask:linear-gradient(90deg,#0000,#000 18%)}}
-.dt-poster{transition:opacity .7s ease,visibility 0s .7s}.dt-poster img{display:block;width:100%;height:100%;object-fit:cover;object-position:62% 50%}
+.dt-poster{transition:opacity .7s ease,visibility 0s .7s;background:var(--poster) 62% 50%/cover no-repeat}
+html.bui[data-theme="light"] .dt-poster{background-image:var(--poster-l)}
+@media (max-width:700px){.dt-poster{background-image:var(--poster-s)}html.bui[data-theme="light"] .dt-poster{background-image:var(--poster-ls)}}
 .dt-hero[data-live] .dt-poster{opacity:0;visibility:hidden}
 .dt-scrim{position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(90deg,color-mix(in srgb,var(--scrim) 90%,transparent) 0%,color-mix(in srgb,var(--scrim) 74%,transparent) 36%,color-mix(in srgb,var(--scrim) 18%,transparent) 60%,transparent 74%)}
 .dt-copy{position:relative;z-index:2;padding:56px 0 64px;pointer-events:none}

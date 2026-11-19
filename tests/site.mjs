@@ -1,7 +1,8 @@
 // The built site (artifacts/pages, `npm run site:build` first) in Chromium, at 1440 and 390, dark and
 // light: the header's wordmark (named HOLESHOT) and a header about the game only (its section links,
 // the theme, PLAY; the links out in the footer: Fizlet, the source); the hero is the game behind the
-// brand: the poster paints first, then the attract race starts on its own (no scroll) and replaces
+// brand: the poster paints first, in the page's theme (the light still in light, only that one fetched; the
+// switch swaps it at once, before the game loads and after), then the attract race starts on its own (no scroll) and replaces
 // it (drawn, riding, its HUD and touch controls hidden), under the lockup in the h1, the title, the
 // hook and a PLAY link to /play/; the controls (the key caps, the gamepad, the animated rocker); the
 // ways to ride (four groups, every entry a live link to a real mode: ?mode= for each, Mashup and Track Day included); the garage
@@ -21,6 +22,12 @@ const browser = await chromium.launch(launchOptions());
 const SHOTS = process.env.SHOTS;
 if (SHOTS) mkdirSync(SHOTS, { recursive: true });
 const until = (p, fn, arg, what, timeout = 20000) => p.waitForFunction(fn, arg, { timeout, polling: 50 }).catch(() => assert.fail(`${what}: timed out`));
+// The hero's poster: the still it shows (from its CSS background), whether it shows, the hero stills fetched.
+const poster = () => {
+  const el = document.querySelector(".dt-poster"), cs = getComputedStyle(el);
+  return { file: (cs.backgroundImage.match(/([\w-]+\.jpg)/) || [])[1], shown: !el.hidden && cs.visibility === "visible", fetched: performance.getEntriesByType("resource").map((e) => e.name.split("/").pop()).filter((n) => /^hero[\w-]*\.jpg$/.test(n)) };
+};
+const still = (w, theme) => `hero${theme === "light" ? "-light" : ""}${w <= 700 ? "-800" : ""}.jpg`;
 const gz = JSON.parse(readFileSync("dist/build.json", "utf8")).gzip["holeshot.mjs"];
 
 try {
@@ -32,14 +39,15 @@ try {
       const p = await ctx.newPage(), errs = [];
       p.on("pageerror", (e) => errs.push(e.message));
       await p.goto(`${server.url}${BASE}/`);
+      const first = await p.evaluate(poster);
+      assert.deepEqual(first, { file: still(w, theme), shown: true, fetched: [still(w, theme)] }, `${at}: the poster is the ${theme} still, the only one fetched`);
       const brand = await p.evaluate(async () => {
-        const cover = document.querySelector(".dt-poster img"), wm = document.querySelector(".site-head .brand-mark");
-        await cover.decode().catch(() => {});
+        const wm = document.querySelector(".site-head .brand-mark");
         const dl = [...document.querySelectorAll("#brand a[download]")].map((a) => a.href);
         const ok = await Promise.all(dl.map(async (u) => (await fetch(u)).ok));
-        return { wordmark: wm?.getAttribute("aria-label"), wmHeight: wm?.getBoundingClientRect().height, lockup: !!document.querySelector("h1 svg.hero-lockup"), cover: cover.naturalWidth > 0, swatches: document.querySelectorAll("#brand .sw").length, downloads: dl.length, served: ok.every(Boolean) };
+        return { wordmark: wm?.getAttribute("aria-label"), wmHeight: wm?.getBoundingClientRect().height, lockup: !!document.querySelector("h1 svg.hero-lockup"), swatches: document.querySelectorAll("#brand .sw").length, downloads: dl.length, served: ok.every(Boolean) };
       });
-      assert.ok(brand.wordmark === "HOLESHOT" && brand.wmHeight >= 20 && brand.lockup && brand.cover, `${at}: the header wordmark, the hero lockup and the poster: ${JSON.stringify(brand)}`);
+      assert.ok(brand.wordmark === "HOLESHOT" && brand.wmHeight >= 20 && brand.lockup, `${at}: the header wordmark and the hero lockup: ${JSON.stringify(brand)}`);
       assert.ok(brand.swatches === 8 && brand.downloads >= 6 && brand.served, `${at}: the brand kit: ${JSON.stringify(brand)}`);
       // The race starts by itself after load (no scroll) and takes over from the poster.
       await until(p, () => window.hero?.run && hero.run.state.speed > 3 && document.querySelector(".dt-hero").hasAttribute("data-live"), null, `${at}: the hero's race rides`);
@@ -156,15 +164,46 @@ try {
       await c2.close();
     }
   }
+  // The poster follows the theme before the game loads: saved light, the game's module held back; the
+  // light still first, the switch swaps it at once (both ways); released, the race rides in the theme
+  // and the poster leaves the layout, so a switch then fetches no still.
+  for (const [w, h, touch] of [[1440, 900, false], [390, 844, true]]) {
+    const at = `${w} poster`;
+    const ctx = await browser.newContext({ viewport: { width: w, height: h }, hasTouch: touch, isMobile: touch });
+    await ctx.addInitScript(() => localStorage.setItem("dom-virus:theme", "light"));
+    let release, asked = false;
+    const held = new Promise((r) => (release = r));
+    await ctx.route(/\/holeshot\.[\w-]+\.js$/, async (r) => ((asked = true), await held, r.continue()));
+    const p = await ctx.newPage();
+    await p.goto(`${server.url}${BASE}/`);
+    await until(p, () => document.readyState === "complete", null, `${at}: loaded`);
+    assert.deepEqual(await p.evaluate(poster), { file: still(w, "light"), shown: true, fetched: [still(w, "light")] }, `${at}: light first, the dark still not fetched`);
+    assert.ok(!(await p.evaluate(() => !!document.querySelector("[data-fizlet-host]"))), `${at}: the game has not loaded yet`);
+    await p.click("[data-theme-toggle]");
+    assert.equal((await p.evaluate(poster)).file, still(w, "dark"), `${at}: the switch swaps to the dark still at once`);
+    await p.click("[data-theme-toggle]");
+    assert.equal((await p.evaluate(poster)).file, still(w, "light"), `${at}: and back`);
+    assert.ok(!(await p.evaluate(() => !!document.querySelector("[data-fizlet-host]"))), `${at}: still before the game`);
+    release();
+    await until(p, () => window.hero?.run && hero.run.state.speed > 3 && document.querySelector(".dt-hero").hasAttribute("data-live") && document.querySelector(".dt-poster").hidden, null, `${at}: the race rides, the poster gone`);
+    assert.ok(asked, `${at}: the game module was held back`);
+    const live = await p.evaluate(() => document.querySelector("#dt-hero [data-fizlet-host]").shadowRoot.querySelector("[data-theme]")?.dataset.theme);
+    assert.equal(live, "light", `${at}: the race rides in light`);
+    const before = (await p.evaluate(poster)).fetched;
+    await p.click("[data-theme-toggle]");
+    await until(p, () => document.querySelector("#dt-hero [data-fizlet-host]").shadowRoot.querySelector("[data-theme]")?.dataset.theme === "dark", null, `${at}: the race follows the switch`);
+    assert.deepEqual((await p.evaluate(poster)).fetched, before, `${at}: no still fetched for a gone poster`);
+    await ctx.close();
+  }
   // Reduced motion: the still poster; no game loads.
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
   const p = await ctx.newPage();
   await p.goto(`${server.url}${BASE}/`);
-  await until(p, () => document.readyState === "complete" && document.querySelector(".dt-poster img")?.complete, null, "reduced motion: the poster");
+  await until(p, () => document.readyState === "complete" && performance.getEntriesByType("resource").some((e) => /\/hero\.jpg$/.test(e.name) && e.responseEnd > 0), null, "reduced motion: the poster");
   await p.evaluate(() => new Promise((r) => requestIdleCallback(() => r(), { timeout: 2000 })));
   assert.deepEqual(await p.evaluate(() => ({ poster: getComputedStyle(document.querySelector(".dt-poster")).visibility, game: !!document.querySelector("[data-fizlet-host]"), looping: document.getAnimations().filter((a) => a.effect?.target?.closest?.(".phone")).length })), { poster: "visible", game: false, looping: 0 }, "reduced motion: a still poster, no game, a still controls diagram");
   await ctx.close();
-  console.log("Holeshot site: the header wordmark and game-only header, the footer links out, the hero lockup over the demo race (poster first, no touch controls), the controls (key caps, gamepad, the animated rocker), four ways to ride (every entry a live link to a real mode; ?mode=mashup and ?mode=trackday start), the garage's 3 of 6 spots, the brand kit and its downloads, the title, PLAY to /play/, six sections, the measured size, shadows straight down, no DOM VIRUS, no sideways scroll, /play/ setup (the header handle clear of the card) and ?mode=, the reduced-motion poster; 1440 and 390, dark and light; the manifest and the one-time Home Screen tip (phone landscape only).");
+  console.log("Holeshot site: the header wordmark and game-only header, the footer links out, the hero lockup over the demo race (poster first, no touch controls), the controls (key caps, gamepad, the animated rocker), four ways to ride (every entry a live link to a real mode; ?mode=mashup and ?mode=trackday start), the garage's 3 of 6 spots, the brand kit and its downloads, the title, PLAY to /play/, six sections, the measured size, shadows straight down, no DOM VIRUS, no sideways scroll, /play/ setup (the header handle clear of the card) and ?mode=, the poster in the page's theme (light first, only that still fetched, the switch swaps it before the game and after), the reduced-motion poster; 1440 and 390, dark and light; the manifest and the one-time Home Screen tip (phone landscape only).");
 } finally {
   await browser.close();
   await server.close();

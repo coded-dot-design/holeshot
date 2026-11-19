@@ -2,7 +2,9 @@
 // Holeshot, the landing page. The hero is the game: the attract race rides behind the brand (the
 // lockup in the h1, the hook, PLAY) under a scrim that keeps the copy readable in both themes. The
 // hero paints first with a still of that race (the poster); the game's module loads after the page's
-// load and an idle moment, never on the critical path, and replaces the poster once it draws. Reduced
+// load and an idle moment, never on the critical path, and replaces the poster once it draws. The
+// poster follows the theme (a dark and a light still of the same moment, a CSS background so only the
+// page's theme is fetched, and a switch swaps it at once, before the game or after). Reduced
 // motion (or Save-Data) keeps the poster. Then: how to play (a numbered flow), the controls (the real
 // key bindings, a gamepad, and an animated throttle rocker for phones), the ways to ride (the game's
 // grouping, with in-game stills), the garage, the brand kit, built on Fizlet.
@@ -70,15 +72,20 @@ const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound'
 ---
 <Base title="Holeshot · one bike, every kind of dirt" description={description}>
   <Fragment slot="head">
-    <link rel="preload" as="image" href={base('shots/hero.jpg')} media="(min-width: 701px)" fetchpriority="high" />
-    <link rel="preload" as="image" href={base('shots/hero-800.jpg')} media="(max-width: 700px)" fetchpriority="high" />
+    <script is:inline define:vars={{ shots: base('shots/') }}>
+      // The poster of the page's theme only (Base's head script has set it): preloaded at high priority,
+      // the other theme's never fetched unless the reader switches.
+      var tone = document.documentElement.dataset.theme === "light" ? "-light" : "";
+      [["", "(min-width: 701px)"], ["-800", "(max-width: 700px)"]].forEach(function (v) {
+        var l = document.createElement("link");
+        l.rel = "preload"; l.as = "image"; l.href = shots + "hero" + tone + v[0] + ".jpg"; l.media = v[1]; l.fetchPriority = "high";
+        document.head.append(l);
+      });
+    </script>
   </Fragment>
-  <section class="dt-hero" aria-labelledby="dt-title">
+  <section class="dt-hero" aria-labelledby="dt-title" style={`--poster:url(${base('shots/hero.jpg')});--poster-s:url(${base('shots/hero-800.jpg')});--poster-l:url(${base('shots/hero-light.jpg')});--poster-ls:url(${base('shots/hero-light-800.jpg')})`}>
     <div class="dt-stage" id="dt-hero" aria-hidden="true"></div>
-    <picture class="dt-poster">
-      <source media="(max-width: 700px)" srcset={base('shots/hero-800.jpg')} width="800" height="900" />
-      <img src={base('shots/hero.jpg')} alt="" width="1600" height="900" fetchpriority="high" decoding="async" />
-    </picture>
+    <div class="dt-poster" aria-hidden="true"></div>
     <div class="dt-scrim" aria-hidden="true"></div>
     <div class="wrap dt-copy">
       <p class="eyebrow"><span class="dot"></span> A FIZLET GAME · BY DAVID COOLEY</p>
@@ -265,6 +272,9 @@ const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound'
     host.querySelector("[data-fizlet-host]")?.shadowRoot?.append(style);
     // Swap the poster for the race once it rides (two frames in, so the canvas has drawn).
     const ready = () => (game.run && game.run.state.speed > 0 ? hero.setAttribute("data-live", "") : requestAnimationFrame(ready));
+    // Faded out, the poster leaves the layout, so a theme switch then never fetches the other still.
+    const poster = hero.querySelector<HTMLElement>(".dt-poster")!;
+    poster.addEventListener("transitionend", () => hero.hasAttribute("data-live") && (poster.hidden = true));
     requestAnimationFrame(ready);
   }
   if (!still) {
