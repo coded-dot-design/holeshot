@@ -1,6 +1,6 @@
 {
   "name": "@coded-design/holeshot",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "description": "Holeshot: one dirt bike, one garage, every kind of riding, on a tabletop. Built on Fizlet, by David Cooley.",
