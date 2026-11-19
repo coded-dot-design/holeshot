@@ -34,7 +34,7 @@ export function snap(id: string, p: Profile, night: boolean, w = 384, h = 216): 
   dio.resize(w, h, 2);
   dio.clear();
   const nb = newBike(m.id, "snap", "f-" + m.maker, p.bikes[p.ride]?.look.number ?? 7), P = { ...p, bikes: [nb], ride: 0 }, t = tune(nb), L = lookOf(P);
-  const g = rig(dio, "snap", { ...rigKit(night), ...L.look } as RigColors, t.rig, L.helmet), b = makeBike(FLAT, t.power, t.shape);
+  const g = rig(dio, "snap", { ...rigKit(night), ...L.look } as RigColors, t.rig, L.helmet, t.model.id), b = makeBike(FLAT, t.power, t.shape);
   b.reset(0, 0, 0);
   g.pose(b, 0);
   // No rider: everything that hangs off the rider's group (its id chain through `on`) is hidden.
