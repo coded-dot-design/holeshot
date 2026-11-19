@@ -6,7 +6,7 @@
 // k_sin.c, k_cos.c, k_tan.c, e_pow.c, e_rem_pio2.c's medium path, s_atan.c, e_atan2.c), the same V8 ports
 // for its Math.sin/cos/tan/atan/atan2, so on Chrome they give what the builtins gave (the generated
 // tracks and the series stay what they were: tests/golden.test.mjs) and on every engine the same.
-// `hypot` is V8's two-argument Math.hypot (scaled, compensated), written out. Rendering may still use
+// `hypot` is V8's two-argument Math.hypot, from @fzlt/core/math. Rendering may still use
 // the builtins (a pixel off is fine); tests/math.test.mjs keeps them out of the sim and generator
 // modules. Allocation-free (one shared buffer for the bit reads).
 
@@ -204,20 +204,9 @@ export function atan2(y: number, x: number) {
   else z = atan(Math.abs(y / x));
   return m === 0 ? z : m === 1 ? -z : m === 2 ? PI - (z - PI_LO) : z - PI_LO - PI;
 }
-/** √(x² + y²) without overflow: V8's two-argument Math.hypot (scaled to the larger, compensated). */
-export function hypot(x: number, y: number) {
-  const ax = Math.abs(x), ay = Math.abs(y), max = ax > ay ? ax : ay;
-  if (max === Infinity) return Infinity;
-  if (max === 0) return 0;
-  const a = ax / max, b = ay / max;
-  let sum = 0, comp = 0;
-  const s1 = a * a - comp, p1 = sum + s1;
-  comp = p1 - sum - s1;
-  sum = p1;
-  const s2 = b * b - comp, p2 = sum + s2;
-  sum = p2;
-  return Math.sqrt(sum) * max;
-}
+/** √(x² + y²) without overflow: V8's two-argument Math.hypot. @fzlt/core/math's (the one steer re-exports, so
+ *  the bundle carries one copy); bit for bit the copy this file wrote out. */
+export { hypot } from "@fzlt/core/math";
 
 // ---- pow (fdlibm's e_pow.c: log2 of x in extra precision, times y, then 2^that) ----
 const BP = [1, 1.5] as const, DP_H = [0, 5.84962487220764160156e-1] as const, DP_L = [0, 1.35003920212974897128e-8] as const;
