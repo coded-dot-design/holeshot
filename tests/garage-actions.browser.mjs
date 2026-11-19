@@ -65,7 +65,11 @@ try {
     await press(".dh-units");
     await until(p, `game.profile.settings.units !== ${JSON.stringify(u)}`, `${name}: units`);
     await press(".dh-units");
-    ok("⚙ settings: units, sound, export / import code, reset");
+    await press("[data-go=controls]");
+    await until(p, "game.getSnapshot().screen === 'controls' && !!root.querySelector('.dh-ctl')", `${name}: CONTROLS · HOW TO`);
+    await press(".dh-back");
+    await until(p, "game.getSnapshot().screen === 'settings'", `${name}: back to settings`);
+    ok("⚙ settings: units, sound, export / import code, reset, CONTROLS · HOW TO");
     await press(".dh-back");
     await until(p, "game.getSnapshot().screen === 'garage'", `${name}: back to the garage`);
 

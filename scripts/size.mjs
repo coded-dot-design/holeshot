@@ -101,6 +101,10 @@ import { readdirSync, readFileSync } from "node:fs";
 // goggle's frame, lens and glint, the straps, the chin bar, the raked peak and its root, the fin) on
 // its facing groups, the portrait SVG (garage/portrait.ts) in the top bar, the bay and the HELMET keys,
 // the rider close-up; budget 223,500 → 225,000 (about 1.2 KB of room).
+// R34 (the game self-contained), on 0.9.0 + online copy: +954 B measured (223,870 → 224,824 holeshot.mjs;
+// holeshot.js 224,086 → 225,026): the CONTROLS · HOW TO card in settings (src/data/controls.ts: the keyboard,
+// gamepad and phone bindings the landing also reads; the card and its key-cap CSS); budget 225,000 →
+// 226,000 (about 1 KB of room).
 // R35 (the garage UI rebuild on the shop's pieces), on main bcd408d: +7,507 B measured (224,501 → 232,008
 // holeshot.js; holeshot.mjs 224,293 → 231,797): the shop (src/shop/: its pieces and flows 3.4 KB,
 // its tokens and sheet 3.5 KB gzip on their own), the garage's adapters and new screens (the header,
@@ -119,7 +123,8 @@ import { readdirSync, readFileSync } from "node:fs";
 // holeshot.js); budget 237,500 → 239,000 (about 1.4 KB of room). The turntable's backdrops (TRACK, an
 // MX day; SUNSET, a synthwave night; AUTO follows Day / Night; diorama shapes, no images; the
 // BACKDROP chip and the saved pick): +1,215 B measured (237,606 → 238,821 holeshot.js; the module
-// 1,195 B gzip on its own); budget 239,000 → 240,500 (about 1.7 KB of room).
+// 1,195 B gzip on its own); budget 239,000 → 240,500. Rebased on main b22a85f (the CONTROLS card,
+// main 225,026 B): 239,748 B holeshot.js, 239,570 B holeshot.mjs (+14,722 B over main; about 0.75 KB of room).
 const BUDGET = 240_500;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
