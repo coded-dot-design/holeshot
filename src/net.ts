@@ -53,8 +53,9 @@ export function decode(bits: number, r: number, IN: Float64Array, AUTO: Uint8Arr
 export const scoreBits = (score: number, done: boolean, flags = 0) => ((Math.max(0, Math.min(0xffffff, Math.round(score))) | (done ? B_DONE : 0) | flags) >>> 0);
 
 /** Online modes: a race on a generated track, a Free Ride jam, Big Air and Wheelie City score runs,
- *  and the endless rides together: an ENDLESS ground (sub: the biome) and Endless Wheelie City. */
-export const K_RACE = 0, K_JAM = 1, K_AIR = 2, K_CITY = 3, K_ENDLESS = 4, K_ENDCITY = 5;
+ *  the endless rides together: an ENDLESS ground (sub: the biome) and Endless Wheelie City, and
+ *  Track Day (sub: the circuit; the race's sim on a road circuit). */
+export const K_RACE = 0, K_JAM = 1, K_AIR = 2, K_CITY = 3, K_ENDLESS = 4, K_ENDCITY = 5, K_TRACKDAY = 6;
 /** The host's pick as one byte: the kind (bits 0–2), the race tier, the jam's map or the biome (3–5). */
 export const packMode = (kind: number, sub: number) => (kind & 7) | ((sub & 7) << 3);
 export const unpackMode = (m: number) => ({ kind: m & 7, sub: (m >> 3) & 7 });

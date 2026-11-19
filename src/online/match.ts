@@ -4,7 +4,7 @@
 //          nothing moves. On frame HELLO_FRAMES (once every hello is final) every screen builds the
 //          same ride from the host's pick, the room's seed and those bikes.
 //   RIDE   the ride: a race (../modes/race/course.ts, on a track generated from the seed at the host's
-//          tier; AI rivals in the empty places), a Free Ride jam (../modes/freeride/jam.ts), a score
+//          tier; AI rivals in the empty places), Track Day (the race on the host's road circuit), a Free Ride jam (../modes/freeride/jam.ts), a score
 //          run (Big Air, Wheelie City: each screen rides its own arena and its input bits carry its
 //          score), or an endless ride together: an ENDLESS ground (the jam on the biome's endless
 //          world: one seed, each rider streaming its own window of it) or Endless Wheelie City
@@ -21,19 +21,20 @@
 // first time it runs (sound, stickers, FX), `hooks.over` the result on the final frame it happened.
 import type { Engine } from "@fzlt/core/kernel";
 import type { Transport } from "@fzlt/core/presence";
-import { rollback, decode, cmdOf, hello as helloOf, helloBits, takeHello, readHello, unpackMode, B_GONE, B_DONE, B_READY, GONE, HELLO, HELLO_FRAMES, K_RACE, K_JAM, K_AIR, K_CITY, K_ENDLESS, K_ENDCITY, type Rider } from "../net.ts";
+import { rollback, decode, cmdOf, hello as helloOf, helloBits, takeHello, readHello, unpackMode, B_GONE, B_DONE, B_READY, GONE, HELLO, HELLO_FRAMES, K_RACE, K_JAM, K_AIR, K_CITY, K_ENDLESS, K_ENDCITY, K_TRACKDAY, type Rider } from "../net.ts";
 import { desertTrack, BIOMES } from "../modes/desert/track.ts";
 import { cityJam, type CityJam } from "../modes/wheelie/jam.ts";
 import { RUN as W_RUN, CRASH as W_CRASH, DONE as W_DONE } from "../modes/wheelie/rules.ts";
 import { SB_DIST, SB_BEST, SB_BEST_ID, SB_COMBO, SB_DRAGS, SB_POINTS, SB_TRICKS, type Board } from "./board.ts";
 import { DONE, RACE, makeTrack, motoRace, MOTO_TRACK, type MotoRace, type Track } from "../modes/race/course.ts";
 import { generateTrack } from "../modes/race/generate.ts";
+import { TRACK_DAY, trackDayRivals } from "../modes/race/circuits.ts";
 import { mxPlan } from "../modes/race/venue.ts";
 import { freeJam, type FreeJam } from "../modes/freeride/jam.ts";
 import { makeMap, RIDE_MAPS, type RideMap } from "../modes/freeride/maps.ts";
 import { meter, type Meter } from "../modes/meter.ts";
 import { tune, type Tuned } from "../model/tune.ts";
-import { onGround } from "../model/families.ts";
+import { onGround, roadPower } from "../model/families.ts";
 import { difficulty, rivals as seriesRivals } from "../model/series.ts";
 import { TIERS } from "../data/series.ts";
 import type { Profile } from "../model/profile.ts";
@@ -65,9 +66,16 @@ export function raceTrack(seed: number, tier: number, round: number): Track {
   if (!t) {
     const plan = mxPlan(generateTrack(seed, d).plan);
     t = makeTrack({ ...plan, id: `online-${T.id}-${round + 1}` });
-    if (TRACKS.size > 8) TRACKS.clear();
+    if (TRACKS.size > 12) TRACKS.clear();
     TRACKS.set(key, t);
   }
+  return t;
+}
+/** Track Day's circuit by its index in TRACK_DAY (built once, kept). */
+export function circuitTrack(i: number): Track {
+  const k = Math.max(0, Math.min(TRACK_DAY.length - 1, i));
+  let t = TRACKS.get("td:" + k);
+  if (!t) TRACKS.set("td:" + k, (t = makeTrack(TRACK_DAY[k]!)));
   return t;
 }
 /** A jam's map by its index in JAM_MAPS (built once, kept). */
@@ -197,7 +205,7 @@ export function match(e: Engine, o: MatchOptions) {
     if (!riders.length) (riders = hellos.map((h, p) => readHello(h, p))), (tunedAll = riders.map((r) => tune(r.bike)));
     const seed = rideSeed(o.seed, round), kind = pick.kind;
     // Each bike as it rides this kind's ground (a street bike on the dirt: ../model/families.ts), the same on every screen.
-    const tuned = tunedAll.map((t) => onGround(t, kind === K_CITY ? "wheelie" : kind === K_ENDCITY ? "endcity" : kind === K_ENDLESS ? "desert" : kind === K_JAM ? "freeride" : kind === K_AIR ? "bigair" : "race"));
+    const tuned = tunedAll.map((t) => onGround(t, kind === K_CITY ? "wheelie" : kind === K_ENDCITY ? "endcity" : kind === K_ENDLESS ? "desert" : kind === K_JAM ? "freeride" : kind === K_AIR ? "bigair" : kind === K_TRACKDAY ? "trackday" : "race"));
     let race: MotoRace | null = null, jam: FreeJam | null = null, city: CityJam | null = null, score: ScoreSim | null = null, track: Track | RideMap | null = null, ai: Ride["ai"] = [];
     const meters: Meter[] = [];
     if (kind === K_RACE) {
@@ -209,6 +217,17 @@ export function match(e: Engine, o: MatchOptions) {
       race.clear();
       track = t;
       for (let p = 0; p < P; p++) meters.push(meter("race"));
+    } else if (kind === K_TRACKDAY) {
+      // Track Day together: the race's sim on a road circuit (../modes/race/circuits.ts), three laps,
+      // the empty places to street-bike rivals of the host's class (as riding it alone), the AI's names
+      // and plates from the series' rivals for the seed.
+      const t = circuitTrack(pick.sub), riv = trackDayRivals(tuned[0]!.model, roadPower).slice(0, Math.max(0, 4 - P));
+      ai = seriesRivals({ tier: TIERS[0]!.id, seed }, tuned[0]!.cls).slice(0, riv.length).map((r) => ({ name: r.name, number: r.number }));
+      race = motoRace(seed, t, { power: tuned[0]!.power, shape: tuned[0]!.shape }, riv, { humans: P, bikes: tuned.map((x) => ({ power: x.power, shape: x.shape })) });
+      race.go(tuned[0]!.power);
+      race.clear();
+      track = t;
+      for (let p = 0; p < P; p++) meters.push(meter("trackday"));
     } else if (kind === K_JAM) {
       track = jamMap(pick.sub);
       jam = freeJam(track, tuned.map((x) => ({ power: x.power, shape: x.shape })), o.jam);

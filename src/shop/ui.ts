@@ -71,9 +71,16 @@ export const check = (label: string, on: boolean, attrs: string) => `<button typ
 export const sheet = (o: { title: string; sub?: string; body: string; close: string; label?: string; cls?: string }) =>
   `<div class="shop-sheet${o.cls ? " " + o.cls : ""}" role="dialog" aria-label="${esc(o.label ?? o.title)}"><i class="shop-grab" aria-hidden="true"></i><div class="shop-sheet-h"><b class="shop-h2">${esc(o.title)}</b><button type="button" class="shop-x" ${o.close} aria-label="Close">✕</button></div>${o.sub ? `<p class="shop-sub">${esc(o.sub)}</p>` : ""}${o.body}</div>`;
 
-/** A list row (a bay, a service log line, an upgrade): `row({ eyebrow: "Bay 1", title: "Yowler 125 2T  #7", end: "RIDES NEXT", on: true })`; `cells` makes a table row instead. */
-export const row = (o: { eyebrow?: string; title: string; mid?: string; end?: string; on?: boolean; attrs?: string; tag?: string }) =>
-  `<${o.tag ?? "li"} class="shop-row"${o.on ? " data-on" : ""}${at(o.attrs)}><span class="shop-row-t">${o.eyebrow ? `<small class="shop-eyebrow">${esc(o.eyebrow)}</small>` : ""}<b>${o.title}</b></span>${o.mid !== undefined ? `<span class="shop-row-m">${o.mid}</span>` : ""}${o.end !== undefined ? `<span class="shop-row-e">${o.end}</span>` : ""}</${o.tag ?? "li"}>`;
+/** A list row (a bay, a service log line, an upgrade): `row({ eyebrow: "Bay 1", title: "Yowler 125 2T  #7", end: "RIDES NEXT", on: true })`.
+ *  `sub` is a line under the title, `art` a picture before it (a map's thumbnail); `tag: "button"` (with
+ *  `type="button"` in attrs) makes the whole row a key, and `go` adds its chevron (a destination). */
+export const row = (o: { eyebrow?: string; title: string; sub?: string; art?: string; mid?: string; end?: string; on?: boolean; attrs?: string; tag?: string; go?: boolean }) =>
+  `<${o.tag ?? "li"} class="shop-row"${o.on ? " data-on" : ""}${at(o.attrs)}>${o.art ? `<span class="shop-row-a">${o.art}</span>` : ""}<span class="shop-row-t">${o.eyebrow ? `<small class="shop-eyebrow">${esc(o.eyebrow)}</small>` : ""}<b>${o.title}</b>${o.sub ? `<small class="shop-row-s">${o.sub}</small>` : ""}</span>${o.mid !== undefined ? `<span class="shop-row-m">${o.mid}</span>` : ""}${o.end !== undefined ? `<span class="shop-row-e">${o.end}</span>` : ""}${o.go ? `<i class="shop-chev" aria-hidden="true">›</i>` : ""}</${o.tag ?? "li"}>`;
+/** A number with its label above it (a row's end: BEST 1.52 mi): `figure("Best", "1.52 mi")`; an empty value shows "—". */
+export const figure = (label: string, value: string) => `<span class="shop-fig">${label ? `<small class="shop-eyebrow">${esc(label)}</small>` : ""}<b${value ? "" : ' aria-label="none yet"'}>${value ? esc(value) : "—"}</b></span>`;
+/** Rows in one panel, ruled between, under optional column heads (Track Day's circuits): `list(rows, ["Road circuit", "Best lap"], "Circuits")`. */
+export const list = (rows: string[], head: [string, string] | null, label: string) =>
+  `<div class="shop-list" role="group" aria-label="${esc(label)}">${head ? `<p class="shop-colhead" aria-hidden="true"><span>${esc(head[0])}</span><span>${esc(head[1])}</span></p>` : ""}${rows.join("")}</div>`;
 /** A table: `table(["Event", "Work completed", "Credits"], [["47", "Exhaust stage 2 fitted", "1,250"]])` (the service log); cells are HTML. */
 export const table = (head: string[], rows: string[][], label: string) =>
   `<table class="shop-table" aria-label="${esc(label)}"><thead><tr>${head.map((h) => `<th scope="col">${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;

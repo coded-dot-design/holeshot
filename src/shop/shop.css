@@ -168,3 +168,24 @@
 .shop .shop-chip{position:absolute;left:10px;bottom:10px;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border:1.5px solid var(--shop-line);border-radius:22px;background:color-mix(in srgb,var(--shop-panel) 88%,transparent);color:var(--shop-ink);font:inherit;font-size:14px;cursor:pointer;transform:none!important;box-shadow:none!important}
 .shop .shop-chip small{font:500 10px/1 var(--shop-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--shop-mute)}
 .shop [hidden]{display:none}
+/* Destinations (a ride page): a row that is a key (title, a line under it, a thumbnail, a figure, a
+   chevron), rows ruled in one panel under column heads, the tinted card and key (lavender by day). */
+.shop .shop-card.shop-tint{background:var(--shop-tile);border-color:var(--shop-line2)}
+.shop .shop-btn-tile{background:var(--shop-tile)}
+.shop button.shop-row{box-shadow:none!important;transform:none!important;width:100%;box-sizing:border-box;font:inherit;color:var(--shop-ink);text-align:left;cursor:pointer}
+.shop .shop-row:has(.shop-chev){grid-template-columns:minmax(0,1fr) auto auto}
+.shop .shop-row:has(.shop-row-a){grid-template-columns:auto minmax(0,1fr) auto auto}
+.shop button.shop-row:hover{border-color:var(--shop-bar)}
+.shop button.shop-row:focus-visible{outline:3px solid var(--shop-bar);outline-offset:2px}
+.shop .shop-row-s{font-weight:500;font-size:16px;color:var(--shop-mute)}
+.shop .shop-row-t>b{font-size:22px}
+.shop .shop-row-a{display:block;line-height:0}
+.shop .shop-chev{font-style:normal;font-size:30px;line-height:1;color:var(--shop-mute);padding:0 4px 4px}
+.shop .shop-fig{display:grid;justify-items:end;gap:4px}
+.shop .shop-fig .shop-eyebrow{font-size:11px}
+.shop .shop-fig b{font-size:20px;font-variant-numeric:tabular-nums;color:var(--shop-price)}
+.shop .shop-fig b[aria-label]{color:var(--shop-mute)}
+.shop .shop-list{border:1.5px solid var(--shop-line);border-radius:var(--shop-r);background:var(--shop-panel);overflow:hidden}
+.shop .shop-list>.shop-colhead{display:flex;justify-content:space-between;margin:0;padding:14px 28px 10px}
+.shop .shop-list>.shop-row{border:0;border-top:1.5px solid var(--shop-line);border-radius:0;padding:12px 28px}
+.shop .shop-list>.shop-row:first-child{border-top:0}

@@ -1,0 +1,78 @@
+/* LET'S RIDE (./ride-ui.ts): layout only, over the shop's pieces and tokens (./shop/shop.css; the game
+   re-points them in ./garage/garage.css). A full-bleed page under the garage's sticky header (with
+   ← Garage in place of its tabs): the title row, the tabs, the tab's list, WITH FRIENDS, the controls. */
+.dh-cards:has(>.dh-ride){display:block;padding:var(--dh-top,0px) 0 0}
+.dh .dh-ride{display:flex;flex-direction:column;width:100%;min-height:100%;gap:0;padding:0;border:0;border-radius:0;box-shadow:none;background:var(--shop-bg);color:var(--shop-ink);font-weight:800}
+.dh .dh-ride .dh-brand .dh-logo{height:32px;margin:0}
+.dh-rhead{grid-template-columns:auto minmax(0,1fr) auto}
+.dh .dh-rhead .dh-back{justify-self:start;align-self:start;margin-left:40px;padding:0 24px;font-size:17px;letter-spacing:0}
+.dh-rwrap{flex:1;display:flex;flex-direction:column;gap:20px;box-sizing:border-box;width:100%;max-width:1600px;margin:0 auto;padding:28px 36px 24px}
+.dh-rtitle{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 24px}
+.dh-rtitle .shop-h1{font-size:52px}
+.dh-rtitle .shop-title{justify-items:end;text-align:right}
+.dh-rtitle .shop-title .shop-name{order:-1}
+.dh-rtitle .shop-title .shop-eyebrow{font-size:13px}
+.dh-rtabs{margin-bottom:12px}
+.shop .dh-rtabs .shop-seg-k:not([aria-pressed=true]){color:var(--shop-mute)}
+.dh-rbody .shop-h2{font-size:36px;font-weight:800}
+.dh-rbody{display:grid;gap:14px}
+.dh-rbody>.shop-sub{margin:-8px 0 8px;font-weight:500;font-size:18px}
+.dh-rlist .shop-row{min-height:94px;padding:14px 28px}
+.dh-venues{display:flex;gap:16px}
+.dh-venues .shop-btn{min-width:13em;min-height:50px;font-size:18px}
+.dh-rgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px}
+.dh-rgrid .shop-row{min-height:72px;padding:10px 20px}
+.dh-thumb{display:block;width:88px;height:56px;object-fit:cover;border:1.5px solid var(--shop-line);border-radius:4px;background:var(--shop-tile)}
+.dh-rfh{margin:14px 0 0}
+.dh .dh-rf{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px 28px;padding:20px 28px}
+.dh-rf-t{display:grid;gap:8px}
+.dh-rf .shop-h3{font-size:26px}
+.dh-rf .shop-sub{font-weight:500;font-size:18px}
+.dh-rf .shop-meta{font-size:14px}
+.dh-olgo{min-width:13em;min-height:56px;font-size:20px}
+.dh-keys{margin-top:auto;padding-top:24px}
+.dh-keys .shop-foot{justify-content:start;gap:8px 24px}
+.dh-keys .shop-foot>b{font-size:16px;color:var(--shop-mute)}
+.dh-keys .shop-foot>span{flex-wrap:wrap;gap:6px 36px;font:500 14px/1.4 var(--shop-mono);color:var(--shop-mute)}
+.dh-keys kbd{font:inherit;color:var(--shop-ink);margin-right:.7em;padding:0;border:0;background:none;box-shadow:none}
+.dh-ride .dh-note{margin:0}
+@media (max-width:1100px){.dh-rwrap{padding-inline:20px}.dh .dh-rhead .dh-back{margin-left:16px}}
+/* Phone: ← Garage under the header's top line, the tabs two by two, every list one column, the
+   race keys and Play online full width under their words, the controls a compact strip. */
+@media (max-width:820px){
+.dh .dh-rhead .dh-back{grid-column:1/-1;grid-row:2;margin:0 0 8px;min-height:44px;font-size:15px;padding:0 16px}
+.dh .dh-ride .dh-brand .dh-logo{height:24px}
+.dh-rwrap{gap:14px;padding:16px 16px 20px}
+.dh-rtitle{flex-direction:column;align-items:start}
+.dh-rtitle .shop-h1{font-size:34px}
+.dh-rtitle .shop-title{justify-items:start;text-align:left}
+.dh-rtitle .shop-title .shop-name{font-size:20px}
+.dh-rtitle .shop-title .shop-eyebrow{font-size:11px}
+.dh-rtabs{margin-bottom:4px}
+.dh-rtabs .shop-seg{grid-auto-flow:row;grid-template-columns:repeat(2,minmax(0,1fr))}
+.shop .dh-rtabs .shop-seg-k{min-height:48px;font-size:17px}
+.dh-rbody>.shop-sub{margin:-6px 0 4px;font-size:15px}
+.dh-rbody .shop-h2{font-size:24px}
+.shop .dh-rlist .shop-row{grid-template-columns:minmax(0,1fr);padding:12px 14px}
+.shop .dh-rbody .shop-row-e{grid-row:auto;grid-column:auto}
+.dh-venues{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.dh-venues .shop-btn{min-width:0;font-size:15px;padding:0 8px}
+.dh-rgrid{grid-template-columns:minmax(0,1fr);gap:8px}
+.dh-rgrid .shop-row{min-height:64px;padding:8px 12px;gap:10px}
+.shop .dh-rbody .shop-row-t>b{font-size:18px}
+.shop .dh-rbody .shop-row-s{font-size:14px}
+.shop .dh-rbody .shop-fig b{font-size:17px}
+.dh-thumb{width:64px;height:42px}
+.shop .shop-list>.shop-colhead{display:flex;padding:10px 14px 8px}
+.shop .shop-list>.shop-row{padding:10px 14px}
+.dh .dh-rf{grid-template-columns:minmax(0,1fr) auto;padding:14px 16px;gap:10px 12px}
+.dh-rf-t{grid-column:1/-1}
+.dh-rf .shop-h3{font-size:21px}
+.dh-rf .shop-sub{font-size:15px}
+.dh-olgo{min-width:0;min-height:48px;font-size:17px}
+.dh-keys{padding-top:12px}
+.dh-keys .shop-foot{gap:4px 12px;padding-top:10px}
+.dh-keys .shop-foot>b{font-size:13px}
+.dh-keys .shop-foot>span{gap:2px 14px;font-size:11.5px}
+.dh-keys kbd{margin-right:.4em}
+}

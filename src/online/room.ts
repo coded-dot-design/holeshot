@@ -1,5 +1,6 @@
 // The online cards, as HTML (the shell, ../game.ts, wires them): the room card (YOUR NAME and the
-// INVITE CODE, HOST or JOIN; the host's pick: what to ride, the tier or the map, 2 / 3 / 4 players;
+// INVITE CODE, HOST or JOIN; the host's pick: what to ride, the tier, the map, the ground or the
+// circuit, 2 / 3 / 4 players;
 // JOIN's room number; the lobby's ticket, seats, SEND LINK and START NOW; the "lining up" while the
 // hellos travel; a card for a room that's gone) and the online result (your payout and wear with the
 // online bonus, and the standings of everyone in the room). Board UI keys, 44 px or more.
@@ -7,7 +8,8 @@ import { TIERS } from "../data/series.ts";
 import { ONLINE } from "../data/economy.ts";
 import { esc, num } from "../html.ts";
 import { JAM_MAPS, type Ride, type SeatResult } from "./match.ts";
-import { K_RACE, K_JAM, K_AIR, K_ENDLESS, K_ENDCITY } from "../net.ts";
+import { K_RACE, K_JAM, K_AIR, K_ENDLESS, K_ENDCITY, K_TRACKDAY } from "../net.ts";
+import { TRACK_DAY } from "../modes/race/circuits.ts";
 import { BIOMES } from "../modes/desert/track.ts";
 import { SB_DIST, SB_BEST, SB_BEST_ID, SB_COMBO, SB_DRAGS, SB_POINTS, trickName, type Board } from "./board.ts";
 import { COMBOS } from "../modes/stunts.ts";
@@ -21,6 +23,7 @@ export const KINDS = [
   { k: K_AIR, name: "BIG AIR", title: "BIG AIR SHOWDOWN", head: "SHOWDOWN", blurb: "A minute each in the arena; the judges' total wins." },
   { k: K_ENDLESS, name: "ENDLESS", title: "RIDE OUT", head: "RIDE OUT", blurb: "Roam one endless ground together: the same world on every screen. G regroups to the host; END banks your ride." },
   { k: K_ENDCITY, name: "ENDLESS WHEELIE CITY", title: "RIDE OUT", head: "RIDE OUT", blurb: "The open world together: every rider's own neon patrol, roads that never end. G regroups to the host; END banks your ride." },
+  { k: K_TRACKDAY, name: "TRACK DAY", title: "TRACK DAY", head: "TRACK DAY", blurb: "Three laps of a road circuit; street-bike rivals fill the empty places. Best laps count." },
 ];
 /** A kind's entry (the room card's blurb, the pick's name). */
 export const kindOf = (k: number) => KINDS.find((x) => x.k === k) ?? KINDS[0]!;
@@ -36,6 +39,7 @@ export function roomCard() {
     <div data-for="host" hidden><b class="dh-h2">WHAT TO RIDE</b><p class="ol-seg ol-kinds" role="group" aria-label="Ride">${seg("olkind", KINDS.map((x) => ({ v: x.k, t: x.name })))}</p><p class="dh-sub ol-kind-sub">${KINDS[0]!.blurb}</p>
       <div class="ol-tiers"><b class="dh-h2">TIER</b><p class="ol-seg" role="group" aria-label="Tier">${seg("oltier", TIERS.map((t, i) => ({ v: i, t: t.name })))}</p></div>
       <div class="ol-maps" hidden><b class="dh-h2">MAP</b><p class="ol-seg ol-mapseg" role="group" aria-label="Map">${seg("olmap", JAM_MAPS.map((m, i) => ({ v: i, t: m.name })))}</p></div>
+      <div class="ol-circuits" hidden><b class="dh-h2">CIRCUIT</b><p class="ol-seg ol-mapseg" role="group" aria-label="Circuit">${seg("olcircuit", TRACK_DAY.map((t, i) => ({ v: i, t: t.name })))}</p></div>
       <div class="ol-biomes" hidden><b class="dh-h2">GROUND</b><p class="ol-seg ol-mapseg" role="group" aria-label="Ground">${seg("olbiome", BIOMES.map((b, i) => ({ v: i, t: b.name.replace(/^THE /, "") })))}</p></div>
       <b class="dh-h2">HOW MANY RIDERS?</b><p class="ol-sizes" role="group" aria-label="Riders"><button type="button" class="bui-key" data-olsize="2">2</button><button type="button" class="bui-key" data-olsize="3">3</button><button type="button" class="bui-key dh-go" data-olsize="4">4</button></p><p class="dh-sub">It starts when everyone's in, or when you press START NOW.</p><p class="dh-row"><button type="button" class="bui-key ol-topick">BACK</button></p></div>
     <form data-for="join" hidden novalidate><b class="dh-big">WHICH ROOM?</b><p class="ol-rooms"><button type="button" class="bui-key" data-olroom="-1" aria-label="Previous room">−</button><output name="roomShow" aria-live="polite">0</output><button type="button" class="bui-key" data-olroom="1" aria-label="Next room">+</button></p>
@@ -54,7 +58,7 @@ export const JOIN_TITLE = "JOIN YOUR FRIENDS · ONLINE";
 export const rideTitle = (kind: number, sub: number) => `${kindOf(kind).head} · ${pickName(kind, sub)} · ONLINE`;
 
 /** The host's pick in words (the lobby, the chip). */
-export const pickName = (kind: number, sub: number) => (kind === K_RACE ? `RACE · ${TIERS[sub]?.name ?? TIERS[0]!.name}` : kind === K_JAM ? `FREE RIDE JAM · ${JAM_MAPS[sub]?.name ?? JAM_MAPS[0]!.name}` : kind === K_ENDLESS ? `ENDLESS · ${BIOMES[sub]?.name ?? BIOMES[0]!.name}` : kindOf(kind).name);
+export const pickName = (kind: number, sub: number) => (kind === K_RACE ? `RACE · ${TIERS[sub]?.name ?? TIERS[0]!.name}` : kind === K_JAM ? `FREE RIDE JAM · ${JAM_MAPS[sub]?.name ?? JAM_MAPS[0]!.name}` : kind === K_ENDLESS ? `ENDLESS · ${BIOMES[sub]?.name ?? BIOMES[0]!.name}` : kind === K_TRACKDAY ? `TRACK DAY · ${TRACK_DAY[sub]?.name ?? TRACK_DAY[0]!.name}` : kindOf(kind).name);
 
 /** The lobby's seats: who is in (the room only says how many), the open places. */
 export function seatsHTML(seat: number, seated: number, n: number, me: string, colors: string[]) {

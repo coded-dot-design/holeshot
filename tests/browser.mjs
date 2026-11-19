@@ -144,12 +144,13 @@ try {
     }
     // ---- Free Ride's maps: LET'S RIDE shows a key per map in FREE RIDE; each open map rides, holds its camera, banks and pays ----
     await click(p, ".dh-result [data-go=ride]");
+    await click(p, "[data-rtab=free]");
     const pick = await p.evaluate(() => {
-      const root = document.querySelector("[data-fizlet-host]").shadowRoot, keys = [...root.querySelectorAll(".dh-mapk")];
+      const root = document.querySelector("[data-fizlet-host]").shadowRoot, keys = [...root.querySelectorAll("[data-map]:has(canvas[data-prev])")];
       return { screen: game.getSnapshot().screen, maps: keys.map((k) => k.dataset.map), big: keys.every((k) => Math.min(k.getBoundingClientRect().width, k.getBoundingClientRect().height) >= 44), sideways: root.querySelector(".dh-cards").scrollWidth > innerWidth + 1 };
     });
     assert.deepEqual(pick, { screen: "ride", maps: ["neon-park", "dune-sea", "quarry", "forest", "night-park"], big: true, sideways: false }, `${name}: the Free Ride maps`);
-    await until(p, () => [...document.querySelector("[data-fizlet-host]").shadowRoot.querySelectorAll(".dh-mapv")].every((c) => c.width > 30 && c.getContext("2d").getImageData(c.width >> 1, c.height >> 1, 1, 1).data[3] === 255), null, `${name}: every map's preview is drawn`);
+    await until(p, () => [...document.querySelector("[data-fizlet-host]").shadowRoot.querySelectorAll("canvas[data-prev]")].every((c) => c.width > 30 && c.getContext("2d").getImageData(c.width >> 1, c.height >> 1, 1, 1).data[3] === 255), null, `${name}: every map's preview is drawn`);
     await click(p, "[data-map=forest]");
     s = await snap(p);
     assert.deepEqual([s.screen, s.mode, s.run.map, s.run.phase], ["event", "freeride", "forest", "ready"], `${name}: a map key starts it`);

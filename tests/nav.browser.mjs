@@ -60,38 +60,43 @@ try {
         await press(".dh-set .dh-back");
         await until(p, "game.getSnapshot().screen === 'garage'", `${at}: ← GARAGE from the settings`);
 
-        // ---- LET'S RIDE: four groups, each with a line; a grid on a wide screen, stacked on a phone ----
+        // ---- LET'S RIDE: the title row, four tabs (Race first), each a list of destinations, WITH FRIENDS, the controls ----
         await press(".dh-letsride");
         await until(p, "game.getSnapshot().screen === 'ride'", `${at}: LET'S RIDE`);
-        const groups = await $(p, `[...root.querySelectorAll('.dh-grp')].map((g) => { const h = g.querySelector('header').getBoundingClientRect(), t = g.querySelector('.dh-tiles').getBoundingClientRect(); return [g.dataset.grp, g.querySelector('h2').textContent, g.querySelector('header p').textContent.length > 20, t.left >= h.right ? "side" : t.top >= h.bottom ? "stacked" : "?"]; })`);
-        const lay = touch ? "stacked" : "side";
-        assert.deepEqual(groups, [["race", "RACE", true, lay], ["endless", "ENDLESS", true, lay], ["free", "FREE RIDE", true, lay], ["day", "TRACK DAY", true, lay]], `${at}: the groups`);
-        const tiles = await $(p, `(() => {
-          const r = (e) => e.getBoundingClientRect(), keys = [...root.querySelectorAll('.dh-ridec .dh-grps button')];
-          const g = (id) => [...root.querySelectorAll('[data-grp=' + id + '] button')];
-          return {
-            race: g('race').map((b) => (b.dataset.go || b.dataset.mode || 'online') + (b.dataset.venue ? ':' + b.dataset.venue : '') + (b.disabled ? '!' : '')),
-            endless: g('endless').map((b) => (b.dataset.endless || b.dataset.mode || (b.classList.contains('ol-open') ? 'online' : 'soon')) + (b.disabled ? '!' : '')),
-            free: g('free').map((b) => (b.dataset.map || b.dataset.mode || (b.classList.contains('ol-open') ? 'online' : 'soon')) + (b.disabled ? '!' : '')),
-            day: g('day').map((b) => b.dataset.circuit + (b.disabled ? '!' : '')),
-            big: keys.every((k) => Math.min(r(k).width, r(k).height) >= 44),
-          };
-        })()`);
-        assert.deepEqual(tiles, {
-          race: ["series:mx", "series:sx", "race:mx", "race:sx", "online"],
-          endless: ["desert", "quarry", "forest", "night-park", "endcity", "online", "mashup"],
-          free: ["neon-park", "dune-sea", "quarry", "forest", "night-park", "sx-floor", "sx-volt-floor", "bigair", "online"],
-          day: ["td-meridian", "td-knotworks", "td-bottlecap"], big: true,
-        }, `${at}: the tiles (SERIES first; MX and SX; the coming ones disabled)`);
-        assert.equal(await sideways(), false, `${at}: LET'S RIDE: no sideways scroll`);
-        // ← GARAGE stays top-left with the groups scrolled to the end.
+        const want = {
+          race: ["Choose a race", ["race:mx", "race:sx", "series:mx", "series:sx"], "0"],
+          endless: ["Choose a world", ["desert", "quarry", "forest", "night-park", "endcity", "mashup"], "4"],
+          free: ["Choose a spot", ["neon-park", "dune-sea", "quarry", "forest", "night-park", "sx-floor", "sx-volt-floor", "bigair"], "1"],
+          day: ["Choose a circuit", ["td-meridian", "td-knotworks", "td-bottlecap"], "6"],
+        };
+        for (const [tab, [h, dests, kind]] of Object.entries(want)) {
+          await press(`[data-rtab=${tab}]`);
+          await until(p, `root.querySelector('.dh-rtabs [data-rtab=${tab}]')?.getAttribute('aria-pressed') === 'true'`, `${at}: the ${tab} tab`);
+          const got = await $(p, `(() => {
+            const r = (e) => e.getBoundingClientRect(), keys = [...root.querySelectorAll('.dh-ride button')].filter((k) => r(k).width > 0);
+            return {
+              h: root.querySelector('.dh-rbody .shop-h2').textContent,
+              dests: [...root.querySelectorAll('.dh-rbody [data-mode], .dh-rbody [data-go], .dh-rbody [data-endless], .dh-rbody [data-map], .dh-rbody [data-circuit]')].map((b) => b.dataset.circuit || b.dataset.endless || b.dataset.map || (b.dataset.go || b.dataset.mode) + (b.dataset.venue && (b.dataset.go || b.dataset.mode === 'race') ? ':' + b.dataset.venue : '')),
+              kind: root.querySelector('.dh-rbody .ol-open').dataset.olkind,
+              friends: /^Up to 4 · ×1\.5$/.test(root.querySelector('.dh-rf .shop-meta').textContent),
+              focus: root.activeElement === root.querySelector('.dh-rtabs [aria-pressed=true]'),
+              big: keys.every((k) => Math.min(r(k).width, r(k).height) >= 44), keys: !!root.querySelector('.dh-keys kbd'), links: root.querySelectorAll('.dh-ride a').length,
+            };
+          })()`);
+          assert.deepEqual(got, { h, dests, kind, friends: true, focus: true, big: true, keys: true, links: 0 }, `${at}: ${tab}: its destinations, WITH FRIENDS, the controls (no links)`);
+          assert.equal(await sideways(), false, `${at}: ${tab}: no sideways scroll`);
+        }
+        // The tabs: one row on a wide screen, two by two on a phone.
+        const rows = await $(p, "new Set([...root.querySelectorAll('.dh-rtabs button')].map((b) => Math.round(b.getBoundingClientRect().top))).size");
+        assert.equal(rows, touch ? 2 : 1, `${at}: the tabs' rows`);
+        // ← Garage stays in reach with the page scrolled to the end.
         await $(p, "(() => { const c = root.querySelector('.dh-cards'); c.scrollTop = c.scrollHeight; })()");
-        await until(p, "(() => { const b = root.querySelector('.dh-ridec .dh-back').getBoundingClientRect(); return root.querySelector('.dh-cards').scrollTop > 200 && b.top >= 0 && b.top < 80 && b.left < innerWidth / 3; })()", `${at}: ← GARAGE in view, top-left, scrolled down`);
-        await press(".dh-ridec .dh-back");
-        await until(p, "game.getSnapshot().screen === 'garage'", `${at}: ← GARAGE`);
+        await until(p, "(() => { const b = root.querySelector('.dh-ride .dh-back').getBoundingClientRect(); const c = root.querySelector('.dh-cards'); return c.scrollTop >= c.scrollHeight - c.clientHeight - 2 && b.top >= 0 && b.top < 140 && b.left < innerWidth / 3; })()", `${at}: ← Garage in view, top-left, scrolled down`);
+        await press(".dh-ride .dh-back");
+        await until(p, "game.getSnapshot().screen === 'garage'", `${at}: ← Garage`);
         if (!touch) {
           await press(".dh-letsride");
-          await until(p, "game.getSnapshot().screen === 'ride'", `${at}: LET'S RIDE again`);
+          await until(p, "game.getSnapshot().screen === 'ride' && root.querySelector('[data-rtab=day]').getAttribute('aria-pressed') === 'true'", `${at}: LET'S RIDE again, on the tab left`);
           await p.keyboard.press("Escape");
           await until(p, "game.getSnapshot().screen === 'garage'", `${at}: Escape steps back to the garage`);
         }
@@ -99,6 +104,7 @@ try {
         // ---- a ride from a tile, then the result, then home ----
         await press(".dh-letsride");
         await until(p, "game.getSnapshot().screen === 'ride'", `${at}: LET'S RIDE`);
+        await press("[data-rtab=endless]");
         await press("[data-endless=quarry]");
         await until(p, "game.getSnapshot().screen === 'event' && game.getSnapshot().mode === 'desert' && game.getSnapshot().run.phase === 'ready'", `${at}: a tile starts the ride`);
         await p.evaluate(() => game.leave());
@@ -108,6 +114,7 @@ try {
         await until(p, "game.getSnapshot().screen === 'garage'", `${at}: back on the garage`);
         // A SERIES key opens the series (← LET'S RIDE back), a RACE key races.
         await press(".dh-letsride");
+        await press("[data-rtab=race]");
         await press("[data-go=series][data-venue=mx]");
         await until(p, "game.getSnapshot().screen === 'series' && /SERIES · MX/.test(root.querySelector('.dh-title').textContent)", `${at}: SERIES · MX`);
         await press(".ds .dh-back");
@@ -125,11 +132,13 @@ try {
         await p.evaluate(() => game.leave());
         await until(p, "game.getSnapshot().screen === 'result'", `${at}: left the SX race`);
         await press(".dh-result [data-go=ride]");
+        await press("[data-rtab=free]");
         await press("[data-map=sx-floor]");
         await until(p, "game.getSnapshot().screen === 'event' && game.getSnapshot().mode === 'freeride'", `${at}: FREE RIDE · STADIUM FLOOR`);
         await p.evaluate(() => game.leave());
         await until(p, "game.getSnapshot().screen === 'result'", `${at}: left`);
         await press(".dh-result [data-go=ride]");
+        await press("[data-rtab=race]");
         await press("[data-mode=race][data-venue=mx]");
         await until(p, "game.getSnapshot().screen === 'event' && game.getSnapshot().mode === 'race'", `${at}: RACE · MX`);
         await p.evaluate(() => game.finish());

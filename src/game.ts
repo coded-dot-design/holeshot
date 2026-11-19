@@ -22,7 +22,7 @@ import { lapClock, mode as modeOf, trackDayBest } from "./modes/index.ts";
 import type { ModeCtx, ModeId, ModeRun, RunStats } from "./modes/mode.ts";
 import { venueOf, type Venue } from "./modes/race/venue.ts";
 import { paintMaps } from "./modes/freeride/picker.ts";
-import { rideCard as rideScreen } from "./ride-ui.ts";
+import { rideCard as rideScreen, type RideTab } from "./ride-ui.ts";
 import { APPICON, WORDMARK } from "./logo.ts";
 import { exportCode, importCode, load, local, newBike, ready, riding, save, setup, fresh, type Profile, type Store, type RiderKit } from "./model/profile.ts";
 import { testCredits, topUp } from "./model/testcredits.ts";
@@ -39,6 +39,7 @@ import { mountShowroom as mountSr, showroomState } from "./garage/showroom.ts";
 import { rigKit } from "./garage/snap.ts";
 import { addBackdrop, sceneOf, skyOf } from "./garage/backdrop.ts";
 import { buyInto } from "./model/garage.ts";
+import { words } from "./garage/adapters.ts";
 import { bar, esc, num } from "./html.ts";
 import { enter as enterSeries, recordRound, retire as retireSeries, roundStats } from "./model/series.ts";
 import { seriesCard as seriesScreen, seriesKeys, seriesName, seriesResult, startRound } from "./series-ui.ts";
@@ -49,7 +50,7 @@ import { ICON } from "./modes/keys.ts";
 import { mountTrack, type NetRun, type NetView } from "./modes/race/scene.ts";
 import { applyOnline, settleOnline } from "./model/economy.ts";
 import { match, OVER, type Match, type Ride, type SeatResult } from "./online/match.ts";
-import { joinRoom, cleanName, encode, scoreBits, packMode, unpackMode, B_AUTO, B_RESET, B_DONE, B_REGROUP, B_HOP, B_COMBO, C_END, C_REGROUP, C_HOP, C_COMBO, SEATS, K_RACE, K_JAM, K_AIR, K_ENDLESS, K_ENDCITY } from "./net.ts";
+import { joinRoom, cleanName, encode, scoreBits, packMode, unpackMode, B_AUTO, B_RESET, B_DONE, B_REGROUP, B_HOP, B_COMBO, C_END, C_REGROUP, C_HOP, C_COMBO, SEATS, K_RACE, K_JAM, K_AIR, K_ENDLESS, K_ENDCITY, K_TRACKDAY } from "./net.ts";
 import { JOIN_TITLE, kindOf, pickName, rideTitle, roomCard, roomTitle, seatsHTML, standingsHTML, boardHTML } from "./online/room.ts";
 import { mountCity } from "./modes/wheelie/scene.ts";
 export { lookOf };
@@ -95,7 +96,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   root.append(stage);
   const paintTheme = () => ((root.dataset.theme = pageTheme()), stage.toggleAttribute("data-day", pageTheme() === "light"));
   paintTheme();
-  const mo = new MutationObserver(() => ((ownTheme = null), paintTheme(), preview()));
+  const mo = new MutationObserver(() => ((ownTheme = null), paintTheme(), preview(), screen === "ride" && reTheme()));
   mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   engine.signal.addEventListener("abort", () => (mo.disconnect(), run?.destroy()), { once: true });
 
@@ -218,9 +219,9 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   /** The garage's header: the logo with the version and the byline, the Garage / Showroom tabs, the
    *  credits, the rider (to the rider's gear), ⚙ settings (the CONTROLS / HOW TO card lives there)
    *  and the Day / Night key. */
-  const garageHead = () => {
+  const garageHead = (mid?: string) => {
     const day = pageTheme() === "light";
-    return `<header class="dh-top dh-ghead"><span class="dh-brand">${APPICON}<span class="dh-brand-t">${WORDMARK}<small class="shop-eyebrow"><span>V${__VERSION__}</span><i aria-hidden="true">·</i>BY DAVID COOLEY</small></span></span>${shopTabs([["garage", "Garage"], ["showroom", "Showroom"]], gui.tab === "showroom" ? "showroom" : "garage", "gtab", "Garage or showroom", true)}<span class="dh-hkeys">${inf ? `<span class="dh-chip dh-cr" title="Test credits: nothing is saved">◈ ∞</span><span class="dh-chip dh-test" title="?credits=inf: nothing is saved, online is off">TEST CREDITS ∞</span>` : `<span class="dh-chip dh-cr" title="Credits">◈ ${num(profile.credits)}</span>`}<button type="button" class="shop-btn dh-who" data-rider aria-label="Rider gear">${portraitOf(profile.kit)}<span>${esc(profile.name ? profile.name.charAt(0) + profile.name.slice(1).toLowerCase() : "Rider")}</span></button><button type="button" class="shop-btn dh-icon dh-cog" data-go="settings" aria-label="Settings">${ICON.cog}</button><button type="button" class="shop-btn dh-theme" aria-label="Day or night"><i aria-hidden="true">${day ? "☀" : "☾"}</i>${day ? "Day" : "Night"}</button></span></header>`;
+    return `<header class="dh-top dh-ghead${mid ? " dh-rhead" : ""}"><span class="dh-brand">${APPICON}<span class="dh-brand-t">${WORDMARK}<small class="shop-eyebrow"><span>V${__VERSION__}</span><i aria-hidden="true">·</i>BY DAVID COOLEY</small></span></span>${mid ?? shopTabs([["garage", "Garage"], ["showroom", "Showroom"]], gui.tab === "showroom" ? "showroom" : "garage", "gtab", "Garage or showroom", true)}<span class="dh-hkeys">${inf ? `<span class="dh-chip dh-cr" title="Test credits: nothing is saved">◈ ∞</span><span class="dh-chip dh-test" title="?credits=inf: nothing is saved, online is off">TEST CREDITS ∞</span>` : `<span class="dh-chip dh-cr" title="Credits">◈ ${num(profile.credits)}</span>`}<button type="button" class="shop-btn dh-who" data-rider aria-label="Rider gear">${portraitOf(profile.kit)}<span>${esc(profile.name ? profile.name.charAt(0) + profile.name.slice(1).toLowerCase() : "Rider")}</span></button><button type="button" class="shop-btn dh-icon dh-cog" data-go="settings" aria-label="Settings">${ICON.cog}</button><button type="button" class="shop-btn dh-theme" aria-label="Day or night"><i aria-hidden="true">${day ? "☀" : "☾"}</i>${day ? "Day" : "Night"}</button></span></header>`;
   };
   const bikeLine = () => {
     const b = riding(profile), m = modelOf(b.model);
@@ -254,7 +255,18 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     turntable: (h: HTMLElement, id: string) => { gui.trial = ["bike", id]; h.append(pv); pvKey = ""; requestAnimationFrame(preview); },
   };
   const mountShowroom = (host: HTMLElement) => void mountSr(host, srApi, srState);
-  const rideCard = () => rideScreen(head(["garage", "GARAGE", "LET'S RIDE"]), { bike: bikeLine(), best: (k) => km(profile.stats.far[k] ?? 0), lap: (c) => lapClock(trackDayBest(profile.stats.best, c)), inf, note });
+  /** LET'S RIDE follows the theme (its Day / Night key, the map thumbnails), the focus kept on the key. */
+  const reTheme = () => {
+    const k = (cards.getRootNode() as Document | ShadowRoot).activeElement?.classList.contains("dh-theme");
+    show("ride");
+    if (k) cards.querySelector<HTMLElement>(".dh-theme")?.focus({ preventScroll: true });
+  };
+  /** LET'S RIDE: the garage's header with ← Garage, the tab shown (kept while the shell lives). */
+  let rideTab: RideTab = "race";
+  const rideCard = () => {
+    const b = riding(profile), m = modelOf(b.model);
+    return rideScreen(garageHead(`<button type="button" class="shop-btn dh-back" data-go="garage">← Garage</button>`), { tab: rideTab, bike: words(`${makerOf(m).name} ${m.name}`), number: b.look.number, best: (k) => km(profile.stats.far[k] ?? 0), lap: (c) => lapClock(trackDayBest(profile.stats.best, c)), inf, note });
+  };
   /** The series shown: the championship under way's venue, else the one picked on LET'S RIDE. */
   const seriesAt = (): Venue => (profile.series.run ? venueOf(profile.series.run.venue) : seriesVenue);
   const seriesCard = () => seriesScreen(profile, head(["ride", "LET'S RIDE", `SERIES · ${seriesAt().toUpperCase()}`]), "", note, seriesAt());
@@ -320,7 +332,8 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     // (Within the garage, the focus stays on the key that was pressed, redrawn: or the open menu's first row.)
     const again = s === "garage" && was === "garage" ? (gui.menu ? cards.querySelector<HTMLElement>(".shop-menu-i, .shop-sheet .shop-x") : refocus ? cards.querySelector<HTMLElement>(refocus) : null) : null;
     refocus = "";
-    const first = again ?? (s === "garage" && was !== "garage" ? cards.querySelector<HTMLElement>(".dh-letsride") : null) ?? cards.querySelector<HTMLElement>(".dh-go, [aria-pressed=true], button, input");
+    const tab = s === "ride" && was === "ride" ? cards.querySelector<HTMLElement>(".dh-rtabs [aria-pressed=true]") : null;
+    const first = tab ?? again ?? (s === "garage" && was !== "garage" ? cards.querySelector<HTMLElement>(".dh-letsride") : null) ?? cards.querySelector<HTMLElement>(".dh-go, [aria-pressed=true], button, input");
     if (s !== "event") first?.focus({ preventScroll: true });
     engine.wake();
   }
@@ -448,6 +461,9 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     if (t.classList.contains("dh-theme")) return o.onTheme ? o.onTheme() : ((ownTheme = pageTheme() === "light" ? "dark" : "light"), paintTheme(), (pvKey = ""), show(screen));
     if (d.go === "series" && d.venue) seriesVenue = d.venue as Venue;
     if (d.go) return show(d.go as Screen);
+    // LET'S RIDE: a tab redraws the page (the focus stays on it); Rider opens the rider's gear in the garage.
+    if (d.rtab) return (rideTab = d.rtab as RideTab), show("ride");
+    if (d.rider !== undefined && screen === "ride") return garageClick(profile, gui, t, cards), show("garage");
     refocus = [...t.attributes].filter((a) => a.name.startsWith("data-") && a.name !== "data-sure").map((a) => `[${a.name}="${CSS.escape(a.value)}"]`).join("");
     const g = screen === "garage" ? garageClick(profile, gui, t, cards) : null;
     if (g) return g.buy ? did(g.buy[0], g.buy[1]) : (g.profile && ((profile = g.profile), keep()), show("garage"));
@@ -624,7 +640,9 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       $r(".ol-tiers").hidden = N.pick.kind !== K_RACE;
       $r(".ol-maps").hidden = N.pick.kind !== K_JAM;
       $r(".ol-biomes").hidden = N.pick.kind !== K_ENDLESS;
+      $r(".ol-circuits").hidden = N.pick.kind !== K_TRACKDAY;
       press("[data-olbiome]", "0", "olbiome");
+      press("[data-olcircuit]", "0", "olcircuit");
       N.pick.sub = 0;
       press("[data-oltier]", "0", "oltier");
       press("[data-olmap]", "0", "olmap");
@@ -633,6 +651,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     } else if (d.oltier !== undefined) (N.pick.sub = Number(d.oltier)), press("[data-oltier]", d.oltier, "oltier");
     else if (d.olmap !== undefined) (N.pick.sub = Number(d.olmap)), press("[data-olmap]", d.olmap, "olmap");
     else if (d.olbiome !== undefined) (N.pick.sub = Number(d.olbiome)), press("[data-olbiome]", d.olbiome, "olbiome");
+    else if (d.olcircuit !== undefined) (N.pick.sub = Number(d.olcircuit)), press("[data-olcircuit]", d.olcircuit, "olcircuit");
     else if (d.olsize) (N.room = (Math.random() * ROOM_N) | 0), void enterRoom(true, Number(d.olsize));
     else if (d.olroom) (N.room = (N.room + Number(d.olroom) + ROOM_N) % ROOM_N), showRoomN();
     else if (t.classList.contains("ol-back")) netEnd(), show("ride");
@@ -781,7 +800,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       ctx.best = profile.stats.far.city ?? 0;
       run = mountCity(ctx, view);
     } else if (r.race || r.jam) {
-      runMode = r.race ? "race" : r.board ? "desert" : "freeride";
+      runMode = r.kind === K_TRACKDAY ? "trackday" : r.race ? "race" : r.board ? "desert" : "freeride";
       // An endless ground together: this seat's own track (its window of the same world).
       const own = r.board ? r.jam!.runs[N.seat]!.track : r.track!;
       if (r.board) ctx.best = profile.stats.far[(own as { id: string }).id] ?? 0;
@@ -821,7 +840,8 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     const ORD = ["1ST", "2ND", "3RD", "4TH"], clock = (v: number) => `${(v / 60) | 0}:${(v % 60).toFixed(1).padStart(4, "0")}`;
     let st: RunStats;
     // (A rider still out when the grace time ran out is placed by how far they got, and paid for it.)
-    if (r.race) st = { ...blankStats("race"), ...common, place: me.place, time: me.time, bestLap: me.bestLap, finished: true, led: false, where: "online", summary: `Online · ${ORD[me.place]} of ${r.race.riders.length}${me.finished ? ` · ${clock(me.time)}` : " · didn't finish"} · best lap ${clock(me.bestLap)}` };
+    // (Track Day keeps the circuit's best lap, as riding it alone: ./model/economy.ts `apply`.)
+    if (r.race) st = { ...blankStats(r.kind === K_TRACKDAY ? "trackday" : "race"), ...common, place: me.place, time: me.time, bestLap: me.bestLap, finished: true, led: false, where: r.kind === K_TRACKDAY ? (r.track as { id: string }).id : "online", summary: `Online · ${r.kind === K_TRACKDAY ? (r.track as { name: string }).name + " · " : ""}${ORD[me.place]} of ${r.race.riders.length}${me.finished ? ` · ${clock(me.time)}` : " · didn't finish"} · best lap ${clock(me.bestLap)}` };
     else if (r.board) {
       // The endless rides: the distance (each ground's best, kept as riding it alone), the session's points.
       const where = r.city ? "city" : (r.jam!.runs[N.seat]!.track as { id: string }).id, what = r.city ? "Endless Wheelie City" : pickName(r.kind, r.sub);

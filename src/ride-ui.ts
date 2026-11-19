@@ -1,59 +1,96 @@
-// LET'S RIDE, the shell's ride page (owner, 2026-11-19): every way to ride in four groups, each a
-// shelf of tiles with a one-line description. RACE (the SERIES first, then a single RACE, each MX
-// outdoor or SX indoor), ENDLESS (each endless ground, Endless Wheelie City, the Endless Mashup),
-// FREE RIDE (the maps, Big Air) and TRACK DAY (street bikes on the road circuits: ./modes/race/circuits.ts). Riding online
-// sits in the groups it belongs to (MX only: SX is solo). Strings in, a string out, like ./series-ui.ts: the shell
-// (./game.ts) owns the clicks (`data-mode`, `data-endless`, `data-map`, `data-circuit`, `data-go`, `data-venue`,
-// `data-olkind` on `.ol-open`) and passes its header.
+// LET'S RIDE, the shell's ride page (owner's design, 2026-11-19): the title row (your bike), four
+// segmented tabs (Race · Endless · Free Ride · Track Day), each a "Choose a …" list of destinations,
+// then a WITH FRIENDS card (its Play online opens the room card on the tab's kind) and the controls
+// strip. Built only from the shop's pieces (./shop/): the page adds layout (./ride.css). Strings in, a
+// string out, like ./series-ui.ts: the shell (./game.ts) owns the clicks (`data-rtab`, `data-mode`,
+// `data-endless`, `data-map`, `data-circuit`, `data-go`, `data-venue`, `data-olkind` on `.ol-open`)
+// and passes its header. Every number comes from the game: bests, best laps, seats, the online bonus.
 import { BIOMES } from "./modes/desert/track.ts";
-import { FREE_SX, TRACK_DAY_MAPS, mode as modeOf } from "./modes/index.ts";
-import { mapTiles } from "./modes/freeride/picker.ts";
+import { FREE_MAPS, FREE_SX, TRACK_DAY_MAPS } from "./modes/index.ts";
 import type { Venue } from "./modes/race/venue.ts";
-import { K_ENDLESS, K_JAM, K_RACE } from "./net.ts";
-import { esc } from "./html.ts";
+import { K_ENDLESS, K_JAM, K_RACE, K_TRACKDAY, SEATS } from "./net.ts";
+import { ONLINE } from "./data/economy.ts";
+import { btn, card, esc, figure, footbar, heading, list, row, seg, title } from "./shop/index.ts";
 
 export const VENUES: { id: Venue; name: string; where: string }[] = [
-  { id: "mx", name: "MX", where: "OUTDOOR" },
-  { id: "sx", name: "SX", where: "STADIUM" },
+  { id: "mx", name: "MX", where: "Outdoor" },
+  { id: "sx", name: "SX", where: "Stadium" },
 ];
+export type RideTab = "race" | "endless" | "free" | "day";
+export const RIDE_TABS: [RideTab, string][] = [["race", "Race"], ["endless", "Endless"], ["free", "Free Ride"], ["day", "Track Day"]];
 
 export interface RideView {
-  /** The rider's bike in words ("MAKER MODEL · #7"). */
+  /** The tab shown. */
+  tab: RideTab;
+  /** The rider's bike: "Yamori Yowler 125 2T" and its plate. */
   bike: string;
-  /** Each endless ground's best distance, in the rider's units ("desert", …, "city"). */
+  number: number;
+  /** Each endless ground's best distance, in the rider's units ("desert", …, "city", "mashup"). */
   best: (key: string) => string;
   /** Track Day: the rider's best lap on a circuit ("0:18.4"), or "" for none. */
-  lap?: (circuit: string) => string;
+  lap: (circuit: string) => string;
   /** Test credits: online is off. */
   inf: boolean;
   note: string;
 }
 
-const tile = (attrs: string, name: string, line: string, meta = "", off = false) => `<li><button type="button" class="bui-key dh-tile" ${attrs}${off ? " disabled" : ""}><b>${name}</b><small>${line}</small>${meta ? `<em>${meta}</em>` : ""}</button></li>`;
-/** A tile with an MX / SX choice: two keys under its name. */
-const venues = (name: string, line: string, attrs: (v: Venue) => string) => `<li class="dh-tile dh-vtile"><b>${name}</b><small>${line}</small><span class="dh-vkeys" role="group" aria-label="${name}: MX or SX">${VENUES.map((v) => `<button type="button" class="bui-key dh-vk" ${attrs(v.id)} data-venue="${v.id}" aria-label="${name}, ${v.name} ${v.where.toLowerCase()}"><b>${v.name}</b><small>${v.where}</small></button>`).join("")}</span></li>`;
-const soon = (name: string, line: string) => tile(`data-soon`, name, line, "COMING SOON", true);
-/** A group's online tile: named for what the group rides together (owner, 2026-11-19), marked ONLINE. */
-const online = (kind: number, name: string, line: string, inf: boolean) => tile(`data-olkind="${kind}"`, name, inf ? "Off with test credits: take ?credits=inf off the address to ride online." : line, inf ? "TEST CREDITS ∞" : "ONLINE · UP TO 4 · ×1.5", inf).replace("dh-tile", "dh-tile dh-oltile ol-open");
-const group = (id: string, name: string, line: string, tiles: string) => `<section class="dh-grp" data-grp="${id}" aria-labelledby="grp-${id}"><header><h2 class="dh-grph" id="grp-${id}">${name}</h2><p class="dh-sub">${line}</p></header><ul class="dh-tiles">${tiles}</ul></section>`;
+// The page's words (the owner's design); a destination's id → [name, line].
+const WORDS: Record<string, [string, string]> = {
+  desert: ["Endless Desert", "Dunes, bowls and natural kickers."],
+  quarry: ["Deep Quarry", "Terraced faces, ledges and hill climbs."],
+  forest: ["Endless Woods", "Wooded hills, log jumps and rock gardens."],
+  "night-park": ["Night Park", "An open jump park with doubles and rollers."],
+  city: ["Endless Wheelie City", "Open roads, towns and a neon patrol."],
+  mashup: ["Endless Mashup", "One ride through the city, dunes, quarry and park."],
+  "f:neon-park": ["Neon Loop", "Doubles, whoops, triple and tabletop."],
+  "f:dune-sea": ["Dune Sea", "Open dunes, ridgelines and kickers."],
+  "f:quarry": ["The Quarry", "Drop from the rim and climb the faces."],
+  "f:forest": ["Forest Enduro", "Single track through roots and rocks."],
+  "f:night-park": ["Night Park", "Jump line, wall ride and step-down."],
+  "sx-floor": ["Stadium Floor", "Neon Dome · rhythm doubles and hairpins."],
+  "sx-volt-floor": ["Volt Floor", "Volt Arena · tabletop, whoops and tight triple."],
+  bigair: ["Big Air", "One minute of tricks. Five judges score the run."],
+  "td-meridian": ["Meridian Ring", "Fast, flowing circuit with a long straight and a flat-out S."],
+  "td-knotworks": ["Knotworks", "Two chicanes, a hairpin and a run of square corners."],
+  "td-bottlecap": ["Bottlecap", "Tight kart circuit with two hairpins and a hook."],
+};
+/** A destination's words; the game's own name (title case) if the page has none. */
+const words = (id: string, name: string, line: string): [string, string] => WORDS[id] ?? [name.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase()), line];
 
-/** The LET'S RIDE card (`head`: the shell's header with ← GARAGE). */
+/** A destination: the whole row is the key. */
+const dest = (attrs: string, w: [string, string], end = "", art = "") => row({ tag: "button", attrs: `type="button" ${attrs}`, title: esc(w[0]), sub: esc(w[1]), end: end || undefined, art: art || undefined, go: true });
+/** A race row: its name and line, the MX · Outdoor and SX · Stadium keys. */
+const venues = (name: string, line: string, attrs: string) =>
+  row({ tag: "div", title: esc(name), sub: esc(line), end: `<span class="dh-venues" role="group" aria-label="${esc(name)}: MX or SX">${VENUES.map((v) => btn(`${v.name} · ${v.where}`, `${attrs} data-venue="${v.id}" aria-label="${esc(name)}, ${v.name} ${v.where.toLowerCase()}"`, false, "shop-btn-tile")).join("")}</span>` });
+/** The WITH FRIENDS card: what the tab rides together, its line, seats and pay, Play online (the room card on `kind`). */
+function friends(kind: number, name: string, line: string, inf: boolean) {
+  const meta = `Up to ${SEATS} · ×${ONLINE.bonus}`;
+  const say = inf ? "Off with test credits: take ?credits=inf off the address to ride online." : line;
+  return `<h2 class="shop-eyebrow dh-rfh">With friends</h2>${card(`<div class="dh-rf-t"><b class="shop-h3">${esc(name)}</b><p class="shop-sub">${esc(say)}</p></div><small class="shop-meta">${esc(meta)}</small>${btn("Play online →", `data-olkind="${kind}"${inf ? " disabled" : ""}`, false, "ol-open dh-olgo")}`, "shop-tint dh-rf")}`;
+}
+/** The keys, as words (the page is the game's own: nothing links out). */
+const KEYS: [string, string][] = [["W/S", "lean"], ["A/D", "steer"], ["Space", "gas"], ["K", "brake"], ["L", "trick / hop"], ["C", "endless combo"], ["P", "pause"]];
+
+/** The LET'S RIDE page (`head`: the shell's header with ← Garage). */
 export function rideCard(head: string, v: RideView) {
-  const race = group("race", "RACE", "Three rivals, places pay: a championship of new tracks, or one race.",
-    venues("SERIES", "Four to six rounds, a points table and a title: new outdoor tracks (MX) or the stadiums (SX).", () => `data-go="series"`)
-    + venues("RACE", `${esc(modeOf("race").blurb)}`, () => `data-mode="race"`)
-    + online(K_RACE, "CHALLENGE YOUR FRIENDS", "Online: challenge up to three friends to a race, each on their own garage bike (MX; SX is solo for now).", v.inf));
-  const endless = group("endless", "ENDLESS", "No edge, no clock: ride as far as you can, then pause and END & BANK.",
-    BIOMES.map((b, i) => tile(`data-endless="${b.id}"`, i ? b.name.replace(/^THE /, "") : "ENDLESS DESERT", esc(b.blurb), `BEST ${v.best(b.id)}`)).join("")
-    + tile(`data-mode="endcity"`, "ENDLESS WHEELIE CITY", "Roads, towns and fields that never end. Wheelie, lose the neon patrol.", `BEST ${v.best("city")}`)
-    + online(K_ENDLESS, "RIDE OUT", "Online: create a ride out and invite your friends to roam an endless ground or the city together.", v.inf)
-    + tile(`data-mode="mashup"`, "ENDLESS MASHUP", "One endless world: city, dunes, mountains, quarry, park and a city again.", `BEST ${v.best("mashup")}`));
-  const free = group("free", "FREE RIDE", "No laps, no clock: air, wheelies and tricks pay a little.",
-    mapTiles("dh-tile")
-    + FREE_SX.map((m) => tile(`data-map="${m.id}" data-venue="sx"`, m.name, esc(m.blurb), "SX · STADIUM")).join("")
-    + tile(`data-mode="bigair"`, "BIG AIR", esc(modeOf("bigair").blurb), "A MINUTE · FIVE JUDGES")
-    + online(K_JAM, "JAM WITH YOUR FRIENDS", "Online: invite your friends to a Free Ride jam or a Big Air showdown. The most points wins.", v.inf));
-  const day = group("day", "TRACK DAY", "Street bikes on road circuits: lap times, braking points, knee down.",
-    TRACK_DAY_MAPS.map((m) => tile(`data-circuit="${m.id}"`, m.name, esc(m.blurb), v.lap?.(m.id) ? `BEST LAP ${v.lap(m.id)}` : `3 LAPS · ${m.kind}`)).join(""));
-  return `<div class="dh-card dh-ridec" data-screen="ride">${head}<p class="dh-sub">On your ${esc(v.bike)}.</p><div class="dh-grps">${race}${endless}${free}${day}</div><p class="dh-sub dh-keys">Keys: ↑/W lean forward · ↓/S lean back · ←→/AD steer · Space gas · K brake · L trick or hop · C combo trick (endless) · P pause</p>${v.note ? `<p class="dh-sub dh-note" role="status">${esc(v.note)}</p>` : ""}</div>`;
+  const best = (k: string) => figure("Best", v.best(k).toLowerCase());
+  let body: string;
+  if (v.tab === "race")
+    body = heading("Choose a race") + `<p class="shop-sub">Race three rivals. Places pay.</p>`
+      + `<div class="shop-rows dh-rlist">${venues("Single race", "Three laps against rivals on stock bikes in your class.", `data-mode="race"`)}${venues("Series", "Four to six rounds for points and a championship title.", `data-go="series"`)}</div>`
+      + friends(K_RACE, "Challenge your friends", "Race friends on an outdoor MX track. Each rider brings their own garage bike. SX is solo for now.", v.inf);
+  else if (v.tab === "endless")
+    body = heading("Choose a world") + `<p class="shop-sub">Ride as far as you can. Pause and select End &amp; Bank to finish.</p>`
+      + `<div class="shop-rows dh-rgrid">${BIOMES.map((b) => dest(`data-endless="${b.id}"`, words(b.id, b.name, b.blurb), best(b.id))).join("")}${dest(`data-mode="endcity"`, words("city", "", ""), best("city"))}${dest(`data-mode="mashup"`, words("mashup", "", ""), best("mashup"))}</div>`
+      + friends(K_ENDLESS, "Ride Out", "Meet up in an endless world or roam Wheelie City together.", v.inf);
+  else if (v.tab === "free")
+    body = heading("Choose a spot") + `<p class="shop-sub">Practice at your own pace, or enter Big Air for a judged run.</p>`
+      + `<div class="shop-rows dh-rgrid">${FREE_MAPS.map((m) => dest(`data-map="${m.id}"`, words("f:" + m.id, m.name, m.blurb), "", `<canvas class="dh-thumb" data-prev="${m.id}" aria-hidden="true"></canvas>`)).join("")}${FREE_SX.map((m) => dest(`data-map="${m.id}" data-venue="sx"`, words(m.id, m.name, m.blurb))).join("")}${dest(`data-mode="bigair"`, words("bigair", "", ""))}</div>`
+      + friends(K_JAM, "Jam with your friends", "Choose a Free Ride jam or a Big Air showdown. Highest score wins.", v.inf);
+  else
+    body = heading("Choose a circuit") + `<p class="shop-sub">Three laps on asphalt against three rivals. Each circuit keeps your best lap.</p>`
+      + list(TRACK_DAY_MAPS.map((m) => dest(`data-circuit="${m.id}"`, words(m.id, m.name, m.blurb), figure("", v.lap(m.id)))), ["Road circuit", "Best lap"], "Road circuits")
+      + friends(K_TRACKDAY, "Track Day Online", "Pick a road circuit and ride three laps with friends.", v.inf);
+  const keys = footbar("Controls", KEYS.map(([k, w]) => `<span><kbd>${esc(k)}</kbd> ${esc(w)}</span>`).join(""), 'aria-label="Controls"');
+  return `<div class="dh-card dh-ride shop" data-screen="ride" data-tab="${v.tab}">${head}<div class="dh-rwrap"><div class="dh-rtitle"><h1 class="shop-h1">Let’s Ride</h1>${title({ maker: "Your bike", kind: `#${v.number}`, name: v.bike, small: true })}</div><div class="dh-rtabs">${seg(RIDE_TABS, v.tab, "rtab", "Ways to ride")}</div><section class="dh-rbody" aria-label="${esc(RIDE_TABS.find((t) => t[0] === v.tab)![1])}">${body}</section>${v.note ? `<p class="shop-sub dh-note" role="status">${esc(v.note)}</p>` : ""}<div class="dh-keys">${keys}</div></div></div>`;
 }

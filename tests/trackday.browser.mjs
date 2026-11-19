@@ -1,5 +1,5 @@
 // Track Day in Chromium (the built dist/holeshot.mjs), at 1440 (dark) and 390 touch (light): on a
-// street bike, LET'S RIDE's TRACK DAY group shows the three circuits; a circuit's tile starts Track
+// street bike, LET'S RIDE's Track Day tab shows the three circuits; a circuit's tile starts Track
 // Day on it (the grid, the start lights' countdown, then the race on the autopilot: places and laps
 // move, the asphalt drawn); the first lap completed is kept as the circuit's best (the tile says
 // BEST LAP after the ride) and the result pays. Waits on state, never on time.
@@ -24,8 +24,9 @@ try {
     await p.goto(server.url + "/" + theme);
     await until(p, () => window.game && game.getSnapshot().screen !== "setup", null, `${name}: mounts`);
     await p.evaluate(() => game.show("ride"));
-    const tiles = await p.evaluate(`[...${root}.querySelectorAll('[data-grp=day] button')].map((b) => [b.dataset.circuit, b.disabled, b.querySelector('b').textContent])`);
-    assert.deepEqual(tiles, [["td-meridian", false, "MERIDIAN RING"], ["td-knotworks", false, "KNOTWORKS"], ["td-bottlecap", false, "BOTTLECAP"]], `${name}: the circuits`);
+    await p.evaluate(`${root}.querySelector('[data-rtab=day]').click()`);
+    const tiles = await p.evaluate(`[...${root}.querySelectorAll('.shop-list [data-circuit]')].map((b) => [b.dataset.circuit, b.disabled, b.querySelector('b').textContent, b.querySelector('.shop-fig b').textContent])`);
+    assert.deepEqual(tiles, [["td-meridian", false, "Meridian Ring", "—"], ["td-knotworks", false, "Knotworks", "—"], ["td-bottlecap", false, "Bottlecap", "—"]], `${name}: the circuits, no best lap yet`);
     await p.evaluate(`${root}.querySelector('[data-circuit=${map}]').click()`);
     await until(p, (m) => game.getSnapshot().mode === "trackday" && game.getSnapshot().run?.map === m && game.getSnapshot().run.phase === "grid", map, `${name}: ${map} on the grid`);
     await p.evaluate(() => (game.auto = true));
@@ -38,8 +39,8 @@ try {
     const best = await p.evaluate((m) => game.profile.stats.best["lap:" + m], map);
     assert.ok(best > 5 && best < 60, `${name}: the best lap kept (${best})`);
     await p.evaluate(() => game.show("ride"));
-    const meta = await p.evaluate(`${root}.querySelector('[data-circuit=${map}] em').textContent`);
-    assert.match(meta, /^BEST LAP \d:\d\d\.\d$/, `${name}: the tile shows it`);
+    const meta = await p.evaluate(`${root}.querySelector('[data-circuit=${map}] .shop-fig b').textContent`);
+    assert.match(meta, /^\d:\d\d\.\d$/, `${name}: the BEST LAP column shows it`);
     assert.deepEqual(errs, [], `${name}: no page errors`);
     console.log(`✓ ${name} (${theme}): ${map} from its tile, lights out, a lap, best lap ${best.toFixed(2)} s kept and shown (${meta}), ${s.faces} faces`);
     await ctx.close();
