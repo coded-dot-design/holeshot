@@ -44,7 +44,7 @@ import { mountTrack, type NetRun, type NetView } from "./modes/race/scene.ts";
 import { applyOnline, settleOnline } from "./model/economy.ts";
 import { match, OVER, type Match, type Ride, type SeatResult } from "./online/match.ts";
 import { joinRoom, cleanName, encode, scoreBits, packMode, unpackMode, B_AUTO, B_RESET, B_DONE, B_REGROUP, B_HOP, B_COMBO, C_END, C_REGROUP, C_HOP, C_COMBO, SEATS, K_RACE, K_JAM, K_AIR, K_ENDLESS, K_ENDCITY } from "./net.ts";
-import { kindOf, pickName, roomCard, seatsHTML, standingsHTML, boardHTML } from "./online/room.ts";
+import { JOIN_TITLE, kindOf, pickName, rideTitle, roomCard, roomTitle, seatsHTML, standingsHTML, boardHTML } from "./online/room.ts";
 import { mountCity } from "./modes/wheelie/scene.ts";
 export { lookOf };
 
@@ -245,7 +245,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   function pauseCard() {
     // Online, the endless rides together bank too: END &amp; BANK rides this screen's END bit.
     const roamBank = N.on && (N.pick.kind === K_ENDLESS || N.pick.kind === K_ENDCITY);
-    if (N.on) return `<div class="dh-card dh-pause" data-screen="pause" role="dialog" aria-label="Paused"><b class="dh-h">ONLINE · ${pickName(N.pick.kind, N.pick.sub)}</b><p class="dh-sub">The ride goes on for everyone (your bike rolls to a stop). ${roamBank ? "END &amp; BANK banks your ride (the room's result comes when everyone has); leaving" : "Leaving"} the room now pays nothing; the wear so far still counts.</p><p class="dh-row"><button type="button" class="bui-key dh-go dh-resume">RESUME</button>${roamBank ? `<button type="button" class="bui-key dh-bank" aria-label="End the ride and bank it (E)">END &amp; BANK</button>` : ""}<button type="button" class="bui-key dh-leave">LEAVE ROOM</button></p></div>`;
+    if (N.on) return `<div class="dh-card dh-pause" data-screen="pause" role="dialog" aria-label="Paused"><b class="dh-h">${rideTitle(N.pick.kind, N.pick.sub)}</b><p class="dh-sub">The ride goes on for everyone (your bike rolls to a stop). ${roamBank ? "END &amp; BANK banks your ride (the room's result comes when everyone has); leaving" : "Leaving"} the room now pays nothing; the wear so far still counts.</p><p class="dh-row"><button type="button" class="bui-key dh-go dh-resume">RESUME</button>${roamBank ? `<button type="button" class="bui-key dh-bank" aria-label="End the ride and bank it (E)">END &amp; BANK</button>` : ""}<button type="button" class="bui-key dh-leave">LEAVE ROOM</button></p></div>`;
     return `<div class="dh-card dh-pause" data-screen="pause" role="dialog" aria-label="Paused"><b class="dh-h">PAUSED</b><p class="dh-sub">${modeName(runMode)} on your ${bikeLine()}. ${banks() ? "END &amp; BANK pays for what you rode; leaving pays nothing" : "Leaving now pays nothing"}; the wear so far still counts.</p><p class="dh-row"><button type="button" class="bui-key dh-go dh-resume">RESUME</button>${banks() ? `<button type="button" class="bui-key dh-bank" aria-label="End the ride and bank it (E)">END &amp; BANK</button>` : ""}<button type="button" class="bui-key dh-leave">LEAVE</button></p></div>`;
   }
   function resultCard() {
@@ -504,6 +504,8 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   type Step = "pick" | "host" | "join" | "wait" | "hello" | "gone";
   function roomStep(st: Step) {
     roomC.dataset.step = st;
+    // The header: the host's pick says what it's for; a joiner's says whose ride (the pick comes at LINING UP).
+    if (st === "pick" || st === "host" || st === "join") $r(".ol-room-h").textContent = st === "join" ? JOIN_TITLE : roomTitle(N.pick.kind);
     for (const el of roomC.querySelectorAll<HTMLElement>("[data-for]")) el.hidden = el.dataset.for !== st;
     roomC.querySelector<HTMLElement>(`[data-for="${st}"] :is(input, button:not([hidden]))`)?.focus({ preventScroll: true });
   }
@@ -575,6 +577,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       press("[data-oltier]", "0", "oltier");
       press("[data-olmap]", "0", "olmap");
       $r(".ol-kind-sub").textContent = kindOf(N.pick.kind).blurb;
+      $r(".ol-room-h").textContent = roomTitle(N.pick.kind);
     } else if (d.oltier !== undefined) (N.pick.sub = Number(d.oltier)), press("[data-oltier]", d.oltier, "oltier");
     else if (d.olmap !== undefined) (N.pick.sub = Number(d.olmap)), press("[data-olmap]", d.olmap, "olmap");
     else if (d.olbiome !== undefined) (N.pick.sub = Number(d.olbiome)), press("[data-olbiome]", d.olbiome, "olbiome");
@@ -611,6 +614,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     roomStep("wait");
     $r(".ol-t-code").textContent = N.code;
     $r(".ol-t-ride").textContent = host ? pickName(N.pick.kind, N.pick.sub) : "";
+    if (!host) $r(".ol-room-h").textContent = JOIN_TITLE;
     $r(".ol-room-sub").textContent = "CONNECTING";
     $r(".ol-wait-say").textContent = host ? "Opening a room…" : `Joining room ${N.room}…`;
     $r(".ol-gonow").hidden = true;
@@ -667,6 +671,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     N.chip = N.boardKey = "";
     roomStep("hello");
     $r(".ol-room-sub").textContent = `ROOM ${N.room} · ${pickName(N.pick.kind, N.pick.sub)}`;
+    $r(".ol-room-h").textContent = roomTitle(N.pick.kind);
     N.m = match(engine, {
       transport: st.transport, seat: st.slot, players: N.players, seed: st.seed, mode: st.mode, profile: { ...profile, name: myName || profile.name },
       input: netInput,
@@ -792,7 +797,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     const lines = r.lines.map(([k, v]) => `<li${v < 0 ? " data-loss" : ""}><span>${esc(k)}</span><b>${v < 0 ? "−" : "+"}${num(Math.abs(v))}</b></li>`).join("") || `<li><span>NO PAYOUT</span><b>0</b></li>`;
     const wear = PARTS.map((k) => `<li>${bar(b.parts[k], k === "motor" ? MOTOR_NAME[m.cls] : PART_NAME[k])}<small>−${(r.wear[k] * 100).toFixed(1)}%</small></li>`).join("");
     const others = ((1 << N.players) - 1) & ~(1 << N.seat), alone = (N.m!.link.left & others) === others;
-    return `<div class="dh-card dh-result ol-result" data-screen="result" role="dialog" aria-label="Result"><b class="dh-h">ONLINE · ${pickName(ride.kind, ride.sub)}</b><p class="dh-sub">${esc(r.stats.summary ?? "")}</p>${standingsHTML(ride, N.res!, N.seat, names, profile.settings.units)}<div class="dh-cols"><section><b class="dh-h2">PAYOUT</b><ul class="dh-pay">${lines}<li class="dh-total"><span>TOTAL</span><b>◈ ${num(r.credits)}</b></li></ul></section><section><b class="dh-h2">WEAR</b><ul class="dh-list dh-wear">${wear}</ul></section></div>${pitReady(profile) ? `<p class="dh-row"><button type="button" class="bui-key dh-pit">PIT CREW: FREE BASIC FIX</button></p>` : ""}<p class="dh-row">${alone ? "" : `<button type="button" class="bui-key dh-go ol-ready" aria-pressed="${N.m!.ready}">${N.m!.ready ? "WAITING…" : "RIDE AGAIN"}</button>`}<button type="button" class="bui-key dh-leave">LEAVE ROOM</button></p><p class="dh-sub ol-ready-say" aria-live="polite">${alone ? "Everyone else left the room." : ""}</p></div>`;
+    return `<div class="dh-card dh-result ol-result" data-screen="result" role="dialog" aria-label="Result"><b class="dh-h">${rideTitle(ride.kind, ride.sub)}</b><p class="dh-sub">${esc(r.stats.summary ?? "")}</p>${standingsHTML(ride, N.res!, N.seat, names, profile.settings.units)}<div class="dh-cols"><section><b class="dh-h2">PAYOUT</b><ul class="dh-pay">${lines}<li class="dh-total"><span>TOTAL</span><b>◈ ${num(r.credits)}</b></li></ul></section><section><b class="dh-h2">WEAR</b><ul class="dh-list dh-wear">${wear}</ul></section></div>${pitReady(profile) ? `<p class="dh-row"><button type="button" class="bui-key dh-pit">PIT CREW: FREE BASIC FIX</button></p>` : ""}<p class="dh-row">${alone ? "" : `<button type="button" class="bui-key dh-go ol-ready" aria-pressed="${N.m!.ready}">${N.m!.ready ? "WAITING…" : "RIDE AGAIN"}</button>`}<button type="button" class="bui-key dh-leave">LEAVE ROOM</button></p><p class="dh-sub ol-ready-say" aria-live="polite">${alone ? "Everyone else left the room." : ""}</p></div>`;
   }
   cards.addEventListener("click", (ev) => {
     const t = (ev.target as HTMLElement).closest<HTMLElement>(".ol-ready");
@@ -872,7 +877,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
         if ((L2.left & others) === others && !N.ride) return netGone(N.players > 2 ? "Everyone else left the room." : "The other rider left the room.");
       }
       const away = L2.away & ~(1 << N.seat);
-      let chip = `ONLINE · ROOM ${N.room} · ${myName || "YOU"}`;
+      let chip = `${kindOf(N.pick.kind).head} · ONLINE · ROOM ${N.room} · ${myName || "YOU"}`;
       for (let p = 0; p < N.players; p++) if (away & (1 << p)) chip += ` · ${N.ride?.riders[p]?.name ?? "P" + (p + 1)} RECONNECTING`;
       if (L2.away & (1 << N.seat)) chip += " · RECONNECTING";
       if (chip !== N.chip) (N.chip = chip), (netChip.lastElementChild!.textContent = chip), (netChip.dataset.conn = L2.away ? "wait" : "live"), netChip.toggleAttribute("data-quiet", !L2.away);

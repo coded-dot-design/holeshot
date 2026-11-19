@@ -33,7 +33,8 @@ const tile = (attrs: string, name: string, line: string, meta = "", off = false)
 /** A tile with an MX / SX choice: two keys under its name. */
 const venues = (name: string, line: string, attrs: (v: Venue) => string) => `<li class="dh-tile dh-vtile"><b>${name}</b><small>${line}</small><span class="dh-vkeys" role="group" aria-label="${name}: MX or SX">${VENUES.map((v) => `<button type="button" class="bui-key dh-vk" ${attrs(v.id)} data-venue="${v.id}" aria-label="${name}, ${v.name} ${v.where.toLowerCase()}"><b>${v.name}</b><small>${v.where}</small></button>`).join("")}</span></li>`;
 const soon = (name: string, line: string) => tile(`data-soon`, name, line, "COMING SOON", true);
-const online = (kind: number, line: string, inf: boolean) => tile(`data-olkind="${kind}"`, "ONLINE", inf ? "Off with test credits: take ?credits=inf off the address to ride online." : line, inf ? "TEST CREDITS ∞" : "UP TO 4 · ONLINE ×1.5", inf).replace("dh-tile", "dh-tile dh-oltile ol-open");
+/** A group's online tile: named for what the group rides together (owner, 2026-11-19), marked ONLINE. */
+const online = (kind: number, name: string, line: string, inf: boolean) => tile(`data-olkind="${kind}"`, name, inf ? "Off with test credits: take ?credits=inf off the address to ride online." : line, inf ? "TEST CREDITS ∞" : "ONLINE · UP TO 4 · ×1.5", inf).replace("dh-tile", "dh-tile dh-oltile ol-open");
 const group = (id: string, name: string, line: string, tiles: string) => `<section class="dh-grp" data-grp="${id}" aria-labelledby="grp-${id}"><header><h2 class="dh-grph" id="grp-${id}">${name}</h2><p class="dh-sub">${line}</p></header><ul class="dh-tiles">${tiles}</ul></section>`;
 
 /** The LET'S RIDE card (`head`: the shell's header with ← GARAGE). */
@@ -41,17 +42,17 @@ export function rideCard(head: string, v: RideView) {
   const race = group("race", "RACE", "Three rivals, places pay: a championship of new tracks, or one race.",
     venues("SERIES", "Four to six rounds, a points table and a title: new outdoor tracks (MX) or the stadiums (SX).", () => `data-go="series"`)
     + venues("RACE", `${esc(modeOf("race").blurb)}`, () => `data-mode="race"`)
-    + online(K_RACE, "Race up to three friends, each on their own garage bike (MX; SX is solo for now).", v.inf));
+    + online(K_RACE, "CHALLENGE YOUR FRIENDS", "Online: challenge up to three friends to a race, each on their own garage bike (MX; SX is solo for now).", v.inf));
   const endless = group("endless", "ENDLESS", "No edge, no clock: ride as far as you can, then pause and END & BANK.",
     BIOMES.map((b, i) => tile(`data-endless="${b.id}"`, i ? b.name.replace(/^THE /, "") : "ENDLESS DESERT", esc(b.blurb), `BEST ${v.best(b.id)}`)).join("")
     + tile(`data-mode="endcity"`, "ENDLESS WHEELIE CITY", "Roads, towns and fields that never end. Wheelie, lose the neon patrol.", `BEST ${v.best("city")}`)
-    + online(K_ENDLESS, "Roam an endless ground or the city together.", v.inf)
+    + online(K_ENDLESS, "RIDE OUT", "Online: create a ride out and invite your friends to roam an endless ground or the city together.", v.inf)
     + tile(`data-mode="mashup"`, "ENDLESS MASHUP", "One endless world: city, dunes, mountains, quarry, park and a city again.", `BEST ${v.best("mashup")}`));
   const free = group("free", "FREE RIDE", "No laps, no clock: air, wheelies and tricks pay a little.",
     mapTiles("dh-tile")
     + FREE_SX.map((m) => tile(`data-map="${m.id}" data-venue="sx"`, m.name, esc(m.blurb), "SX · STADIUM")).join("")
     + tile(`data-mode="bigair"`, "BIG AIR", esc(modeOf("bigair").blurb), "A MINUTE · FIVE JUDGES")
-    + online(K_JAM, "A Free Ride jam or Big Air with friends: the most points wins.", v.inf));
+    + online(K_JAM, "JAM WITH YOUR FRIENDS", "Online: invite your friends to a Free Ride jam or a Big Air showdown. The most points wins.", v.inf));
   const day = group("day", "TRACK DAY", "Street bikes on road circuits: lap times, braking points, knee down.",
     TRACK_DAY_MAPS.map((m) => tile(`data-circuit="${m.id}"`, m.name, esc(m.blurb), v.lap?.(m.id) ? `BEST LAP ${v.lap(m.id)}` : `3 LAPS · ${m.kind}`)).join(""));
   return `<div class="dh-card dh-ridec" data-screen="ride">${head}<p class="dh-sub">On your ${esc(v.bike)}.</p><div class="dh-grps">${race}${endless}${free}${day}</div><p class="dh-sub dh-keys">Keys: ↑/W lean forward · ↓/S lean back · ←→/AD steer · Space gas · K brake · L trick or hop · C combo trick (endless) · P pause</p>${v.note ? `<p class="dh-sub dh-note" role="status">${esc(v.note)}</p>` : ""}</div>`;

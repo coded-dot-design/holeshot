@@ -3,6 +3,13 @@
 ## Unreleased
 
 - **The landing hero is light from the first paint.** The poster under the hero race was one dark still, so in light mode the hero stayed dark until the game started and then flipped. Now there is a light poster of the same moment (`shots/hero-light.jpg`, `hero-light-800.jpg` for phones), chosen by the page's theme. The poster is a CSS background, so only the theme's still is fetched, and its preload follows the theme. The theme switch swaps the poster at once, before the game loads or after it (the game already took the theme on mount). Once the poster fades out it leaves the layout, so a switch never fetches a still nobody sees. The phone posters no longer show the touch pad and the throttle rocker, which the live hero hides anyway (`node scripts/shots.mjs [dark|light]` makes both themes; `og.jpg` untouched). The phone first load is 4.3 KB lighter in dark and 7.2 KB lighter in light. `test:site` covers it: light first with only the light still fetched, the switch both ways before the game, the race in light, no still fetched after.
+- **Online speaks to what each group rides together.** LET'S RIDE's online tiles are named for their
+  use: RACE's is CHALLENGE YOUR FRIENDS, ENDLESS's is RIDE OUT (create a ride out, invite your
+  friends), FREE RIDE's is JAM WITH YOUR FRIENDS; each still says ONLINE (ONLINE · UP TO 4 · ×1.5).
+  The room card's header follows the pick (CHALLENGE YOUR FRIENDS · ONLINE, RIDE OUT · ONLINE, JAM
+  WITH YOUR FRIENDS · ONLINE, BIG AIR SHOWDOWN · ONLINE; JOIN YOUR FRIENDS · ONLINE for a joiner), and
+  the pause and result cards and the ride's chip lead with it too (RIDE OUT · ENDLESS · THE DESERT ·
+  ONLINE). Copy only: same behaviour and layout.
 
 ## 0.9.0 — 2026-11-19
 

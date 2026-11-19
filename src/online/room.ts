@@ -13,12 +13,14 @@ import { SB_DIST, SB_BEST, SB_BEST_ID, SB_COMBO, SB_DRAGS, SB_POINTS, trickName,
 import { COMBOS } from "../modes/stunts.ts";
 import { dist, type Units } from "../model/units.ts";
 
+// Each kind speaks to what the group is for (owner, 2026-11-19): a race is a challenge, an endless
+// ride is a ride out, a jam is a jam; `title` heads the room card, `head` the ride's cards and chip.
 export const KINDS = [
-  { k: K_RACE, name: "RACE", blurb: "A new generated track; AI rivals fill the empty places." },
-  { k: K_JAM, name: "FREE RIDE JAM", blurb: "Three minutes on one map: the most trick points wins." },
-  { k: K_AIR, name: "BIG AIR", blurb: "A minute each in the arena; the judges' total wins." },
-  { k: K_ENDLESS, name: "ENDLESS", blurb: "Roam one endless ground together: the same world on every screen. G regroups to the host; END banks your ride." },
-  { k: K_ENDCITY, name: "ENDLESS WHEELIE CITY", blurb: "The open world together: every rider's own neon patrol, roads that never end. G regroups to the host; END banks your ride." },
+  { k: K_RACE, name: "RACE", title: "CHALLENGE YOUR FRIENDS", head: "CHALLENGE", blurb: "A new generated track; AI rivals fill the empty places." },
+  { k: K_JAM, name: "FREE RIDE JAM", title: "JAM WITH YOUR FRIENDS", head: "JAM", blurb: "Three minutes on one map: the most trick points wins." },
+  { k: K_AIR, name: "BIG AIR", title: "BIG AIR SHOWDOWN", head: "SHOWDOWN", blurb: "A minute each in the arena; the judges' total wins." },
+  { k: K_ENDLESS, name: "ENDLESS", title: "RIDE OUT", head: "RIDE OUT", blurb: "Roam one endless ground together: the same world on every screen. G regroups to the host; END banks your ride." },
+  { k: K_ENDCITY, name: "ENDLESS WHEELIE CITY", title: "RIDE OUT", head: "RIDE OUT", blurb: "The open world together: every rider's own neon patrol, roads that never end. G regroups to the host; END banks your ride." },
 ];
 /** A kind's entry (the room card's blurb, the pick's name). */
 export const kindOf = (k: number) => KINDS.find((x) => x.k === k) ?? KINDS[0]!;
@@ -27,7 +29,7 @@ const ORD = ["1ST", "2ND", "3RD", "4TH"];
 /** The room card (one element, kept: its fields keep what was typed). */
 export function roomCard() {
   const seg = (attr: string, list: { v: number; t: string }[]) => list.map((x, i) => `<button type="button" class="bui-key" data-${attr}="${x.v}" aria-pressed="${i === 0}">${x.t}</button>`).join("");
-  return `<b class="dh-h">ONLINE</b><p class="dh-sub ol-room-sub">UP TO FOUR RIDERS · EACH ON THEIR OWN GARAGE BIKE · ONLINE PAYS ×${ONLINE.bonus}</p>
+  return `<b class="dh-h ol-room-h">${roomTitle(KINDS[0]!.k)}</b><p class="dh-sub ol-room-sub">UP TO FOUR RIDERS · EACH ON THEIR OWN GARAGE BIKE · ONLINE PAYS ×${ONLINE.bonus}</p>
     <form class="ol-pick" data-for="pick" novalidate><label class="dh-field">YOUR NAME<input name="who" autocomplete="nickname" autocapitalize="characters" spellcheck="false" maxlength="8" placeholder="RIDER" /></label><label class="dh-field">INVITE CODE<input name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="64" placeholder="XXXX-XXXX-XXXX" /></label>
       <p class="ol-hostjoin"><button type="submit" class="bui-key dh-go ol-host" value="host"><b>HOST</b><small>Open a room, pick the ride, send the link</small></button><button type="submit" class="bui-key ol-joink" value="join"><b>JOIN</b><small>Type the room number from the host</small></button></p>
       <p class="ol-say" role="alert"></p><p class="dh-row"><button type="button" class="bui-key ol-back">BACK</button></p></form>
@@ -43,6 +45,13 @@ export function roomCard() {
     <div data-for="hello" hidden><b class="dh-big">LINING UP</b><p class="dh-sub ol-hello-say" aria-live="polite">Swapping bikes: every screen rides every rider's own garage bike.</p></div>
     <div data-for="gone" hidden><p class="dh-big ol-gone-say"></p><p class="dh-row"><button type="button" class="bui-key dh-go ol-again">TRY AGAIN</button><button type="button" class="bui-key ol-back">MENU</button></p></div>`;
 }
+
+/** The room card's header for a kind: what the group is for, and that it's online. */
+export const roomTitle = (kind: number) => `${kindOf(kind).title} · ONLINE`;
+/** The room card's header for a rider joining a friend's room (their pick comes with the hellos). */
+export const JOIN_TITLE = "JOIN YOUR FRIENDS · ONLINE";
+/** The ride's cards' header (pause, result): the use, the pick, online ("RIDE OUT · ENDLESS · THE DESERT · ONLINE"). */
+export const rideTitle = (kind: number, sub: number) => `${kindOf(kind).head} · ${pickName(kind, sub)} · ONLINE`;
 
 /** The host's pick in words (the lobby, the chip). */
 export const pickName = (kind: number, sub: number) => (kind === K_RACE ? `RACE · ${TIERS[sub]?.name ?? TIERS[0]!.name}` : kind === K_JAM ? `FREE RIDE JAM · ${JAM_MAPS[sub]?.name ?? JAM_MAPS[0]!.name}` : kind === K_ENDLESS ? `ENDLESS · ${BIOMES[sub]?.name ?? BIOMES[0]!.name}` : kindOf(kind).name);
