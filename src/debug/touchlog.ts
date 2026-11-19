@@ -26,10 +26,13 @@ export function touchLog(search: string) {
     if (rk && e.type === "pointerdown") setTimeout(() => {
       const g = (window as unknown as { game?: { getSnapshot(): { run?: { gas?: number; brake?: number } } } }).game;
       const run = g ? g.getSnapshot().run : undefined;
-      lines.push(`  → zone=${rk.dataset.zone ?? "-"} gas=${run?.gas ?? "?"} brake=${run?.brake ?? "?"}`);
+      lines.push(`  → zone=${rk.dataset.zone ?? "-"} dn=${rk.dataset.dn ?? "-"} gas=${run?.gas ?? "?"} brake=${run?.brake ?? "?"}`);
       if (lines.length > 14) lines.shift();
       box.textContent = lines.join("\n");
     }, 60);
   };
+  const err = (m: string) => { lines.push("ERR " + m.slice(0, 160)); if (lines.length > 14) lines.shift(); box.textContent = lines.join("\n"); };
+  addEventListener("error", (e) => err(`${(e as ErrorEvent).message} @${(e as ErrorEvent).lineno}:${(e as ErrorEvent).colno}`), true);
+  addEventListener("unhandledrejection", (e) => err(String((e as PromiseRejectionEvent).reason)));
   for (const t of ["pointerdown", "pointerup", "pointercancel", "lostpointercapture", "touchstart", "touchend", "touchcancel"]) addEventListener(t, log, { capture: true, passive: true });
 }

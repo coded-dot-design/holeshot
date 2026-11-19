@@ -91,7 +91,8 @@ export function rocker(c: Controls, host: HTMLElement, o: { reduced?: boolean; s
   // Two fingers at most: their ids (−1 free) and the first one's zone.
   const ID = new Int32Array([-1, -1]), Z = new Uint8Array(2);
   let gas = false, brake = false, zone = 0;
-  const apply = () => {
+  const apply = () => { try { apply0(); } catch (err) { el.dataset.dn += " E:" + String(err).slice(0, 80); throw err; } };
+  const apply0 = () => {
     const z0 = ID[0]! >= 0 ? Z[0]! : 0, two = ID[0]! >= 0 && ID[1]! >= 0;
     const g = (z0 & 1) === 1, b = (z0 & 2) === 2 || two;
     const zz = (g ? 1 : 0) | (b ? 2 : 0);
@@ -181,7 +182,8 @@ export function rocker(c: Controls, host: HTMLElement, o: { reduced?: boolean; s
   };
   el.addEventListener("pointerdown", (e) => {
     e.preventDefault();
-    const bi = onPill(e.clientX, e.clientY) ? -1 : bubAt(e.clientX, e.clientY);
+    const pill = onPill(e.clientX, e.clientY), bi = pill ? -1 : bubAt(e.clientX, e.clientY);
+    el.dataset.dn = (pill ? "p" : "o") + bi;
     if (bi >= 0 && CID[bi]! < 0) {
       CID[bi] = e.pointerId;
       try { el.setPointerCapture(e.pointerId); } catch { /* synthetic */ }
@@ -194,6 +196,7 @@ export function rocker(c: Controls, host: HTMLElement, o: { reduced?: boolean; s
     ID[k] = e.pointerId;
     OV[k] = 0;
     Z[k] = zoneY(e.clientY);
+    el.dataset.dn += ` k${k} z${Z[k]}`;
     try { el.setPointerCapture(e.pointerId); } catch { /* synthetic */ }
     apply();
   }, opt);
