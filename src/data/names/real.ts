@@ -18,7 +18,7 @@ export const REAL: NameSet = {
   },
   paints: {
     "f-yamada": { name: "YAMAHA BLUE" }, "f-hondo": { name: "HONDA RED" }, "f-kawazakura": { name: "KAWASAKI GREEN" }, "f-starkwolf": { name: "STARK GREY" },
-    "f-surgeon": { name: "SUR-RON BLACK" }, "f-makfox": { name: "MACFOX ORANGE" }, "f-curbcat": { name: "HONDA STREET RED" }, "f-nightglass": { name: "YAMAHA STREET BLUE" },
+    "f-surgeon": { name: "SUR-RON TEAL" }, "f-makfox": { name: "MACFOX ORANGE" }, "f-curbcat": { name: "HONDA STREET RED" }, "f-nightglass": { name: "YAMAHA STREET BLUE" },
     "f-ironjaw": { name: "DUCATI RED" },
   },
 };

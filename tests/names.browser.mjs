@@ -36,9 +36,9 @@ const text = (p, sel) => $(p, "root.querySelector(arg).textContent", sel);
 const CASES = [
   ["nod", main, "", "DUCELLI", "DUCELLI RED", ["YAMORI YOWLER 250 2T", "HONZO CRIMSON 450 FACTORY", "SURGE-ON LIGHT BUZZ", "HONZO GROWL 125", "DUCELLI STRIKER V4"], ["YAMAHA", "HONDA", "DUCATI", "BLUEWAKE", "STING"]],
   ["real", main, "?names=real", "DUCATI", "DUCATI RED", ["YAMAHA YZ250", "HONDA CRF450R WORKS EDITION", "SUR-RON LIGHT BEE", "HONDA GROM", "DUCATI STREETFIGHTER V4", "STARK VARG MX"], ["YAMORI", "BLUEWAKE"]],
-  ["real-money", main, "?money=inf", "DUCATI", "SUR-RON BLACK", ["YAMAHA YZ250", "KAWASAKI KX450", "YAMAHA R6"], ["YAMORI", "BLUEWAKE"]],
-  ["real-credits", main, "?credits=infinite", "DUCATI", "SUR-RON BLACK", ["YAMAHA YZ250", "KAWASAKI KX450", "YAMAHA R6"], ["YAMORI", "BLUEWAKE"]],
-  ["safe", safe, "?names=real", "IRONJAW", "BUZZWORKS BLACK", ["BLUEWAKE RIPPER 250", "EMBERLINE BLAZE 450 PRO", "BUZZWORKS DART", "EMBERLINE BLOCK PUP 125", "IRONJAW BARE KNUCKLE V4"], ["YAMAHA", "YAMORI", "HONZO", "DUCELLI", "DUCATI"]],
+  ["real-money", main, "?money=inf", "DUCATI", "SUR-RON TEAL", ["YAMAHA YZ250", "KAWASAKI KX450", "YAMAHA R6"], ["YAMORI", "BLUEWAKE"]],
+  ["real-credits", main, "?credits=infinite", "DUCATI", "SUR-RON TEAL", ["YAMAHA YZ250", "KAWASAKI KX450", "YAMAHA R6"], ["YAMORI", "BLUEWAKE"]],
+  ["safe", safe, "?names=real", "IRONJAW", "BUZZWORKS TEAL", ["BLUEWAKE RIPPER 250", "EMBERLINE BLAZE 450 PRO", "BUZZWORKS DART", "EMBERLINE BLOCK PUP 125", "IRONJAW BARE KNUCKLE V4"], ["YAMAHA", "YAMORI", "HONZO", "DUCELLI", "DUCATI"]],
 ];
 try {
   for (const [vname, viewport, touch] of [["desktop", { width: 1440, height: 900 }, false], ["phone", { width: 390, height: 844 }, true]]) {

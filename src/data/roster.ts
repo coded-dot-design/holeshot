@@ -23,7 +23,7 @@ export const MAKERS: Record<MakerId, Maker> = {
   hondo: { id: "hondo", name: "EMBERLINE", motto: "Red thumpers from the night foundry. Smooth, strong, never quits.", colors: ["#ff3b4f", "#eef0ff"] },
   kawazakura: { id: "kawazakura", name: "LIMEJET", motto: "Lime-green bruisers from the cherry-blossom docks. Mean, fast, loud about it.", colors: ["#b6ff3b", "#1b1a2c"] },
   starkwolf: { id: "starkwolf", name: "VOLTHOWL", motto: "A grey wolf on volts. Silent, savage, hunts the far fence.", colors: ["#8a8fa8", "#ff8a3d"] },
-  surgeon: { id: "surgeon", name: "BUZZWORKS", motto: "Featherweight volt-motos with a buzz. Point, twist, gone.", colors: ["#1b1a2c", "#b6ff3b"] },
+  surgeon: { id: "surgeon", name: "BUZZWORKS", motto: "Featherweight volt-motos with a buzz. Point, twist, gone.", colors: ["#1fd6c9", "#1b1a2c"] },
   makfox: { id: "makfox", name: "TRAILKIT", motto: "Fox-orange e-bikes for the alley lines. Quick, light, sly.", colors: ["#ff8a3d", "#eef0ff"] },
   // The street makers: their own ids (and paints), shown under a dirt maker's name in every tier
   // (the mini a Honda-style red, the supersport a Yamaha-style blue) or their own (the naked V4).

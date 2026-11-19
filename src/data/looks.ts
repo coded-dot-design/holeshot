@@ -40,7 +40,7 @@ export const PAINTS: Paint[] = [
   { id: "f-hondo", name: "EMBERLINE RED", plastic: "#ff3b4f", plastic2: "#eef0ff", plate: "#eef0ff", ink: "#ff3b4f", tier: 0 },
   { id: "f-kawazakura", name: "LIMEJET LIME", plastic: "#b6ff3b", plastic2: "#1b1a2c", plate: "#b6ff3b", ink: "#0b0a14", tier: 0 },
   { id: "f-starkwolf", name: "VOLTHOWL GREY", plastic: "#8a8fa8", plastic2: "#ff8a3d", plate: "#1b1a2c", ink: "#ff8a3d", tier: 0 },
-  { id: "f-surgeon", name: "BUZZWORKS BLACK", plastic: "#1b1a2c", plastic2: "#b6ff3b", plate: "#b6ff3b", ink: "#0b0a14", tier: 0 },
+  { id: "f-surgeon", name: "BUZZWORKS TEAL", plastic: "#1fd6c9", plastic2: "#1b1a2c", plate: "#ff4fa3", ink: "#0b0a14", tier: 0 },
   { id: "f-makfox", name: "TRAILKIT ORANGE", plastic: "#ff8a3d", plastic2: "#eef0ff", plate: "#eef0ff", ink: "#ff8a3d", tier: 0 },
   { id: "f-curbcat", name: "EMBERLINE STREET RED", plastic: "#ff3b4f", plastic2: "#eef0ff", plate: "#1b1a2c", ink: "#eef0ff", tier: 0 },
   { id: "f-nightglass", name: "BLUEWAKE STREET BLUE", plastic: "#2b6bff", plastic2: "#eef0ff", plate: "#eef0ff", ink: "#2b6bff", tier: 0 },

@@ -56,7 +56,7 @@ test("names: every tier names every maker, model and factory paint, and the appr
     ["bare-knuckle", "IRONJAW BARE KNUCKLE V4", "DUCELLI STRIKER V4", "DUCATI STREETFIGHTER V4"],
   ]) assert.deepEqual([safe.full[row(id)], nod.full[row(id)], real.full[row(id)]], [s, n, r], id);
   assert.deepEqual([safe, nod, real].map((x) => x.paints[FACTORY.findIndex((p) => p.id === "f-yamada")]), ["BLUEWAKE BLUE", "YAMORI BLUE", "YAMAHA BLUE"]);
-  assert.deepEqual([safe, nod, real].map((x) => x.paints[FACTORY.findIndex((p) => p.id === "f-surgeon")]), ["BUZZWORKS BLACK", "SURGE-ON BUZZ", "SUR-RON BLACK"], "no Sting");
+  assert.deepEqual([safe, nod, real].map((x) => x.paints[FACTORY.findIndex((p) => p.id === "f-surgeon")]), ["BUZZWORKS TEAL", "SURGE-ON BUZZ", "SUR-RON TEAL"], "no Sting");
   assert.deepEqual([safe, nod, real].map((x) => x.classes.at(-1)), ["EMBERLINE · BLUEWAKE · IRONJAW", "HONZO · YAMORI · DUCELLI", "HONDA · YAMAHA · DUCATI"], "the street class's makers follow the tier");
   // No name of one tier leaks into another's (the shared fox and wolf words aside: every full name differs).
   for (const [a, b] of [[safe, nod], [safe, real], [nod, real]]) for (let i = 0; i < MODELS.length; i++) assert.notEqual(a.full[i], b.full[i], MODELS[i].id);
