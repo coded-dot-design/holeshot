@@ -416,9 +416,12 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     if (tell && v) say(`Preview: ${pvName(profile, v)}`);
     preview();
   };
-  cards.addEventListener("pointerover", (e) => e.pointerType !== "touch" && peek(pvOf(e.target as Element)), sig);
-  cards.addEventListener("pointerleave", () => peek(null), sig);
-  cards.addEventListener("focusin", (e) => peek(pvOf(e.target as Element), true), sig);
+  // (A preview from keyboard focus stays until the focus moves: the pointer passing over empty space,
+  // or the page redrawing under a resting pointer, does not take it off.)
+  let byFocus = false;
+  cards.addEventListener("pointerover", (e) => { if (e.pointerType === "touch") return; const v = pvOf(e.target as Element); if (v || !byFocus) (byFocus = false), peek(v); }, sig);
+  cards.addEventListener("pointerleave", () => !byFocus && peek(null), sig);
+  cards.addEventListener("focusin", (e) => { const v = pvOf(e.target as Element); byFocus = !!v; peek(v, true); }, sig);
   cards.addEventListener("focusout", (e) => !cards.contains(e.relatedTarget as Node) && peek(null), sig);
   cards.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && screen === "garage" && gui.menu) return e.stopPropagation(), (gui.menu = ""), show("garage");
