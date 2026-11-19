@@ -33,7 +33,7 @@ import type { Buy } from "./model/garage.ts";
 import { after, ride as garageRide } from "./model/upkeep.ts";
 import { portraitOf } from "./garage/portrait.ts";
 import { bayInfo, garageCard as garageView, garageClick, garageUI, pvName, pvOf, riskCard, showroomView, shown, type Pv } from "./garage/view.ts";
-import { cta as lkCta, tabs as lkTabs } from "./locker/ui.ts";
+import { cta as shopCta, tabs as shopTabs } from "./shop/index.ts";
 import { lookOf } from "./garage/look.ts";
 import { bar, esc, num } from "./html.ts";
 import { enter as enterSeries, recordRound, retire as retireSeries, roundStats } from "./model/series.ts";
@@ -205,13 +205,13 @@ export function createHoleshot(o: HoleshotOptions = {}) {
    *  the name, ⚙ settings and the theme key. Sticky, so the way back stays in reach. */
   const head = (back?: [Screen, string, string]) => `<header class="dh-top${back ? " dh-sticky" : ""}">${back ? `<button type="button" class="bui-key dh-back" data-go="${back[0]}">← ${back[1]}</button><b class="dh-h dh-title">${back[2]}</b>` : WORDMARK}${inf ? `<span class="dh-chip dh-cr" title="Test credits: nothing is saved">◈ ∞</span><span class="dh-chip dh-test" title="?credits=inf: nothing is saved, online is off">TEST CREDITS ∞</span>` : `<span class="dh-chip dh-cr" title="Credits">◈ ${num(profile.credits)}</span>`}${profile.name ? `<span class="dh-chip dh-who">${portraitOf(profile.kit)}${esc(profile.name)}</span>` : ""}${screen === "settings" || screen === "controls" ? "" : `<button type="button" class="bui-key dh-icon dh-cog" data-go="settings" aria-label="Settings">${ICON.cog}</button>`}${o.onTheme ? `<button type="button" class="bui-key dh-icon dh-theme" aria-label="Light or dark">${ICON.theme}</button>` : ""}</header>`;
   /** The garage's one main action. */
-  const letsRide = lkCta("LET'S RIDE", "dh-letsride", "RACE · ENDLESS · FREE RIDE · TRACK DAY", 'data-go="ride"');
+  const letsRide = shopCta("LET'S RIDE", "dh-letsride", "RACE · ENDLESS · FREE RIDE · TRACK DAY", 'data-go="ride"');
   /** The garage's header: the logo with the version and the byline, the Garage / Showroom tabs, the
    *  credits, the rider (to the rider's gear), ⚙ settings (the CONTROLS / HOW TO card lives there)
    *  and the Day / Night key. */
   const garageHead = () => {
     const day = pageTheme() === "light";
-    return `<header class="dh-top dh-ghead"><span class="dh-brand">${WORDMARK}<small class="lk-eyebrow"><span>V${__VERSION__}</span><i aria-hidden="true">·</i>BY DAVID COOLEY</small></span>${lkTabs([["garage", "Garage"], ["showroom", "Showroom"]], gui.tab === "showroom" ? "showroom" : "garage", "gtab", "Garage or showroom", true)}<span class="dh-hkeys">${inf ? `<span class="dh-chip dh-cr" title="Test credits: nothing is saved">◆ ∞</span><span class="dh-chip dh-test" title="?credits=inf: nothing is saved, online is off">TEST CREDITS ∞</span>` : `<span class="dh-chip dh-cr" title="Credits">◆ ${num(profile.credits)}</span>`}<button type="button" class="lk-btn dh-who" data-rider aria-label="Rider gear">${portraitOf(profile.kit)}<span>${esc(profile.name ? profile.name.charAt(0) + profile.name.slice(1).toLowerCase() : "Rider")}</span></button><button type="button" class="lk-btn dh-icon dh-cog" data-go="settings" aria-label="Settings">${ICON.cog}</button>${o.onTheme ? `<button type="button" class="lk-btn dh-theme" aria-label="Light or dark"><i aria-hidden="true">${day ? "☀" : "☾"}</i>${day ? "Day" : "Night"}</button>` : ""}</span></header>`;
+    return `<header class="dh-top dh-ghead"><span class="dh-brand">${WORDMARK}<small class="shop-eyebrow"><span>V${__VERSION__}</span><i aria-hidden="true">·</i>BY DAVID COOLEY</small></span>${shopTabs([["garage", "Garage"], ["showroom", "Showroom"]], gui.tab === "showroom" ? "showroom" : "garage", "gtab", "Garage or showroom", true)}<span class="dh-hkeys">${inf ? `<span class="dh-chip dh-cr" title="Test credits: nothing is saved">◆ ∞</span><span class="dh-chip dh-test" title="?credits=inf: nothing is saved, online is off">TEST CREDITS ∞</span>` : `<span class="dh-chip dh-cr" title="Credits">◆ ${num(profile.credits)}</span>`}<button type="button" class="shop-btn dh-who" data-rider aria-label="Rider gear">${portraitOf(profile.kit)}<span>${esc(profile.name ? profile.name.charAt(0) + profile.name.slice(1).toLowerCase() : "Rider")}</span></button><button type="button" class="shop-btn dh-icon dh-cog" data-go="settings" aria-label="Settings">${ICON.cog}</button>${o.onTheme ? `<button type="button" class="shop-btn dh-theme" aria-label="Light or dark"><i aria-hidden="true">${day ? "☀" : "☾"}</i>${day ? "Day" : "Night"}</button>` : ""}</span></header>`;
   };
   const bikeLine = () => {
     const b = riding(profile), m = modelOf(b.model);
@@ -303,7 +303,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     note = "";
     // (Into the garage from elsewhere, LET'S RIDE takes the focus: its one main action.)
     // (Within the garage, the focus stays on the key that was pressed, redrawn: or the open menu's first row.)
-    const again = s === "garage" && was === "garage" ? (gui.menu ? cards.querySelector<HTMLElement>(".lk-menu-i, .lk-sheet .lk-x") : refocus ? cards.querySelector<HTMLElement>(refocus) : null) : null;
+    const again = s === "garage" && was === "garage" ? (gui.menu ? cards.querySelector<HTMLElement>(".shop-menu-i, .shop-sheet .shop-x") : refocus ? cards.querySelector<HTMLElement>(refocus) : null) : null;
     refocus = "";
     const first = again ?? (s === "garage" && was !== "garage" ? cards.querySelector<HTMLElement>(".dh-letsride") : null) ?? cards.querySelector<HTMLElement>(".dh-go, [aria-pressed=true], button, input");
     if (s !== "event") first?.focus({ preventScroll: true });

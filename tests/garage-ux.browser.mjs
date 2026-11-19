@@ -80,8 +80,8 @@ try {
     await click(p, "[data-gtab=garage]");
     await click(p, "[data-gsub=up]");
     await click(p, "[data-pv='mod:swap']");
-    await until(p, "!!root.querySelector('.lk-preview [data-mod=swap]')", `${name}: the upgrade preview with its FIT`);
-    assert.match(await $(p, "root.querySelector('.lk-preview').textContent"), /Motor swap.*→/s, `${name}: the preview names it and shows before → after`);
+    await until(p, "!!root.querySelector('.shop-preview [data-mod=swap]')", `${name}: the upgrade preview with its FIT`);
+    assert.match(await $(p, "root.querySelector('.shop-preview').textContent"), /Motor swap.*→/s, `${name}: the preview names it and shows before → after`);
     await inkNot(p, ink0, `${name}: the turntable shows the swap`);
     assert.ok(await $(p, "[...root.querySelectorAll('.dh-pace-bay em')].some((e) => e.dataset.d === 'up')"), `${name}: the swap's pace is better somewhere`);
     await shot(p, `${name}-3-mod-preview`);
@@ -90,11 +90,11 @@ try {
     // ---- a paint: tap tries it on (pinned), CANCEL restores ----
     await click(p, "[data-gtab=look]");
     await $(p, "root.querySelector(\"[data-page='1']\")?.click()"), await click(p, "[data-dress=paint][data-id=magma]");
-    await until(p, "!!root.querySelector('.lk-pin [data-buytrial]')", `${name}: the paint is pinned with its BUY`);
+    await until(p, "!!root.querySelector('.shop-pin [data-buytrial]')", `${name}: the paint is pinned with its BUY`);
     await inkNot(p, ink0, `${name}: the turntable wears the paint`);
-    assert.match(await $(p, "root.querySelector('.lk-pin').textContent"), /Previewing Magma.*Cancel.*Buy/s);
+    assert.match(await $(p, "root.querySelector('.shop-pin').textContent"), /Previewing Magma.*Cancel.*Buy/s);
     await shot(p, `${name}-4-paint-preview`);
-    await click(p, ".lk-pin [data-untry]");
+    await click(p, ".shop-pin [data-untry]");
     await inkIs(p, ink0, `${name}: CANCEL takes the paint off`);
     assert.equal((await prof(p)).bikes[0].look.paint, "acid", `${name}: nothing was bought`);
     if (!touch) {
@@ -163,8 +163,8 @@ try {
       const now = await svg();
       if (sees) assert.ok(now.includes(sees), `${name}: the portrait shows ${slot} ${id}`);
       was = now;
-      await click(p, ".lk-pin [data-untry]");
-      await until(p, "!root.querySelector('.lk-pin')", `${name}: CANCEL`);
+      await click(p, ".shop-pin [data-untry]");
+      await until(p, "!root.querySelector('.shop-pin')", `${name}: CANCEL`);
       was = await svg();
     }
     // Head-on (Home, then 90° round): inside the white helmet's box, the goggle's dark band and lens

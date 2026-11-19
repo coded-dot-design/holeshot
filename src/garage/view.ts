@@ -1,4 +1,4 @@
-// The garage: the locker (../locker/) with HOLESHOT's adapters (./adapters.ts) and its layout. Left,
+// The garage: the shop (../shop/) with HOLESHOT's adapters (./adapters.ts) and its layout. Left,
 // the bike panel (My Bikes and its bays, the turntable with ‹ ›, the bike's name and pace, LET'S
 // RIDE); right, PARTS & MODS (Condition with the tyre compound menu and crash damage, Tuning with
 // the ride feel, Upgrades with a preview, Service log) and PAINT & KIT (the bike's paint menu and
@@ -19,8 +19,8 @@ import type { Units } from "../model/units.ts";
 import { atRisk, failChance, failName, warnings } from "../model/upkeep.ts";
 import { DIRT_LINE } from "../model/families.ts";
 import { buyBike, buySpot, cosmeticPrice, choose, dress, fits, modPrice, repair, sell, service, setChoice, tradeValue, tryOn, unlocked, upgrade, type Buy, type Slot } from "../model/garage.ts";
-import { baysSheet, condition, itemGrid, upgrades as upgradeList } from "../locker/flow.ts";
-import { btn, card, chips, cta, drop, feel, heading, menu, pill, price, seg, stat, stats, table, tabs, title, turntable } from "../locker/ui.ts";
+import { baysSheet, condition, itemGrid, upgrades as upgradeList } from "../shop/index.ts";
+import { btn, card, chips, cta, drop, feel, heading, menu, pill, price, seg, stat, stats, table, tabs, title, turntable } from "../shop/index.ts";
 import { RIDER_SLOTS, SLOT_NAME, bays, bikeItems, bikeSlots, cap, damageRows, feelRows, isE, modKey, modName, modStage, outfitItems, pace, partName, riderItems, riderSlots, setups, tyreItems, upgradeItems, wearRows, words, type BikeSlot, type RiderSlot } from "./adapters.ts";
 
 /** What the turntable can preview: a cosmetic (its slot), a mod's next level, or a showroom bike. */
@@ -90,13 +90,13 @@ function condTab(p: Profile, b: BikeSave, ui: GarageUI) {
   const warn = warnings(b).filter((w) => w[1] !== "worn");
   const banner = warn.length ? `<p class="dh-alert" role="alert">${warn.map((w) => `<b>${partName(b, w[0] as PartId)}</b> ${esc(w[2])}`).join(" · ")}</p>` : "";
   const open = ui.menu === "tyre";
-  const tyre = `<span class="lk-pop">${drop(`${cap(TYRES[b.tyre].name)} compound`, 'data-gmenu="tyre"', open, "lk-drop-text")}${open ? menu({ title: "Tyre compound", label: "Tyre compound", items: tyreItems(b) }) : ""}</span>`;
+  const tyre = `<span class="shop-pop">${drop(`${cap(TYRES[b.tyre].name)} compound`, 'data-gmenu="tyre"', open, "shop-drop-text")}${open ? menu({ title: "Tyre compound", label: "Tyre compound", items: tyreItems(b) }) : ""}</span>`;
   const dmg = damageRows(b);
-  return `${banner}${heading("Bike condition")}${card(condition(wearRows(b, tyre), p.credits, ["Component", "Condition"]), "dh-cond")}${heading("Crash damage", "", 3)}${dmg.length ? condition(dmg, p.credits, undefined, true) : card("No crash damage", "lk-soft")}`;
+  return `${banner}${heading("Bike condition")}${card(condition(wearRows(b, tyre), p.credits, ["Component", "Condition"]), "dh-cond")}${heading("Crash damage", "", 3)}${dmg.length ? condition(dmg, p.credits, undefined, true) : card("No crash damage", "shop-soft")}`;
 }
 function tuneTab(p: Profile, b: BikeSave) {
   const t = tune(b);
-  const rows = setups(b).map((s) => card(`<b class="lk-h4">${s.name}</b><div class="lk-opts">${s.opts.map((o) => (o.on ? btn(`${o.label} ✓`, o.attrs, true) : price({ label: o.label, price: o.price || undefined, credits: p.credits, attrs: o.attrs }))).join("")}</div><p class="lk-blurb">${esc(s.blurb)}</p>`)).join("");
+  const rows = setups(b).map((s) => card(`<b class="shop-h4">${s.name}</b><div class="shop-opts">${s.opts.map((o) => (o.on ? btn(`${o.label} ✓`, o.attrs, true) : price({ label: o.label, price: o.price || undefined, credits: p.credits, attrs: o.attrs }))).join("")}</div><p class="shop-blurb">${esc(s.blurb)}</p>`)).join("");
   return `${heading("Tuning")}${rows}${heading("Ride feel", "", 3)}${card(feel(feelRows(t), 2), "dh-feelc")}`;
 }
 function upTab(p: Profile, b: BikeSave, ui: GarageUI) {
@@ -108,11 +108,11 @@ function upTab(p: Profile, b: BikeSave, ui: GarageUI) {
     const a = pace(tune(b), u), z = pace(tune(nb), u);
     preview = { name: modStage(b, v), blurb: MODS[v].blurb, stats: a.map(([l, x], i) => [l, x, z[i]![1]] as [string, string, string]), key: { label: modKey(b, v), price: modPrice(b, v), attrs: `data-mod="${v}"` } };
   }
-  return `${heading("Upgrades")}${upgradeList({ items: upgradeItems(b), on: v ?? undefined, preview, credits: p.credits })}${preview ? "" : `<p class="lk-sub">Point at an upgrade to see it on the bike; tap it to preview the numbers and buy.</p>`}`;
+  return `${heading("Upgrades")}${upgradeList({ items: upgradeItems(b), on: v ?? undefined, preview, credits: p.credits })}${preview ? "" : `<p class="shop-sub">Point at an upgrade to see it on the bike; tap it to preview the numbers and buy.</p>`}`;
 }
 function logTab(b: BikeSave) {
   const rows = b.log.slice(0, 8).map(([e, w, c]) => [String(e), esc(cap(logLine(b, w))), c ? num(c) : ""]);
-  return `${heading("Service log", rows.length ? `${rows.length} ${rows.length === 1 ? "entry" : "entries"} shown` : "")}${rows.length ? card(table(["Event", "Work completed", "Credits"], rows, "Service log"), "dh-log") : card(`<p class="lk-sub">Nothing yet. Every service, mod and fix lands here.</p>`, "dh-log")}`;
+  return `${heading("Service log", rows.length ? `${rows.length} ${rows.length === 1 ? "entry" : "entries"} shown` : "")}${rows.length ? card(table(["Event", "Work completed", "Credits"], rows, "Service log"), "dh-log") : card(`<p class="shop-sub">Nothing yet. Every service, mod and fix lands here.</p>`, "dh-log")}`;
 }
 
 // ---- PAINT & KIT ----
@@ -123,7 +123,7 @@ function lookTab(p: Profile, b: BikeSave, ui: GarageUI) {
   const sub = tabs([["bike", "Bike"], ["rider", "Rider gear"], ["outfit", "Outfits"]], ui.look, "look", "Paint and kit");
   if (ui.look === "bike") {
     const slots = bikeSlots(b);
-    if (ui.slot === "number") return `${sub}${heading("Bike paint", `${PAINTS.length} schemes`)}<div class="lk-toolbar"><span class="lk-pop">${drop(SLOT_NAME.number!, common.menuAttrs, common.open)}${common.open ? menu({ label: "Bike paint", items: slots.map((x) => ({ label: x.name, meta: x.meta, on: x.id === "number", attrs: x.attrs })) }) : ""}</span><small class="lk-sub">Plastics, graphics, plate &amp; number</small></div>${card(`<b class="lk-h4">Race number</b><div class="lk-opts"><input class="dh-numin" type="number" min="1" max="99" value="${b.look.number}" aria-label="Plate number" />${price({ label: "Set", price: cosmeticPrice(p, "number", ""), credits: cr, attrs: "data-number" })}</div>`)}`;
+    if (ui.slot === "number") return `${sub}${heading("Bike paint", `${PAINTS.length} schemes`)}<div class="shop-toolbar"><span class="shop-pop">${drop(SLOT_NAME.number!, common.menuAttrs, common.open)}${common.open ? menu({ label: "Bike paint", items: slots.map((x) => ({ label: x.name, meta: x.meta, on: x.id === "number", attrs: x.attrs })) }) : ""}</span><small class="shop-sub">Plastics, graphics, plate &amp; number</small></div>${card(`<b class="shop-h4">Race number</b><div class="shop-opts"><input class="dh-numin" type="number" min="1" max="99" value="${b.look.number}" aria-label="Plate number" />${price({ label: "Set", price: cosmeticPrice(p, "number", ""), credits: cr, attrs: "data-number" })}</div>`)}`;
     const items = bikeItems(p, ui.slot), name = SLOT_NAME[ui.slot]!;
     return sub + itemGrid({ ...common, title: "Bike paint", count: `${ui.slot === "paint" ? PAINTS.length + " schemes" : items.length + " " + name.toLowerCase()}`, slots, slot: ui.slot, note: "Plastics, graphics, plate & number", items, per: 12, cols: 4, pageWord: ui.slot === "paint" ? "schemes" : "items", trying: trying(items, ui.slot) });
   }
@@ -133,7 +133,7 @@ function lookTab(p: Profile, b: BikeSave, ui: GarageUI) {
     return `${sub}${grid}${heading("Customize rider", "", 3)}${chips(RIDER_SLOTS.filter((k) => k !== "helmet").map((k) => btn(SLOT_NAME[k]!, `data-gslot="${k}"`, k === ui.rslot)), "Customize rider")}`;
   }
   const items = outfitItems(p);
-  return `${sub}${itemGrid({ ...common, title: "Outfits", count: `${OUTFITS.length} presets`, ownedOnly: undefined, slots: undefined, items, per: 6, cols: 3, big: true, pageWord: "outfits", trying: trying(items, "outfit") })}${tr && tr[0] === "outfit" ? "" : `<p class="lk-sub lk-rule">Select an outfit to preview it on your rider.</p>`}`;
+  return `${sub}${itemGrid({ ...common, title: "Outfits", count: `${OUTFITS.length} presets`, ownedOnly: undefined, slots: undefined, items, per: 6, cols: 3, big: true, pageWord: "outfits", trying: trying(items, "outfit") })}${tr && tr[0] === "outfit" ? "" : `<p class="shop-sub shop-rule">Select an outfit to preview it on your rider.</p>`}`;
 }
 /** What a cosmetic is called (the announcement). */
 function nameOf(slot: Slot, id: string) {
@@ -192,8 +192,8 @@ function pinBar(p: Profile, ui: GarageUI) {
   const v = ui.trial;
   if (!v || (v[0] !== "bike" && v[0] !== "own")) return "";
   const [k, id] = v;
-  const go = k === "own" ? `<button type="button" class="lk-btn lk-btn-go" data-ride="${id}"${+id === p.ride ? " disabled" : ""}>${+id === p.ride ? "Rides next" : "Ride this one"}</button>` : bikeKey(p, id, ui.all, " dh-go");
-  return `<div class="lk-pin dh-pin" role="group" aria-label="Preview"><div class="lk-foot"><b>${pill("Preview", "", "dh-pvtag")} ${esc(words(pvName(p, v)))}</b><span>${btn("Cancel", "data-untry")}${go}</span></div></div>`;
+  const go = k === "own" ? `<button type="button" class="shop-btn shop-btn-go" data-ride="${id}"${+id === p.ride ? " disabled" : ""}>${+id === p.ride ? "Rides next" : "Ride this one"}</button>` : bikeKey(p, id, ui.all, " dh-go");
+  return `<div class="shop-pin dh-pin" role="group" aria-label="Preview"><div class="shop-foot"><b>${pill("Preview", "", "dh-pvtag")} ${esc(words(pvName(p, v)))}</b><span>${btn("Cancel", "data-untry")}${go}</span></div></div>`;
 }
 
 /** The garage card: the header (the shell's), the bike panel on the left (My Bikes, the turntable,
@@ -202,10 +202,10 @@ function pinBar(p: Profile, ui: GarageUI) {
 export function garageCard(p: Profile, ui: GarageUI, head: string, go: string, note: string, extra = "") {
   const b = riding(p), B = bays(p);
   const sheet = ui.menu === "bays" ? baysSheet({ title: "My Bikes", sub: B.sub, bays: B.bays, expand: B.expand, credits: p.credits, close: "data-bays", empty: "Empty bay" }) : "";
-  const left = `<aside class="lk-card dh-bikep"><div class="lk-toolbar dh-bikebar"><span class="lk-pop dh-bays">${drop("My Bikes", "data-bays", ui.menu === "bays")}${sheet}</span><small class="lk-sub">${esc(B.line)}</small></div>${p.bikes.length > 1 ? turntable("<canvas-slot></canvas-slot>", "data-turn") : `<div class="lk-turn"><canvas-slot></canvas-slot></div>`}<div class="dh-pvinfo">${bayInfo(p, ui)}</div>${pinBar(p, ui)}${go}${extra}</aside>`;
+  const left = `<aside class="shop-card dh-bikep"><div class="shop-toolbar dh-bikebar"><span class="shop-pop dh-bays">${drop("My Bikes", "data-bays", ui.menu === "bays")}${sheet}</span><small class="shop-sub">${esc(B.line)}</small></div>${p.bikes.length > 1 ? turntable("<canvas-slot></canvas-slot>", "data-turn") : `<div class="shop-turn"><canvas-slot></canvas-slot></div>`}<div class="dh-pvinfo">${bayInfo(p, ui)}</div>${pinBar(p, ui)}${go}${extra}</aside>`;
   const right = ui.tab === "showroom" ? `<div class="dh-showroom"></div>`
     : `${seg([["bike", "Parts & Mods"], ["look", "Paint & Kit"]], ui.tab, "gtab", "Garage")}${ui.tab === "bike" ? tabs([["cond", "Condition"], ["tune", "Tuning"], ["up", "Upgrades"], ["log", "Service log"]], ui.sub, "gsub", "Parts and mods") + (ui.sub === "cond" ? condTab(p, b, ui) : ui.sub === "tune" ? tuneTab(p, b) : ui.sub === "up" ? upTab(p, b, ui) : logTab(b)) : lookTab(p, b, ui)}`;
-  return `<div class="dh-card dh-garage lk" data-screen="garage" data-tab="${ui.tab}">${head}<div class="dh-gwrap">${left}<div class="dh-gbody">${right}<p class="lk-sub dh-note" role="status">${esc(note)}</p></div></div></div>`;
+  return `<div class="dh-card dh-garage shop" data-screen="garage" data-tab="${ui.tab}">${head}<div class="dh-gwrap">${left}<div class="dh-gbody">${right}<p class="shop-sub dh-note" role="status">${esc(note)}</p></div></div></div>`;
 }
 
 /** A click in the garage: a purchase to report ([result, what]), a new profile, or just a redraw

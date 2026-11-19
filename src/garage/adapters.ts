@@ -1,5 +1,5 @@
-// HOLESHOT onto the locker (../locker/flow.ts): its bikes, wear, crash damage, tune, mods, paint,
-// helmets and outfits as the locker's plain data. Every number comes from the game's own model
+// HOLESHOT onto the shop (../shop/index.ts): its bikes, wear, crash damage, tune, mods, paint,
+// helmets and outfits as the shop's plain data. Every number comes from the game's own model
 // (../model/garage.ts prices, ../model/tune.ts feel, ../model/pace.ts pace); nothing here decides a
 // rule. The `attrs` are the garage's routing (./view.ts garageClick).
 import { CLASSES, model as modelOf } from "../data/roster.ts";
@@ -14,8 +14,8 @@ import { atRisk, failChance, partState } from "../model/upkeep.ts";
 import { cosmeticPrice, fits, fixPrice, modPrice, partPrice, setupPrice, spotPrice, type Slot } from "../model/garage.ts";
 import { helmetSVG } from "./portrait.ts";
 import { helmetOf } from "./look.ts";
-import type { Bay, Item, Slot as LkSlot, Upgrade, Wear } from "../locker/flow.ts";
-import { btn, esc, pill, swatch } from "../locker/ui.ts";
+import type { Bay, Item, Slot as LkSlot, Upgrade, Wear } from "../shop/index.ts";
+import { btn, esc, pill, swatch } from "../shop/index.ts";
 
 /** "CHAIN & SPROCKETS" → "Chain & sprockets" (the design's sentence case). */
 export const cap = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
@@ -77,7 +77,7 @@ export const bikeSlots = (b: BikeSave): LkSlot[] => [
 ];
 export const riderSlots = (): LkSlot[] => RIDER_SLOTS.map((k) => ({ id: k, name: SLOT_NAME[k]!, meta: "", attrs: `data-gslot="${k}"` }));
 
-/** A cosmetic as a locker item: its art, price (0 when owned or free), worn or not. */
+/** A cosmetic as a shop item: its art, price (0 when owned or free), worn or not. */
 const item = (p: Profile, slot: Slot, id: string, name: string, art: string, on: string): Item => {
   const pr = cosmeticPrice(p, slot, id);
   return { id, name: words(name), art, price: pr, owned: !pr, equipped: id === on, attrs: `data-dress="${slot}" data-id="${id}" data-pv="${slot}:${id}"` };

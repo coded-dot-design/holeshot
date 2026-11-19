@@ -1,0 +1,165 @@
+/* The shop's pieces (./ui.ts): one source of tokens on .shop (the host adds it), dark first, light
+   under [data-theme=light] or [data-day] on any ancestor (or .shop-light). A game re-points any token
+   (--shop-bar, --shop-price, --shop-go, …) in its own sheet; screens add layout only. Hard shadows fall
+   straight down (no x offset). Nothing here knows the game. */
+.shop{--shop-bg:#13121f;--shop-panel:#1a1829;--shop-tile:#262438;--shop-line:#35324c;--shop-line2:#4a4666;--shop-go:#2af5b8;--shop-go-ink:#0b1f1a;--shop-soft:#123a35;--shop-soft-ink:#3ff0c0;--shop-bar:#22e6ff;--shop-track:#2c2a40;--shop-price:#ff4fa8;--shop-ink:#f6f3ff;--shop-mute:#aea4d6;--shop-off:#2a283d;--shop-warn:#ffb23d;--shop-drop:0 2px 0 #07060f;--shop-r:12px;--shop-mono:ui-monospace,"SF Mono",Menlo,monospace}
+:is([data-theme=light],[data-day]) .shop,.shop.shop-light{--shop-bg:#f4f1ea;--shop-panel:#fdfbf4;--shop-tile:#ecebf4;--shop-line:#dcd8e2;--shop-line2:#c6c2d2;--shop-soft:#d8f6ee;--shop-soft-ink:#0b7d78;--shop-track:#e6e4ee;--shop-ink:#17152b;--shop-mute:#5d5684;--shop-bar:#0b8a90;--shop-price:#c2186a;--shop-off:#e3e1ec;--shop-warn:#b86a00;--shop-drop:0 2px 0 #d6d2de}
+.shop .shop-card{box-sizing:border-box;min-width:0;padding:16px 20px;background:var(--shop-panel);border:1.5px solid var(--shop-line);border-radius:var(--shop-r);color:var(--shop-ink)}
+.shop .shop-card.shop-soft{background:var(--shop-soft);border-color:color-mix(in srgb,var(--shop-soft-ink) 25%,transparent);color:var(--shop-soft-ink);font-weight:800}
+.shop .shop-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px;min-width:0}
+.shop .shop-h1,.shop .shop-h2,.shop .shop-h3{margin:0;color:var(--shop-ink);letter-spacing:0;line-height:1.1}
+.shop .shop-h1{font-size:34px}.shop-h2{font-size:30px}.shop-h3{font-size:20px}
+.shop .shop-meta,.shop .shop-eyebrow,.shop .shop-colhead,.shop .shop-table th,.shop .shop-stat dt{font:500 12px/1.2 var(--shop-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--shop-mute)}
+.shop .shop-sub{margin:0;color:var(--shop-mute);font-weight:600;font-size:15px}
+/* The big two-way toggle and the underline tabs. */
+.shop .shop-seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:16px}
+.shop .shop-seg-k,.shop .shop-btn,.shop .shop-drop,.shop .shop-tile,.shop .shop-menu-i,.shop .shop-arrow,.shop .shop-x,.shop .shop-tab,.shop .shop-cta{font:inherit;color:var(--shop-ink);cursor:pointer;--edge:var(--shop-line2);--edge-hover:var(--shop-line2);--border-hover:var(--shop-bar);--py:2px;--hy:1px}
+/* Keys (.shop-btn, .shop-drop, .shop-arrow, .shop-cta) keep the host kit's press (a hard base straight down);
+   tabs, toggles, menu rows and tiles are flat: no lift, no base, in any state. */
+.shop :is(.shop-seg-k,.shop-tab,.shop-menu-i,.shop-tile,.shop-x,.shop-drop-text){transform:none!important;box-shadow:none!important}
+.shop :is(.shop-btn,.shop-drop,.shop-cta,.shop-arrow):disabled{opacity:1}
+.shop .shop-seg-k{min-height:54px;padding:0 12px;border:1.5px solid var(--shop-line2);border-radius:6px;background:var(--shop-panel);font-size:24px;font-weight:800}
+.shop .shop-seg-k[aria-pressed=true]{background:var(--shop-go);border-color:var(--shop-go);color:var(--shop-go-ink)}
+.shop .shop-tabs{display:flex;gap:4px 40px;flex-wrap:wrap;border-bottom:1.5px solid var(--shop-line)}
+.shop .shop-tab{position:relative;min-height:44px;padding:4px 0 10px;border:0;background:none;font-size:18px;font-weight:600;color:var(--shop-mute)}
+.shop .shop-tab[aria-pressed=true]{color:var(--shop-ink);font-weight:800}
+.shop .shop-tab[aria-pressed=true]::after{content:"";position:absolute;inset:auto 0 -1.5px;height:4px;border-radius:2px;background:var(--shop-bar)}
+.shop .shop-tabs-big{border:0;gap:0 64px;justify-content:center}
+.shop .shop-tabs-big .shop-tab{font-size:24px;font-weight:800;padding-bottom:12px}
+.shop .shop-tabs-big .shop-tab[aria-pressed=true]::after{inset:auto 0 0;background:var(--shop-go)}
+/* Stat tiles. */
+.shop .shop-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0}
+.shop .shop-stat{min-width:0;padding:12px 12px 10px;border-radius:8px;background:var(--shop-tile)}
+.shop .shop-stat dd{margin:4px 0 0;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--shop-ink)}
+.shop .shop-stat dd i{font-style:normal;color:var(--shop-mute)}
+.shop .shop-stat dd b[data-d],.shop .shop-stat dd:has(b[data-d]) span{color:var(--shop-soft-ink)}
+.shop .shop-stat em{flex:1 1 100%;font-style:normal;font-size:14px}
+.shop .shop-stat em[data-d=up]{color:var(--shop-soft-ink)}.shop-stat em[data-d=down]{color:var(--shop-price)}.shop-stat em[data-d=same]{color:var(--shop-mute)}
+.shop .shop-stats-s{gap:4px}.shop-stats-s .shop-stat{padding:6px 8px}.shop-stats-s dt{font-size:9px}.shop-stats-s dd{font-size:15px;margin-top:2px}
+/* Bars. */
+.shop .shop-meter{display:block;height:10px;border-radius:5px;background:linear-gradient(90deg,var(--shop-bar) calc(var(--v) * 100%),var(--shop-track) 0)}
+.shop .shop-meter[data-state=worn]{--shop-bar:var(--shop-warn)}
+.shop .shop-meter[data-state=risk],.shop .shop-meter[data-state=failed],.shop .shop-meter[data-state=hot],.shop .shop-meter[data-state=low]{--shop-bar:var(--shop-price)}
+.shop .shop-bars{list-style:none;margin:0;padding:0;display:grid}
+.shop .shop-colhead,.shop .shop-barrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(80px,220px) 4em minmax(10em,290px);gap:6px 18px;align-items:center}
+.shop .shop-colhead{padding:0 0 12px;border-bottom:1.5px solid var(--shop-line)}
+.shop .shop-colhead span:last-child{grid-column:2/-1}
+.shop .shop-barrow{min-height:62px;padding:8px 0;border-bottom:1.5px solid var(--shop-line)}
+.shop .shop-barrow:last-child{border-bottom:0}
+.shop .shop-barrow-l{display:grid;justify-items:start;gap:2px;min-width:0;font-size:19px}
+.shop .shop-barrow-l small{font-weight:600;font-size:15px;color:var(--shop-mute)}
+.shop .shop-pct{font-size:18px;font-variant-numeric:tabular-nums}
+.shop .shop-barrow-a{display:grid;justify-items:stretch}
+.shop .shop-bars-loose{gap:10px}
+.shop .shop-bars-loose>.shop-barrow{padding:6px 20px;min-height:52px;border:1.5px solid var(--shop-line);border-radius:var(--shop-r);background:var(--shop-panel)}
+.shop .shop-bars-loose .shop-barrow-a{justify-items:end}.shop-bars-loose .shop-btn{min-width:13em}
+.shop .shop-feel{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));gap:14px 48px}
+.shop .shop-feel li{display:grid;grid-template-columns:7.5em minmax(40px,1fr) 3.2em;gap:14px;align-items:center;font-size:17px}
+.shop .shop-feel b{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+/* Keys. */
+.shop .shop-btn{display:inline-flex;align-items:center;justify-content:center;gap:.45em;box-sizing:border-box;min-height:44px;padding:0 18px;border:1.5px solid var(--shop-line2);border-radius:6px;background:var(--shop-panel);font-size:17px;font-weight:800;white-space:nowrap;}
+.shop .shop-btn:hover:not(:disabled),.shop .shop-drop:hover,.shop .shop-tile:hover,.shop .shop-menu-i:hover{border-color:var(--shop-bar)}
+.shop .shop-btn:disabled{background:var(--shop-off);color:var(--shop-mute);cursor:default;box-shadow:none}
+.shop .shop-btn[aria-pressed=true]{background:var(--shop-soft);border-color:var(--shop-soft-ink);color:var(--shop-soft-ink)}
+.shop .shop-btn-go{background:var(--shop-go);border-color:var(--shop-go);color:var(--shop-go-ink)}
+.shop .shop-btn-wide{width:100%}
+.shop .shop-dot{opacity:.8}
+.shop .shop-num{font-variant-numeric:tabular-nums}
+.shop .shop-need{margin:0;color:var(--shop-price);font-weight:800;font-size:16px}
+.shop .shop-check i{display:inline-grid;place-items:center;width:13px;height:13px;border:1.5px solid currentColor;border-radius:2px;font-size:10px;font-style:normal}
+.shop .shop-drop{display:inline-flex;align-items:center;justify-content:center;gap:.6em;min-height:44px;padding:0 24px;border:1.5px solid var(--shop-line2);border-radius:6px;background:var(--shop-panel);font-size:17px;font-weight:800;}
+.shop .shop-drop i{font-style:normal;font-size:.8em}
+.shop .shop-drop[aria-expanded=true]{background:var(--shop-soft);border-color:var(--shop-soft-ink);color:var(--shop-soft-ink)}
+/* Menus and sheets: float over the panel; on phones the sheet rises from the bottom. */
+.shop .shop-menu,.shop .shop-sheet{box-sizing:border-box;display:grid;gap:10px;padding:16px;background:var(--shop-panel);border:2px solid var(--shop-soft-ink);border-radius:var(--shop-r);color:var(--shop-ink);box-shadow:0 8px 0 color-mix(in srgb,#07060f 18%,transparent)}
+.shop .shop-menu{gap:8px;padding:12px}
+.shop .shop-menu>.shop-h3{padding:4px 6px}
+.shop .shop-menu-i{display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:46px;padding:0 18px;border:1.5px solid var(--shop-line);border-radius:6px;background:var(--shop-panel);font-size:18px;font-weight:800;text-align:left}
+.shop .shop-menu-i small{font-weight:600;font-size:15px;color:var(--shop-mute)}
+.shop .shop-menu-i[aria-checked=true]{background:var(--shop-soft);border-color:var(--shop-soft-ink)}
+.shop .shop-menu-i i{font-style:normal;font-weight:600;margin-left:.5em}
+.shop .shop-sheet{padding:22px 30px 24px;gap:12px}
+.shop .shop-grab{display:none}
+.shop .shop-sheet-h{display:flex;justify-content:space-between;align-items:center}
+.shop .shop-sheet-h .shop-h2{font-size:34px}
+.shop .shop-x{min-width:44px;min-height:44px;border:0;background:none;font-size:26px;color:var(--shop-mute)}
+@media (max-width:620px){
+.shop .shop-sheet{position:fixed;inset:auto 0 0;z-index:30;max-height:82svh;overflow:auto;padding:12px 20px 24px;border:1.5px solid var(--shop-line);border-bottom:0;border-radius:18px 18px 0 0;box-shadow:0 -6px 0 color-mix(in srgb,#07060f 12%,transparent)}
+.shop .shop-sheet{box-shadow:0 0 0 100vmax color-mix(in srgb,#07060f 45%,transparent)}
+.shop .shop-grab{display:block;justify-self:center;width:72px;height:5px;border-radius:3px;background:var(--shop-line2)}
+.shop .shop-sheet-h .shop-h2{font-size:26px}
+}
+/* Rows and tables. */
+.shop .shop-rows{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.shop .shop-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;min-height:56px;padding:10px 16px;border:1.5px solid var(--shop-line);border-radius:8px;background:var(--shop-panel)}
+.shop .shop-row:has(.shop-row-m){grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto}
+.shop .shop-row[data-on]{background:var(--shop-soft);border-color:var(--shop-soft-ink)}
+.shop .shop-row-t{display:grid;gap:2px;min-width:0}
+.shop .shop-row-t b{font-size:19px}
+.shop .shop-row-m{color:var(--shop-mute);font-weight:600}
+.shop .shop-row-e{font-weight:800;color:var(--shop-price);text-align:right}
+.shop .shop-row[data-on] .shop-row-e{color:var(--shop-soft-ink);font-size:13px;letter-spacing:.04em}
+.shop .shop-table{width:100%;border-collapse:collapse;font-size:17px}
+.shop .shop-table th{text-align:left;font-size:11px;padding:0 0 14px;border-bottom:1.5px solid var(--shop-line)}
+.shop .shop-table td{padding:16px 0;border-bottom:1.5px solid var(--shop-line);font-weight:600}
+.shop .shop-table tr:last-child td{border-bottom:0}
+.shop .shop-table th:last-child,.shop .shop-table td:last-child{text-align:right;font-weight:800}
+.shop .shop-table td:first-child{width:7.5em;color:var(--shop-mute);font-variant-numeric:tabular-nums}
+/* Tiles and grids. */
+.shop .shop-grid{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));gap:10px}
+.shop .shop-tile{display:grid;align-content:start;justify-items:start;gap:4px;min-width:0;padding:8px 8px 10px;border:1.5px solid var(--shop-line);border-radius:8px;background:var(--shop-panel);text-align:left}
+.shop .shop-tile[aria-pressed=true]{border:2px solid var(--shop-soft-ink);padding:7.5px 7.5px 9.5px}
+.shop .shop-tile b{font-size:17px;padding:4px 2px 0}
+.shop .shop-tile small{padding:0 2px;font-weight:800;font-size:14px;color:var(--shop-price)}
+.shop .shop-tile small[data-own]{color:var(--shop-soft-ink)}
+.shop .shop-tile-art{display:grid;place-items:center;width:100%}
+.shop .shop-swatch{display:block;width:100%;height:38px;background:linear-gradient(135deg,var(--a) 0 50%,var(--b) 50%)}
+.shop .shop-tile-big{padding:14px 16px 16px}.shop-tile-big .shop-tile-art{height:96px}
+.shop .shop-chips{display:flex;flex-wrap:wrap;gap:8px}
+.shop .shop-chips .shop-btn{font-size:16px;padding:0 18px}
+/* The bike's title and the turntable. */
+.shop .shop-title{display:grid;gap:6px;min-width:0}
+.shop .shop-title .shop-eyebrow{display:flex;gap:.9em;font-size:15px}
+.shop .shop-title .shop-eyebrow i{font-style:normal}
+.shop .shop-name{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:40px;line-height:1.05;color:var(--shop-ink);overflow-wrap:anywhere}
+.shop .shop-no{color:var(--shop-price)}
+.shop .shop-title-s .shop-name{font-size:24px}
+.shop .shop-turn{position:relative;min-width:0}
+.shop .shop-arrow{position:absolute;top:50%;translate:0 -50%;width:44px;height:44px;display:grid;place-items:center;padding:0;border:1.5px solid var(--shop-line);border-radius:6px;background:var(--shop-panel);font-size:24px;font-weight:800;}
+.shop .shop-arrow-l{left:10px}.shop-arrow-r{right:10px}
+.shop .shop-cta-w{display:grid;gap:12px;justify-items:center}
+.shop .shop-cta{display:flex;align-items:center;justify-content:center;gap:28px;width:100%;min-height:56px;border:0;border-radius:6px;background:var(--shop-go);color:var(--shop-go-ink);font-size:24px;}
+.shop .shop-cta b{letter-spacing:.02em}.shop-cta i{font-style:normal;font-weight:800}
+.shop .shop-cta-sub{font:500 12px/1.2 var(--shop-mono);letter-spacing:.06em;color:var(--shop-mute);text-transform:uppercase}
+.shop .shop-stars{color:var(--shop-price);letter-spacing:.06em;font-size:18px}.shop-stars i{font-style:normal}
+.shop .shop-pin{display:grid;gap:8px}
+.shop .shop-pill{display:inline-block;padding:3px 9px;border-radius:4px;background:var(--shop-soft);color:var(--shop-soft-ink);font:800 12px/1.2 var(--shop-mono);letter-spacing:.08em;text-transform:uppercase}
+.shop .shop-pill[data-kind=plain]{background:none;padding:0}
+.shop .shop-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;padding-top:14px;border-top:1.5px solid var(--shop-line)}
+.shop .shop-foot>b{font-size:20px}
+.shop .shop-foot>span{display:flex;gap:12px}
+.shop .shop-cta:focus-visible,.shop .shop-btn:focus-visible,.shop .shop-tab:focus-visible,.shop .shop-seg-k:focus-visible,.shop .shop-tile:focus-visible,.shop .shop-drop:focus-visible,.shop .shop-menu-i:focus-visible,.shop .shop-arrow:focus-visible{outline:3px solid var(--shop-bar);outline-offset:2px}
+/* The flows (./flow.ts): toolbar, paging, upgrade list and preview, bays, compare. */
+.shop .shop-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
+.shop .shop-toolbar-end{margin-left:auto}
+.shop .shop-pop{position:relative}
+.shop .shop-pop>.shop-menu{position:absolute;z-index:20;top:calc(100% + 6px);left:0;width:max(100%,330px)}
+.shop .shop-paging{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px}
+.shop .shop-paging .shop-btn{font-size:15px}
+.shop .shop-rows-tight{gap:6px}.shop-rows-tight .shop-row{min-height:40px;padding:6px 16px;border-radius:6px}.shop-rows-tight .shop-row-t b{font-size:17px}
+.shop .shop-tick{color:var(--shop-soft-ink)}
+.shop .shop-preview{display:grid;gap:12px;padding:20px}
+.shop .shop-preview-h{display:flex;align-items:center;gap:24px}
+.shop .shop-h4{display:block;font-size:22px;margin-bottom:6px}
+.shop .shop-expand{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 12px;padding-top:18px;border-top:1.5px solid var(--shop-line)}
+.shop .shop-expand .shop-need{grid-column:1/-1;margin-top:8px}
+.shop .shop-table td b[data-best]{color:var(--shop-soft-ink)}
+.shop .shop-table th:not(:first-child),.shop .shop-table td:not(:first-child){text-align:right}
+.shop .shop-drop-text{min-height:44px;margin:-10px 0 -8px;padding:0;border:0;background:none;box-shadow:none;font-size:15px;font-weight:600;color:var(--shop-mute)}
+.shop .shop-drop-text[aria-expanded=true]{background:none;color:var(--shop-soft-ink)}
+.shop .shop-opts{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:12px;margin:12px 0 10px}
+.shop .shop-blurb{margin:0;font-style:italic;font-weight:500;font-size:15px;color:var(--shop-mute)}
+.shop .shop-rule{padding-top:18px;border-top:1.5px solid var(--shop-line)}
+.shop .shop-turn{position:relative;min-width:0}
+.shop :is(.shop-cta,.shop-btn-go){--edge:color-mix(in srgb,var(--shop-go) 50%,#07060f);--edge-hover:var(--edge)}
+.shop .shop-tile-art>svg{width:auto;height:100%;max-width:100%}
