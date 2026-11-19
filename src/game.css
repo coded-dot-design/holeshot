@@ -20,10 +20,6 @@
 .dh-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .dh-theme{min-width:44px;min-height:44px;padding:0;display:inline-grid;place-items:center}
 .dh-logo{display:block;flex:none;height:26px;width:auto;margin-right:auto}
-/* The garage's lockup (the logo with "by David Cooley") above LET'S RIDE; where it shows, the
-   header's wordmark steps aside (one logo on screen). Hidden where the dock is tight. */
-.dh-lockup{display:block;width:min(100%,230px);height:auto;justify-self:center;margin:0}
-.dh-garage .dh-top .dh-logo{visibility:hidden}
 .dh-chip{display:inline-flex;align-items:center;gap:.35em;padding:.35em .65em;border:2px solid var(--rim);border-radius:8px;background:var(--raised);font-variant-numeric:tabular-nums;white-space:nowrap}
 .dh-test{border-color:var(--hot);color:var(--hot);font-size:.8em;letter-spacing:.04em}
 .dh-cr{background:var(--k-go);color:var(--rim)}
@@ -39,11 +35,6 @@
 .dh .bui-key[aria-pressed=true]{background:var(--k-go);color:var(--rim)}
 .dh .bui-key:disabled{opacity:.5;cursor:default}
 .dh .dh-go{background:var(--k-go);color:var(--rim);font-size:17px;padding:0 22px}
-.dh-seg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-.dh-seg{grid-template-columns:repeat(3,minmax(0,1fr))}
-.dh-seg .bui-key{padding:0 6px;font-size:14px;letter-spacing:.04em}
-.dh-bay{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px;align-items:center}
-.dh-bay>div{display:grid;gap:6px}
 .dh-preview{width:100%;aspect-ratio:16/10;display:block;border:2px solid var(--rim);border-radius:12px;background:linear-gradient(180deg,color-mix(in srgb,var(--cy) 16%,var(--raised)),var(--raised));touch-action:pan-y;cursor:grab}
 .dh-preview:active{cursor:grabbing}.dh-preview:focus-visible{outline:3px solid var(--cy);outline-offset:2px}
 .dh-bar{display:grid;grid-template-columns:8.5em minmax(3em,1fr) 3.2em;align-items:center;gap:8px;font-size:12px;letter-spacing:.04em}
@@ -60,18 +51,6 @@
 .dh-mod{display:grid;gap:2px}
 .dh-mod small{color:var(--muted);font-weight:700;font-size:12px}
 .dh-mod i{font-style:normal;color:var(--hot);letter-spacing:.1em}
-.dh-feel{display:grid;gap:4px}
-.dh-slots{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
-.dh .dh-slot-k{display:grid;justify-items:start;align-content:center;gap:0;padding:6px 12px;min-width:7.5em}
-.dh-slot-k small{font-size:10px;letter-spacing:.06em;opacity:.8}
-.dh-empty{border-style:dashed}
-.dh-looks>li{grid-template-columns:7.5em minmax(0,1fr)}
-.dh-swrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.dh-swk{position:relative;display:grid;justify-items:center;gap:2px;min-width:44px;min-height:44px;padding:4px 6px;font:inherit;font-size:9px;letter-spacing:.03em;cursor:pointer;background:var(--surface);color:var(--ink);border:2px solid var(--rim);border-radius:10px}
-.dh-swk i{width:26px;height:16px;border-radius:5px;border:2px solid var(--rim);background:linear-gradient(135deg,var(--a) 55%,var(--b) 0)}
-.dh-swk small{max-width:7em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dh-swk em{font-style:normal;color:var(--hot)}
-.dh-swk[aria-pressed=true]{background:var(--k-go);color:var(--rim);box-shadow:calc(3px * var(--bui-sx)) calc(3px * var(--bui-sy)) 0 var(--bui-shadow)}
 .dh-numin,.dh-field input,.dh-field textarea{font:inherit;font-size:16px;min-height:44px;padding:6px 10px;border:2px solid var(--rim);border-radius:10px;background:var(--raised);color:var(--ink);box-sizing:border-box}
 .dh-numin{width:5em}
 .dh-field{display:grid;gap:4px;font-size:12px;letter-spacing:.08em;color:var(--muted);flex:1 1 12em}
@@ -140,7 +119,7 @@
 @media (max-width:620px){
 .dh-cards{padding:calc(10px + var(--dh-top,0px)) 8px 24px}
 .dh-card{padding:12px 12px 14px;gap:10px}
-.dh-bay,.dh-cols,.dh-picks{grid-template-columns:1fr}
+.dh-cols,.dh-picks{grid-template-columns:1fr}
 .dh-sticky{top:-10px;margin:-12px -12px 0;padding:10px 12px 8px}
 .dh-title{font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dh-sticky{flex-wrap:nowrap;gap:6px}
@@ -152,7 +131,6 @@
 .dh .dh-tile{padding:8px 10px 10px}
 .dh-tile>b{font-size:15px}
 .dh-tile>small{font-size:12px}
-.dh-looks>li{grid-template-columns:1fr}
 .dh-logo{height:22px}
 }
 /* The throttle rocker (src/bike/rocker.ts): gas on top, brake below, both square (as tall as the pill is

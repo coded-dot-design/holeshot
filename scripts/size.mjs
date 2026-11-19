@@ -101,17 +101,14 @@ import { readdirSync, readFileSync } from "node:fs";
 // goggle's frame, lens and glint, the straps, the chin bar, the raked peak and its root, the fin) on
 // its facing groups, the portrait SVG (garage/portrait.ts) in the top bar, the bay and the HELMET keys,
 // the rider close-up; budget 223,500 → 225,000 (about 1.2 KB of room).
-// R34 (the game self-contained), on 0.9.0 + online copy: +954 B measured (223,870 → 224,824 holeshot.mjs;
-// holeshot.js 224,086 → 225,026): the CONTROLS · HOW TO card in settings (src/data/controls.ts: the keyboard,
-// gamepad and phone bindings the landing also reads; the card and its key-cap CSS); budget 225,000 →
-// 226,000 (about 1 KB of room).
-// R36 (the gas dirt bikes in the art's style), on R34: +1,226 B measured (225,558 → 226,784
-// holeshot.js; holeshot.mjs 225,321 → 226,552): bodies.ts `dirt` (the shared base: the inked tank and
-// shroud, seat, side panel, plate, tail and fender, the angled frame, the 2-stroke's chamber, the
-// 4-stroke's header and side silencer, the shroud's colour blocks) and DIRT (the per-model table), the
-// rig's ink slabs and polygon grow, the three-spoke hub, the inked swingarm and the fork tubes, the
-// model id through the scenes; budget 226,000 → 227,800 (about 1 KB of room).
-const BUDGET = 227_800;
+// R35 (the garage UI rebuild on the locker kit), on 0.9.0: +7,280 B measured (223,800 → 231,080
+// holeshot.js; holeshot.mjs 223,557 → 230,844): the locker (src/locker/: its pieces and flows 2.8 KB,
+// its tokens and sheet 3.3 KB gzip on their own), the garage's adapters and new screens (the header,
+// the bike panel, My Bikes and the expansion, the tyre compound menu, the upgrade preview, the paged
+// paint grid and menu, rider gear, outfits' art, the phone sheet), less the old dock, keys and
+// swatch rows' CSS; the old showroom stays mounted until the new module swaps in. Budget 225,000 →
+// 233,000 (about 1.9 KB of room).
+const BUDGET = 233_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;
