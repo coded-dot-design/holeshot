@@ -13,7 +13,6 @@
 .dh[data-menu][data-day]{background:radial-gradient(120% 80% at 50% 110%,#ffd3b0 0,#f6ead8 62%)}
 .dh[data-menu]::before{content:"";position:absolute;inset:50% -20% -10%;background:repeating-linear-gradient(90deg,color-mix(in srgb,var(--cy) 30%,transparent) 0 2px,transparent 2px 64px),repeating-linear-gradient(0deg,color-mix(in srgb,var(--hot) 26%,transparent) 0 2px,transparent 2px 40px);transform:perspective(420px) rotateX(58deg);transform-origin:50% 0;opacity:.55;pointer-events:none}
 .dh-cards{position:absolute;inset:0;overflow:auto;overscroll-behavior:contain;display:grid;place-items:start center;padding:calc(16px + var(--dh-top,0px)) 12px 28px;z-index:5}
-.dh-cards[hidden]{display:none}
 .dh:not([data-menu]) .dh-cards{background:color-mix(in srgb,#07060f 55%,transparent);place-items:center}
 .dh-live{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);margin:0}
 .dh-card{box-sizing:border-box;position:relative;display:grid;gap:12px;width:min(100%,780px);padding:16px 18px 18px;background:var(--surface);color:var(--ink);border:2.5px solid var(--rim);border-radius:14px;box-shadow:calc(6px * var(--bui-sx)) calc(6px * var(--bui-sy)) 0 var(--bui-shadow)}
@@ -181,7 +180,6 @@
 /* Walking the bike (src/bike/walk-ui.ts): the WALK chip by the top chips, the one-time touch hint. */
 .dh .hs-walk{position:absolute;inset-inline-start:50%;inset-block-start:calc(12px + 3.2em);translate:-50% 0;padding:.25em .7em;border:2px solid #0b0a14;border-radius:8px;background:#22e6ff;color:#0b0a14;font-size:12px;font-weight:900;letter-spacing:.08em;pointer-events:none;z-index:3}
 .dh .hs-walkhint{position:absolute;inset-inline-start:50%;inset-block-end:34%;translate:-50% 0;margin:0;padding:4px 10px;border:2px solid #0b0a14;border-radius:10px;background:#ffd166;color:#0b0a14;font-size:11px;font-weight:800;line-height:1.2;text-align:center;text-transform:uppercase;white-space:nowrap;pointer-events:none;z-index:3}
-.dh .hs-walk[hidden],.dh .hs-walkhint[hidden]{display:none}
 @media (max-width:600px){.dh .hs-walk{inset-block-start:calc(12px + 7.6em)}}
 /* The ride's corner keys (src/modes/keys.ts): on a phone one ☰ key beside PAUSE; the rest open downward
    as a column. The chip bar then sits up against the top edge (safe-area aware), the hint under it. */

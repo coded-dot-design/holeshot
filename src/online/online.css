@@ -3,7 +3,6 @@
    standings on the result. Phone first: every key 44 px or more, nothing scrolls sideways. */
 .dh .ol-room{width:min(100%,620px);justify-items:center;text-align:center}
 .dh .ol-room form,.dh .ol-room [data-for]{display:grid;gap:10px;justify-items:center;width:100%}
-.dh .ol-room [data-for][hidden],.dh .ol-room [hidden]{display:none!important}
 .dh .ol-room .dh-field{width:min(100%,22em);text-align:left}
 .dh .ol-room .dh-field input{text-transform:uppercase;letter-spacing:.06em}
 .dh .ol-say{min-height:1.2em;color:var(--hot)}
@@ -33,7 +32,6 @@
 .dh .ol-seats li.ol-me{background:var(--k-sys);color:var(--rim)}
 .dh .ol-seats li.ol-me i,.dh .ol-seats li.ol-in i{opacity:1}
 .dh .ol-chip{position:absolute;left:50%;bottom:12px;translate:-50% 0;z-index:4;display:flex;align-items:center;gap:.5em;margin:0;padding:.35em .75em;background:var(--surface);color:var(--ink);border:2px solid var(--rim);border-radius:20px;box-shadow:calc(3px * var(--bui-sx)) calc(3px * var(--bui-sy)) 0 var(--bui-shadow);font-size:12px;letter-spacing:.05em;white-space:nowrap;max-width:calc(100% - 24px);overflow:hidden;pointer-events:none}
-.dh .ol-chip[hidden],.dh .ol-board[hidden]{display:none}
 .dh .ol-chip i{width:.7em;height:.7em;border-radius:50%;background:var(--k-go)}
 .dh .ol-chip[data-conn=wait] i{background:#ffd166}
 .dh[data-menu] .ol-chip{display:none}

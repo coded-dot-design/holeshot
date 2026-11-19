@@ -7,7 +7,7 @@
 .dh .hs-call[data-kind="bad"] b{background:#ff4f5e}
 .dh .hs-call.hs-pop b{animation:hs-pop .32s cubic-bezier(.2,1.6,.4,1) both}
 @keyframes hs-pop{from{scale:.3;opacity:0}to{scale:1;opacity:1}}
-.dh .hs-call[hidden],.dh .hs-call :empty{display:none}
+.dh .hs-call :empty{display:none}
 /* The COMBO button: tucked into the gas zone; with the gas held it slides out to 10–12 o'clock. */
 .dh .hs-rocker.hs-hascombo{overflow:visible}
 .dh .hs-rcombo{position:absolute;inset-block-start:-58px;inset-inline-end:46px;inline-size:60px;block-size:60px;display:grid;place-items:center;align-content:center;gap:0;border:3px solid #0b0a14;border-radius:50%;background:#ffd166;color:#0b0a14;box-shadow:0 4px 0 #0b0a14;translate:34px 56px;scale:.4;opacity:0;pointer-events:none;transition:translate .16s ease-out,scale .16s ease-out,opacity .12s}
@@ -21,4 +21,3 @@
 .dh .hs-rocker[data-hop="1"] .hs-rhop{background:#3bff9b;box-shadow:none;translate:0 3px}
 .dh .hs-rocker[data-combo="1"] .hs-rcombo{background:#3bff9b;box-shadow:none;translate:0 3px}
 @media (prefers-reduced-motion:reduce){.dh .hs-rcombo{transition:none}.dh .hs-call.hs-pop b{animation:none}}
-.dh .mt-chip[hidden]{display:none}
