@@ -58,8 +58,15 @@ with that group's kind picked; online rides MX, SX is solo). `?mode=<id>` on /pl
   speed, then a steel kicker and a tabletop landing every so often, forever, banks either side and a
   stadium wall past them (you never leave the line or turn round). The jumps are sized by your bike's
   top speed (every length and height × (top / 17.5)², so the flight is the same shape on any bike): a
-  full-gas jump lands on the landing's down ramp, a short one on its deck. Hold TRICK in the air and
-  the stick picks one of four tricks; weight all the way back flips it. Five judges score the run and pay.
+  full-gas jump lands on the landing's down ramp, a short one on its deck. Freestyle tricks work like
+  Wheelie City's combo button: in the air C (or L, E, a gamepad's left bumper, or the TRICK button
+  that slides out of the rocker's gas side) throws the next trick up the ladder (SEAT GRAB, CROSS-UP,
+  NAC-NAC, HEEL CLICKER, CAN-CAN, SUPERMAN, SUPERMAN SEAT GRAB, CLIFFHANGER, CHRIST AIR, LAZY BOY,
+  HANDSTAND; past the top they come at random); tap again for the next, hold to keep one out for
+  more. The stick left or right whips the bike (a longer whip pays more), all the way back flips it
+  (a trick out too: a BACKFLIP NAC-NAC). Tuck the trick in and straighten the whip before the
+  landing or it is a bail. Clean landings that did something build the combo (×2 to ×6), the judges
+  mark each one, and five judges score the run and pay.
 - **Endless Wheelie City**: an open world of roads, towns and fields that never ends, in every
   direction (the same world on every screen): long smooth roads sweep across rolling fields
   (highways, smaller roads branching off, junctions and roundabouts, kickers now and then on the
@@ -112,7 +119,7 @@ event pays something, a worn bike still rides, and the pit crew fixes you up for
 ridden a few events and can't pay.
 
 **Controls.** Space or J gas, K or Shift brake, W/S or ↑/↓ your weight (back lifts the front; in the
-air it pitches the bike), A/D or ←/→ steer, L trick (Big Air) or hop (Endless Wheelie City and every endless ground), V
+air it pitches the bike), A/D or ←/→ steer, C trick (Big Air, where L and E throw one too; the endless rides' combo) or L hop (Endless Wheelie City and every endless ground), V
 camera, M sound, P or Escape pause, R reset (every mode you ride yourself; the ↺ key on the HUD, a
 gamepad's Back/Select). Every endless ride has the same hop: L, a gamepad's X, Y or right bumper, or
 on the pad's stick a quick pull back then push forward (within 0.35 s, only started with both wheels

@@ -5,7 +5,7 @@
 // zones light at once (icons only; the words are in the aria-labels); a short buzz on a zone change
 // where the device has one (never with reduced motion). It drives `controls` intents through
 // `press()` like the pad's own keys, so game code reads `down("gas")` / `down("brake")` and never
-// knows. With `combo` (the endless modes) a COMBO button slides out from the gas side while the gas is
+// knows. With `combo` (the endless modes; `comboWord` relabels it, Big Air's TRICK) a COMBO button slides out from the gas side while the gas is
 // held, at 10 to 12 o'clock round the top of the pill: tap it with a second finger, or slide the gas
 // thumb onto it (the gas stays on while it is over the button) and back. Desktop keys are untouched. A first-time hint ("slide to the middle to wheelie") stays
 // until the seam is used once (remembered per browser, best effort).
@@ -24,7 +24,7 @@ export const ICON_COMBO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="
 const HINT_KEY = "holeshot:rocker-seam";
 
 /** Mount the rocker in `host` (the pad's element): drives `gas` and `brake` on `c`. */
-export function rocker(c: Controls, host: HTMLElement, o: { reduced?: boolean; signal?: AbortSignal; gas?: string; brake?: string; combo?: string; hop?: string } = {}) {
+export function rocker(c: Controls, host: HTMLElement, o: { reduced?: boolean; signal?: AbortSignal; gas?: string; brake?: string; combo?: string; hop?: string; comboWord?: string } = {}) {
   const gi = o.gas ?? "gas", bi = o.brake ?? "brake", ci = o.combo ?? "", hi = o.hop ?? "";
   const el = document.createElement("div");
   el.className = "hs-rocker";
@@ -39,8 +39,10 @@ export function rocker(c: Controls, host: HTMLElement, o: { reduced?: boolean; s
     cb = document.createElement("b");
     cb.className = "hs-rcombo";
     cb.setAttribute("role", "img");
-    cb.setAttribute("aria-label", "Combo trick: tap, or slide the gas thumb onto it; hold for more points (C)");
-    cb.innerHTML = ICON_COMBO + "<i>COMBO</i>";
+    // Its word is cosmetic (COMBO; Big Air says TRICK).
+    const word = o.comboWord || "COMBO";
+    cb.setAttribute("aria-label", `${word === "COMBO" ? "Combo trick" : word[0] + word.slice(1).toLowerCase()}: tap, or slide the gas thumb onto it; hold for more points (C)`);
+    cb.innerHTML = ICON_COMBO + "<i>" + word + "</i>";
     el.classList.add("hs-hascombo");
     el.append(cb);
   }

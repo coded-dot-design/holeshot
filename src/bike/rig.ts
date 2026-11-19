@@ -46,8 +46,16 @@ const SEG = [0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f];
  *  (legs back), legs spread 0..1 (sideways), body out over the back 0..1, body up off the seat 0..1,
  *  twist (radians, about the bike's long axis), arms spread 0..1, tuck 0..1 (knees to the bars),
  *  hand drag 0..1 (the left hand off the bar and down to the road, the body back: Wheelie City),
- *  the right hand down too 0..1 (the double hand drag: ../modes/stunts.ts)]. */
-export const TRICK_POSE = 10;
+ *  the right hand down too 0..1 (the double hand drag: ../modes/stunts.ts), then the freestyle set
+ *  (Big Air: ../modes/bigair/fmx.ts): the right hand back on the seat 0..1 (a seat grab), the right leg
+ *  over the back to the far side 0..1 (a nac-nac), the right leg over the tank to the far side 0..1 (a
+ *  can-can), both feet up over the bars 0..1 (a heel clicker, a cliffhanger, a lazy boy), legs
+ *  straight up over the bike 0..1 (a handstand), the bars turned 0..1 (a cross-up), the body's pitch
+ *  (radians: + flat out over the bars, − upright and on back to lying on the seat)]. Every one is 0
+ *  in a mode that does not write it. */
+export const TRICK_POSE = 17;
+/** The freestyle channels of `T` (see TRICK_POSE). */
+export const T_GRAB = 10, T_NAC = 11, T_CAN = 12, T_HEELS = 13, T_HANDSTAND = 14, T_BARS = 15, T_BODY = 16;
 
 const PI = Math.PI;
 // Bike-frame points (x forward, y up, from the centre of mass): the swingarm pivot, the steering head,
@@ -269,7 +277,9 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
   /** Walking the bike: on (0/1), the stride's phase, the ground's height in the rider's frame. */
   const WALKP = new Float64Array(3);
   /** The trick pose (see TRICK_POSE), written by the game. */
-  const T = new Float64Array(TRICK_POSE);
+  const T = new Float64Array(TRICK_POSE), Z = new Float64Array(TRICK_POSE);
+  /** The trick channels the limbs read now (T on the bike, zeros thrown or walking). */
+  let E = Z;
   let thrown = false;
 
   /** Pose everything from bike `b` (call each frame before draw). `stand` 0..1: sitting to the attack position. */
@@ -281,7 +291,7 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
     const ry = dy + b.comp[0]!, fy = dy + b.comp[1]!;
     hubs[0]!.pos[0] = rx + 2 * END; hubs[0]!.pos[1] = ry; hubs[0]!.rot[2] = -b.spin[0]!;
     hubs[1]!.pos[0] = fx - 2 * END; hubs[1]!.pos[1] = fy; hubs[1]!.rot[2] = -b.spin[1]!;
-    hubs[1]!.rot[1] = b.contact[1] || b.air > 0 ? -b.steerAngle * 0.6 : 0;
+    hubs[1]!.rot[1] = (b.contact[1] || b.air > 0 ? -b.steerAngle * 0.6 : 0) - 0.75 * T[T_BARS]!;
     arm.pos[0] = PIVOT[0]!; arm.pos[1] = PIVOT[1]!;
     arm.rot[2] = Math.atan2(ry - PIVOT[1]!, rx - PIVOT[0]!);
     const fa = Math.atan2(fy - HEAD[1]!, fx - HEAD[0]!);
@@ -310,15 +320,20 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
     }
     // The hand drag: the road is "down" in the bike's frame (x forward, y up, pitched by rel).
     DG[0] = T[8]!; DG[1] = -Math.sin(b.pitch); DG[2] = -Math.cos(b.pitch);
+    E = T;
     limbs(b.lean, stand, T[0]!, T[1]!, T[2]!, T[3]! + 0.5 * T[8]!, T[6]!, T[7]!, false, T[4]!);
+    E = Z;
     DG[0] = 0;
   }
   /** The rider's body: weight (−1 forward .. 1 back), standing, hands and feet off, spread, out over the back. */
   function limbs(lean: number, stand: number, hands: number, feet: number, spread: number, back: number, arms: number, tuck: number, loose: boolean, up = 0) {
     // The hip: over the pegs standing, on the seat sitting; back with the weight, up off the seat in a trick.
-    const hx = SEAT[0]! + 0.08 * stand - 0.14 * lean - 0.25 * back + 0.1 * tuck, hy = SEAT[1]! + 0.06 + 0.2 * stand + 0.22 * up + 0.12 * back - 0.06 * tuck;
-    // The torso leans forward over the bars (less with the weight back; flat out over the back in a plank).
-    const tilt = 0.75 - 0.35 * lean + 0.25 * stand - 0.6 * back + 0.35 * tuck, ta = PI / 2 - tilt;
+    // The freestyle set (zeros unless a mode writes them): a handstand puts the hips over the bike.
+    const grab = E[T_GRAB]!, nac = E[T_NAC]!, can = E[T_CAN]!, heels = E[T_HEELS]!, hs = E[T_HANDSTAND]!;
+    const hx = SEAT[0]! + 0.08 * stand - 0.14 * lean - 0.25 * back + 0.1 * tuck + 0.18 * hs + 0.12 * heels, hy = SEAT[1]! + 0.06 + 0.2 * stand + 0.22 * up + 0.12 * back - 0.06 * tuck + 0.72 * hs;
+    // The torso leans forward over the bars (less with the weight back; flat out over the back in a
+    // plank; upright or lying back with the body's pitch; head down over the seat in a handstand).
+    const tilt0 = 0.75 - 0.35 * lean + 0.25 * stand - 0.6 * back + 0.35 * tuck + E[T_BODY]!, tilt = tilt0 + (PI - 0.25 - tilt0) * hs, ta = PI / 2 - tilt;
     torso.pos[0] = hx; torso.pos[1] = hy; torso.rot[2] = ta;
     const sx = hx + Math.cos(ta) * (TORSO - 0.05), sy = hy + Math.sin(ta) * (TORSO - 0.05);
     head.pos[0] = hx + Math.cos(ta) * (TORSO + 0.06); head.pos[1] = hy + Math.sin(ta) * (TORSO + 0.06) - 0.02; head.rot[2] = ta - PI / 2 + 0.15;
@@ -331,22 +346,43 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
         const ph = Math.sin(WALKP[1]! + side * PI / 2);
         px = hx + 0.06 + ph * 0.2; py = WALKP[2]! + Math.max(0, Math.cos(WALKP[1]! + side * PI / 2)) * 0.07;
       }
+      // Both feet up over the bars; the right leg over the back (a nac-nac) or the tank (a can-can) to
+      // the far side; legs straight up (a handstand).
+      if (heels) (px += (0.72 - px) * heels), (py += (0.5 - py) * heels);
+      const over = s === 1 ? (nac > can ? nac : can) : 0;
+      if (s === 1 && nac) (px += (-0.8 - px) * nac), (py += (0.45 - py) * nac);
+      if (s === 1 && can) (px += (0.42 - px) * can), (py += (0.3 - py) * can);
+      if (hs) (px += (hx - 0.12 - px) * hs), (py += (hy + 0.8 - py) * hs);
       ik(hx, hy, px, py, THIGH, SHIN, 1);
-      const lz = side * (0.15 + spread * 0.55 + (loose ? 0.15 : 0));
+      let lz = side * (0.15 + spread * 0.55 + (loose ? 0.15 : 0));
+      if (over) lz += (-0.34 - lz) * over;
+      if (heels) lz += (side * 0.06 - lz) * heels;
       // (z from the side group at side × 0.15.)
       thigh[s]!.pos[0] = hx; thigh[s]!.pos[1] = hy; thigh[s]!.pos[2] = (lz - side * 0.15) * 0.5; thigh[s]!.rot[2] = J[0]!;
       shin[s]!.pos[0] = J[2]!; shin[s]!.pos[1] = J[3]!; shin[s]!.pos[2] = lz - side * 0.15; shin[s]!.rot[2] = J[1]!;
       thigh[s]!.rot[0] = -side * spread * 0.9;
       shin[s]!.rot[0] = -side * spread * 0.9;
       // Arms: shoulder to grip (elbow out and down); hands off, they go up and out.
-      const gx = GRIP[0]! - hands * (0.55 + 0.25 * arms), gy = GRIP[1]! + hands * (0.65 + 0.2 * arms) + (loose ? 0.3 : 0);
+      let gx = GRIP[0]! - hands * (0.55 + 0.25 * arms), gy = GRIP[1]! + hands * (0.65 - 0.3 * arms) + (loose ? 0.3 : 0);
+      // The right hand back on the seat (a seat grab; in a handstand, the seat's middle).
+      if (s === 1 && grab) (gx += (-0.42 + 0.22 * hs - gx) * grab), (gy += (0.17 - gy) * grab);
+      // In a handstand the other hand stays on its grip.
+      if (s === 0 && hs) (gx += (GRIP[0]! - gx) * hs), (gy += (GRIP[1]! - gy) * hs);
       // The hand drag: the left hand reaches down to the road (straight-armed, out from the bike).
       const dr = s === 0 ? DG[0]! : DG[0]! * T[9]!, reach = (UPPER + FORE) * 0.98;
       ik(sx, sy, gx + (sx + DG[1]! * reach - gx) * dr, gy + (sy + DG[2]! * reach - gy) * dr, UPPER, FORE, -1);
-      const az = side * (0.2 + arms * 0.45 * hands + (loose ? 0.2 : 0) + dr * 0.35);
-      upper[s]!.pos[0] = sx; upper[s]!.pos[1] = sy; upper[s]!.pos[2] = side * 0.04; upper[s]!.rot[2] = J[0]!;
-      fore[s]!.pos[0] = J[2]!; fore[s]!.pos[1] = J[3]!; fore[s]!.pos[2] = az - side * 0.15; fore[s]!.rot[2] = J[1]!;
-      upper[s]!.rot[0] = fore[s]!.rot[0] = -side * arms * hands * 0.8;
+      // Arms spread (hands off): the upper arm swings out sideways (turned about y) and the forearm
+      // starts at its elbow, so the two stay joined however wide they go.
+      const sp = arms * hands * 1.3, ca = Math.cos(sp), sa = Math.sin(sp);
+      const az = side * (0.2 + (loose ? 0.2 : 0) + dr * 0.35);
+      // Spread wide, the arm straightens and lifts a little above the shoulder.
+      const st = sp / 1.3, a0 = J[0]! + (1.25 - J[0]!) * st, a1 = J[1]! + (1.25 - J[1]!) * st;
+      upper[s]!.pos[0] = sx; upper[s]!.pos[1] = sy; upper[s]!.pos[2] = side * 0.04; upper[s]!.rot[2] = a0;
+      upper[s]!.rot[1] = -side * sp;
+      fore[s]!.pos[0] = sp ? sx + UPPER * ca * Math.cos(a0) : J[2]!; fore[s]!.pos[1] = sp ? sy + UPPER * ca * Math.sin(a0) : J[3]!;
+      fore[s]!.pos[2] = az - side * 0.15 + side * UPPER * sa; fore[s]!.rot[2] = a1;
+      fore[s]!.rot[1] = -side * sp;
+      upper[s]!.rot[0] = fore[s]!.rot[0] = 0;
     }
   }
   /** New colours (a theme change). */

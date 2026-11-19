@@ -3,11 +3,14 @@
 // speed, then a big steel kicker and a tabletop landing every so often, forever, sized for your bike
 // (a full-gas jump lands on the down ramp), banks and a stadium wall either side, crowd stands and
 // light towers along the line; at night the steel glows with neon and the stands twinkle, by day it
-// is pastel low-poly. A minute from the first gas. In the air hold
-// TRICK (L or E) and the stick picks a trick (none: SKY PLANK, forward: LANTERN, back: CANNONBALL,
-// side: PIXEL SPLIT); with no trick the stick pitches the bike (weight back all the way: a flip). Put
-// the trick away and land on the down ramp, clean, to score; land with the trick out and it is a
-// bail. At the end five judges score the run, and the judges pay.
+// is pastel low-poly. A minute from the first gas. Freestyle tricks are controlled like the endless
+// rides' stunts: in the air TRICK (C, L or E, the gamepad's combo button, or the rocker's slide-out
+// TRICK button) throws the next trick up the ladder (./tricks.ts: SEAT GRAB to HANDSTAND; tap again
+// for the next, hold to keep it out for more), the stick left or right whips the bike, back (or
+// forward) turns a flip, a trick out too (a BACKFLIP NAC-NAC). Put the trick away and straighten the
+// whip before the landing, on the down ramp, clean, to score; land with either still out and it is a
+// bail. The judges mark each clean landing; at the end five judges score the run, and the judges pay.
+// The poses are ./fmx.ts, eased each frame.
 // Bricks: the kernel, diorama, terrain, drive (`chase`), input, pad, sound. The run is ./show.ts and
 // the scorer ./tricks.ts, both headless.
 import { walkUi } from "../../bike/walk-ui.ts";
@@ -25,8 +28,10 @@ import { modeStage } from "../race/scene.ts";
 import type { ModeCtx, ModeRun } from "../mode.ts";
 import { rig, type Rig, type RigColors } from "../../bike/rig.ts";
 import { pool, voice, gamepad, type Pool } from "../../bike/kit.ts";
-import { TRICKS, CLEAN, SC, CB, PTS, LFLIPS, AIRT, BEST, FLIPS, CLEANS, CRASHES, JUMPS, SEEN } from "./tricks.ts";
-import { DONE, E_CRASH, E_END, E_LAND, E_RESPAWN, E_RESET, E_STUCK, E_START, E_TRICK, READY, RUN, RUN_T, airShow } from "./show.ts";
+import { TRICKS, CLEAN, SC, CB, PTS, LFLIPS, BEST, FLIPS, CLEANS, CRASHES, JUMPS, SEEN, WHIPS, LTOP, LTRICKS, LWHIPS, LMARK, DONE_N, HOLD_CAP } from "./tricks.ts";
+import { DONE, E_CRASH, E_END, E_LAND, E_RESPAWN, E_RESET, E_STUCK, E_START, E_TRICK, E_DONE, E_WHIP, E_WHIPPED, READY, RUN, RUN_T, airShow } from "./show.ts";
+import { ease, bikeTurn } from "./fmx.ts";
+import { callout } from "../callout.ts";
 import { BANK_W, HW, LDECK, LKH, LKL, LSP, LX0, ROLL_H, ROLL_X, SCELL, SCOLS, WALL_AT, heightAt } from "./line.ts";
 import { speedo } from "../speedo.ts";
 import { keysHTML, menuKeys, paintMute as paintMuteK, paintView } from "../keys.ts";
@@ -57,7 +62,7 @@ const DUST = 120, SPARK = 60, FANS = 160;
 /** Scenery sets along the line (one per jump: the kicker's posts, the flags, a stand, towers), moved on as you ride. */
 const SETS = 4, SET_FANS = FANS / SETS;
 const CRASH_NAME: Record<number, string> = { [LOOP]: "LOOPED IT!", [ENDO]: "NOSED IN!", [CASE]: "CASED IT!", [BAIL]: "BAILED!", 5: "WIPEOUT!" };
-const KEYS_HINT = "In the air: L + stick for a trick · S held for a flip";
+const KEYS_HINT = "In the air: C for tricks (again for the next, hold for more) · A/D whip · S flip";
 
 export function mountAir(ctx: ModeCtx): ModeRun {
   const stage = modeStage(ctx.host, "ba");
@@ -72,7 +77,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
   const play = L.add(document.createElement("button"));
   play.type = "button";
   play.className = "ba-play";
-  play.setAttribute("aria-label", "Big Air: Space or J for gas, K or Shift to brake, W and S (or up and down) shift your weight (in the air: pitch, all the way back for a flip), A and D steer; in the air hold L or E for a trick, the stick picks which. V changes the view, M mutes, P or Escape pauses");
+  play.setAttribute("aria-label", "Big Air: Space or J for gas, K or Shift to brake, W and S (or up and down) shift your weight (in the air: pitch, all the way back for a flip), A and D steer; in the air C (or L or E) throws a trick, again for the next one, held for more points; A and D whip the bike. V changes the view, M mutes, P or Escape pauses");
   const hud = L.add(document.createElement("div"));
   hud.className = "ba-hud";
   hud.innerHTML = `<div class="ba-head"><p class="ba-top"><b class="ba-chip ba-score"><span>0</span><i>×1</i></b><b class="ba-chip ba-time"><span>1:00</span></b><b class="ba-chip ba-ride"><span>#${ctx.number} ${ctx.bike.model.name}</span></b></p><p class="ba-hint"></p></div><p class="ba-toast" hidden></p><p class="ba-live" aria-live="polite"></p><p class="ba-keys">${keysHTML("ba", { reset: "Back to the run-in (R)", theme: !!ctx.theme })}</p>`;
@@ -90,23 +95,19 @@ export function mountAir(ctx: ModeCtx): ModeRun {
   hud.append(stuckEl);
   let resetQ = 0;
   stage.append(canvas, play, hud);
+  // The trick callout (../callout.ts, as in the endless rides): each trick's name, its points, the landing.
+  const call = callout(hud, ctx.reduced);
   if (ctx.attract) hud.hidden = true;
-  const snd = sound(engine, { cues: { start: "ready", trick: "click", clean: "power", sketchy: "click", crash: "boom", end: "win" }, volume: 0.1, on: ctx.sound && !ctx.attract });
+  const snd = sound(engine, { cues: { start: "ready", trick: "click", cheer: "power", clean: "power", sketchy: "click", crash: "boom", end: "win" }, volume: 0.1, on: ctx.sound && !ctx.attract });
   const vox = voice();
   vox.on = snd.on;
   const c = controls(engine, { keys: { left: [], right: [], fwd: [], back: [], gas: [], brake: [], trick: [], reset: [] }, target: play });
   const GAS = c.id("gas"), BRAKE = c.id("brake"), LEFT = c.id("left"), RIGHT = c.id("right"), FWD = c.id("fwd"), BACK = c.id("back"), TRICK = c.id("trick"), RESETK = c.id("reset");
-  const ICON_TRICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 3 7 7 .6-5.4 4.6 1.7 7.3L12 17.6 5.7 21.5l1.7-7.3L2 9.6 9 9z" fill="currentColor"/></svg>';
-  const thePad = pad(engine, c, {
-    scheme: "stick",
-    // Gas and brake on the throttle rocker (../../bike/rocker.ts); TRICK an icon key beside it.
-    actions: [
-      { intent: "trick", label: "", icon: ICON_TRICK, name: "Trick (L)", key: "L", role: "flag", hold: true },
-    ],
-    host: stage,
-  });
+  // No pad keys: gas and brake on the throttle rocker (../../bike/rocker.ts), and TRICK slides out of
+  // its gas side while the gas is held (Wheelie City's COMBO button, its word TRICK).
+  const thePad = pad(engine, c, { scheme: "stick", actions: [], host: stage });
   thePad.el.classList.add("ba-pad");
-  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal });
+  const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal, combo: "trick", comboWord: "TRICK" });
   // Walking the bike: the WALK chip, and on a touch screen the one-time "stick back" hint.
   const coarse = matchMedia("(pointer: coarse)"), walkHud = walkUi(hud, () => coarse.matches && !ctx.attract);
   if (ctx.attract) thePad.el.hidden = true;
@@ -200,12 +201,12 @@ export function mountAir(ctx: ModeCtx): ModeRun {
   }
 
   // ---- state ----
-  const I = new Float64Array(6), GP = new Float64Array(7), tmp = new Float64Array(3), tmp2 = new Float64Array(3);
+  const I = new Float64Array(6), GP = new Float64Array(8), BT = new Float64Array(4), tmp = new Float64Array(3), tmp2 = new Float64Array(3);
   const PD = new Float64Array(6);
   PD[5] = -1;
   const V = new Float64Array(8);
   V[0] = V[1] = 1;
-  let view = 1, auto = !!ctx.auto || !!ctx.attract, dirty = true, hudDirty = true, shake = 0, toastT = 0, endAt = -1, emitK = 0, cheer = 0, paused = false, ended = false, chaseSet = false;
+  let whipped = false, lastR = 0, view = 1, auto = !!ctx.auto || !!ctx.attract, dirty = true, hudDirty = true, shake = 0, toastT = 0, endAt = -1, emitK = 0, cheer = 0, paused = false, ended = false, chaseSet = false;
   const was = new Float64Array(8).fill(-1);
   const TABLE = { yaw: 0, pitch: 0.78, dist: 40, tx: 0, ty: 0, tz: 0.6, ox: 0, oy: 0, fov: 0.62 };
   // Fixed for the event (no zoom; set once from the stage shape at the start).
@@ -237,15 +238,19 @@ export function mountAir(ctx: ModeCtx): ModeRun {
       for (let n = q * SET_FANS; n < (q + 1) * SET_FANS; n++) fans.P.x[n] = FAN[n * 3]! + x;
     }
   }
-  /** The rider's trick pose from the trick out and how far (see rig's TRICK_POSE). */
-  function pose() {
-    const T = g.T, a = show.trickAmount, id = show.trick;
-    T.fill(0);
-    if (id === 0) (T[1] = a), (T[3] = 0.55 * a), (T[4] = 0.35 * a);
-    else if (id === 1) (T[0] = a), (T[6] = 1), (T[4] = 0.5 * a);
-    else if (id === 2) (T[2] = a), (T[1] = 0.25 * a), (T[4] = 0.45 * a);
-    else if (id === 3) (T[7] = a), (T[4] = 0.15 * a);
+  /** The rider's trick pose (./fmx.ts: eased toward the trick out, `k` this frame), the bike turned
+   *  under it (the whip, the cross-up). */
+  function pose(k = 1) {
+    const id = show.trick, a = show.trickAmount;
+    ease(g.T, id, a, k);
     g.pose(me, me.air > 0 || Math.abs(me.speed) > 4 ? 0.9 : 0.4);
+    if (!me.crashed) {
+      bikeTurn(BT, id, a, show.whip);
+      BT[2] = BT[2]! + (BT[0]! - BT[2]!) * k;
+      BT[3] = BT[3]! + (BT[1]! - BT[3]!) * k;
+      g.root.rot[0] = g.root.rot[0]! + BT[2]!;
+      g.root.rot[1] = g.root.rot[1]! + BT[3]!;
+    } else BT[2] = BT[3] = 0;
     walkHud.update(me);
     const x = me.pos[0]!, z = me.pos[2]!, inside = x > t.x0 && x < t.x0 + SCOLS * SCELL, lift = inside ? me.pos[1]! - t.height(x, z) : 9;
     tv.shadow(0, x, z, 1.0, inside ? Math.max(0, 0.38 - lift * 0.06) : 0);
@@ -276,20 +281,42 @@ export function mountAir(ctx: ModeCtx): ModeRun {
       const type = show.ev[k * 2]!, val = show.ev[k * 2 + 1]!;
       hudDirty = true;
       if (type === E_START) engine.events.emit("start"), toast("GO! 1:00 ON THE CLOCK", "go"), say("Go");
-      else if (type === E_TRICK) engine.events.emit("trick"), toast(TRICKS[val]!, "trick");
+      else if (type === E_TRICK) engine.events.emit("trick"), call.show(TRICKS[val]!, "HOLD IT", "go", 9);
+      else if (type === E_DONE) {
+        if (val === 0) call.hide();
+        else call.show(TRICKS[sc.last]!, `+${val.toLocaleString("en-US")} · LAND IT`, "air", 1.2), say(`${TRICKS[sc.last]}, ${val} points: land it`);
+      } else if (type === E_WHIP) {
+        const n = val % 100, big = val >= 100;
+        call.show(n > 1 ? `${big ? "BIG " : ""}WHIP ×${n}` : big ? "BIG WHIP!" : "WHIP!", "STRAIGHTEN IT BEFORE YOU LAND", "air", 1.2);
+        engine.events.emit("trick");
+        say(n > 1 ? `Whip times ${n}` : "Whip");
+      } else if (type === E_WHIPPED) whipped = true;
       else if (type === E_LAND) {
-        const S = sc.S, clean = val === CLEAN, flips = S[LFLIPS]!;
+        const S = sc.S, clean = val === CLEAN, flips = S[LFLIPS]!, top = S[LTOP]!, n = S[LTRICKS]!, w = S[LWHIPS]!;
         engine.events.emit(clean ? "clean" : "sketchy");
-        const what = flips ? (flips > 1 ? `${flips}× BACKFLIP` : me.airSpin < 0 ? "FRONTFLIP" : "BACKFLIP") + " · " : "";
-        toast(`${what}+${S[PTS]!.toLocaleString("en-US")}${clean ? (S[CB]! > 1 ? ` · COMBO ×${S[CB]}` : " · CLEAN") : " · SKETCHY"}`, clean ? "clean" : "meh");
-        if (S[PTS]! > 600) cheer = 1.6;
-        say(`${what}${S[PTS]} points`);
+        // The jump's name: the flip and its biggest trick (a BACKFLIP NAC-NAC), the whips.
+        const flip = flips ? (flips > 1 ? `${flips}× ` : "") + (me.airSpin < 0 ? "FRONTFLIP" : "BACKFLIP") : "";
+        const name = (flip && top >= 0 ? `${flip} ${TRICKS[top]}` : flip || (top >= 0 ? TRICKS[top]! : w ? (w > 1 ? `${w}× WHIP` : "WHIP") : "")) + (w && (flip || top >= 0) ? " + WHIP" : "");
+        const pts = `+${S[PTS]!.toLocaleString("en-US")}`, more = (n > 1 ? ` · ${n} TRICKS` : "") + (S[CB]! > 1 && clean ? ` · COMBO ×${1 + S[CB]!}` : "");
+        if (clean && name) {
+          // The judges react: their mark for the jump, out of 10.
+          call.show(name, `${pts}${more} · JUDGES ${S[LMARK]!.toFixed(1)}`, "go", 1.8);
+          engine.events.emit("cheer");
+          cheer = Math.min(2.4, 0.8 + S[LMARK]! / 6);
+        } else if (name || S[PTS]! > 0) {
+          call.hide();
+          toast(`${name ? name + " · " : ""}${pts}${clean ? " · CLEAN" : " · SKETCHY"}`, clean ? "clean" : "meh");
+        }
+        say(`${name ? name + ", " : ""}${S[PTS]} points${clean && name ? `, judges ${S[LMARK]!.toFixed(1)}` : ""}`);
         dust.ring(rnd, me.pos[0]!, me.pos[1]! - 0.6, me.pos[2]!, clean ? 10 : 16, 2.4, 1, 0.8, 0.2, 0.55);
       } else if (type === E_CRASH) {
+        call.hide();
         shake = ctx.reduced ? 0 : 0.5;
         engine.events.emit("crash");
-        toast(CRASH_NAME[val] || "WIPEOUT!", "bad");
-        say(CRASH_NAME[val] || "Wipeout");
+        const nm = whipped ? "WHIPPED OUT!" : CRASH_NAME[val] || "WIPEOUT!";
+        whipped = false;
+        toast(nm, "bad");
+        say(nm);
         for (let q = 0; q < 24; q++) {
           const a = rnd() * TAU, u = 0.4 + rnd();
           spark.puff(me.pos[0]!, me.pos[1]!, me.pos[2]!, Math.cos(a) * 4 * u, 2 + rnd() * 4, Math.sin(a) * 4 * u, 0.5 + rnd() * 0.5, 0.07, 1);
@@ -332,14 +359,14 @@ export function mountAir(ctx: ModeCtx): ModeRun {
     const secs = Math.ceil(show.clock);
     if (was[2] !== secs) (was[2] = secs), (timeEl.textContent = `${(secs / 60) | 0}:${("" + (secs % 60)).padStart(2, "0")}`), timeEl.parentElement!.classList.toggle("ba-low", secs <= 10 && ph === RUN);
     const touch = !!thePad.el.offsetParent;
-    const hint = ph === READY ? (touch ? "Hold GAS to start the clock" : "Space to go · " + KEYS_HINT) : ph === RUN && show.clock > RUN_T - 8 ? (touch ? "In the air: TRICK + stick · stick back for a flip" : KEYS_HINT) : "";
+    const hint = ph === READY ? (touch ? "Hold GAS to start the clock" : "Space to go · " + KEYS_HINT) : ph === RUN && show.clock > RUN_T - 8 ? (touch ? "In the air: slide onto TRICK · stick side to whip, back to flip" : KEYS_HINT) : "";
     if (hintEl.textContent !== hint) hintEl.textContent = hint;
   }
   function stats() {
     const S = sc.S;
     let seen = 0;
     for (let i = 0; i < TRICKS.length; i++) seen += (S[SEEN]! >> i) & 1;
-    return m.stats({ finished: show.phase === DONE, judges: show.phase === DONE ? sc.JD[5]! : 0, flips: S[FLIPS]!, score: S[SC]!, where: "arena", summary: `${S[SC]!.toLocaleString("en-US")} pts · best jump ${S[BEST]!.toLocaleString("en-US")} · ${seen}/${TRICKS.length} tricks · ${S[FLIPS]} ${S[FLIPS] === 1 ? "flip" : "flips"} · ${S[CLEANS]}/${S[JUMPS]} clean` });
+    return m.stats({ finished: show.phase === DONE, judges: show.phase === DONE ? sc.JD[5]! : 0, flips: S[FLIPS]!, score: S[SC]!, where: "arena", summary: `${S[SC]!.toLocaleString("en-US")} pts · best jump ${S[BEST]!.toLocaleString("en-US")} · ${seen}/${TRICKS.length} tricks · ${S[FLIPS]} ${S[FLIPS] === 1 ? "flip" : "flips"} · ${S[WHIPS]} ${S[WHIPS] === 1 ? "whip" : "whips"} · ${S[CLEANS]}/${S[JUMPS]} clean` });
   }
   function end() {
     endAt = -1;
@@ -494,11 +521,11 @@ export function mountAir(ctx: ModeCtx): ModeRun {
     ctx.fillText(id >= 0 ? TRICKS[id]! : `AIR ${me.air.toFixed(1)}s`, x + h + 2, y + h * 0.36);
     // The trick's hold: how long it has been all the way out this jump.
     if (id >= 0) {
-      const held = sc.J[id]!, bw = w - h - 12 * s;
+      const held = sc.held, bw = w - h - 12 * s;
       ctx.fillStyle = P.night ? "#2a2545" : "#e8e4f0";
       ctx.fillRect(x + h + 2, y + h * 0.62, bw, 8 * s);
       ctx.fillStyle = show.trickAmount > 0.85 ? P.hot : P.ok;
-      ctx.fillRect(x + h + 2, y + h * 0.62, bw * Math.min(1, held / 1.2), 8 * s);
+      ctx.fillRect(x + h + 2, y + h * 0.62, bw * Math.min(1, held / HOLD_CAP), 8 * s);
     } else ctx.fillText(Math.abs(turned) > 1 ? `${((Math.abs(turned) / TAU) * 360) | 0}°` : "", x + h + 2, y + h * 0.7);
   }
 
@@ -535,7 +562,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
       I[1] = c.down(BRAKE) || GP[3]! > 0.2 ? 1 : 0;
       I[2] = (+c.down(BACK) - +c.down(FWD)) || (c.stick.active ? c.stick.y : 0) || GP[1]! || (PD[0] ? Math.max(-1, Math.min(1, (PD[4]! - PD[2]!) / drag)) : 0);
       I[3] = (+c.down(RIGHT) - +c.down(LEFT)) || (c.stick.active ? c.stick.x : 0) || GP[0]! || (PD[0] ? Math.max(-1, Math.min(1, (PD[3]! - PD[1]!) / drag)) : 0);
-      I[4] = c.down(TRICK) || GP[4]! > 0.5 ? 1 : 0;
+      I[4] = c.down(TRICK) || GP[4]! > 0.5 || GP[7]! > 0.5 ? 1 : 0;
       I[5] = resetQ || c.down(RESETK) || GP[6]! > 0.5 ? 1 : 0;
       resetQ = 0;
       if (paused || ended) I.fill(0);
@@ -545,6 +572,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
       if (endAt > 0) moving = true;
       if (show.n) events(), (moving = true);
       if (stepFx(dt)) moving = true;
+      if (call.step(dt)) moving = true;
       if (stepCam(dt)) moving = true;
       placeSets();
       if (shake > 0) (shake = Math.max(0, shake - dt)), (moving = true);
@@ -556,7 +584,10 @@ export function mountAir(ctx: ModeCtx): ModeRun {
       vox.set(me.rpm, me.throttle, (show.phase === RUN || show.phase === READY) && !me.crashed && !paused && !ended, me.gear, me.speed);
       if (!dirty) return;
       dirty = false;
-      pose();
+      // The pose eases toward the trick (about 70 ms to most of the way; at once after a long gap).
+      const fdt = Math.min(0.25, Math.max(0, engine.time - lastR));
+      lastR = engine.time;
+      pose(1 - Math.exp(-16 * fdt));
       const cam = dio.cam, k = shake * shake * 10, sx = Math.sin(engine.time * 71) * k, sy = Math.cos(engine.time * 53) * k * 0.7;
       (cam.ox += sx), (cam.oy += sy);
       dio.draw();
@@ -564,7 +595,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
     },
   });
 
-  const MAP: Record<string, string> = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowUp: "fwd", KeyW: "fwd", ArrowDown: "back", KeyS: "back", Space: "gas", KeyJ: "gas", KeyK: "brake", ShiftLeft: "brake", ShiftRight: "brake", KeyL: "trick", KeyE: "trick", KeyR: "reset" };
+  const MAP: Record<string, string> = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowUp: "fwd", KeyW: "fwd", ArrowDown: "back", KeyS: "back", Space: "gas", KeyJ: "gas", KeyK: "brake", ShiftLeft: "brake", ShiftRight: "brake", KeyC: "trick", KeyL: "trick", KeyE: "trick", KeyR: "reset" };
   const wake = () => vox.wake(me.power);
   const src = (e: Event) => (e.composedPath?.()[0] ?? e.target) as Element | null;
   window.addEventListener("keydown", (e) => {
@@ -626,7 +657,7 @@ export function mountAir(ctx: ModeCtx): ModeRun {
     },
     get state() {
       const S = sc.S, ph = show.phase;
-      return { phase: ph === READY ? "ready" : ph === RUN ? "run" : ph === DONE ? "done" : "idle", speed: me.speed, walking: me.walking, clock: show.clock, score: S[SC]!, combo: S[CB]!, trick: show.trick, air: me.air, crashes: S[CRASHES]!, jumps: S[JUMPS]!, view: view ? "chase" : "arena", judges: sc.JD[5]!, ended, x: me.pos[0]!, z: me.pos[2]!, far: show.far, jump: show.jump, k: G[0]!, landedOn: show.landedOn, faces: tv.stats.faces, slides: show.strip.stats[0]! };
+      return { phase: ph === READY ? "ready" : ph === RUN ? "run" : ph === DONE ? "done" : "idle", speed: me.speed, walking: me.walking, clock: show.clock, score: S[SC]!, combo: S[CB]!, trick: show.trick, amount: show.trickAmount, held: sc.held, whip: show.whip, ladder: sc.ladder, tricks: S[DONE_N]!, whips: S[WHIPS]!, mark: S[LMARK]!, air: me.air, crashes: S[CRASHES]!, jumps: S[JUMPS]!, view: view ? "chase" : "arena", judges: sc.JD[5]!, ended, x: me.pos[0]!, z: me.pos[2]!, far: show.far, jump: show.jump, k: G[0]!, landedOn: show.landedOn, faces: tv.stats.faces, slides: show.strip.stats[0]! };
     },
     get camera() {
       return { dist: view ? dio.cam.dist : chaseO.dist, fov: dio.cam.fov, view: view ? "chase" : "table" };

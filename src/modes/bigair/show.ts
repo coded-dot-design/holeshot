@@ -4,14 +4,14 @@
 // lands on the landing's down ramp; banks either side and a stadium wall past them, so the bike never
 // leaves the line and never has to turn round. The bike is ../../bike/bike.ts with the freestyle feel
 // (a lighter gravity for hang time, more pitch in the air), the tricks are ./tricks.ts. The run: a
-// minute from the first gas; in the air, TRICK with the stick picks a trick (the stick then poses the
-// rider instead of pitching the bike); weight back (or forward) with no trick turns a flip; land on
-// the down ramp, clean, to score (the deck scores less); land with the trick still out and it is a
-// bail. Then five judges score it. `autopilot` rides it (the poster, the tests). Deterministic (the
+// minute from the first gas; in the air TRICK (I[4]: tap or hold) throws the next trick up the ladder
+// (./tricks.ts), the stick left or right whips the bike, weight back (or forward) turns a flip (with a
+// trick out too: a BACKFLIP NAC-NAC); land on the down ramp, clean, to score (the deck scores less);
+// land with a trick still out, or still whipped, and it is a bail. Then five judges score it. `autopilot` rides it (the poster, the tests). Deterministic (the
 // same bike, the same line) and zero allocation per step in the run's own code.
-import { bike, type Bike, type BikeShape, type Power, TWO_STROKE, B_CRASH, B_LAND } from "../../bike/bike.ts";
+import { bike, type Bike, type BikeShape, type Power, TWO_STROKE, B_CRASH, B_LAND, BAIL } from "../../bike/bike.ts";
 import { pace } from "../../model/pace.ts";
-import { tricks, TRICKS, HOP } from "./tricks.ts";
+import { tricks, TRICKS, HOP, WHIPPED, T_TRICK, T_DONE, T_WHIP } from "./tricks.ts";
 import { atan } from "../../math.ts";
 import { PROGRESS, PROMPT_T, AUTO_T } from "../unstuck.ts";
 import { FK, HW, L as LL, LSP, LX0, OUT, PF, P_DOWN, P_FLOOR, P_KICK, P_ROLL, ROLL_X, footAt, kickAt, knuckleAt, lineFor, prof, strip } from "./line.ts";
@@ -24,6 +24,9 @@ export const RUN_T = 60;
 export const E_START = 1, E_AIR = 2, E_TRICK = 3, E_LAND = 4, E_CRASH = 5, E_RESPAWN = 6, E_END = 7, E_FLIP = 8;
 /** Unstuck: the prompt (1 up, 0 down), a reset (1 asked for, 2 automatic). The reset input is I[5] = 1. */
 export const E_STUCK = 9, E_RESET = 10;
+/** A trick done in the air (points pending: 0, it never got all the way out), a whip (its count in the
+ *  jump, + 100 for a big one), landed still whipped (the crash follows). */
+export const E_DONE = 11, E_WHIP = 12, E_WHIPPED = 13;
 /** The freestyle feel: lighter gravity (hang time), more pitch from the rider in the air. */
 export const GRAVITY = 14, AIR_PITCH = 13;
 const RESPAWN = 1.5;
@@ -43,14 +46,14 @@ export function airShow(seed = 20261120, me: { power: Power; shape?: BikeShape }
   const walkable = (p: Float64Array) => p[0]! > ROLL_X - 0.5 && Math.abs(p[1]!) < HW + 8;
   S0.follow(START_X);
   const b: Bike = bike(t, freestyle(me.power), { ...me.shape, caseDrop: (me.shape?.caseDrop ?? 26) * Math.sqrt(GRAVITY / 20), gravity: GRAVITY, walk: walkable });
-  const sc = tricks();
-  // S: phase, clock (left), started, best x, trick id (−1 none), trick amount, last pitch, autopilot jump count, air flag, flip planned,
+  const sc = tricks({ seed });
+  // S: phase, clock (left), started, best x, the autopilot's button (last step), its whip side, last pitch, autopilot jump count, air flag, flip planned,
   // unstuck seconds, unstuck mark, the jump the bike is on (its index), the last landing's part (FK) and x.
   const S = new Float64Array(16);
-  const PH = 0, CLK = 1, FAR = 3, TID = 4, TAM = 5, PP = 6, AJ = 7, AIRF = 8, FL = 9, STL = 10, MK = 11, JI = 12, LK = 13, LXX = 14;
-  const ev = new Float64Array(16);
+  const PH = 0, CLK = 1, FAR = 3, AB = 4, AW = 5, PP = 6, AJ = 7, AIRF = 8, FL = 9, STL = 10, MK = 11, JI = 12, LK = 13, LXX = 14;
+  const ev = new Float64Array(32);
   let nev = 0;
-  const emit = (type: number, v: number) => void (nev < 8 && ((ev[nev * 2] = type), (ev[nev * 2 + 1] = v), nev++));
+  const emit = (type: number, v: number) => void (nev < 16 && ((ev[nev * 2] = type), (ev[nev * 2 + 1] = v), nev++));
   const IN = new Float64Array(6), LD = new Float64Array(2), G4 = new Float64Array(4);
 
   /** The bike at x on the line, facing on (+x), the strip slid round it. */
@@ -66,7 +69,6 @@ export function airShow(seed = 20261120, me: { power: Power; shape?: BikeShape }
   function reset(power?: Power) {
     if (power) b.use(freestyle(power)), size(power);
     S.fill(0);
-    S[TID] = -1;
     S[CLK] = RUN_T;
     sc.reset();
     nev = 0;
@@ -111,14 +113,15 @@ export function airShow(seed = 20261120, me: { power: Power; shape?: BikeShape }
     }
     if (!why) return false;
     runIn();
-    S[TID] = -1;
-    S[TAM] = 0;
+    sc.drop();
     S[MK] = b.pos[0]!;
     S[STL] = 0;
     emit(E_RESET, why);
     return true;
   }
-  /** Inputs that ride the line: out = [gas, brake, lean, steer, trick held]. Full gas on the ground. */
+  /** Inputs that ride the line: out = [gas, brake, lean, steer, trick held]. Full gas on the ground; in
+   *  the air every other jump a back flip, and tricks up the ladder (tapped or held a little, put
+   *  away in time) and on every third jump a whip. */
   function autopilot(out: Float64Array) {
     // Steer back onto the line (z = 0), heading on.
     const fx = b.cy, fz = -b.sy, ax = 6 + Math.max(0, b.speed) * 0.3, uz = -b.pos[2]!, ul = Math.sqrt(ax * ax + uz * uz);
@@ -136,13 +139,20 @@ export function airShow(seed = 20261120, me: { power: Power; shape?: BikeShape }
       const flip = S[FL] === 1;
       out[0] = 0;
       out[1] = 0;
+      // The stick's side: a whip on every third jump with no flip, kicked out and back in time.
+      const tl = LD[1]!, aj = S[AJ]!;
+      out[3] = !flip && aj % 3 === 2 && b.air > 0.1 && tl > 0.75 ? (aj % 2 ? 1 : -1) : 0;
+      // The button: a trick when none is out (a step off between presses), held a little, let go in time.
+      let btn = 0;
+      if (b.air > 0.12 && tl > 0.5) btn = sc.trick < 0 ? (S[AB] === 0 && tl > (flip ? 1 : 0.7) ? 1 : 0) : sc.held < 0.22 + 0.14 * (aj % 3) ? 1 : 0;
+      S[AB] = btn;
+      out[4] = btn;
       // Pull until the rotation left to stop (ω² / 2α) brings it round to the slope.
       if (flip && p + (rate > 0 ? (rate * rate) / (2 * AIR_PITCH * 0.6) : 0) < 6.283185307179586 + slope) out[2] = 1;
       else {
         // Level to the landing: pitch (less the flip) matched to the slope it meets.
         const cur = flip ? p - 6.283185307179586 : p, err = slope - (cur + rate * (flip ? 0.45 : 0.3));
         out[2] = Math.max(-1, Math.min(1, err * 3));
-        if (!flip && b.air > 0.15 && LD[1]! > 0.5) out[4] = 1;
       }
     } else {
       // Full gas, the throttle shut only to bring a wheelie down before it loops.
@@ -153,11 +163,6 @@ export function airShow(seed = 20261120, me: { power: Power; shape?: BikeShape }
       out[2] = FK[0] === P_KICK ? 0.25 : b.rel > 0.12 ? -1 : b.rel > 0.05 ? -0.4 : 0;
     }
     return out;
-  }
-
-  /** The trick the stick picks while TRICK is held: fwd LANTERN, back CANNONBALL, side PIXEL SPLIT, none SKY PLANK. */
-  function pick(lean: number, steer: number) {
-    return lean < -0.5 ? 1 : lean > 0.5 ? 3 : steer > 0.5 || steer < -0.5 ? 2 : 0;
   }
 
   /** Advance dt: I = [gas, brake, lean, steer, trick held, reset]; `auto` rides it. True while anything moves. */
@@ -179,30 +184,24 @@ export function airShow(seed = 20261120, me: { power: Power; shape?: BikeShape }
       events();
       if (b.crashTime > RESPAWN) {
         runIn();
-        S[TID] = -1;
-        S[TAM] = 0;
+        sc.drop();
         if (!auto) (S[MK] = b.pos[0]!), (S[STL] = 0);
         emit(E_RESPAWN, 0);
       }
       if (S[CLK] === 0 && S[PH] === RUN) end();
       return true;
     }
-    // The trick: TRICK held in the air with the stick picks one and poses the rider (no pitch from the
-    // stick while it is out); let go and the rider gets back on.
-    const air = b.air > 0.08, want = air && I[4]! > 0;
-    let lean = I[2]!;
-    if (want) {
-      const id = auto ? (S[AJ]! >> 1) % 4 : pick(I[2]!, I[3]!);
-      if (S[TID]! !== id) (S[TID] = id), (S[TAM] = Math.min(S[TAM]!, 0.3)), emit(E_TRICK, id);
-      S[TAM] = Math.min(1, S[TAM]! + 5 * dt);
-      lean = 0;
-    } else S[TAM] = Math.max(0, S[TAM]! - 6 * dt);
-    if (S[TAM] === 0) S[TID] = -1;
-    b.set(S[PH] === RUN || S[PH] === READY ? I[0]! : 0, I[1]!, lean, I[3]!, S[TAM]!);
+    // The tricks (./tricks.ts): TRICK in the air throws the next one up the ladder, the stick's side
+    // whips; the stick's weight still pitches the bike (a flip with a trick out is a combo).
+    sc.step(dt, b.air > 0.08 && S[PH] === RUN, I[4]!, I[3]!);
+    for (let k = 0; k < sc.n; k++) {
+      const ty = sc.ev[k * 2]!, v = sc.ev[k * 2 + 1]!;
+      emit(ty === T_TRICK ? E_TRICK : ty === T_DONE ? E_DONE : E_WHIP, v);
+    }
+    sc.clear();
+    b.set(S[PH] === RUN || S[PH] === READY ? I[0]! : 0, I[1]!, I[2]!, I[3]!, sc.amount);
     const moving = b.step(dt);
     if (b.air > 0) {
-      sc.air(dt);
-      if (S[TID]! >= 0) sc.hold(S[TID]!, S[TAM]!, dt);
       sc.spin(b.airSpin);
       S[AIRF] = 1;
     }
@@ -223,7 +222,9 @@ export function airShow(seed = 20261120, me: { power: Power; shape?: BikeShape }
         S[LK] = FK[0]!;
         S[LXX] = b.pos[0]!;
         const kind = sc.land(v, FK[0] === P_DOWN);
-        if (kind !== HOP) emit(E_LAND, kind), (S[AJ] = S[AJ]! + 1);
+        // Still whipped: down it goes (its B_CRASH comes round this loop: the crash below).
+        if (kind === WHIPPED) emit(E_WHIPPED, 0), b.knock(BAIL);
+        else if (kind !== HOP) emit(E_LAND, kind), (S[AJ] = S[AJ]! + 1);
         S[AIRF] = 0;
       } else if (type === B_CRASH) sc.crash(), emit(E_CRASH, v), (S[AIRF] = 0), (S[AJ] = S[AJ]! + 1);
     }
@@ -253,9 +254,10 @@ export function airShow(seed = 20261120, me: { power: Power; shape?: BikeShape }
     get phase() { return S[PH]!; },
     /** Seconds left. */
     get clock() { return S[CLK]!; },
-    /** The trick out (−1 none) and how far out (0..1). */
-    get trick() { return S[TID]!; },
-    get trickAmount() { return S[TAM]!; },
+    /** The trick out (−1 none) and how far out (0..1); the whip's angle (−1..1). */
+    get trick() { return sc.trick; },
+    get trickAmount() { return sc.amount; },
+    get whip() { return sc.whip; },
     /** The furthest x reached (the distance down the line from the deck's edge is far − 0). */
     get far() { return S[FAR]!; },
     /** The jump the bike is on (its index; −1 on the roll-in). */
