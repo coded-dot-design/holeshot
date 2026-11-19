@@ -8,6 +8,7 @@
 // the line puts you back on it just behind the feature, out in the open you get up where you fell,
 // and off the table you go to the nearest spawn point; a post (a tree) is a crash. Clean landings
 // of big air and flips count as tricks (Free Ride pays a little for them).
+import { hop } from "../../bike/hop.ts";
 import { bike, type Bike, type BikeShape, type Power, B_CRASH, B_LAND, B_WHEELIE, B_STOPPIE, STRIKE, BAIL } from "../../bike/bike.ts";
 import { tricks, BANKED, KIND } from "../wheelie/tricks.ts";
 import { stunts, assist, FENDER_LOOP, ST_DRAG, ST_BANK, ST_LOST, CRASH as ST_CRASH } from "../stunts.ts";
@@ -36,7 +37,7 @@ export const E_TRICK = 10;
  *  the stunts' own ring (`st`). */
 export const E_GROUND = 13, E_DRAG = 14, E_BANKED = 15, E_LOST = 16;
 
-export function freeRun(track: Track | RideMap | (Track & EndlessTrack), me: { power: Power; shape?: BikeShape; sweet?: number; bar?: { dragX: number } | null }, limit = 600, ground?: Terrain) {
+export function freeRun(track: Track | RideMap | (Track & EndlessTrack), me: { power: Power; shape?: BikeShape; sweet?: number; bar?: { dragX: number } | null; hop?: number }, limit = 600, ground?: Terrain) {
   const { HX, HZ, NT, TRACK, YAW, NR, near, WANT, FK, PF, prof, sAt } = track;
   const map = "isMap" in track ? track : null, Wd = "isEndless" in track ? track.world : null;
   if (Wd) Wd.follow(0, 0);
@@ -49,8 +50,8 @@ export function freeRun(track: Track | RideMap | (Track & EndlessTrack), me: { p
   const sc = tricks(), st = stunts(sc, 7), SWEET = me.sweet ?? 0.1;
   // A wheelie bar caps the drags (../stunts.ts `bar`).
   st.bar(me.bar?.dragX);
-  // TK: the hop's air (seconds), the stunt events forwarded so far.
-  const TK = new Float64Array(2);
+  // TK: the hop's air (seconds), the stunt events forwarded so far, the bunny hop's timer (../../bike/hop.ts).
+  const TK = new Float64Array(3), HOP = Wd ? me.hop ?? 0 : 0;
   const riders = [b];
   // S: phase, clock, started, near index, fall x, fall z, fall yaw, off the table, tricks, flips,
   // seconds still since the end.
@@ -166,7 +167,7 @@ export function freeRun(track: Track | RideMap | (Track & EndlessTrack), me: { p
       else if (b.landAir > TRICK_AIR && b.landErr < 0.3) (S[8] = S[8]! + 1), emit(E_TRICK, 0, 1);
     }
   }
-  /** Advance dt: I = [gas, brake, lean (+ back), steer]. `auto` rides the loop. */
+  /** Advance dt: I = [gas, brake, lean (+ back), steer, reset, combo, hop]. `auto` rides the loop. */
   function step(dt: number, I: Float64Array, auto = false) {
     const ph = S[0]!;
     if (ph === DONE) {
@@ -219,6 +220,8 @@ export function freeRun(track: Track | RideMap | (Track & EndlessTrack), me: { p
       emit(E_RESET, 0, 1);
       return true;
     }
+    // Endless: the bunny hop (I[6]: L, a pad's button, the stick flick), as in Endless Wheelie City.
+    if (HOP) hop(b, TK, 2, I.length > 6 ? I[6]! : 0, HOP, dt);
     b.set(I[0]!, I[1]!, I[2]!, I[3]!, Wd ? st.amount : 0);
     const x0 = b.pos[0]!, z0 = b.pos[2]!, wasAir = !b.contact[0] && !b.contact[1];
     const moving = b.step(dt);

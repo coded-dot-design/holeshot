@@ -16,6 +16,7 @@ import { terrainView, type TerrainView } from "@fzlt/core/terrain";
 import { chase } from "@fzlt/core/drive";
 import { controls } from "@fzlt/core/input";
 import { rocker } from "../../bike/rocker.ts";
+import { flicker } from "../../bike/flick.ts";
 import { pad } from "@fzlt/core/pad";
 import { sound } from "@fzlt/core/sound";
 import { LOOP, ENDO, CASE, BAIL, type Power } from "../../bike/bike.ts";
@@ -139,7 +140,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   const DK: Pal = look ? { ...DARK, ...look.dark } : bp ? { ...DARK, ...bp.dark } : DARK, LT: Pal = look ? { ...LIGHT, ...look.light } : bp ? { ...LIGHT, ...bp.light } : LIGHT;
   let P: Pal = document.documentElement.dataset.theme === "light" ? LT : DK;
   const { HX, HZ, NT, TRACK, YAW } = track, { TURN, LAP, GATE_S, LINE_S } = track as Track;
-  const me0 = { power: ctx.bike.power, shape: ctx.bike.shape, sweet: ctx.bike.sweet, bar: ctx.bike.bar };
+  const me0 = { power: ctx.bike.power, shape: ctx.bike.shape, sweet: ctx.bike.sweet, bar: ctx.bike.bar, hop: ctx.bike.hop };
   // Online: the match's sim (stepped by the rollback link, not here), this screen's seat in it.
   const seat = net ? net.seat : 0, jam = net ? net.ride.jam : null, humans = net ? net.ride.players : 1;
   const race = net ? net.ride.race : free ? null : motoRace(ctx.seed, track as Track, me0, rivals, opts);
@@ -159,7 +160,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   const play = L.add(document.createElement("button"));
   play.type = "button";
   play.className = "mt-play";
-  play.setAttribute("aria-label", `${free ? "Free Ride" : "Race"}: Space or J for gas, K or Shift to brake, W and S (or up and down) shift your weight forward and back (back lifts the front; in the air it pitches the bike), A and D (or left and right) steer. V changes the view, M mutes, P or Escape pauses`);
+  play.setAttribute("aria-label", `${free ? "Free Ride" : "Race"}: Space or J for gas, K or Shift to brake, W and S (or up and down) shift your weight forward and back (back lifts the front; in the air it pitches the bike), A and D (or left and right) steer${endless ? ", L hops (or flick the stick back then forward), C holds the combo" : ""}. V changes the view, M mutes, P or Escape pauses`);
   const hud = L.add(document.createElement("div"));
   hud.className = "mt-hud";
   hud.innerHTML = `<div class="mt-head"><p class="mt-top">${jamOnly ? `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>0 PTS</span></b>` : endless ? `<b class="mt-chip mt-pos"><span>BEST ${km(ctx.best ?? 0)}</span></b><b class="mt-chip mt-lap"><span>${km(0)}</span></b>` : free ? `<b class="mt-chip mt-pos"><span>${map ? map.name : "FREE RIDE"}</span></b><b class="mt-chip mt-lap"><span>0.0s AIR</span></b>` : `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>LAP 1/${LAPS}</span></b>`}<b class="mt-chip mt-time"><span>0:00.0</span></b><b class="mt-chip mt-ride"><span>#${ctx.number} ${NAME}</span></b>${endless ? `<b class="mt-chip mt-score" aria-label="Trick points"><span>0 PTS</span><i></i></b><b class="mt-chip mt-drag" hidden><span></span></b>` : ""}</p><p class="mt-hint"></p></div><p class="mt-toast" hidden></p><p class="mt-live" aria-live="polite"></p><p class="mt-stuck" hidden>STUCK? Hold R / tap ↺ to reset</p><p class="mt-keys">${keysHTML("mt", { reset: "Reset to the last good spot (R)", view: !endless, theme: !!ctx.theme, regroup: roam ? (seat ? "To the host (G)" : "Regroup: everyone to you (G)") : undefined })}</p>`;
@@ -177,8 +178,8 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   const snd = sound(engine, { cues: { count: "click", gate: "power", lap: "ready", crash: "boom", land: "click", wheelie: "power", finish: "win", pass: "click" }, volume: 0.1, on: ctx.sound && !ctx.attract });
   const vox = voice();
   vox.on = snd.on;
-  const c = controls(engine, { keys: { left: [], right: [], fwd: [], back: [], gas: [], brake: [], reset: [], combo: [] }, target: play });
-  const COMBOK = c.id("combo"), RESETK = c.id("reset"), GAS = c.id("gas"), BRAKE = c.id("brake"), LEFT = c.id("left"), RIGHT = c.id("right"), FWD = c.id("fwd"), BACK = c.id("back");
+  const c = controls(engine, { keys: { left: [], right: [], fwd: [], back: [], gas: [], brake: [], reset: [], combo: [], hop: [] }, target: play });
+  const HOPK = c.id("hop"), COMBOK = c.id("combo"), RESETK = c.id("reset"), GAS = c.id("gas"), BRAKE = c.id("brake"), LEFT = c.id("left"), RIGHT = c.id("right"), FWD = c.id("fwd"), BACK = c.id("back");
   const thePad = pad(engine, c, {
     scheme: "stick",
     // Gas and brake on the throttle rocker (../../bike/rocker.ts), under the right thumb.
@@ -188,6 +189,9 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   thePad.el.classList.add("mt-pad");
   // Endless: the TRICK bubble (the combo button) pops out of the rocker in the air and in a wheelie past 10 o'clock.
   const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal, combo: endless ? "combo" : "" });
+  // Endless: the bunny hop, as in Endless Wheelie City: a back-then-forward flick of the stick, only
+  // started with both wheels down (../../bike/flick.ts), L, or a pad's button.
+  const flk = flicker(() => me.crashed || (!!(me.contact[0] || me.contact[1]) && me.rel <= 0.12));
   // Walking the bike: the WALK chip, and on a touch screen the one-time "stick back" hint.
   const coarse = matchMedia("(pointer: coarse)"), walkHud = walkUi(hud, () => coarse.matches && !ctx.attract);
   if (ctx.attract) thePad.el.hidden = true;
@@ -301,7 +305,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   }
 
   // ---- state ----
-  const I = new Float64Array(6), GP = new Float64Array(8), DRAGA = new Float64Array(1), tmp = new Float64Array(3), tmp2 = new Float64Array(3);
+  const I = new Float64Array(7), GP = new Float64Array(8), DRAGA = new Float64Array(1), tmp = new Float64Array(3), tmp2 = new Float64Array(3);
   // Pointer: down, start x, start y, x, y, id.
   const PD = new Float64Array(6);
   PD[5] = -1;
@@ -531,7 +535,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       : jam
       ? ph === GRID ? "Trick points: big air, flips, long wheelies · most in three minutes wins" : ""
       : free
-      ? ph === GRID ? (endless ? (touch ? `Hold GAS: ${endless.biome.id === "desert" ? "the desert" : "it"} never ends · pause ❚❚ banks it` : `Space to ride: ${endless.biome.id === "desert" ? "the desert" : "it"} never ends · E (or pause) banks it`) : touch ? "Hold GAS and ride anywhere · pause ❚❚ banks it" : "Space to ride, anywhere · E (or pause) banks it") : ""
+      ? ph === GRID ? (endless ? (touch ? `Hold GAS: ${endless.biome.id === "desert" ? "the desert" : "it"} never ends · pause ❚❚ banks it` : `Space to ride: ${endless.biome.id === "desert" ? "the desert" : "it"} never ends · E (or pause) banks it`) : touch ? "Hold GAS and ride anywhere · pause ❚❚ banks it" : "Space to ride, anywhere · E (or pause) banks it") : endless && ph === RACE && sim.clock < 6 ? (touch ? "Hop: flick the stick back, then forward" : "L hops · W/S lean · A/D steer") : ""
       : ph === GRID ? (touch ? "Hold GAS to rev · it drops on GO" : "Hold Space to rev · it drops on GO") : ph === RACE && sim.clock < 6 ? (touch ? "Stick: lean and steer · back lifts the front" : "W/S lean · A/D steer · Space gas · K brake") : "";
     if (hintEl.textContent !== hint) hintEl.textContent = hint;
   }
@@ -786,6 +790,8 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     I[3] = (+c.down(RIGHT) - +c.down(LEFT)) || (c.stick.active ? c.stick.x : 0) || GP[0]! || (PD[0] ? Math.max(-1, Math.min(1, (PD[3]! - PD[1]!) / drag)) : 0);
     I[4] = resetQ || c.down(RESETK) || GP[6]! > 0.5 ? RESET : 0;
     I[5] = endless && (c.down(COMBOK) || GP[7]! > 0.5) ? 1 : 0;
+    // (The flick reads the stick's own lean: + forward there, + back in I[2].)
+    I[6] = endless && (c.hit(HOPK) || GP[4]! > 0.5 || (c.stick.active && flk.step(-I[2]!))) ? 1 : 0;
     resetQ = 0;
     if (paused || ended) I.fill(0);
   }
@@ -861,7 +867,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   engine.add(loop);
 
   // ---- input: keys on the stage, hold-and-drag on the play surface, the stickers ----
-  const MAP: Record<string, string> = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowUp: "fwd", KeyW: "fwd", ArrowDown: "back", KeyS: "back", Space: "gas", KeyJ: "gas", KeyK: "brake", ShiftLeft: "brake", ShiftRight: "brake", KeyR: "reset", KeyC: "combo" };
+  const MAP: Record<string, string> = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", ArrowUp: "fwd", KeyW: "fwd", ArrowDown: "back", KeyS: "back", Space: "gas", KeyJ: "gas", KeyK: "brake", ShiftLeft: "brake", ShiftRight: "brake", KeyR: "reset", KeyC: "combo", ...(endless ? { KeyL: "hop" } : {}) };
   const keyHost: EventTarget = window;
   const src = (e: Event) => (e.composedPath?.()[0] ?? e.target) as Element | null;
   keyHost.addEventListener("keydown", (ev) => {
@@ -923,7 +929,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     engine,
     get state() {
       const ph = sim.phase;
-      return { phase: ph === GRID ? (free && !jam ? "ready" : "grid") : ph === RACE ? "run" : ph === DONE ? "done" : "idle", speed: me.speed, walking: me.walking, clock: sim.clock, lap: race ? race.lap(seat) : 0, place: race ? race.place(seat) : jam ? jam.place(seat) : 0, crashes: m.M[5]!, air: me.air, gas: I[0]!, brake: I[1]!, wheelie: me.wheelie, view: view ? "chase" : "table", count: race ? race.count : jam ? jam.count : 0, ended, riders: RIDERS, map: track.id, tricks: fr ? fr.tricks : jam ? jam.tricks(seat) : 0, seat, points: jam ? jam.points(seat) : 0, steer: I[3]!, steerAngle: me.steerAngle, x: me.pos[0]!, z: me.pos[2]!, y: me.pos[1]!, distance: fr ? fr.distance : 0, stuck: fr ? fr.stuck : false, upright: !me.crashed && Math.abs(me.rel) < 0.5, tiles: dv ? endless!.world.stats[0]! : 0, faces: tv.stats.faces, score: tsc ? tsc[T_SC]! : 0, drag: st ? st.HD[1]! : 0, stunt: st ? st.trick : -1, whip: st ? st.whip : 0 };
+      return { phase: ph === GRID ? (free && !jam ? "ready" : "grid") : ph === RACE ? "run" : ph === DONE ? "done" : "idle", speed: me.speed, walking: me.walking, clock: sim.clock, lap: race ? race.lap(seat) : 0, place: race ? race.place(seat) : jam ? jam.place(seat) : 0, crashes: m.M[5]!, air: me.air, gas: I[0]!, brake: I[1]!, wheelie: me.wheelie, view: view ? "chase" : "table", count: race ? race.count : jam ? jam.count : 0, ended, riders: RIDERS, map: track.id, tricks: fr ? fr.tricks : jam ? jam.tricks(seat) : 0, seat, points: jam ? jam.points(seat) : 0, steer: I[3]!, steerAngle: me.steerAngle, x: me.pos[0]!, z: me.pos[2]!, y: me.pos[1]!, distance: fr ? fr.distance : 0, stuck: fr ? fr.stuck : false, upright: !me.crashed && Math.abs(me.rel) < 0.5, tiles: dv ? endless!.world.stats[0]! : 0, faces: tv.stats.faces, score: tsc ? tsc[T_SC]! : 0, drag: st ? st.HD[1]! : 0, stunt: st ? st.trick : -1, whip: st ? st.whip : 0, flicks: flk.n, down: !me.crashed && !!me.contact[0] && !!me.contact[1] };
     },
     get auto() {
       return auto;
@@ -954,9 +960,9 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     },
     destroy: () => engine.destroy(),
     input: () => (readInput(), I),
-    /** END (sticky, once pressed), REGROUP (a few frames after a press), the combo button (held). */
+    /** END (sticky, once pressed), REGROUP (a few frames after a press), the combo button (held), a hop. */
     cmd() {
-      let c = CMDQ[0]! | (I[5] ? CMD_COMBO : 0);
+      let c = CMDQ[0]! | (I[5] ? CMD_COMBO : 0) | (I[6] ? CMD_HOP : 0);
       if (CMDQ[1]! > 0) (c |= CMD_REGROUP), (CMDQ[1] = CMDQ[1]! - 1);
       return c;
     },

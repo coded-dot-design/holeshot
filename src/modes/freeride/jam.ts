@@ -33,12 +33,12 @@ export const E_STUNT = 30;
 export const JAM_POINTS = { air: 100, perAir: 100, flip: 400, wheelie: 60, wheelieFrom: 1 };
 /** Side by side at the spawn (units across the line). */
 const LANES = [-0.9, 0.9, -2.4, 2.4];
-/** Endless commands (../../net.ts C_END, C_REGROUP), a regroup's cooldown (s), the bump distance. */
-const CM_END = 1, CM_REGROUP = 2, CM_COMBO = 8, REGROUP_T = 2, BUMP = 0.75;
+/** Endless commands (../../net.ts C_END, C_REGROUP, C_HOP, C_COMBO), a regroup's cooldown (s), the bump distance. */
+const CM_END = 1, CM_REGROUP = 2, CM_HOP = 4, CM_COMBO = 8, REGROUP_T = 2, BUMP = 0.75;
 /** A trick's id on the board: a big air, a flip, a long wheelie. */
 export const T_AIR = 1, T_FLIP = 2, T_WHEELIE = 3;
 
-export function freeJam(track: Track | RideMap, bikes: { power: Power; shape?: BikeShape; sweet?: number; bar?: { dragX: number } | null }[], limit = JAM) {
+export function freeJam(track: Track | RideMap, bikes: { power: Power; shape?: BikeShape; sweet?: number; bar?: { dragX: number } | null; hop?: number }[], limit = JAM) {
   const map = "isMap" in track ? track : null, H = bikes.length;
   const endless = "isEndless" in track ? (track as DesertTrack) : null;
   // Endless: a window of the same world for each rider (its own ground: they roam apart).
@@ -49,8 +49,8 @@ export function freeJam(track: Track | RideMap, bikes: { power: Power; shape?: B
   // J: phase, the count left, the clock. PTS: each rider's trick points.
   const J = new Float64Array(3), PTS = new Float64Array(H), IN = new Float64Array(H * 5), AUTO = new Uint8Array(H);
   const IV = runs.map((_, r) => IN.subarray(r * 5, r * 5 + 5));
-  // Endless: each rider's input with the combo button (I[5], from CMD's COMBO bit).
-  const IC = runs.map(() => new Float64Array(6));
+  // Endless: each rider's input with the combo button (I[5], from CMD's COMBO bit) and the hop (I[6], HOP).
+  const IC = runs.map(() => new Float64Array(7));
   const ev = new Float64Array(48), NE = new Uint32Array(1);
   const emit = (type: number, r: number, v: number) => void (NE[0]! < 16 && ((ev[NE[0]! * 3] = type), (ev[NE[0]! * 3 + 1] = r), (ev[NE[0]! * 3 + 2] = v), (NE[0] = NE[0]! + 1)));
 
@@ -95,6 +95,7 @@ export function freeJam(track: Track | RideMap, bikes: { power: Power; shape?: B
         const I = IC[r]!;
         I.set(IV[r]!);
         I[5] = CMD[r]! & CM_COMBO ? 1 : 0;
+        I[6] = CMD[r]! & CM_HOP ? 1 : 0;
         fr.step(dt, I, AUTO[r] === 1);
       } else fr.step(dt, IV[r]!, AUTO[r] === 1);
       if (endless) stunts(r);

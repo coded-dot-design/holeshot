@@ -21,6 +21,7 @@ import { roadRibbons } from "./ribbons.ts";
 import { chase } from "@fzlt/core/drive";
 import { controls } from "@fzlt/core/input";
 import { rocker } from "../../bike/rocker.ts";
+import { flicker } from "../../bike/flick.ts";
 import { pad } from "@fzlt/core/pad";
 import { sound } from "@fzlt/core/sound";
 import {
@@ -189,27 +190,9 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
   const thePad = pad(engine, c, { scheme: "stick", actions: [], host: stage });
   thePad.el.classList.add("wc-pad");
   const rock = rocker(c, thePad.el, { reduced: ctx.reduced, signal: engine.signal, combo: "combo" });
-  // The bunny hop on the stick, as on a real bike: a quick pull back (the front comes up), then a push
-  // forward, the whole flick within FLICK_MS of the pull starting. Only started with both wheels down:
-  // in a wheelie or in the air the stick only balances, so rocking back and forth never hops. Holding back
-  // longer is leaning, not a flick. L (and a pad's button) still hop.
-  const FLICK_MS = 350;
-  let backFrom = -1, flicks = 0;
-  const flick = (lean: number) => {
-    const now = performance.now();
-    if (lean < -0.6) {
-      // A flick only starts with both wheels down (the pull itself then lifts the front, as it should).
-      if (backFrom < 0 && !bike.air && bike.nose <= 0.12) backFrom = now;
-      return false;
-    }
-    if (lean > 0.45 && backFrom >= 0) {
-      const ok = now - backFrom <= FLICK_MS;
-      backFrom = -1;
-      return ok && (flicks++, true);
-    }
-    if (lean > -0.2 && backFrom >= 0 && now - backFrom > FLICK_MS) backFrom = -1;
-    return false;
-  };
+  // The bunny hop on the stick: a quick back-then-forward flick, only started with both wheels down
+  // (../../bike/flick.ts). L (and a pad's button) still hop.
+  const flk = flicker(() => !bike.air && bike.nose <= 0.12), flick = flk.step;
   const coarse = matchMedia("(pointer: coarse)"), walkHud = walkUi(hud, () => coarse.matches && !ctx.attract);
   if (ctx.attract) thePad.el.hidden = true;
   const vox = voice();
@@ -1538,7 +1521,7 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
       const ph = S[0]!;
       return {
         phase: ph === READY ? "ready" : ph === RUN || ph === CRASH ? "run" : ph === DONE ? "done" : "idle", walking: bike.b.walking, clock: S[1]!, score: sc[SC]!, combo: sc[CB]!, trick: sc[ON] === 1, nose: bike.nose, view: view ? "chase" : "map", speed: bike.b.speed, crashes, grumps: S[4]!, best: sc[BEST_W]!, ended,
-        gas: I[0]!, brake: I[1]!, air: bike.air, flicks, drag: run.HD[1]!, hold: run.HD[0]!, stunt: run.st.trick, whip: run.st.whip,
+        gas: I[0]!, brake: I[1]!, air: bike.air, flicks: flk.n, drag: run.HD[1]!, hold: run.HD[0]!, stunt: run.st.trick, whip: run.st.whip,
         far: run.far, endless: true, towns: S[S_TOWNS]!, inTown: run.inTown, near: cop.S[NEAR]!, heat: cop.S[HEAT]!, stars: cop.S[STARS]!, units: cop.chasing, risk: cop.S[HOT]!, escapes: cop.S[ESC]!, tickets: cop.S[TIX]!, x: bike.b.pos[0]!, z: bike.b.pos[2]!, objects: dio.stats.objects, faces: dio.stats.faces, ground: tv.stats.faces, ribbons: rib.stats.quads, tiles: run.win.stats[0]!,
       };
     },

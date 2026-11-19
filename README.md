@@ -91,9 +91,11 @@ event pays something, a worn bike still rides, and the pit crew fixes you up for
 ridden a few events and can't pay.
 
 **Controls.** Space or J gas, K or Shift brake, W/S or ↑/↓ your weight (back lifts the front; in the
-air it pitches the bike), A/D or ←/→ steer, L trick (Big Air) or hop (Wheelie City), V camera, M
-sound, P or Escape pause, R reset (every mode you ride yourself; the ↺ key on the HUD, a gamepad's
-Back/Select).
+air it pitches the bike), A/D or ←/→ steer, L trick (Big Air) or hop (Endless Wheelie City and every endless ground), V
+camera, M sound, P or Escape pause, R reset (every mode you ride yourself; the ↺ key on the HUD, a
+gamepad's Back/Select). Every endless ride has the same hop: L, a gamepad's X, Y or right bumper, or
+on the pad's stick a quick pull back then push forward (within 0.35 s, only started with both wheels
+down, so balancing a wheelie never hops).
 
 **Walk the bike.** Stopped (under 1.5 m/s) with no gas and no brake, hold W/S or ↑/↓ (on a phone,
 the pad's stick forward or back) and the rider puts a foot down and walks the bike that way at about

@@ -1,10 +1,11 @@
 // Wheelie City's ride on the shared bike (../../bike/bike.ts): the gallery piece's three electric
 // rides as data (kept for the tests and as defaults; in the game the player's tuned bike is the one
-// ride), one bike per ride (each has its own wheel size), and the small adapter this piece needs on top: a hop (the shared bike has no
-// jump of its own: brick candidate), lean as "+1 forward" like the rest of the piece, a velocity
+// ride), one bike per ride (each has its own wheel size), and the small adapter this piece needs on top: a hop (../../bike/hop.ts, shared
+// with the endless grounds), lean as "+1 forward" like the rest of the piece, a velocity
 // for the chase camera, and a bump off a wall (speed along the heading turned back). Zero
 // allocation per step. Once at rest it stays parked until the rider does something.
 import { assist, FENDER_LOOP, PAST_BRAKE as PB } from "../stunts.ts";
+import { hop as hopOn } from "../../bike/hop.ts";
 import { bike, E_BIKE, E_MOTO, STRIKE, type Bike, type BikeGround, type BikeShape, type Power } from "../../bike/bike.ts";
 
 /** A fat-tyre mini e-moto: low and heavy, a soft pull, slow to rotate (long, steady manuals). */
@@ -68,8 +69,7 @@ export function ride(ground: BikeGround, specs: RideSpec[] = RIDES, walk?: (at: 
     const idle = !k.crashed && gas === 0 && hop === 0 && lean === 0;
     R[2] = idle && Math.abs(k.speed) < 0.05 && Math.abs(k.vy) < 0.05 && Math.abs(k.S[3]!) < 0.05 ? R[2]! + dt : 0;
     if (idle && (k.resting || R[2]! > 0.8)) return false;
-    if (hop > 0 && R[0]! <= 0 && !k.crashed && k.contact[0] && k.contact[1]) (k.S[6] = k.S[6]! + sp.hop), (R[0] = 0.4);
-    R[0] = R[0]! - dt;
+    hopOn(k, R, 0, hop, sp.hop, dt);
     k.set(gas, brake, -lean, steer, trick);
     const moving = k.step(dt);
     // Past the balance point on the rear wheel (towards 12 o'clock and the drags): the rear brake's

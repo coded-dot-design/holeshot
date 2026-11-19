@@ -216,7 +216,7 @@ export function match(e: Engine, o: MatchOptions) {
       const B = BIOMES[pick.sub] ?? BIOMES[0]!;
       track = desertTrack(B.seed, B.id);
       // (A wheelie bar caps the drags: ../modes/stunts.ts `bar`.)
-      jam = freeJam(track, tuned.map((x) => ({ power: x.power, shape: x.shape, sweet: x.sweet, bar: x.bar })));
+      jam = freeJam(track, tuned.map((x) => ({ power: x.power, shape: x.shape, sweet: x.sweet, bar: x.bar, hop: x.hop })));
       jam.clear();
       for (let p = 0; p < P; p++) meters.push(meter("desert"));
     } else if (kind === K_ENDCITY) {

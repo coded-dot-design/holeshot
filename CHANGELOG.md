@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- **Every endless ride has the same controls as Endless Wheelie City.** The Endless Desert and each
+  endless Free Ride ground now hop: a quick back-then-forward flick of the pad's stick (within
+  0.35 s, only started with both wheels down, so balancing a wheelie never hops), L on a keyboard,
+  or a gamepad's X, Y or right bumper. The hop is your bike's own (the garage's hop: suspension and
+  travel count), it lands as a HOP ground trick, and it rides online too (the jam's HOP bit). One
+  hop for both modes (src/bike/hop.ts) and one flick reader (src/bike/flick.ts). Race and Big Air
+  keep their controls. Size: +0.4 KB gzip, inside the 207,300 budget.
+
 ## 0.5.4 — 2026-11-19
 
 - **The bunny hop is a stick flick** in Wheelie City, as on a real bike: a quick pull back (the front
