@@ -421,7 +421,12 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   let byFocus = false;
   cards.addEventListener("pointerover", (e) => { if (e.pointerType === "touch") return; const v = pvOf(e.target as Element); if (v || !byFocus) (byFocus = false), peek(v); }, sig);
   cards.addEventListener("pointerleave", () => !byFocus && peek(null), sig);
-  cards.addEventListener("focusin", (e) => { const v = pvOf(e.target as Element); byFocus = !!v; peek(v, true); }, sig);
+  // (A touch that focuses a row or a key does not preview it on focus: on a phone the bike panel sits
+  // above the lists, so a preview between the touch and its click would move the target away.)
+  let touched = false;
+  cards.addEventListener("pointerdown", (e) => (touched = e.pointerType === "touch"), sig);
+  cards.addEventListener("keydown", () => (touched = false), sig);
+  cards.addEventListener("focusin", (e) => { if (touched) return; const v = pvOf(e.target as Element); byFocus = !!v; peek(v, true); }, sig);
   cards.addEventListener("focusout", (e) => !cards.contains(e.relatedTarget as Node) && peek(null), sig);
   cards.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && screen === "garage" && gui.menu) return e.stopPropagation(), (gui.menu = ""), show("garage");

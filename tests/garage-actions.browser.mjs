@@ -31,7 +31,8 @@ try {
     const p = await ctx.newPage(), errs = [];
     p.on("pageerror", (e) => errs.push(e.message));
     // A real press on the element (scrolled into view; a tap on touch): it must be reachable.
-    const press = async (sel) => { const l = p.locator(sel).first(); await l.scrollIntoViewIfNeeded(); await (touch ? l.tap() : l.click()); };
+    // (Centred, so the sticky header never sits over it.)
+    const press = async (sel) => { const l = p.locator(sel).first(); await l.evaluate((e) => e.scrollIntoView({ block: "center" })); await (touch ? l.tap() : l.click()); };
     const ok = (what) => name === "desktop" && done.push(what);
     await p.goto(server.url + path);
     await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${name}: loads`);
@@ -150,7 +151,7 @@ try {
     }
     ok("every upgrade that fits, from its preview (Upgrades)");
     await press("[data-gsub=log]");
-    assert.ok(await $(p, "root.querySelectorAll('.dh-log tbody tr').length >= 8"), `${name}: the service log`);
+    await until(p, "root.querySelectorAll('.dh-log tbody tr').length >= 8", `${name}: the service log`);
     ok("the service log (Service log)");
 
     // ---- PAINT & KIT ----
