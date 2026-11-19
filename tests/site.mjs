@@ -1,6 +1,8 @@
 // The built site (artifacts/pages, `npm run site:build` first) in Chromium, at 1440 and 390, dark and
-// light: the landing page's hero is the game's attract race (drawn, riding, its HUD hidden), with the
-// title, the hook and a PLAY link to /play/; the four sections (how to play, the events, the garage,
+// light: the header's wordmark (named HOLESHOT); the landing hero is the brand: the lockup in the h1,
+// the title, the hook, a PLAY link to /play/ and the cover art (loaded); the band under it is the
+// game's attract race (drawn, riding once scrolled to, its HUD and touch controls hidden); the brand
+// kit (eight colours, every download served); the four sections (how to play, the events, the garage,
 // built on Fizlet with the measured size, by David Cooley, linked); no sideways scroll. Reduced motion: the
 // still poster, no game. /play/ mounts the game with the first-run setup; once set up, ?mode=bigair
 // starts that event. SHOTS=<dir> saves a screenshot of each.
@@ -26,6 +28,16 @@ try {
       const p = await ctx.newPage(), errs = [];
       p.on("pageerror", (e) => errs.push(e.message));
       await p.goto(`${server.url}${BASE}/`);
+      const brand = await p.evaluate(async () => {
+        const cover = document.querySelector(".hero-cover img"), wm = document.querySelector(".brand .brand-mark");
+        await cover.decode().catch(() => {});
+        const dl = [...document.querySelectorAll("#brand a[download]")].map((a) => a.href);
+        const ok = await Promise.all(dl.map(async (u) => (await fetch(u)).ok));
+        return { wordmark: wm?.getAttribute("aria-label"), wmHeight: wm?.getBoundingClientRect().height, lockup: !!document.querySelector("h1 svg.hero-lockup"), cover: cover.naturalWidth > 0, swatches: document.querySelectorAll("#brand .sw").length, downloads: dl.length, served: ok.every(Boolean) };
+      });
+      assert.ok(brand.wordmark === "HOLESHOT" && brand.wmHeight >= 20 && brand.lockup && brand.cover, `${at}: the header wordmark, the hero lockup and cover: ${JSON.stringify(brand)}`);
+      assert.ok(brand.swatches === 8 && brand.downloads >= 6 && brand.served, `${at}: the brand kit: ${JSON.stringify(brand)}`);
+      await p.locator("#dt-hero").scrollIntoViewIfNeeded();
       await until(p, () => window.hero?.run && hero.run.state.speed > 3, null, `${at}: the hero's race rides`);
       const m = await p.evaluate(() => {
         const root = document.querySelector("#dt-hero [data-fizlet-host]").shadowRoot, cv = root.querySelector("canvas"), px = cv.getContext("2d").getImageData(cv.width >> 1, cv.height >> 1, 1, 1).data;
@@ -33,11 +45,11 @@ try {
         return {
           theme: document.documentElement.dataset.theme,
           drawn: px[3] === 255,
-          hud: root.querySelector(".mt-hud").hidden && root.querySelector(".dh-cards").hidden,
+          hud: root.querySelector(".mt-hud").hidden && root.querySelector(".dh-cards").hidden && [...root.querySelectorAll(".hs-rocker,.ba-pad")].every((e) => !e.getClientRects().length),
           h1: document.querySelector("h1").textContent.trim(),
           play: play.getAttribute("href"),
           playSize: Math.min(play.getBoundingClientRect().width, play.getBoundingClientRect().height) >= 44,
-          sections: ["how", "modes", "garage", "fizlet"].every((id) => document.getElementById(id)),
+          sections: ["how", "modes", "garage", "fizlet", "brand"].every((id) => document.getElementById(id)),
           modes: document.querySelectorAll("#modes li").length,
           size: document.getElementById("fizlet").textContent.replace(/\s+/g, " "),
           by: /by David Cooley/i.test(document.body.textContent) && !!document.querySelector('a[href="https://fizlet.com/people/david-cooley/"]'),
@@ -48,10 +60,11 @@ try {
       assert.ok(m.drawn && m.hud, `${at}: the hero draws the race, no HUD over the copy`);
       assert.equal(m.h1, "Holeshot.One bike. Every kind of dirt.", `${at}: the title and hook`);
       assert.match(m.play, /\/play\/$/, `${at}: PLAY links to /play/`);
-      assert.ok(m.playSize && m.sections && m.modes === 5 && m.by, `${at}: PLAY ≥ 44 px, four sections, five ways to ride, by David Cooley (linked)`);
+      assert.ok(m.playSize && m.sections && m.modes === 5 && m.by, `${at}: PLAY ≥ 44 px, five sections, five ways to ride, by David Cooley (linked)`);
       assert.ok(m.size.includes(`${gz.toLocaleString("en-US")} bytes gzip`), `${at}: the measured size (${gz} B)`);
       assert.equal(m.sideways, false, `${at}: no sideways scroll`);
       if (SHOTS) {
+        await p.evaluate(() => scrollTo(0, 0));
         await p.screenshot({ path: `${SHOTS}/landing-${w}-${theme}.png` });
         if (!touch) await p.screenshot({ path: `${SHOTS}/landing-${w}-${theme}-full.png`, fullPage: true });
       }
@@ -112,10 +125,11 @@ try {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
   const p = await ctx.newPage();
   await p.goto(`${server.url}${BASE}/`);
+  await p.locator(".dt-poster").scrollIntoViewIfNeeded();
   await until(p, () => document.querySelector(".dt-poster img")?.complete, null, "reduced motion: the poster");
   assert.deepEqual(await p.evaluate(() => ({ poster: !document.querySelector(".dt-poster").hidden, game: !!document.querySelector("[data-fizlet-host]") })), { poster: true, game: false }, "reduced motion: a still poster, no game");
   await ctx.close();
-  console.log("Holeshot site: the hero races, the title, PLAY to /play/, four sections, the measured size, no sideways scroll, /play/ setup (the header handle clear of the card) and ?mode=, the reduced-motion poster; 1440 and 390, dark and light; the manifest and the one-time Home Screen tip (phone landscape only).");
+  console.log("Holeshot site: the header wordmark, the hero lockup and cover, the demo race (no touch controls), the brand kit and its downloads, the title, PLAY to /play/, five sections, the measured size, no sideways scroll, /play/ setup (the header handle clear of the card) and ?mode=, the reduced-motion poster; 1440 and 390, dark and light; the manifest and the one-time Home Screen tip (phone landscape only).");
 } finally {
   await browser.close();
   await server.close();

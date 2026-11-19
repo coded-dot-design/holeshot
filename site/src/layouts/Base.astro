@@ -6,6 +6,7 @@
 import '@fzlt/core/ui/board-ui.css';
 import '../styles/site.css';
 import { VERSION, REPO, HUB, base } from '../site';
+import Wordmark from '../components/Wordmark.astro';
 const { title, description, page = 'home', app = false } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 ---
@@ -47,13 +48,14 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
       <div class="wrap">
         <a class="brand" href={base()} aria-label="Holeshot home">
           <img src={base('icon.svg')} alt="" width="36" height="36" />
-          <span><b>HOLESHOT</b><small>V{VERSION} · BY DAVID COOLEY</small></span>
+          <span><Wordmark id="hs-wm-head" class="brand-mark" label="HOLESHOT" /><small>V{VERSION} · BY DAVID COOLEY</small></span>
         </a>
         <nav class="site-nav" aria-label="Site">
           <a href={base('#how')}>How to play</a>
           <a href={base('#modes')}>Modes</a>
           <a href={base('#garage')}>Garage</a>
           <a href={base('#fizlet')}>Built on Fizlet</a>
+          <a href={base('#brand')}>Brand</a>
           <a href={HUB}>DOM VIRUS ↗</a>
         </nav>
         {!app && <div class="head-keys">

@@ -1,7 +1,9 @@
 ---
-// Holeshot, the landing page. The hero is the game itself: a race on the autopilot in the chase
-// view; reduced motion shows a still poster that links to /play/.
+// Holeshot, the landing page. The hero is the brand: the lockup (in the h1), the hook, PLAY and the
+// box-art cover on a sunset like the cover's. Below it, the game itself: a race on the autopilot in
+// the chase view, started when it scrolls near; reduced motion shows a still poster that links to /play/.
 import Base from '../layouts/Base.astro';
+import Wordmark from '../components/Wordmark.astro';
 import { base, GZIP, FIZLET, REPO } from '../site';
 import { CLASSES, MODELS, STARTERS, makerOf } from '../../../src/data/roster.ts';
 import { MODES } from '../../../src/modes/index.ts';
@@ -15,19 +17,33 @@ const steps = [
 ];
 const classes = Object.values(CLASSES).map((c) => ({ ...c, models: MODELS.filter((m) => m.cls === c.id), starter: STARTERS.find((m) => m.cls === c.id) }));
 const words = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+const palette = [['Logo lime', '#B6F23A'], ['Drop pink', '#FF4FA8'], ['Credit cyan', '#22E6FF'], ['Sun yellow', '#FFD166'], ['Stripe pink', '#E23D8A'], ['Dusk purple', '#3A1D6E'], ['Night navy', '#1A1038'], ['Ink', '#0B0A14']];
 const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound', 'ui'];
 ---
 <Base title="Holeshot · one bike, every kind of dirt" description={description}>
   <section class="dt-hero" aria-labelledby="dt-title">
-    <div class="dt-stage" id="dt-hero" aria-label="Holeshot demo race"></div>
-    <a class="dt-poster" href={base('play/')} hidden><img src={base('shots/hero.jpg')} alt="Holeshot: four dirt bikes racing at night on a neon-edged motocross track on a tabletop" width="1600" height="900" /></a>
-    <div class="wrap dt-copy">
-      <p class="eyebrow"><span class="dot"></span> A DOM VIRUS GAME · BY DAVID COOLEY</p>
-      <h1 id="dt-title">Holeshot.<br /><em>One bike. Every kind of dirt.</em></h1>
-      <p class="lead">A dirt bike game on a tabletop. Pick one bike, race it, fly it, wheelie it through town, and keep it alive in the garage: tyres, rebuilds, mods and paint, paid for with what you win.</p>
-      <div class="dt-ctas">
-        <a class="bui-key bui-sticker-key bui-call start-key" href={base('play/')}><b>PLAY</b><span>free · in your browser</span></a>
+    <div class="wrap hero-grid">
+      <div class="dt-copy">
+        <p class="eyebrow"><span class="dot"></span> A DOM VIRUS GAME · BY DAVID COOLEY</p>
+        <h1 id="dt-title"><span class="sr">Holeshot.</span><Wordmark tab id="hs-wm-hero" class="hero-lockup" /><em>One bike. Every kind of dirt.</em></h1>
+        <p class="lead">A dirt bike game on a tabletop. Pick one bike, race it, fly it, wheelie it through town, and keep it alive in the garage: tyres, rebuilds, mods and paint, paid for with what you win.</p>
+        <div class="dt-ctas">
+          <a class="bui-key bui-sticker-key bui-call start-key" href={base('play/')}><b>PLAY</b><span>free · in your browser</span></a>
+          <a class="dt-watch" href="#race">or watch a race ↓</a>
+        </div>
       </div>
+      <a class="hero-cover" href={base('play/')} tabindex="-1" aria-hidden="true"><span class="hero-sun"></span><img src={base('brand/holeshot-cover.svg')} alt="" width="800" height="1200" fetchpriority="high" decoding="async" /></a>
+    </div>
+  </section>
+
+  <section class="demo-band" id="race" aria-labelledby="race-title">
+    <div class="wrap demo-head">
+      <p class="eyebrow"><span class="dot"></span> LIVE · THE REAL GAME, ON AUTOPILOT</p>
+      <h2 id="race-title">Watch a race.</h2>
+    </div>
+    <div class="demo-frame">
+      <div class="dt-stage" id="dt-hero" aria-label="Holeshot demo race"></div>
+      <a class="dt-poster" href={base('play/')} hidden><img src={base('shots/hero.jpg')} alt="Holeshot: four dirt bikes racing at night on a neon-edged motocross track on a tabletop" width="1600" height="900" loading="lazy" /></a>
     </div>
   </section>
 
@@ -88,12 +104,58 @@ const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound'
       </div>
     </div>
   </section>
+
+  <section class="section" id="brand" aria-labelledby="brand-title">
+    <div class="wrap">
+      <p class="eyebrow"><span class="index">05</span> THE BRAND</p>
+      <h2 id="brand-title">The Holeshot kit.</h2>
+      <p class="brand-credit">Logo, icon and cover art by <a href="https://fizlet.com/people/david-cooley/">David Cooley</a>. Every credited surface says <b>by David Cooley</b>.</p>
+      <div class="brand-grid">
+        <figure class="panel brand-cover">
+          <img src={base('brand/holeshot-cover.svg')} alt="The Holeshot cover: three riders launching off sunset dunes under a striped sun, the HOLESHOT lockup at the top" width="800" height="1200" loading="lazy" decoding="async" />
+          <figcaption><b>Cover art</b> <span>800 × 1200 · 2:3</span><span class="dl"><a href={base('brand/holeshot-cover.svg')} download>SVG</a><a href={base('brand/holeshot-cover.png')} download>PNG</a></span></figcaption>
+        </figure>
+        <div class="brand-side">
+          <figure class="panel brand-logo">
+            <div class="brand-tiles">
+              <div class="brand-tile on-dark"><img src={base('brand/holeshot-lockup.svg')} alt="The HOLESHOT lockup on dark" width="625" height="169" loading="lazy" decoding="async" /></div>
+              <div class="brand-tile on-light"><img src={base('brand/holeshot-lockup.svg')} alt="The HOLESHOT lockup on light" width="625" height="169" loading="lazy" decoding="async" /></div>
+            </div>
+            <figcaption><b>Logo · L1 lockup</b> <span>lime letters, pink drop, ink outline; the credit on the cyan tab</span><span class="dl"><a href={base('brand/holeshot-lockup.svg')} download>Lockup SVG</a><a href={base('brand/holeshot-wordmark.svg')} download>Wordmark SVG</a></span></figcaption>
+          </figure>
+          <figure class="panel brand-icon">
+            <img src={base('brand/holeshot-icon.svg')} alt="The Holeshot app icon: a rider on a wheelie against a setting sun" width="96" height="96" loading="lazy" decoding="async" />
+            <figcaption><b>App icon</b> <span>the favicon and the Home Screen icon</span><span class="dl"><a href={base('brand/holeshot-icon.svg')} download>SVG</a><a href={base('brand/holeshot-icon-512.png')} download>PNG 512</a></span></figcaption>
+          </figure>
+          <div class="panel brand-palette">
+            <p class="meta">Palette</p>
+            <ul>
+              {palette.map(([name, hex]) => <li><span class="sw" style={`background:${hex}`}></span><b>{name}</b><code>{hex}</code></li>)}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 </Base>
 
 <script>
-  import { createHoleshot } from "../../../dist/holeshot.mjs";
   const host = document.getElementById("dt-hero")!;
   const poster = document.querySelector<HTMLElement>(".dt-poster")!;
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) poster.hidden = false;
-  else (window as unknown as { hero: unknown }).hero = createHoleshot({ host, attract: true, sound: false });
+  else {
+    // The race starts when its band comes near the screen, so the brand hero paints first.
+    // The game's module loads then too (a dynamic import: nothing of it on the first paint).
+    const io = new IntersectionObserver(async (es) => {
+      if (!es.some((e) => e.isIntersecting)) return;
+      io.disconnect();
+      const { createHoleshot } = await import("../../../dist/holeshot.mjs");
+      (window as unknown as { hero: unknown }).hero = createHoleshot({ host, attract: true, sound: false });
+      // The demo rides itself: no touch controls (the pad, the throttle rocker and its hint) over it.
+      const style = document.createElement("style");
+      style.textContent = ".ba-pad,.hs-rocker{display:none!important}";
+      host.querySelector("[data-fizlet-host]")?.shadowRoot?.append(style);
+    }, { rootMargin: "0px" });
+    io.observe(host);
+  }
 </script>
