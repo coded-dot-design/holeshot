@@ -6,6 +6,21 @@
 
 ## 0.6.0 — 2026-11-19
 
+- **Track Day: street bikes on paved circuits.** Three original road circuits (`game.start("trackday",
+  { map })`): MERIDIAN RING (fast, 361 units a lap, a 122-unit main straight: the supersport and the
+  naked are flat out on it, 23.5 and 24.9 of 25.1), KNOTWORKS (technical, 290: two chicanes, a
+  hairpin, square corners) and BOTTLECAP (kart-tight, 177, for the mini). Asphalt and run-off in
+  rolling grass, red and white kerbs, edge lines, a chequered line, grid boxes, a gantry whose start
+  lights come on with the countdown and go out at GO, a pit lane, pit wall and garages, grandstands,
+  tyre walls; dark (a night race) and light. A staggered grid, three laps, places, lap times (BEST
+  LAP! when it beats your best) and the best lap kept per circuit (`stats.best["lap:<circuit>"]`: an
+  additive key, no profile version step). Rivals: street bikes of your class. Street bikes ride as
+  tuned; a dirt bike may ride on knobblies (`ROAD_FX`: 85 % grip, 88 % brakes) against its own class
+  on the same tyres. Pays as a race does. Solo only; no Track Day series. A scripted fast lap on the
+  mini, the supersport and the naked laps every circuit with 0 excursions and 0 crashes
+  (tests/trackday.test.mjs); new goldens for the circuits and a race on each, the old ones unchanged.
+  LET'S RIDE's TRACK DAY group now holds the three circuits' tiles (BEST LAP once ridden) in place of
+  COMING SOON. Budget 215,000 → 220,500 (+4,938 B measured over 0.6.1).
 - **New icon and share image.** The app icon is a lime setting sun with pink stripes and a wheelie silhouette on a cyan horizon (all icon sizes, maskable and Apple touch); the share image is the new launch cover's landscape cut; the cover art is in `site/public/shots/cover.jpg`.
 - **The landing page wears the brand.** The header shows the HOLESHOT wordmark (lime letters, pink drop, ink outline; named for screen readers) beside the icon. The hero leads with the lockup in the h1, the hook, a lime PLAY and the box-art cover (an SVG, 6 KB gzip) on the cover's sunset bands, with a pale sunset in the light theme. The live demo race moves to its own "Watch a race" band and starts, with its module, only when scrolled to, without touch controls over it. A first view now loads about 25 KB gzip instead of about 282 KB. A new Brand section near the bottom shows the lockup on dark and light, the app icon, the cover and the eight-colour palette, with "by David Cooley", and every file can be downloaded from `site/public/brand/`.
 - **The garage is home; LET'S RIDE is its one main key** (owner, 2026-11-19). The row of four top

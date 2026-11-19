@@ -95,6 +95,17 @@ you loop out. A building between the chase camera
   (NEON DOME, VOLT ARENA): a near-flat floor under the lights between walls, short straights joined by
   hairpins, rhythm doubles, whoops, a tight triple, a 3.2-wide track; Free Ride SX rides their floors.
   Online rides MX.
+- **Track Day**: street bikes on paved road circuits (original layouts): **MERIDIAN RING** (fast and
+  flowing, 361 units a lap: a 122-unit main straight into a heavy stop, a flat-out S down the back),
+  **KNOTWORKS** (technical, 290: two chicanes, a hairpin, a dog-leg of square corners) and
+  **BOTTLECAP** (kart-tight, 177: two hairpins and a hook, built for the mini). Asphalt with red and
+  white kerbs, edge lines, run-off, a start/finish gantry with start lights, a pit lane, pit wall and
+  garages, grandstands and tyre walls; a night race under floodlights (dark) or a summer track day
+  (light). A staggered grid, three laps against three rivals of your class (the mini races minis; the
+  supersport and the naked race the big street bikes), places, lap times and your best lap kept per
+  circuit. Street bikes ride on their own rubber (no dirt penalty); a dirt bike may ride too, on
+  knobblies (85 % grip, 88 % brakes on the asphalt), against its own class on the same tyres. Solo
+  only.
 
 - **Online**: up to four riders, each on their own garage bike (its mods, its wear, its paint and
   your kit travel to every screen). The host picks a **race** on a new generated track (ROOKIE, PRO
@@ -174,6 +185,7 @@ import { createHoleshot } from "./dist/holeshot.mjs";
 const game = createHoleshot({ host: document.querySelector("#stage") }); // setup or the garage
 game.start("race");                         // or "freeride", "bigair", "wheelie"
 game.start("race", { venue: "sx" });         // Race, Series and Free Ride: venue "mx" (default) or "sx"
+game.start("trackday", { map: "td-meridian" }); // Track Day: "td-meridian" (default), "td-knotworks", "td-bottlecap"
 createHoleshot({ host, attract: true });     // the landing hero: a race on the autopilot
 createHoleshot();                            // a layer over the whole page; Escape gives it back
 ```

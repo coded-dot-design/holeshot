@@ -18,6 +18,9 @@ export interface ModeResult {
   wear: Record<PartId, number>;
 }
 
+/** Track Day's best-lap key for a circuit in the profile's `stats.best`. */
+export const lapKey = (circuit: string) => "lap:" + circuit;
+
 /** What a ride pays. */
 export function payout(s: RunStats, units: Units = "imperial"): [string, number][] {
   const L: [string, number][] = [];
@@ -25,7 +28,8 @@ export function payout(s: RunStats, units: Units = "imperial"): [string, number]
     if (PAYOUT.quit > 0) L.push(["LEFT EARLY", 0]);
     return L;
   }
-  if (s.mode === "race") {
+  if (s.mode === "race" || s.mode === "trackday") {
+    // (Track Day pays as a race does: ../modes/race/circuits.ts.)
     const pl = s.place ?? 3, P = PAYOUT.race;
     L.push([`FINISHED ${["1ST", "2ND", "3RD", "4TH"][pl] ?? "4TH"}`, P.place[pl] ?? P.place[P.place.length - 1]!]);
     if (!s.crashes) L.push(["CLEAN RACE", P.clean]);
@@ -95,15 +99,22 @@ export function apply(p: Profile, r: ModeResult): Profile {
   n.credits += r.credits;
   n.stats.events++;
   n.stats.earned += r.credits;
-  if (r.stats.mode === "race" && r.stats.finished && r.stats.place === 0) n.stats.wins++;
+  const raced = r.stats.mode === "race" || r.stats.mode === "trackday";
+  if (raced && r.stats.finished && r.stats.place === 0) n.stats.wins++;
   // Endless: the best distance (kept apart from the scores: ./profile.ts `stats.far`).
   const fk = r.stats.farKey ?? r.stats.mode;
   if (r.stats.far !== undefined && r.stats.far > (n.stats.far[fk] ?? 0)) n.stats.far[fk] = Math.round(r.stats.far);
   const key = r.stats.mode + (r.stats.where ? ":" + r.stats.where : "");
-  const best = r.stats.mode === "race" ? r.stats.time : r.stats.mode === "bigair" ? r.stats.judges : r.stats.score;
+  const best = raced ? r.stats.time : r.stats.mode === "bigair" ? r.stats.judges : r.stats.score;
   if (r.stats.finished && best !== undefined && best > 0) {
     const was = n.stats.best[key];
-    if (was === undefined || (r.stats.mode === "race" ? best < was : best > was)) n.stats.best[key] = best;
+    if (was === undefined || (raced ? best < was : best > was)) n.stats.best[key] = best;
+  }
+  // Track Day: the best lap per circuit (`stats.best["lap:<circuit>"]`, lower is better), kept from
+  // any lap completed, finished or not (an additive key: no profile version step).
+  if (r.stats.mode === "trackday" && r.stats.where && r.stats.bestLap && r.stats.bestLap > 0) {
+    const k = lapKey(r.stats.where), was = n.stats.best[k];
+    if (was === undefined || r.stats.bestLap < was) n.stats.best[k] = r.stats.bestLap;
   }
   n.pit++;
   return n;

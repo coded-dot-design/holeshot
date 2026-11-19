@@ -9,7 +9,7 @@ import type { Engine } from "@fzlt/core/kernel";
 import type { RigColors, RigHelmet } from "../bike/rig.ts";
 import type { Tuned } from "../model/tune.ts";
 
-export type ModeId = "race" | "freeride" | "bigair" | "wheelie" | "series" | "desert" | "endcity";
+export type ModeId = "race" | "freeride" | "bigair" | "wheelie" | "series" | "desert" | "endcity" | "trackday";
 
 /** What a ride did, for the payout and the wear. Every mode fills the common part. */
 export interface RunStats {
@@ -25,7 +25,7 @@ export interface RunStats {
   hard: number;
   /** The event ran to its end (a finish, the clock) rather than being left. */
   finished: boolean;
-  /** Race: finishing place (0 is 1st), time, best lap, whether it led every lap. */
+  /** Race (and Track Day): finishing place (0 is 1st), time, best lap, whether it led every lap. */
   place?: number;
   time?: number;
   bestLap?: number;

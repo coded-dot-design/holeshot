@@ -73,7 +73,7 @@ try {
             race: g('race').map((b) => (b.dataset.go || b.dataset.mode || 'online') + (b.dataset.venue ? ':' + b.dataset.venue : '') + (b.disabled ? '!' : '')),
             endless: g('endless').map((b) => (b.dataset.endless || b.dataset.mode || (b.classList.contains('ol-open') ? 'online' : 'soon')) + (b.disabled ? '!' : '')),
             free: g('free').map((b) => (b.dataset.map || b.dataset.mode || (b.classList.contains('ol-open') ? 'online' : 'soon')) + (b.disabled ? '!' : '')),
-            day: g('day').map((b) => (b.disabled ? 'soon!' : 'ride')),
+            day: g('day').map((b) => b.dataset.circuit + (b.disabled ? '!' : '')),
             big: keys.every((k) => Math.min(r(k).width, r(k).height) >= 44),
           };
         })()`);
@@ -81,7 +81,7 @@ try {
           race: ["series:mx", "series:sx", "race:mx", "race:sx", "online"],
           endless: ["desert", "quarry", "forest", "night-park", "endcity", "online", "soon!"],
           free: ["neon-park", "dune-sea", "quarry", "forest", "night-park", "sx-floor", "sx-volt-floor", "bigair", "online"],
-          day: ["soon!"], big: true,
+          day: ["td-meridian", "td-knotworks", "td-bottlecap"], big: true,
         }, `${at}: the tiles (SERIES first; MX and SX; the coming ones disabled)`);
         assert.equal(await sideways(), false, `${at}: LET'S RIDE: no sideways scroll`);
         // ← GARAGE stays top-left with the groups scrolled to the end.

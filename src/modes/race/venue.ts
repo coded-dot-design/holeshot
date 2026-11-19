@@ -21,7 +21,7 @@ export const SX_W = 3.2;
  *  scaled, the track wider and its berms higher. The gate and the lap line stay put (on the first straight); the features keep their
  *  size. Idempotent per plan (an MX plan is not scaled again). Pure. */
 export function mxPlan(p: TrackPlan, s = MX_SCALE): TrackPlan {
-  if (p.venue === "mx" || p.venue === "sx") return p;
+  if (p.venue) return p;
   const r3 = (v: number) => Math.round(v * 1e4) / 1e4;
   // The berms as high as the track is wider (the same bank angle across the wider track).
   const bh = (b: number | undefined) => r3((b ?? 0.75) * (MX_W / TRACK_W));

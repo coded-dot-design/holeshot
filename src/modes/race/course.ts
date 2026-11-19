@@ -20,6 +20,14 @@ export const E_STUCK = 11, E_RESET = 12;
 /** A reset's time cost: the bike is held on the line this long (the field rides on). */
 export const RESET_HOLD = 1.2;
 const COUNT = 3, RESPAWN = 1.45;
+/** Track Day (./circuits.ts): the run-off's width past the asphalt's edge; the speeds the line wants:
+ *  flat out (past every bike's top), a corner at √(TD_K × radius), braked for at TD_BRAKE (units/s²). */
+export const TD_RUNOFF = 2.4, TD_TOP = 30, TD_K = 18, TD_BRAKE = 11;
+/** The road tyre's grip the corner speeds are set for (a street bike's: ../../data/roster.ts). */
+export const TD_GRIP = 1.34;
+/** Track Day's grid: a staggered two-by-two (slot k: its side, × the track's half width less a metre,
+ *  and how far back of the line), the player third on the grid. */
+export const TD_GRID = [[-1, 0], [1, 2.6], [-1, 5.2], [1, 7.8]] as const, TD_SLOT = [2, 0, 1, 3];
 
 /** A turn: `turn` radians (+ left, − right; a hairpin is about ±π), of radius `r` (the plan's RAD if
  *  absent), its berm's height (0.75 if absent). */
@@ -60,8 +68,11 @@ export interface TrackPlan {
   seed: number;
   /** The track's width (TRACK_W if absent: an MX track is wider, ./venue.ts). */
   width?: number;
-  /** The venue it was built for ("mx" outdoors if absent; "sx" a stadium: ./venue.ts). */
-  venue?: "mx" | "sx";
+  /** The venue it was built for ("mx" outdoors if absent; "sx" a stadium: ./venue.ts; "td" a paved
+   *  road circuit: ./circuits.ts). */
+  venue?: "mx" | "sx" | "td";
+  /** The terrain's cell (CELL if absent: a flat paved circuit's is coarser, ./circuits.ts). */
+  cell?: number;
 }
 /** Moto Track's loop: four straights and four bermed left-handers; a rhythm section of doubles on
  *  the first straight, the whoops on the second, the big triple on the third, the finish tabletop. */
@@ -77,7 +88,9 @@ export const MOTO_TRACK: TrackPlan = {
 /** A track from its plan: the centre line, the profile, the terrain, the rivals' speeds. Pure. */
 export function makeTrack(def: TrackPlan) {
   // ---- the track: a closed centre line, integrated from straights and left turns, resampled ----
-  const { A, B, RAD } = def, W = def.width ?? TRACK_W, DS = 0.5, COLS = def.cols, ROWS = def.rows, HX = (COLS * CELL) / 2, HZ = (ROWS * CELL) / 2;
+  const { A, B, RAD } = def, W = def.width ?? TRACK_W, DS = 0.5, COLS = def.cols, ROWS = def.rows, CL = def.cell ?? CELL, HX = (COLS * CL) / 2, HZ = (ROWS * CL) / 2;
+  /** Track Day (./circuits.ts): asphalt, flat, no berms, run-off round it, a road bike's corner speeds. */
+  const TD = def.venue === "td";
   /** The lap's sections in order: straight length, or a turn. */
   const PLAN = def.plan;
   const LAP = PLAN.reduce<number>((s, v) => s + secLen(v, RAD), 0);
@@ -207,7 +220,7 @@ export function makeTrack(def: TrackPlan) {
   /** near() for the course's build: the same answer wherever the centre line is within NEAR_R (beyond
    *  it, Infinity), from a grid of buckets of the segments round each cell (built once, on the first
    *  build), so building a course costs the cells × a few segments, not the cells × the lap. */
-  const NEAR_R = W / 2 + 2.55, BG = 2;
+  const NEAR_R = W / 2 + (TD ? TD_RUNOFF + 0.6 : 2.55), BG = 2;
   let BK: Int32Array | null = null, BS: Int32Array | null = null;
   const BW = Math.ceil((HX * 2) / BG) + 2, BH = Math.ceil((HZ * 2) / BG) + 2;
   function buckets() {
@@ -242,18 +255,25 @@ export function makeTrack(def: TrackPlan) {
   /** The course: terrain with the track carved and the features stamped. Pure: the same every time. */
   function course(): Terrain {
     if (!BK) buckets();
-    const t = terrain({ cols: COLS, rows: ROWS, cell: CELL });
+    const t = terrain({ cols: COLS, rows: ROWS, cell: CL });
     // Rolling dirt round the track, down to the plinth at the edges.
     // (A stadium floor (SX) is near flat: packed dirt on a concrete floor.)
-    t.noise({ seed: def.seed, amp: def.venue === "sx" ? 0.22 : 1.6, scale: 9, octaves: 3, ridge: 0.2 });
+    // (A paved circuit (Track Day) sits in gently rolling grass, its asphalt and run-off level.)
+    t.noise({ seed: def.seed, amp: def.venue === "sx" ? 0.22 : TD ? 0.7 : 1.6, scale: TD ? 16 : 9, octaves: 3, ridge: TD ? 0 : 0.2 });
     t.shape((x, z, h) => {
       const ex = Math.min(1, (HX - Math.abs(x)) / 2.6), ez = Math.min(1, (HZ - Math.abs(z)) / 2.6), e = Math.max(0, Math.min(ex, ez));
       return h * e * e * (3 - 2 * e) * 0.9;
     });
-    const half = W / 2, edge = 1.8;
+    const half = TD ? W / 2 + TD_RUNOFF : W / 2, edge = TD ? 0.6 : 1.8;
     t.shape((x, z, h) => {
       nearCourse(x, z);
       const d = NR[0]!;
+      if (TD) {
+        // Asphalt and run-off dead level at the floor, the grass eased down to it (no lip).
+        if (d >= half + 0.3 + edge + 0.3) return h;
+        const u = d <= half ? 0 : (d - half) / (edge + 0.3), w = 1 - sm(u);
+        return h * (1 - w) + FLOOR * w;
+      }
       if (d >= half + edge + 0.6) return h;
       const s = sAt(NR[1]! + NR[2]!), y = FLOOR + profile(s), u = d <= half + 0.3 ? 0 : (d - half - 0.3) / edge, w = 1 - sm(u);
       // A low bank of dirt along each side (the track sits in it).
@@ -261,7 +281,7 @@ export function makeTrack(def: TrackPlan) {
       return h + (y - h) * w + lip * (1 - w * 0.5);
     });
     // The berms: the outside of each turn banked up (the right of a left turn, the left of a right).
-    for (let i = 0; i < NT; ) {
+    for (let i = 0; i < NT && !TD; ) {
       while (i < NT && !TURN[i]) i++;
       if (i >= NT) break;
       const i0 = i, dir = TURN[i]!, sec = SECTION[i]!;
@@ -277,9 +297,14 @@ export function makeTrack(def: TrackPlan) {
     // Paint: the track's faces, and the features' faces.
     for (let j = 0; j < ROWS; j++)
       for (let i = 0; i < COLS * 2; i++) {
-        const x = t.x0 + ((i >> 1) + (i & 1 ? 1 : 2) / 3) * CELL, z = t.z0 + (j + (i & 1 ? 2 : 1) / 3) * CELL;
+        const x = t.x0 + ((i >> 1) + (i & 1 ? 1 : 2) / 3) * CL, z = t.z0 + (j + (i & 1 ? 2 : 1) / 3) * CL;
         nearCourse(x, z);
         if (NR[0]! > half) continue;
+        // Track Day: the asphalt (inside the edge lines) and the run-off round it.
+        if (TD) {
+          t.kind[j * COLS * 2 + i] = NR[0]! <= W / 2 ? KIND_TRACK : KIND_FACE;
+          continue;
+        }
         const s = sAt(NR[1]! + NR[2]!), p = profile(s);
         t.kind[j * COLS * 2 + i] = p > 0.05 && FK[0] !== F_WHOOPS ? KIND_FACE : KIND_TRACK;
       }
@@ -303,7 +328,23 @@ export function makeTrack(def: TrackPlan) {
   const WANT = new Float64Array(NT);
   /** 1 where the speed wanted is a turn's: the autopilot brakes to it sooner. */
   const INTO = new Uint8Array(NT);
-  {
+  if (TD) {
+    // A road circuit: flat out (TD_TOP, past every top speed) wherever no corner ahead wants less; a
+    // corner's speed by its radius (TD_K × r, a share of a road tyre's grip), braked for from up to
+    // 45 units out at TD_BRAKE (the speed it may carry at distance d: √(v² + 2·TD_BRAKE·d)).
+    const AH = Math.round(45 / (LAP / NT));
+    for (let i = 0; i < NT; i++) {
+      let w = TD_TOP;
+      for (let a = 0; a <= AH; a++) {
+        const j = (i + a) % NT;
+        if (!TURN[j]) continue;
+        const vt = Math.sqrt(TD_K * RADIUS[j]!), v = Math.sqrt(vt * vt + 2 * TD_BRAKE * a * (LAP / NT));
+        if (v < w) w = v;
+      }
+      if (w < TD_TOP) INTO[i] = 1;
+      WANT[i] = w;
+    }
+  } else {
     for (let i = 0; i < NT; i++) {
       const s = sAt(i);
       let w = 14.5, wt = 99;
@@ -331,7 +372,7 @@ export function makeTrack(def: TrackPlan) {
   }
 
   return {
-    def, id: def.id, name: def.name, W, venue: def.venue ?? "mx", COLS, ROWS, HX, HZ, LAP, NT, TRACK, YAW, TURN, RADIUS, SECTION, GATE_S, LINE_S, FEATURES, FEATURE_NAMES, FK, PF, NR, FLOOR, WANT, INTO,
+    def, id: def.id, name: def.name, W, venue: def.venue ?? "mx", CELL: CL, COLS, ROWS, HX, HZ, LAP, NT, TRACK, YAW, TURN, RADIUS, SECTION, GATE_S, LINE_S, FEATURES, FEATURE_NAMES, FK, PF, NR, FLOOR, WANT, INTO,
     sAt, profile, prof, near, course, trackEdges,
   };
 }
@@ -353,7 +394,7 @@ export const GRACE = 30;
 export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), me: { power: Power; shape?: BikeShape } = { power: TWO_STROKE }, rivals: Power[] = [FOUR_STROKE, TWO_STROKE, FOUR_STROKE], opts: RaceOpts = {}) {
   const NV0 = opts.nerve?.[0] ?? 0.9, NV1 = opts.nerve?.[1] ?? 0.98;
   const { HX, HZ, LAP, NT, TRACK, YAW, GATE_S, LINE_S, FK, PF, NR, WANT, INTO, sAt, prof, near } = track;
-  const t = track.course();
+  const t = track.course(), TD = track.venue === "td";
   const riders: Bike[] = [];
   const H = Math.max(1, Math.min(RIDERS, opts.humans ?? 1)), DEF = [FOUR_STROKE, TWO_STROKE, FOUR_STROKE];
   const mine = (r: number) => (r ? opts.bikes?.[r] : me) ?? me;
@@ -385,21 +426,27 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
     b.reset(TRACK[i * 2]! + nx * lane - cos(yaw) * back, TRACK[i * 2 + 1]! + nz * lane + sin(yaw) * back, yaw);
     R[r * 16 + NI] = i;
   }
+  /** Track Day: each rider's share of a road tyre's corner speed (a dirt bike's knobblies take the
+   *  corners slower: √(its grip / TD_GRIP), at most 1). */
+  const GS = new Float64Array(RIDERS);
   function reset(power?: Power) {
     if (power) riders[0]!.use(power), (POWERS[0] = power);
+    for (let r = 0; r < RIDERS; r++) GS[r] = TD ? Math.min(1, Math.sqrt(POWERS[r]!.grip / TD_GRIP)) : 1;
     S.fill(0);
     NE[0] = 0;
     NE[1] = seed >>> 0;
     R.fill(0);
     const gi = Math.round(GATE_S / (LAP / NT)) - 1;
     for (let r = 0; r < RIDERS; r++) {
-      // Lanes across the gate, the player second from the inside.
-      const lane = [-0.35, -1.15, 0.45, 1.25][r]!;
+      // Lanes across the gate, the player second from the inside. Track Day: a staggered grid
+      // behind the line (TD_GRID), the player third.
+      // (A grid slot is placed on its own point of the straight, so the line is searched from there.)
+      const k = TD ? TD_SLOT[r]! : 0, lane = TD ? TD_GRID[k]![0] * (track.W / 2 - 1) : [-0.35, -1.15, 0.45, 1.25][r]!, gk = TD ? gi - Math.round(TD_GRID[k]![1] / (LAP / NT)) : gi;
       R[r * 16 + LN] = lane;
       R[r * 16 + NV] = r ? NV0 + rand() * (NV1 - NV0) : 1;
-      place(r, gi, lane, 0.35);
-      R[r * 16 + PG] = sAt(gi) - 0.35;
-      R[r * 16 + PL] = r;
+      place(r, gk, lane, 0.35);
+      R[r * 16 + PG] = sAt(gk) - 0.35;
+      R[r * 16 + PL] = TD ? k : r;
     }
   }
   /** The nearest track point to rider r, searched round its last; its progress and laps. */
@@ -484,7 +531,7 @@ export function motoRace(seed = 20261118, track: Track = makeTrack(MOTO_TRACK), 
     const fx = b.cy, fz = -b.sy, ux = tx - b.pos[0]!, uz = tz - b.pos[2]!, ul = Math.sqrt(ux * ux + uz * uz) || 1;
     const cross = (fx * uz - fz * ux) / ul;
     out[3] = Math.max(-1, Math.min(1, cross * 2.6));
-    const want = WANT[i]! * (onJump ? 1 : R[r * 16 + NV]!);
+    const want = WANT[i]! * (onJump ? 1 : R[r * 16 + NV]!) * (INTO[i] ? GS[r]! : 1);
     const p = b.pitch, rate = (p - R[r * 16 + PP]!) * 60;
     R[r * 16 + PP] = p;
     out[4] = 0;

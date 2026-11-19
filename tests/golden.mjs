@@ -1,5 +1,5 @@
 // The golden cases (tests/golden.test.mjs in Node, tests/golden.browser.mjs in a browser): generated
-// tracks at three difficulties, the race loop, the four open maps, and fixed rides (Endless Wheelie City's among them), each hashed.
+// tracks at three difficulties, the race loop, Track Day's circuits, the four open maps, and fixed rides (Endless Wheelie City's among them), each hashed.
 // Imports only the game's headless modules, so it bundles for any browser.
 import { hash32 } from "@fzlt/core/presence";
 import * as C from "../src/modes/race/course.ts";
@@ -13,6 +13,8 @@ import { tune } from "../src/model/tune.ts";
 import { newBike } from "../src/model/profile.ts";
 import { STARTERS } from "../src/data/roster.ts";
 import * as N from "../src/net.ts";
+import { TRACK_DAY, trackDayRivals } from "../src/modes/race/circuits.ts";
+import { onGround, roadPower } from "../src/model/families.ts";
 
 const bytes = (a) => new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
 const h = (...arrays) => {
@@ -22,6 +24,7 @@ const h = (...arrays) => {
 };
 const text = (s) => new TextEncoder().encode(s);
 const bikes = STARTERS.map((m) => tune(newBike(m.id, "g")));
+const street = ["curb-pup", "tidebreaker"].map((id) => onGround(tune(newBike(id, "g")), "trackday"));
 const trackHash = (t) => h(t.TRACK, t.YAW, t.course().h);
 
 /** Every case's hash, by name. */
@@ -33,6 +36,14 @@ export function compute() {
       out[`track ${seed * 7919} @${d}`] = h(text(JSON.stringify(g.plan)), text(trackHash(C.makeTrack(g.plan))));
     }
   out["the race loop"] = trackHash(C.makeTrack(C.MOTO_TRACK));
+  // Track Day's circuits, and a race of four on each on the autopilot (street bikes: the mini, the supersport).
+  for (const [k, p] of TRACK_DAY.entries()) {
+    const t = C.makeTrack(p), me = street[k === 2 ? 0 : 1], r = C.motoRace(31 + k, t, me, trackDayRivals(me.model, roadPower)), I = new Float64Array(5);
+    out[`track day ${p.id}`] = h(t.TRACK, t.YAW, t.course().h, t.course().kind);
+    r.go(me.power);
+    for (let f = 0; f < 60 * 70; f++) (r.step(1 / 60, I, true), r.clear());
+    out[`track day race ${p.id}`] = h(...r.bytes);
+  }
   for (const def of RIDE_MAPS) {
     const m = makeMap(def);
     out[`map ${def.id}`] = h(m.TRACK, m.YAW, m.SPAWN, m.POSTS, m.terrain.h);

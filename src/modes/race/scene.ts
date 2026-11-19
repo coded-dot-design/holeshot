@@ -22,7 +22,7 @@ import { sound } from "@fzlt/core/sound";
 import { LOOP, ENDO, CASE, BAIL, type Power } from "../../bike/bike.ts";
 import { rig, type Rig, type RigColors } from "../../bike/rig.ts";
 import { pool, voice, gamepad, type Pool } from "../../bike/kit.ts";
-import { DONE, E_CRASH, E_FINISH, E_GATE, E_LAND, E_LAP, E_PLACE, E_RESPAWN, E_WHEELIE, E_COUNT, GRID, LAPS, RACE, TRACK_W, motoRace, type RaceOpts, type Track } from "./course.ts";
+import { DONE, E_CRASH, E_FINISH, E_GATE, E_LAND, E_LAP, E_PLACE, E_RESPAWN, E_WHEELIE, E_COUNT, GRID, LAPS, RACE, TRACK_W, TD_GRID, TD_RUNOFF, TD_SLOT, motoRace, type RaceOpts, type Track } from "./course.ts";
 import { freeRun, E_TRICK, E_STUCK, E_RESET, E_GROUND, E_DRAG, E_BANKED, E_LOST } from "../freeride/session.ts";
 import { DRAG_NAME, FENDER } from "../stunts.ts";
 import { SC as T_SC, CB as T_CB, PTS as T_PTS, KIND as T_KIND, DIST as T_DIST, TIME as T_TIME, MANUAL, STOPPIE } from "../wheelie/tricks.ts";
@@ -102,6 +102,23 @@ const SX_LIGHT: Partial<Pal> = {
   ground: ["#b88a62", "#b28460", "#ac7f5c"], crest: "#c29670", steep: "#8f6648", track: "#9a6a48", face: "#b58058",
   plinth: "#e9e4f2", rim: "#ff7a59", table: "#c9c4d6", tuff: "#13a9bb", tuffTop: "#ffffff", banner: "#ff7a59",
 };
+/** Track Day (./circuits.ts): a night race under floodlights (dark), a summer track day (light). Grass
+ *  round dark asphalt, a pale run-off; the circuit's own colours (kerbs, lines, pit lane, stands) are TD_C. */
+const TD_DARK: Partial<Pal> = {
+  sky0: "#03040c", sky1: "#0b1024", sky2: "#1b1940", amb: 0.46,
+  ground: ["#0f2a24", "#123128", "#15382d"], crest: "#1a4234", steep: "#0b2019", track: "#23232e", face: "#3b3a4c",
+  plinth: "#10121f", rim: "#22e6ff", table: "#070812", tuff: "#ff4fa8", tuffTop: "#f4f1ff", banner: "#22e6ff", dust: "#8d8aa6",
+};
+const TD_LIGHT: Partial<Pal> = {
+  sky0: "#9fd8ff", sky1: "#cdeeff", sky2: "#fff3dc", amb: 0.56,
+  ground: ["#8fd18a", "#84c87f", "#79bd75"], crest: "#9ad995", steep: "#6aa866", track: "#5b5d6b", face: "#cfc9bd",
+  plinth: "#b98e6c", rim: "#fff0dc", table: "#e3d2bd", tuff: "#ff5a4f", tuffTop: "#ffffff", banner: "#13a9bb", dust: "#d8d4cc",
+};
+/** Track Day's own colours: the kerbs, the lines on the asphalt, the pit lane, the stands, the lights. */
+const TD_C = {
+  dark: { kerb: "#ff3b5c", kerb2: "#f4f1ff", line: "#e9ecff", pit: "#2c2c3a", wall: "#3a3d58", wallTop: "#22e6ff", stand: "#3d4270", stand2: "#323760", seats: ["#22e6ff", "#ff4fa8", "#b6ff3b"], roof: "#14172a", garage: "#1d2034", door: "#ffd166", lampOff: "#2a1820", lampOn: "#ff2e4d", board: "#f4f1ff" },
+  light: { kerb: "#e8323f", kerb2: "#ffffff", line: "#ffffff", pit: "#6c6e7c", wall: "#dcdfe8", wallTop: "#13a9bb", stand: "#c9ccd8", stand2: "#b3b7c6", seats: ["#13a9bb", "#ff7a59", "#7cc93a"], roof: "#eef0f6", garage: "#e6e1d6", door: "#5b5d6b", lampOff: "#4a3036", lampOn: "#ff2e4d", board: "#ffffff" },
+};
 const LIGHT: Pal = {
   ...DARK, night: false, light: [0.6, 1, 0.45], amb: 0.54,
   sky0: "#bfe6ff", sky1: "#d9f0ff", sky2: "#fff1dc", star: "#ffffff", grid: "#ffffff",
@@ -118,6 +135,9 @@ const LIGHT: Pal = {
   ],
 };
 const DUST = 120, SPARK = 48, ROOST = 60;
+/** Track Day's level of detail: its flat ground is drawn on coarser cells (./circuits.ts), so its
+ *  detail steps down later (about the faces a frame of an MX table). */
+const TD_LOD = [19, 36];
 const ORD = ["1ST", "2ND", "3RD", "4TH"];
 /** Endless: the ground tricks' names (../wheelie/tricks.ts kinds). */
 const GROUND = ["", "WHEELIE", "MANUAL", "HOP", "STOPPIE"];
@@ -151,7 +171,9 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   const bp = endless ? biomePal(endless.biome.bi) : null;
   // SX: a stadium track (./venue.ts): indoor colours and the stadium's walls.
   const sx = !map && !endless && (track as Track).venue === "sx";
-  const DK: Pal = look ? { ...DARK, ...look.dark } : bp ? { ...DARK, ...bp.dark } : sx ? { ...DARK, ...SX_DARK } : DARK, LT: Pal = look ? { ...LIGHT, ...look.light } : bp ? { ...LIGHT, ...bp.light } : sx ? { ...LIGHT, ...SX_LIGHT } : LIGHT;
+  // Track Day: a paved road circuit (./circuits.ts): asphalt colours, kerbs, the gantry, the pits.
+  const td = !map && !endless && (track as Track).venue === "td";
+  const DK: Pal = look ? { ...DARK, ...look.dark } : bp ? { ...DARK, ...bp.dark } : sx ? { ...DARK, ...SX_DARK } : td ? { ...DARK, ...TD_DARK } : DARK, LT: Pal = look ? { ...LIGHT, ...look.light } : bp ? { ...LIGHT, ...bp.light } : sx ? { ...LIGHT, ...SX_LIGHT } : td ? { ...LIGHT, ...TD_LIGHT } : LIGHT;
   let P: Pal = document.documentElement.dataset.theme === "light" ? LT : DK;
   const { HX, HZ, NT, TRACK, YAW } = track, { TURN, LAP, GATE_S, LINE_S } = track as Track, TW = (track as Track).W ?? TRACK_W;
   const me0 = { power: ctx.bike.power, shape: ctx.bike.shape, sweet: ctx.bike.sweet, bar: ctx.bike.bar, hop: ctx.bike.hop };
@@ -163,7 +185,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   const sim = (race ?? jam ?? fr)!, t = net && fr ? fr.t : sim.t, me = sim.riders[seat]!, RIDERS = sim.riders.length;
   /** Online endless: the ride together (END banks yours, REGROUP brings you to the host). */
   const roam = !!(net && endless), jamOnly = jam && !roam ? jam : null;
-  const m = net ? net.ride.meters[seat]! : meter(endless ? "desert" : free ? "freeride" : "race");
+  const m = net ? net.ride.meters[seat]! : meter(endless ? "desert" : free ? "freeride" : td ? "trackday" : "race");
   /** A placed ride (a race, a jam): its place, against whom. */
   const placed = !!race || !!jam, TAGS: string[] = net ? net.names.slice() : [];
   const NAME = ctx.bike.model.name;
@@ -174,7 +196,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   const play = L.add(document.createElement("button"));
   play.type = "button";
   play.className = "mt-play";
-  play.setAttribute("aria-label", `${free ? "Free Ride" : "Race"}: Space or J for gas, K or Shift to brake, W and S (or up and down) shift your weight forward and back (back lifts the front; in the air it pitches the bike), A and D (or left and right) steer${endless ? ", L hops (or flick the stick back then forward), C holds the combo" : ""}. V changes the view, M mutes, P or Escape pauses`);
+  play.setAttribute("aria-label", `${free ? "Free Ride" : td ? "Track Day" : "Race"}: Space or J for gas, K or Shift to brake, W and S (or up and down) shift your weight forward and back (back lifts the front; in the air it pitches the bike), A and D (or left and right) steer${endless ? ", L hops (or flick the stick back then forward), C holds the combo" : ""}. V changes the view, M mutes, P or Escape pauses`);
   const hud = L.add(document.createElement("div"));
   hud.className = "mt-hud";
   hud.innerHTML = `<div class="mt-head"><p class="mt-top">${jamOnly ? `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>0 PTS</span></b>` : endless ? `<b class="mt-chip mt-pos"><span>BEST ${km(ctx.best ?? 0)}</span></b><b class="mt-chip mt-lap"><span>${km(0)}</span></b>` : free ? `<b class="mt-chip mt-pos"><span>${map ? map.name : "FREE RIDE"}</span></b><b class="mt-chip mt-lap"><span>0.0s AIR</span></b>` : `<b class="mt-chip mt-pos"><span>1ST</span><i>/${RIDERS}</i></b><b class="mt-chip mt-lap"><span>LAP 1/${LAPS}</span></b>`}<b class="mt-chip mt-time"><span>0:00.0</span></b><b class="mt-chip mt-ride"><span>#${ctx.number} ${NAME}</span></b>${endless ? `<b class="mt-chip mt-score" aria-label="Trick points"><span>0 PTS</span><i></i></b><b class="mt-chip mt-drag" hidden><span></span></b>` : ""}</p><p class="mt-hint"></p></div><p class="mt-toast" hidden></p><p class="mt-live" aria-live="polite"></p><p class="mt-stuck" hidden>STUCK? Hold R / tap ↺ to reset</p><p class="mt-keys">${keysHTML("mt", { reset: "Reset to the last good spot (R)", view: !endless, theme: !!ctx.theme, regroup: roam ? (seat ? "To the host (G)" : "Regroup: everyone to you (G)") : undefined })}</p>`;
@@ -223,7 +245,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   const rigs: Rig[] = [], gateBars: DioramaObject[] = [];
   const EDGE = track.trackEdges(t);
   // The neon lines over the terrain: the track's edges, or the map's own (Endless: the grid, drawn live).
-  const LINES: MapLine[] = endless ? [] : look ? look.lines(t) : [{ p: EDGE.subarray(0, NT * 3), n: NT, closed: true, c: "edge2", a: 1 }, { p: EDGE.subarray(NT * 3), n: NT, closed: true, c: "edge", a: 1 }];
+  const LINES: MapLine[] = endless || td ? [] : look ? look.lines(t) : [{ p: EDGE.subarray(0, NT * 3), n: NT, closed: true, c: "edge2", a: 1 }, { p: EDGE.subarray(NT * 3), n: NT, closed: true, c: "edge", a: 1 }];
   const rnd = seeded(ctx.seed);
   let sky: CanvasGradient | null = null;
   const STARS = new Float32Array(120);
@@ -245,7 +267,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     }
     tv = terrainView(dio, t, {
       bands: endless ? desertBands(P, endless.biome.bi) : look ? look.bands(P as Parameters<typeof look.bands>[0]) : [[0.45, P.ground[0]!], [0.85, P.ground[1]!], [1.25, P.ground[2]!], [99, P.crest]], steep: 0.5, steepColor: P.steep, kinds: look ? look.kinds(P as Parameters<typeof look.kinds>[0]) : [P.track, P.face],
-      light: P.light, ambient: P.amb, lod: endless ? [14, 26] : TW !== TRACK_W ? [19, 36] : [24, 44], shadows: RIDERS + 1, shadowColor: P.shadow,
+      light: P.light, ambient: P.amb, lod: endless ? [14, 26] : td ? TD_LOD : TW !== TRACK_W ? [19, 36] : [24, 44], shadows: RIDERS + 1, shadowColor: P.shadow,
       // (MX and SX tracks, on bigger tables, step their detail down sooner: about the same faces a frame.)
       // The endless grounds split each cell along its flatter diagonal (crests fold straight); the
       // window's own height queries (../desert/world.ts) use the same rule, so the bike rides the drawn face.
@@ -257,8 +279,9 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       dio.decal("terrain", 2, (c2) => dv.paintFog(c2, me.pos[0]!, me.pos[2]!, dv.hazeColor(), FOG));
       dio.decal("terrain", 3, (c2) => dv.paintFar(c2));
       FOG.g = null;
-    } else dio.decal("terrain", 1, paintLines);
+    } else dio.decal("terrain", 1, td ? paintCircuit : paintLines);
     if (look) look.build(dio, t, P as Parameters<typeof look.build>[2]);
+    else if (td) circuitScenery();
     else if (!endless) trackScenery();
     // The riders: the player first, in the profile's colours and kit.
     for (let r = 0; r < RIDERS; r++) {
@@ -341,8 +364,242 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     }
   }
 
+  // ---- Track Day: the circuit's paint (kerbs, lines, the grid, the pit lane) and its buildings ----
+  /** Per point: 1 where a kerb runs (round every corner, a little past each end). The kerbs' inner
+   *  and outer edges (both sides: [side × 2 + edge] × NT points) and the edge lines (just inside the
+   *  asphalt), each [x, y, z] per point; the kerb points on the screen this frame ([x, y], NaN off it). */
+  const KB = new Uint8Array(td ? NT : 0), KP = new Float64Array(td ? NT * 12 : 0), EL = new Float64Array(td ? NT * 6 : 0), KS = new Float64Array(td ? NT * 8 : 0);
+  /** The pit lane's quad, the start line's chequer and the grid boxes ([x, y, z] corners), the gantry's lamps. */
+  const PITQ = new Float64Array(12), CHQ = new Float64Array(td ? 2 * 3 * 3 * 15 : 0), GRIDL = new Float64Array(td ? 4 * 24 : 0), LAMPS: DioramaObject[] = [];
+  const TDL = new Float64Array(2); // [lamps lit, the lap's start on the clock]
+  TDL[0] = -1;
+  /** Which way the loop goes round: +1 anticlockwise (left-handed), −1 clockwise; the pits are inside. */
+  let LOOP_DIR = 1;
+  if (td) {
+    const T0 = (track as Track), CW = T0.W / 2, KW = 0.8;
+    let tot = 0;
+    for (let i = 0; i < NT; i++) {
+      let d = YAW[(i + 1) % NT]! - YAW[i]!;
+      d -= TAU * Math.floor(d / TAU + 0.5);
+      tot += d;
+      for (let a = -4; a <= 4 && !KB[i]; a++) if (TURN[(i + a + NT) % NT]) KB[i] = 1;
+    }
+    LOOP_DIR = tot > 0 ? 1 : -1;
+    const at = (out: Float64Array, o: number, i: number, d: number, lift = 0.03) => {
+      const x = TRACK[i * 2]! + Math.sin(YAW[i]!) * d, z = TRACK[i * 2 + 1]! + Math.cos(YAW[i]!) * d;
+      (out[o] = x), (out[o + 1] = t.height(x, z) + lift), (out[o + 2] = z);
+    };
+    for (let i = 0; i < NT; i++)
+      for (let k = 0; k < 2; k++) at(KP, k * 2 * NT * 3 + i * 3, i, (k ? 1 : -1) * CW), at(KP, (k * 2 + 1) * NT * 3 + i * 3, i, (k ? 1 : -1) * (CW + KW)), at(EL, k * NT * 3 + i * 3, i, (k ? 1 : -1) * (CW - 0.22));
+    // The pit lane: inside the main straight (section 0), from just past the last corner to short of the first.
+    const main = typeof T0.def.plan[0] === "number" ? (T0.def.plan[0] as number) : 30, step = LAP / NT, inside = -LOOP_DIR;
+    const p0 = Math.round(4 / step), p1 = Math.round(Math.min(main - 6, GATE_S + 60) / step), d0 = inside * (CW + TD_RUNOFF + 0.7), d1 = inside * (CW + TD_RUNOFF + 3.9);
+    at(PITQ, 0, p0, d0, 0.02), at(PITQ, 3, p1, d0, 0.02), at(PITQ, 6, p1, d1, 0.02), at(PITQ, 9, p0, d1, 0.02);
+    // The start line: a chequer two squares deep across the asphalt (14 squares), at the lap line.
+    const li = Math.round(LINE_S / step);
+    for (let rw = 0; rw < 3; rw++) for (let q = 0; q < 15; q++) at(CHQ, (rw * 15 + q) * 3, (li + rw) % NT, -CW + (q / 14) * 2 * CW, 0.04);
+    // The grid boxes: a line across each slot just ahead of its front wheel and its two sides back.
+    const gi = Math.round(GATE_S / step) - 1;
+    for (let k = 0; k < 4; k++) {
+      const lane = TD_GRID[k]![0] * (CW - 1), g = gi - Math.round(TD_GRID[k]![1] / step), f = g + 3, b = g - 1, o = k * 24;
+      at(GRIDL, o, f, lane - 0.75, 0.04), at(GRIDL, o + 3, f, lane + 0.75, 0.04);
+      at(GRIDL, o + 6, f, lane - 0.75, 0.04), at(GRIDL, o + 9, b, lane - 0.75, 0.04);
+      at(GRIDL, o + 12, f, lane + 0.75, 0.04), at(GRIDL, o + 15, b, lane + 0.75, 0.04);
+    }
+  }
+  const tdc = () => (P.night ? TD_C.dark : TD_C.light);
+  /** Track Day's buildings: the start/finish gantry and its lights, the pit wall, the garages, two
+   *  grandstands, tyre walls round the outside of every corner, light towers. */
+  function circuitScenery() {
+    const C = tdc(), T0 = track as Track, CW = T0.W / 2, step = LAP / NT, inside = -LOOP_DIR, edge = CW + TD_RUNOFF;
+    LAMPS.length = 0;
+    TDL[0] = -1;
+    const fits = (x: number, z: number, m = 1) => Math.abs(x) < HX - m && Math.abs(z) < HZ - m;
+    const spot = (i: number, d: number) => [TRACK[i * 2]! + Math.sin(YAW[i]!) * d, TRACK[i * 2 + 1]! + Math.cos(YAW[i]!) * d] as const;
+    // Tyre walls round the outside of each corner (red and white stacks), off the run-off.
+    for (let i = 0; i < NT; i += 3) {
+      if (!TURN[i]) continue;
+      const [x, z] = spot(i, (edge + 0.45) * TURN[i]!);
+      if (!fits(x, z)) continue;
+      dio.add({ shape: "cyl", sides: 6, size: [0.62, 0.5, 0.62], pos: [x, t.height(x, z) - 0.02, z], color: (i / 3) & 1 ? P.tuff : P.tuffTop, pick: false });
+    }
+    // The start/finish gantry over the line: two posts, the beam, the banner and the start lights.
+    {
+      const i = Math.round(LINE_S / step), [x, z] = spot(i, 0), w = (CW + TD_RUNOFF) * 2 + 0.6;
+      dio.add({ id: "gantry", shape: "group", size: [0.4, 0, w], pos: [x, t.height(x, z), z], rot: [0, YAW[i]!, 0], pick: false });
+      for (const zz of [-w / 2, w / 2]) dio.add({ size: [0.36, 4.2, 0.36], pos: [0, 0, zz], on: "gantry", color: C.wall, pick: false });
+      dio.add({ size: [0.5, 0.7, w + 0.4], pos: [0, 4.2, 0], on: "gantry", color: C.wall, pick: false });
+      dio.add({ size: [0.52, 0.22, w + 0.42], pos: [0, 4.62, 0], on: "gantry", color: P.banner, emissive: P.night, pick: false });
+      for (let k = 0; k < 12; k++) dio.add({ size: [0.54, 0.12, (w + 0.4) / 12], pos: [0, 4.84 + (k & 1 ? 0 : 0.12), -(w + 0.4) / 2 + (k + 0.5) * ((w + 0.4) / 12)], on: "gantry", color: k & 1 ? P.ink : P.check, pick: false, layer: 9 });
+      // Three pairs of start lights on the beam's face toward the grid: on, one pair a second; out at GO.
+      for (let k = 0; k < 6; k++) LAMPS.push(dio.add({ size: [0.1, 0.36, 0.36], pos: [-0.28, 4.36, (k < 3 ? -1 : 1) * (0.5 + (k % 3) * 0.55)], on: "gantry", color: C.lampOff, emissive: true, pick: false, layer: 10 }));
+    }
+    // The pit wall between the run-off and the pit lane, the garages behind the lane.
+    {
+      const p0 = Math.round(4 / step), main = typeof T0.def.plan[0] === "number" ? (T0.def.plan[0] as number) : 30, p1 = Math.round(Math.min(main - 6, GATE_S + 60) / step);
+      const pm = (p0 + p1) >> 1, len = (p1 - p0) * step, [wx, wz] = spot(pm, inside * (edge + 0.35));
+      if (fits(wx, wz)) {
+        dio.add({ id: "pitwall", size: [len, 0.75, 0.3], pos: [wx, t.height(wx, wz) - 0.05, wz], rot: [0, YAW[pm]!, 0], color: C.wall, pick: false });
+        dio.add({ size: [len + 0.02, 0.1, 0.32], on: "pitwall", color: C.wallTop, emissive: P.night, pick: false });
+      }
+      const n = Math.max(3, Math.min(8, Math.floor(len / 5)));
+      for (let q = 0; q < n; q++) {
+        const i = Math.round(p0 + ((q + 0.5) / n) * (p1 - p0)), [gx, gz] = spot(i, inside * (edge + 6.1)), id = "garage" + q;
+        if (!fits(gx, gz, 1.6)) continue;
+        dio.add({ id, size: [len / n - 0.4, 2.2, 3.2], pos: [gx, t.height(gx, gz) - 0.05, gz], rot: [0, YAW[i]!, 0], color: C.garage, pick: false });
+        dio.add({ size: [len / n - 1.4, 1.5, 0.05], pos: [0, -2, -inside * 1.62], on: id, color: C.door, emissive: P.night, pick: false });
+        dio.add({ size: [len / n - 0.3, 0.16, 3.4], on: id, color: q & 1 ? P.banner : C.wallTop, emissive: P.night, pick: false });
+      }
+    }
+    // Grandstands: one along the outside of the main straight by the line, one round the outside of the first corner.
+    const stand = (i: number, side: number, len: number, id: string) => {
+      const C2 = tdc();
+      for (let tier = 0; tier < 3; tier++) {
+        const [x, z] = spot(i, side * (edge + 1.3 + tier * 1.05));
+        if (!fits(x, z, 0.8)) return;
+        const tid = id + tier;
+        dio.add({ id: tid, size: [len, 0.6 + tier * 0.55, 1.05], pos: [x, t.height(x, z) - 0.05, z], rot: [0, YAW[i]!, 0], color: tier & 1 ? C2.stand2 : C2.stand, pick: false });
+        dio.add({ size: [len - 0.2, 0.14, 0.5], pos: [0, 0, side * 0.2], on: tid, color: C2.seats[tier]!, emissive: P.night, pick: false });
+      }
+      const [x, z] = spot(i, side * (edge + 3.4));
+      if (!fits(x, z)) return;
+      dio.add({ id: id + "r", size: [len + 0.4, 0.14, 3.6], pos: [x, t.height(x, z) + 3.1, z], rot: [0, YAW[i]!, 0], color: C2.roof, pick: false });
+    };
+    stand(Math.round(LINE_S / step) + Math.round(6 / step), LOOP_DIR, Math.min(26, (typeof T0.def.plan[0] === "number" ? (T0.def.plan[0] as number) : 30) * 0.45), "gs");
+    {
+      let i = 0;
+      while (i < NT && !TURN[i]) i++;
+      let j = i;
+      while (j < NT && TURN[j] === TURN[i]) j++;
+      const mid = (i + j) >> 1;
+      stand(mid, TURN[mid]! || 1, Math.max(6, Math.min(18, (j - i) * step * 0.6)), "gt");
+    }
+    // Light towers at the table's corners (lit at night).
+    for (const [x, z] of [[-HX + 1.4, -HZ + 1.4], [HX - 1.4, -HZ + 1.4], [-HX + 1.4, HZ - 1.4], [HX - 1.4, HZ - 1.4]] as const) {
+      const id = "tw" + x + z;
+      dio.add({ id, shape: "cyl", sides: 6, size: [0.3, 5.2, 0.3], pos: [x, t.height(x, z) - 0.1, z], color: P.tower, pick: false });
+      dio.add({ size: [1.6, 0.6, 0.25], pos: [0, 0, 0], rot: [0, Math.atan2(-z, x) + Math.PI / 2, 0], on: id, color: P.tower, pick: false });
+      dio.add({ size: [1.4, 0.4, 0.27], pos: [0, 0.1, 0], rot: [0, Math.atan2(-z, x) + Math.PI / 2, 0], on: id, color: P.lamp, emissive: true, pick: false, layer: 9 });
+    }
+  }
+  /** The start lights: a pair lit per second of the countdown, all out at GO. */
+  function lights() {
+    if (!race || !LAMPS.length) return;
+    const lit = race.phase === GRID ? Math.max(0, Math.min(3, 4 - Math.ceil(race.count))) : 0;
+    if (lit === TDL[0]) return;
+    TDL[0] = lit;
+    const C = tdc();
+    for (let k = 0; k < 6; k++) LAMPS[k]!.color = k % 3 < lit ? C.lampOn : C.lampOff;
+  }
+  /** Track Day's paint on the asphalt (a decal over the ground): the pit lane, the kerbs (red and
+   *  white, a metre a stripe), the edge lines, the start line's chequer and the grid boxes. Batched:
+   *  one fill per colour, one stroke per run of line segments of about the same width on screen. */
+  function paintCircuit(c2: CanvasRenderingContext2D) {
+    const C = tdc(), f = dio.focal(), Wd = dio.width, Hd = dio.height;
+    c2.lineCap = "butt";
+    c2.lineJoin = "round";
+    // The pit lane.
+    poly(c2, PITQ, 0, 4, C.pit);
+    // The kerbs (quads between their inner and outer edges): the white band, then the red stripes
+    // over it, one path each; the edge lines.
+    for (let q = 0; q < NT * 4; q++) {
+      const side = q >= NT * 2 ? 1 : 0, e = q & 1, i = (q >> 1) % NT, a = ((side * 2 + e) * NT + i) * 3, o = q * 2;
+      if (!KB[i] || !dio.project(KP[a]!, KP[a + 1]!, KP[a + 2]!, tmp) || tmp[2]! < 0.5) KS[o] = NaN;
+      else (KS[o] = tmp[0]!), (KS[o + 1] = tmp[1]!);
+    }
+    for (let pass = 0; pass < 2; pass++) {
+      c2.fillStyle = pass ? C.kerb : C.kerb2;
+      c2.beginPath();
+      for (let side = 0; side < 2; side++)
+        for (let i = 0; i < NT; i++) {
+          if (pass && !((i >> 1) & 1)) continue;
+          const j = (i + 1) % NT, a = (side * NT * 2 + i * 2) * 2, b = (side * NT * 2 + j * 2) * 2;
+          const ax = KS[a]!, ay = KS[a + 1]!, ox = KS[a + 2]!, oy = KS[a + 3]!, bx = KS[b]!, by = KS[b + 1]!, px = KS[b + 2]!, py = KS[b + 3]!;
+          if (ax !== ax || ox !== ox || bx !== bx || px !== px) continue;
+          if ((ax < 0 && bx < 0 && ox < 0) || (ax > Wd && bx > Wd && ox > Wd) || (ay < 0 && by < 0 && oy < 0) || (ay > Hd && by > Hd && oy > Hd)) continue;
+          c2.moveTo(ax, ay);
+          c2.lineTo(bx, by);
+          c2.lineTo(px, py);
+          c2.lineTo(ox, oy);
+          c2.closePath();
+        }
+      c2.fill();
+    }
+    c2.lineCap = "round";
+    for (let k = 0; k < 2; k++) strip(c2, EL, k * NT * 3, C.line, 0.14, f, Wd, Hd);
+    c2.lineCap = "butt";
+    // The start line: white, then the black squares.
+    c2.fillStyle = C.line;
+    c2.beginPath();
+    for (let rw = 0; rw < 2; rw++) quad(c2, CHQ, rw * 15, 1, 13, Wd, Hd);
+    c2.fill();
+    c2.fillStyle = P.ink;
+    c2.beginPath();
+    for (let rw = 0; rw < 2; rw++) for (let q = rw & 1; q < 14; q += 2) quad(c2, CHQ, rw * 15 + q, 1, 0, Wd, Hd);
+    c2.fill();
+    // The grid boxes.
+    c2.strokeStyle = C.line;
+    for (let k = 0; k < 4; k++) {
+      const o = k * 24;
+      if (!dio.project(GRIDL[o]!, GRIDL[o + 1]!, GRIDL[o + 2]!, tmp) || tmp[2]! < 0.5) continue;
+      c2.lineWidth = Math.max(1, (f * 0.12) / tmp[2]!);
+      c2.beginPath();
+      for (let q = 0; q < 3; q++) {
+        if (!dio.project(GRIDL[o + q * 6]!, GRIDL[o + q * 6 + 1]!, GRIDL[o + q * 6 + 2]!, tmp) || tmp[2]! < 0.5 || !dio.project(GRIDL[o + q * 6 + 3]!, GRIDL[o + q * 6 + 4]!, GRIDL[o + q * 6 + 5]!, tmp2) || tmp2[2]! < 0.5) continue;
+        c2.moveTo(tmp[0]!, tmp[1]!);
+        c2.lineTo(tmp2[0]!, tmp2[1]!);
+      }
+      c2.stroke();
+    }
+  }
+  /** A filled polygon of `n` corners from A (at offset o, xyz each); skipped if a corner is behind the eye. */
+  function poly(c2: CanvasRenderingContext2D, A: Float64Array, o: number, n: number, color: string) {
+    c2.beginPath();
+    for (let k = 0; k < n; k++) {
+      const a = o + k * 3;
+      if (!dio.project(A[a]!, A[a + 1]!, A[a + 2]!, tmp) || tmp[2]! < 0.5) return;
+      if (k) c2.lineTo(tmp[0]!, tmp[1]!);
+      else c2.moveTo(tmp[0]!, tmp[1]!);
+    }
+    c2.fillStyle = color;
+    c2.fill();
+  }
+  /** Square q of the chequer (row-major, 15 corners a row), `extra` more squares wide, as a closed
+   *  subpath of the path under way (mode 0 begins a path first). Skipped off the screen or behind the eye. */
+  function quad(c2: CanvasRenderingContext2D, A: Float64Array, q: number, mode: number, extra: number, Wd: number, Hd: number) {
+    if (!mode) c2.beginPath();
+    const w = extra + 1;
+    const a = q * 3, b = (q + w) * 3, cc = (q + w + 15) * 3, d = (q + 15) * 3;
+    if (!dio.project(A[a]!, A[a + 1]!, A[a + 2]!, tmp) || tmp[2]! < 0.5) return;
+    if (tmp[0]! < -Wd || tmp[0]! > Wd * 2 || tmp[1]! < -Hd || tmp[1]! > Hd * 2) return;
+    if (!dio.project(A[b]!, A[b + 1]!, A[b + 2]!, tmp2) || tmp2[2]! < 0.5 || !dio.project(A[cc]!, A[cc + 1]!, A[cc + 2]!, tmp3) || tmp3[2]! < 0.5 || !dio.project(A[d]!, A[d + 1]!, A[d + 2]!, tmp4) || tmp4[2]! < 0.5) return;
+    c2.moveTo(tmp[0]!, tmp[1]!);
+    c2.lineTo(tmp2[0]!, tmp2[1]!);
+    c2.lineTo(tmp3[0]!, tmp3[1]!);
+    c2.lineTo(tmp4[0]!, tmp4[1]!);
+    c2.closePath();
+  }
+  /** A line round the loop (NT points of A from offset o), `wu` wide in world units. */
+  function strip(c2: CanvasRenderingContext2D, A: Float64Array, o: number, color: string, wu: number, f: number, Wd: number, Hd: number) {
+    c2.strokeStyle = color;
+    let open = false, w0 = 0, last = -2;
+    for (let i = 0; i < NT; i++) {
+      const j = (i + 1) % NT;
+      const a = o + i * 3, b = o + j * 3;
+      if (!dio.project(A[a]!, A[a + 1]!, A[a + 2]!, tmp) || tmp[2]! < 0.5 || !dio.project(A[b]!, A[b + 1]!, A[b + 2]!, tmp2) || tmp2[2]! < 0.5) continue;
+      if ((tmp[0]! < 0 && tmp2[0]! < 0) || (tmp[0]! > Wd && tmp2[0]! > Wd) || (tmp[1]! < 0 && tmp2[1]! < 0) || (tmp[1]! > Hd && tmp2[1]! > Hd)) continue;
+      const w = Math.max(1, (f * wu) / tmp[2]!);
+      if (open && (w > w0 * 1.25 || w < w0 * 0.8)) c2.stroke(), (open = false);
+      if (!open) c2.beginPath(), (c2.lineWidth = w0 = w), (open = true), (last = -2);
+      if (last !== i - 1) c2.moveTo(tmp[0]!, tmp[1]!);
+      c2.lineTo(tmp2[0]!, tmp2[1]!);
+      last = i;
+    }
+    if (open) c2.stroke();
+  }
+
   // ---- state ----
-  const I = new Float64Array(7), GP = new Float64Array(8), DRAGA = new Float64Array(1), tmp = new Float64Array(3), tmp2 = new Float64Array(3);
+  const I = new Float64Array(7), GP = new Float64Array(8), DRAGA = new Float64Array(1), tmp = new Float64Array(3), tmp2 = new Float64Array(3), tmp3 = new Float64Array(3), tmp4 = new Float64Array(3);
   // Pointer: down, start x, start y, x, y, id.
   const PD = new Float64Array(6);
   PD[5] = -1;
@@ -408,6 +665,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     walkHud.update(me);
     const drop = free ? 1 : Math.min(1, gateT / 0.28);
     for (const g of gateBars) g.rot[2] = -1.5 * drop * drop;
+    if (td) lights();
   }
 
   // ---- FX ----
@@ -417,13 +675,14 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       const b = sim.riders[r]!;
       if (b.crashed || !b.contact[0] || ctx.reduced) continue;
       // Dust from the rear by how hard it digs; a roost of dirt thrown back when it spins.
-      const d = b.dust * (r !== seat ? 0.6 : 1);
+      // (On Track Day's asphalt no dust: tyre smoke, only when the rear spins up.)
+      const d = (td ? b.slip * 0.5 : b.dust) * (r !== seat ? 0.6 : 1);
       emitK += d * 55 * dt;
       while (emitK >= 1) {
         emitK -= 1;
         dust.puff(b.wheel[0]! + (rnd() - 0.5) * 0.3, b.wheel[1]! - 0.25, b.wheel[2]! + (rnd() - 0.5) * 0.3, -b.cy * b.speed * 0.12 + (rnd() - 0.5), 0.4 + rnd() * 0.6, b.sy * b.speed * 0.12 + (rnd() - 0.5), 0.6 + rnd() * 0.5, 0.11, 0.4);
       }
-      if (b.slip > 0.1 && rnd() < b.slip) roost.puff(b.wheel[0]!, b.wheel[1]! - 0.2, b.wheel[2]!, -b.cy * (3 + rnd() * 3), 2 + rnd() * 2.5, b.sy * (3 + rnd() * 3), 0.5 + rnd() * 0.3, 0.05, 0.9);
+      if (!td && b.slip > 0.1 && rnd() < b.slip) roost.puff(b.wheel[0]!, b.wheel[1]! - 0.2, b.wheel[2]!, -b.cy * (3 + rnd() * 3), 2 + rnd() * 2.5, b.sy * (3 + rnd() * 3), 0.5 + rnd() * 0.3, 0.05, 0.9);
     }
     if (st) {
       // The drags: the hand eases down; sparks off the hand on the road, and off the fender.
@@ -448,10 +707,13 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       const type = sim.ev[k * 3]!, r = sim.ev[k * 3 + 1]!, val = sim.ev[k * 3 + 2]!, b = sim.riders[r]!;
       hudDirty = true;
       if (type === E_COUNT) engine.events.emit("count"), toast("" + val, "go");
-      else if (type === E_GATE) (gateT = 0.001), engine.events.emit("gate"), toast("GATE DROP!", "go"), say("Go");
+      else if (type === E_GATE) (gateT = 0.001), (TDL[1] = 0), engine.events.emit("gate"), toast(td ? "LIGHTS OUT!" : "GATE DROP!", "go"), say("Go");
       else if (type === E_LAP && r === seat && race) {
         if (race.place(seat) !== 0) led = false;
-        engine.events.emit("lap"), toast(val === LAPS - 1 ? "LAST LAP!" : `LAP ${val + 1}/${LAPS}`, "go"), say(`Lap ${val + 1}`);
+        engine.events.emit("lap");
+        // Track Day: the lap's time (and a best lap, the rider's on this circuit or this race's).
+        if (td) toast(`${val === LAPS - 1 ? "LAST LAP" : `LAP ${val + 1}/${LAPS}`} · ${lapLine()}`, "go"), say(`Lap ${val + 1}`);
+        else toast(val === LAPS - 1 ? "LAST LAP!" : `LAP ${val + 1}/${LAPS}`, "go"), say(`Lap ${val + 1}`);
       } else if (type === E_PLACE && r === seat && race && race.phase === RACE && !(toastT > 0.5 && toastEl.className.endsWith("bad"))) toast(ORD[val]!, val < race.place(seat) ? "go" : "meh"), engine.events.emit("pass");
       else if (type === E_LAND) {
         if (r !== seat || me.crashed) continue;
@@ -518,7 +780,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
         toast("BACK ON IT", "go");
       } else if (type === E_FINISH && r === seat) {
         engine.events.emit("finish");
-        if (race) toast(`FINISH · ${ORD[val]}`, val ? "go" : "clean"), say(`Finished ${ORD[val]}`);
+        if (race) toast(`FINISH · ${ORD[val]}${td ? " · " + lapLine() : ""}`, val ? "go" : "clean"), say(`Finished ${ORD[val]}`);
         else if (roam) toast("RIDE BANKED · RIDE ON WHILE THE OTHERS DO", "clean"), say("Ride banked");
         else if (jam) toast(`TIME · ${ORD[jam.place(seat)]}`, "clean"), say(`Time. ${ORD[jam.place(seat)]}`);
         else toast("RIDE BANKED", "clean"), say("Ride banked");
@@ -529,6 +791,12 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
     }
     if (st) stuntCalls(st, call, say, (n) => engine.events.emit(n === "cheer" ? "finish" : "wheelie"));
     sim.clear();
+  }
+  /** Track Day: the lap just done, "0:24.3", with BEST LAP! when it is the circuit's best (or the first). */
+  function lapLine() {
+    const now = race!.clock, lt = now - TDL[1]!, best = ctx.best ?? 0;
+    TDL[1] = now;
+    return `${clock(lt)}${lt <= race!.bestLap(seat) + 1e-9 && (!best || lt < best) ? " · BEST LAP!" : ""}`;
   }
   function toast(text: string, kind: string) {
     toastEl.textContent = text;
@@ -573,11 +841,15 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       ? ph === GRID ? "Trick points: big air, flips, long wheelies · most in three minutes wins" : ""
       : free
       ? ph === GRID ? (endless ? (touch ? `Hold GAS: ${endless.biome.id === "desert" ? "the desert" : "it"} never ends · pause ❚❚ banks it` : `Space to ride: ${endless.biome.id === "desert" ? "the desert" : "it"} never ends · E (or pause) banks it`) : touch ? "Hold GAS and ride anywhere · pause ❚❚ banks it" : "Space to ride, anywhere · E (or pause) banks it") : endless && ph === RACE && sim.clock < 6 ? (touch ? "Hop: flick the stick back, then forward" : "L hops · W/S lean · A/D steer") : ""
-      : ph === GRID ? (touch ? "Hold GAS to rev · it drops on GO" : "Hold Space to rev · it drops on GO") : ph === RACE && sim.clock < 6 ? (touch ? "Stick: lean and steer · back lifts the front" : "W/S lean · A/D steer · Space gas · K brake") : "";
+      : ph === GRID ? (td ? (touch ? "Hold GAS to rev · go when the lights go out" : "Hold Space to rev · go when the lights go out") : touch ? "Hold GAS to rev · it drops on GO" : "Hold Space to rev · it drops on GO") : ph === RACE && sim.clock < 6 ? (touch ? "Stick: lean and steer · back lifts the front" : "W/S lean · A/D steer · Space gas · K brake") : "";
     if (hintEl.textContent !== hint) hintEl.textContent = hint;
   }
   function stats() {
-    if (race) return m.stats({ place: race.place(seat), time: race.finishTime(seat), bestLap: race.bestLap(seat), led: led && race.place(seat) === 0, finished: race.finished(seat), where: track.id, order: [0, 1, 2, 3].map((r) => race.place(r)), summary: `${ORD[race.place(seat)]} · ${clock(race.finishTime(seat) || race.clock)} · best lap ${clock(race.bestLap(seat))}` });
+    if (race) {
+      // Track Day: the circuit's name and, when the best lap beats the one kept, a new record.
+      const bl = race.bestLap(seat), rec = td && bl > 0 && (!ctx.best || bl < ctx.best);
+      return m.stats({ place: race.place(seat), time: race.finishTime(seat), bestLap: bl, led: led && race.place(seat) === 0, finished: race.finished(seat), where: track.id, order: [0, 1, 2, 3].map((r) => race.place(r)), summary: `${td ? (track as Track).name + " · " : ""}${ORD[race.place(seat)]} · ${clock(race.finishTime(seat) || race.clock)} · best lap ${clock(bl)}${rec ? " · NEW CIRCUIT BEST" : ""}` });
+    }
     if (jamOnly) return m.stats({ finished: jamOnly.phase === DONE, where: track.id, tricks: jamOnly.tricks(seat), flips: jamOnly.flips(seat), score: jamOnly.points(seat), place: jamOnly.place(seat), summary: `${ORD[jamOnly.place(seat)]} · ${jamOnly.points(seat).toLocaleString("en-US")} trick points · ${m.M[3]!.toFixed(1)}s in the air` });
     if (endless) return m.stats({ finished: true, where: track.id, farKey: endless.biome.id, tricks: fr!.tricks, flips: fr!.flips, far: fr!.distance, score: tsc![T_SC]!, summary: `${km(fr!.distance)} ${endless.biome.word} · ${clock(sim.clock)} ridden · ${m.M[3]!.toFixed(1)}s in the air${fr!.tricks ? ` · ${fr!.tricks} ${fr!.tricks === 1 ? "trick" : "tricks"}` : ""}${tsc![T_SC]! ? ` · ${tsc![T_SC]!.toLocaleString("en-US")} trick points` : ""}` });
     return m.stats({ finished: true, where: track.id, tricks: fr!.tricks, flips: fr!.flips, summary: `${map ? map.name + " · " : ""}${clock(sim.clock)} ridden · ${m.M[3]!.toFixed(1)}s in the air · ${m.M[4]!.toFixed(1)}s on one wheel${fr!.tricks ? ` · ${fr!.tricks} ${fr!.tricks === 1 ? "trick" : "tricks"}` : ""}` });
