@@ -16,6 +16,7 @@ import { CLASSES, STARTERS, makerOf, model as modelOf } from "./data/roster.ts";
 import { MOTOR_NAME, PARTS, PART_NAME } from "./data/economy.ts";
 import { PAINTS, SWATCHES } from "./data/looks.ts";
 import { tierFor, useNames } from "./data/names.ts";
+import { KEYS, PAD, TOUCH, TOUCH_LINE } from "./data/controls.ts";
 import { touchLog } from "./debug/touchlog.ts";
 import { lapClock, mode as modeOf, trackDayBest } from "./modes/index.ts";
 import type { ModeCtx, ModeId, ModeRun, RunStats } from "./modes/mode.ts";
@@ -68,7 +69,7 @@ export interface HoleshotOptions {
 }
 
 /** The screens. The garage is home ("menu" is its old name: `show("menu")` still lands there). */
-type Screen = "setup" | "garage" | "ride" | "series" | "settings" | "event" | "result" | "online";
+type Screen = "setup" | "garage" | "ride" | "series" | "settings" | "controls" | "event" | "result" | "online";
 
 export function createHoleshot(o: HoleshotOptions = {}) {
   const dropIn = !o.host, store = o.store ?? local;
@@ -199,7 +200,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   // ---- rendering the cards ----
   /** The header: HOLESHOT on the garage (home), else ← back and the screen's name; then the credits,
    *  the name, ⚙ settings and the theme key. Sticky, so the way back stays in reach. */
-  const head = (back?: [Screen, string, string]) => `<header class="dh-top${back ? " dh-sticky" : ""}">${back ? `<button type="button" class="bui-key dh-back" data-go="${back[0]}">← ${back[1]}</button><b class="dh-h dh-title">${back[2]}</b>` : WORDMARK}${inf ? `<span class="dh-chip dh-cr" title="Test credits: nothing is saved">◈ ∞</span><span class="dh-chip dh-test" title="?credits=inf: nothing is saved, online is off">TEST CREDITS ∞</span>` : `<span class="dh-chip dh-cr" title="Credits">◈ ${num(profile.credits)}</span>`}${profile.name ? `<span class="dh-chip dh-who">${portraitOf(profile.kit)}${esc(profile.name)}</span>` : ""}${screen === "settings" ? "" : `<button type="button" class="bui-key dh-icon dh-cog" data-go="settings" aria-label="Settings">${ICON.cog}</button>`}${o.onTheme ? `<button type="button" class="bui-key dh-icon dh-theme" aria-label="Light or dark">${ICON.theme}</button>` : ""}</header>`;
+  const head = (back?: [Screen, string, string]) => `<header class="dh-top${back ? " dh-sticky" : ""}">${back ? `<button type="button" class="bui-key dh-back" data-go="${back[0]}">← ${back[1]}</button><b class="dh-h dh-title">${back[2]}</b>` : WORDMARK}${inf ? `<span class="dh-chip dh-cr" title="Test credits: nothing is saved">◈ ∞</span><span class="dh-chip dh-test" title="?credits=inf: nothing is saved, online is off">TEST CREDITS ∞</span>` : `<span class="dh-chip dh-cr" title="Credits">◈ ${num(profile.credits)}</span>`}${profile.name ? `<span class="dh-chip dh-who">${portraitOf(profile.kit)}${esc(profile.name)}</span>` : ""}${screen === "settings" || screen === "controls" ? "" : `<button type="button" class="bui-key dh-icon dh-cog" data-go="settings" aria-label="Settings">${ICON.cog}</button>`}${o.onTheme ? `<button type="button" class="bui-key dh-icon dh-theme" aria-label="Light or dark">${ICON.theme}</button>` : ""}</header>`;
   /** The garage's one main action. */
   const letsRide = `<button type="button" class="bui-key bui-sticker-key bui-call dh-letsride" data-go="ride"><b>LET'S RIDE</b><small>RACE · ENDLESS · FREE RIDE · TRACK DAY</small></button>`;
   const bikeLine = () => {
@@ -235,10 +236,18 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   const km = (u: number) => dist(u, profile.settings.units);
   const modeName = (id: ModeId) => (id === "series" ? seriesName(profile) : modeOf(id).name);
   function settingsCard() {
-    return `<div class="dh-card dh-set" data-screen="settings">${head([setFrom, setFrom === "ride" ? "LET'S RIDE" : setFrom === "series" ? "SERIES" : "GARAGE", "SETTINGS"])}<p class="dh-row"><button type="button" class="bui-key dh-sound" aria-pressed="${profile.settings.sound}">SOUND ${profile.settings.sound ? "ON" : "OFF"}</button><button type="button" class="bui-key dh-units" aria-label="Units: ${profile.settings.units === "metric" ? "metric, km and km/h" : "imperial, miles and mph"}">UNITS ${profile.settings.units === "metric" ? "KM · KM/H" : "MI · MPH"}</button></p>
+    return `<div class="dh-card dh-set" data-screen="settings">${head([setFrom, setFrom === "ride" ? "LET'S RIDE" : setFrom === "series" ? "SERIES" : "GARAGE", "SETTINGS"])}<p class="dh-row"><button type="button" class="bui-key dh-sound" aria-pressed="${profile.settings.sound}">SOUND ${profile.settings.sound ? "ON" : "OFF"}</button><button type="button" class="bui-key dh-units" aria-label="Units: ${profile.settings.units === "metric" ? "metric, km and km/h" : "imperial, miles and mph"}">UNITS ${profile.settings.units === "metric" ? "KM · KM/H" : "MI · MPH"}</button><button type="button" class="bui-key dh-ctl-go" data-go="controls">CONTROLS · HOW TO</button></p>
       <b class="dh-h2">MOVE YOUR PROFILE</b><p class="dh-sub">Your garage lives on this device. Copy the code to carry it to another one; nothing leaves the device unless you do.</p>${inf ? `<p class="dh-sub dh-warn">Test credits are on: nothing here is saved, and the code is your saved profile, as it was.</p>` : ""}
       <label class="dh-field">EXPORT CODE<textarea class="dh-code" readonly rows="3">${code()}</textarea></label><p class="dh-row"><button type="button" class="bui-key dh-copy">COPY CODE</button></p>
       <label class="dh-field">IMPORT A CODE<textarea class="dh-codein" rows="3" spellcheck="false" placeholder="DH1-…"></textarea></label><p class="dh-row"><button type="button" class="bui-key dh-import">LOAD IT</button><button type="button" class="bui-key dh-reset">START OVER</button></p><p class="dh-sub dh-note" role="status">${esc(note)}</p></div>`;
+  }
+  /** CONTROLS · HOW TO (from settings): the game's real bindings, the same facts as the landing's
+   *  Controls section (./data/controls.ts). One card, so it moves with the menus as they change. */
+  function controlsCard() {
+    const caps = (ks: string[]) => ks.map((k) => (k === "+" ? "<i>+</i>" : `<kbd>${esc(k)}</kbd>`)).join("");
+    const keys = KEYS.map((g) => `<b class="dh-h3">${g.group}</b><ul class="dh-list">${g.rows.map(([ks, what, nb]) => `<li><span class="dh-caps">${caps(ks)}</span><span><b>${what}</b>${nb ? ` <small>${esc(nb)}</small>` : ""}</span></li>`).join("")}</ul>`).join("");
+    const two = (rows: [string, string][]) => `<ul class="dh-list">${rows.map(([k, v]) => `<li><span><b>${esc(k)}</b> <small>${esc(v)}</small></span></li>`).join("")}</ul>`;
+    return `<div class="dh-card dh-ctl" data-screen="controls">${head(["settings", "SETTINGS", "CONTROLS"])}<p class="dh-sub">Your bike rides every event: LET'S RIDE from the garage. Every mode pays credits; spend them on tyres, rebuilds, mods and paint.</p><div class="dh-cols"><section><b class="dh-h2">KEYBOARD</b>${keys}</section><section><b class="dh-h2">GAMEPAD</b>${two(PAD)}<b class="dh-h2">PHONE</b><p class="dh-sub">${TOUCH_LINE}</p>${two(TOUCH)}</section></div></div>`;
   }
   /** Rides with no finish line end when you say so, and pay for what you rode (the pause card's END & BANK). */
   const banks = () => runMode === "freeride" || runMode === "desert" || runMode === "endcity" || runMode === "mashup";
@@ -269,7 +278,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       engine.wake();
       return;
     }
-    const html = s === "setup" ? setupCard() : s === "garage" ? garageCard() : s === "ride" ? rideCard() : s === "series" ? seriesCard() : s === "settings" ? settingsCard() : s === "result" ? resultCard() : paused ? pauseCard() : "";
+    const html = s === "setup" ? setupCard() : s === "garage" ? garageCard() : s === "ride" ? rideCard() : s === "series" ? seriesCard() : s === "settings" ? settingsCard() : s === "controls" ? controlsCard() : s === "result" ? resultCard() : paused ? pauseCard() : "";
     cards.innerHTML = html;
     cards.hidden = !html;
     stage.toggleAttribute("data-menu", s !== "event" && s !== "result");
@@ -917,9 +926,9 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     if (e.metaKey || e.ctrlKey || e.altKey || o.attract) return;
     const typing = !!src(e)?.closest?.("input,textarea,select");
     if (e.code === "Escape") {
-      // Escape steps back a screen (settings, the series, LET'S RIDE); from the garage it gives the
+      // Escape steps back a screen (controls, settings, the series, LET'S RIDE); from the garage it gives the
       // page back when dropped onto one.
-      const up: Screen | null = screen === "settings" ? setFrom : screen === "series" ? "ride" : screen === "ride" ? "garage" : null;
+      const up: Screen | null = screen === "controls" ? "settings" : screen === "settings" ? setFrom : screen === "series" ? "ride" : screen === "ride" ? "garage" : null;
       if (up && !(screen === "settings" && typing)) return void (e.preventDefault(), show(up));
       if (dropIn && screen !== "event") return void (e.preventDefault(), api.destroy());
       if (screen === "event") return void (e.preventDefault(), setPaused(!paused));

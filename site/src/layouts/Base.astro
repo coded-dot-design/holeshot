@@ -1,9 +1,10 @@
 ---
 // Every page: a Board UI root (<html class="bui">) wearing the Fizlet kit's tokens; the theme is
 // remembered (localStorage "dom-virus:theme", the key the saved choice already lives under), dark by default.
-// The header is about the game only (its sections, the theme, PLAY); the links out live in the footer. The game page
-// (`app`) tucks the header away behind a small handle and has no header keys: the game has its own
-// light/dark key, and Play and the source link are no use mid-game.
+// The header is about the game only (its sections, the theme, PLAY); the links out live in the footer. PLAY opens
+// the game in a new tab, so the game page is the root of its own history. The game page (`app`) is
+// self-contained: no header, no footer, no links back to the site or out (its controls live in the game's
+// settings); a bookmark of it is the game.
 import '@fzlt/core/ui/board-ui.css';
 import '../styles/site.css';
 import { VERSION, REPO, FIZLET_URL, base } from '../site';
@@ -43,9 +44,8 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <slot name="head" />
   </head>
   <body data-page={page} data-app={app ? "" : undefined}>
-    <a class="skip" href="#main">Skip to content</a>
-    {app && <button class="head-handle" type="button" aria-expanded="false" aria-controls="site-head" aria-label="Show the site header"><span aria-hidden="true">▾</span> HOLESHOT</button>}
-    <header class="site-head" id="site-head">
+    {!app && <a class="skip" href="#main">Skip to content</a>}
+    {!app && <header class="site-head" id="site-head">
       <div class="wrap">
         <a class="brand" href={base()} aria-label="Holeshot home">
           <img src={base('icon.svg')} alt="" width="36" height="36" />
@@ -58,12 +58,12 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
           <a href={base('#garage')}>Garage</a>
           <a href={base('#brand')}>Brand</a>
         </nav>
-        {!app && <div class="head-keys">
+        <div class="head-keys">
           <button class="bui-key bui-icon-key" type="button" data-theme-toggle aria-label="Switch light or dark"><span class="theme-dark" aria-hidden="true">☾</span><span class="theme-light" aria-hidden="true">☀</span></button>
-          <a class="bui-key bui-arcade bui-go play-key" href={base('play/')}>▶ Play</a>
-        </div>}
+          <a class="bui-key bui-arcade bui-go play-key" href={base('play/')} target="_blank" rel="noopener">▶ Play</a>
+        </div>
       </div>
-    </header>
+    </header>}
     <main id="main"><slot /></main>
     {!app && <footer class="site-foot">
       <div class="wrap foot-grid">
@@ -73,7 +73,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
         </div>
         <nav class="foot-col" aria-label="The game">
           <p class="meta">THE GAME</p>
-          <a href={base('play/')}>Play</a>
+          <a href={base('play/')} target="_blank" rel="noopener">Play</a>
           <a href={base('#how')}>How to play</a>
           <a href={base('#controls')}>Controls</a>
           <a href={base('#modes')}>Ways to ride</a>
@@ -91,14 +91,6 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <script>
       import { toggleTheme } from "../theme";
       document.querySelector("[data-theme-toggle]")?.addEventListener("click", toggleTheme);
-      // The game page: the header is tucked away (the game is the page); the handle opens it over the game.
-      const handle = document.querySelector<HTMLButtonElement>(".head-handle"), head = document.getElementById("site-head");
-      handle?.addEventListener("click", () => {
-        const open = !head!.hasAttribute("data-open");
-        head!.toggleAttribute("data-open", open);
-        handle.setAttribute("aria-expanded", "" + open);
-        handle.setAttribute("aria-label", open ? "Hide the site header" : "Show the site header");
-      });
     </script>
   </body>
 </html>

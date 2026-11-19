@@ -197,3 +197,11 @@
 /* A card over the ride (pause, the result): the touch controls go (stick, rocker, bubbles), so they
    never cover its keys. */
 .dh:has(>.dh-cards:not([hidden])) .bui-pad{visibility:hidden}
+/* CONTROLS · HOW TO (from settings): one card; key caps in the Board UI kbd chip, sized to read. */
+.dh-ctl section{display:grid;gap:6px;align-content:start}
+.dh-ctl .dh-list>li{grid-template-columns:minmax(0,1fr);align-items:center}
+.dh-ctl .dh-list>li:has(.dh-caps){grid-template-columns:9.5em minmax(0,1fr)}
+.dh-ctl small{color:var(--muted);font-weight:700}
+.dh-caps{display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center}
+.dh-caps kbd{margin:0;opacity:1;display:inline-grid;place-items:center;min-width:28px;height:28px;padding:0 6px;box-sizing:border-box;border:2px solid var(--rim);border-radius:7px;background:var(--raised);color:var(--ink);font:800 12px ui-monospace,monospace}
+.dh-caps i{font-style:normal;color:var(--muted)}

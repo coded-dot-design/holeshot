@@ -101,7 +101,11 @@ import { readdirSync, readFileSync } from "node:fs";
 // goggle's frame, lens and glint, the straps, the chin bar, the raked peak and its root, the fin) on
 // its facing groups, the portrait SVG (garage/portrait.ts) in the top bar, the bay and the HELMET keys,
 // the rider close-up; budget 223,500 → 225,000 (about 1.2 KB of room).
-const BUDGET = 225_000;
+// R34 (the game self-contained), on 0.9.0 + online copy: +954 B measured (223,870 → 224,824 holeshot.mjs;
+// holeshot.js 224,086 → 225,026): the CONTROLS · HOW TO card in settings (src/data/controls.ts: the keyboard,
+// gamepad and phone bindings the landing also reads; the card and its key-cap CSS); budget 225,000 →
+// 226,000 (about 1 KB of room).
+const BUDGET = 226_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

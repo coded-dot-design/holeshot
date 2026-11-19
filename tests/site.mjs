@@ -10,7 +10,9 @@
 // with the measured size, by David Cooley, linked; every hard shadow straight down (Fizlet's
 // language); no DOM VIRUS; no sideways scroll. Reduced motion: the still poster, no game, the controls
 // diagram still. /play/ mounts the game with the first-run setup; once set up, ?mode=bigair
-// starts that event. SHOTS=<dir> saves a screenshot of each.
+// starts that event. Every link into the game opens a new tab; /play/ is self-contained (no header or
+// footer, no same-tab link out, any link out in a new tab) and its settings hold CONTROLS · HOW TO, the
+// landing's key caps. SHOTS=<dir> saves a screenshot of each.
 import assert from "node:assert/strict";
 import { mkdirSync, readFileSync } from "node:fs";
 import { chromium } from "playwright";
@@ -60,6 +62,8 @@ try {
           hud: root.querySelector(".mt-hud").hidden && root.querySelector(".dh-cards").hidden && [...root.querySelectorAll(".hs-rocker,.ba-pad")].every((e) => !e.getClientRects().length),
           h1: document.querySelector("h1").textContent.trim(),
           play: play.getAttribute("href"),
+          // Every link into the game (PLAY, the Ways to ride tiles, ?mode= deep links) opens a new tab: the game is the root of its own history.
+          intoGame: [...document.querySelectorAll("a[href]")].filter((a) => new URL(a.href).pathname.endsWith("/play/")).map((a) => [a.getAttribute("href"), a.target, a.rel]),
           playSize: Math.min(play.getBoundingClientRect().width, play.getBoundingClientRect().height) >= 44,
           sections: ["how", "controls", "modes", "garage", "brand", "fizlet"].every((id) => document.getElementById(id)),
           ways: document.querySelectorAll("#modes .way").length,
@@ -85,6 +89,7 @@ try {
       assert.ok(m.drawn && m.hud, `${at}: the hero draws the race, no HUD over the copy`);
       assert.equal(m.h1, "Holeshot.One bike. Every kind of dirt.", `${at}: the title and hook`);
       assert.match(m.play, /\/play\/$/, `${at}: PLAY links to /play/`);
+      assert.ok(m.intoGame.length >= 10 && m.intoGame.every(([, t, r]) => t === "_blank" && /noopener/.test(r)), `${at}: every link into the game opens a new tab: ${JSON.stringify(m.intoGame.filter(([, t]) => t !== "_blank"))}`);
       assert.ok(m.playSize && m.sections && m.by, `${at}: PLAY ≥ 44 px, six sections, by David Cooley (linked)`);
       assert.equal(m.ways, 4, `${at}: four ways to ride`);
       assert.deepEqual([...new Set(m.rides)].sort(), ["bigair", "desert", "endcity", "freeride", "mashup", "race", "trackday"], `${at}: every live mode has a ride link, and only real modes`);
@@ -110,11 +115,26 @@ try {
       await until(p, () => window.game && game.getSnapshot().screen === "setup", null, `${at}: /play/ mounts with the setup`);
       if (SHOTS) await p.screenshot({ path: `${SHOTS}/play-setup-${w}-${theme}.png` });
       await p.evaluate(() => game.setup({ starter: "anvil" }));
-      // The header handle (shown where there is a pointer) clears the garage card's top edge.
       await p.evaluate(() => game.show("garage"));
       await until(p, () => !!document.querySelector("#game [data-fizlet-host]").shadowRoot.querySelector(".dh-garage"), null, `${at}: the garage`);
-      const gap = await p.evaluate(() => { const h = document.querySelector(".head-handle"), c = document.querySelector("#game [data-fizlet-host]").shadowRoot.querySelector(".dh-garage"); return h.getClientRects().length ? c.getBoundingClientRect().top - h.getBoundingClientRect().bottom : null; });
-      assert.ok(gap === null || gap >= 4, `${at}: the header handle clears the card (${gap} px)`);
+      // Self-contained: no header or footer, no same-tab link leaving the game; any link out opens a new tab.
+      const self = await p.evaluate(() => {
+        const all = [...document.querySelectorAll("a[href]"), ...document.querySelectorAll("#game [data-fizlet-host]")].flatMap((e) => (e.shadowRoot ? [...e.shadowRoot.querySelectorAll("a[href]")] : [e]));
+        const here = location.pathname, out = all.filter((a) => { const u = new URL(a.href); return u.origin !== location.origin || u.pathname !== here; });
+        return { chrome: !!document.querySelector(".site-head, .site-foot, .head-handle"), sameTab: out.filter((a) => a.target !== "_blank").map((a) => a.getAttribute("href")), noOpener: out.filter((a) => !/noopener/.test(a.rel)).map((a) => a.getAttribute("href")), gameLinks: all.length };
+      });
+      assert.deepEqual(self, { chrome: false, sameTab: [], noOpener: [], gameLinks: self.gameLinks }, `${at}: /play/ is self-contained: ${JSON.stringify(self)}`);
+      // CONTROLS · HOW TO lives in the game's settings: the same bindings as the landing's Controls.
+      await p.evaluate(() => game.show("settings"));
+      await p.evaluate(() => document.querySelector("#game [data-fizlet-host]").shadowRoot.querySelector(".dh-ctl-go").click());
+      await until(p, () => !!document.querySelector("#game [data-fizlet-host]").shadowRoot.querySelector(".dh-ctl"), null, `${at}: the controls card`);
+      const ctl = await p.evaluate(() => { const c = document.querySelector("#game [data-fizlet-host]").shadowRoot.querySelector(".dh-ctl"); return { caps: [...c.querySelectorAll("kbd")].map((k) => k.textContent), text: c.textContent, sideways: c.scrollWidth > c.clientWidth + 1 }; });
+      assert.deepEqual(ctl.caps, m.capText.split(" "), `${at}: the controls card's key caps match the landing's`);
+      assert.ok(/GAMEPAD/.test(ctl.text) && /RT or A/.test(ctl.text) && /PHONE/.test(ctl.text) && /Flick the stick/.test(ctl.text) && !ctl.sideways, `${at}: the controls card: keyboard, gamepad, phone, no sideways scroll`);
+      if (SHOTS) await p.waitForTimeout(300), await p.screenshot({ path: `${SHOTS}/play-controls-${w}-${theme}.png` });
+      await p.keyboard.press("Escape");
+      await until(p, () => game.getSnapshot().screen === "settings", null, `${at}: Escape steps back to settings`);
+      await p.evaluate(() => game.show("garage"));
       if (SHOTS) await p.waitForTimeout(300), await p.screenshot({ path: `${SHOTS}/play-garage-${w}-${theme}.png` });
       await p.goto(`${server.url}${BASE}/play/?mode=bigair`);
       await until(p, () => window.game && game.getSnapshot().mode === "bigair", null, `${at}: ?mode= starts that event`);
@@ -203,7 +223,7 @@ try {
   await p.evaluate(() => new Promise((r) => requestIdleCallback(() => r(), { timeout: 2000 })));
   assert.deepEqual(await p.evaluate(() => ({ poster: getComputedStyle(document.querySelector(".dt-poster")).visibility, game: !!document.querySelector("[data-fizlet-host]"), looping: document.getAnimations().filter((a) => a.effect?.target?.closest?.(".phone")).length })), { poster: "visible", game: false, looping: 0 }, "reduced motion: a still poster, no game, a still controls diagram");
   await ctx.close();
-  console.log("Holeshot site: the header wordmark and game-only header, the footer links out, the hero lockup over the demo race (poster first, no touch controls), the controls (key caps, gamepad, the animated rocker), four ways to ride (every entry a live link to a real mode; ?mode=mashup and ?mode=trackday start), the garage's 3 of 6 spots, the brand kit and its downloads, the title, PLAY to /play/, six sections, the measured size, shadows straight down, no DOM VIRUS, no sideways scroll, /play/ setup (the header handle clear of the card) and ?mode=, the poster in the page's theme (light first, only that still fetched, the switch swaps it before the game and after), the reduced-motion poster; 1440 and 390, dark and light; the manifest and the one-time Home Screen tip (phone landscape only).");
+  console.log("Holeshot site: the header wordmark and game-only header, the footer links out, the hero lockup over the demo race (poster first, no touch controls), the controls (key caps, gamepad, the animated rocker), four ways to ride (every entry a live link to a real mode; ?mode=mashup and ?mode=trackday start), the garage's 3 of 6 spots, the brand kit and its downloads, the title, PLAY to /play/, six sections, the measured size, shadows straight down, no DOM VIRUS, no sideways scroll, every link into the game in a new tab, /play/ self-contained (no header, no same-tab link out) with its CONTROLS card (the landing's key caps), /play/ setup and ?mode=, the poster in the page's theme (light first, only that still fetched, the switch swaps it before the game and after), the reduced-motion poster; 1440 and 390, dark and light; the manifest and the one-time Home Screen tip (phone landscape only).");
 } finally {
   await browser.close();
   await server.close();

@@ -16,6 +16,7 @@ import { MODES, FREE_MAPS, FREE_SX } from '../../../src/modes/index.ts';
 import { BIOMES } from '../../../src/modes/desert/track.ts';
 import { TIERS } from '../../../src/data/series.ts';
 import { GARAGE_SLOTS, GARAGE_MAX, SPOT_PRICE } from '../../../src/data/economy.ts';
+import { KEYS, PAD, TOUCH, TOUCH_LINE } from '../../../src/data/controls.ts';
 import { ICON_GAS, ICON_BRAKE, ICON_SEAM, ICON_COMBO } from '../../../src/bike/rocker.ts';
 const description = 'Holeshot is a dirt bike game on a tabletop: one bike and a garage, races and a race series at MX and SX, Endless rides (the dunes, a quarry, woods, a night park and Endless Wheelie City) that never end, Free Ride maps and a Big Air straight of jumps. Earn in every mode, wear out tyres and top ends, rebuild, mod and paint. Free in the browser, by David Cooley, built on Fizlet.';
 const kb = (GZIP / 1024).toFixed(1);
@@ -29,22 +30,9 @@ const steps = [
   ['EARN', 'Every mode pays: places in races and series rounds, the judges in Big Air, points for wheelies and tricks, saddle time in Free Ride.', ico('<circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M9 9.5c0-1.2 1.3-2 3-2s3 .8 3 2-1.3 1.8-3 2.2-3 1-3 2.3 1.3 2 3 2 3-.8 3-2"/>'), 'cyan'],
   ['WRENCH', 'Every lap wears the bike: tyres lose grip, a top end loses pull, seals blow. Buy tyres, rebuild the motor, add mods, change the paint and the kit.', ico('<path d="M14.5 5.5a4 4 0 0 0 4.9 4.9L21 12l-9 9-3-3 9-9-1.6-1.6a4 4 0 0 0-4.9-4.9l2.5 2.5-1.4 1.4z" transform="translate(-2 -1)"/>'), 'sun'],
 ];
-// The keyboard, from the game's own bindings (src/modes/*/scene.ts MAP, the play pages' labels).
-const keys: { group: string; rows: [string[], string, string?][] }[] = [
-  { group: 'RIDE', rows: [[['Space', 'J'], 'Gas'], [['K', 'Shift'], 'Brake'], [['W', 'S', '↑', '↓'], 'Lean', 'back lifts the front; in the air it pitches the bike'], [['A', 'D', '←', '→'], 'Steer'], [['Space', '+', 'K'], 'Wheelie', 'gas and brake together']] },
-  { group: 'TRICKS', rows: [[['L'], 'Hop', 'every endless ride'], [['C'], 'Trick', 'hold for more; in Big Air the trick ladder (L or E too)'], [['R'], 'Reset', 'back to the last good spot']] },
-  { group: 'GAME', rows: [[['V'], 'View', 'chase cam or the map'], [['M'], 'Mute'], [['P', 'Esc'], 'Pause']] },
-];
-// The gamepad (src/bike/kit.ts gamepad()).
-const pad = [['Left stick', 'lean and steer'], ['RT or A', 'gas'], ['LT or B', 'brake'], ['X, Y or RB', 'trick or hop'], ['LB', 'combo'], ['Back', 'reset']];
-// The phone demo's steps (one loop, the captions light in turn).
-const phone = [
-  ['Thumb on GAS', 'the top zone lights: go.'],
-  ['Slide to the middle', 'the seam is gas and brake at once: a wheelie.'],
-  ['Slide onto COMBO', 'it pops out of the gas side; the gas stays held.'],
-  ['Slide back', 'onto the gas, never lifting.'],
-  ['Flick the stick', 'back, then forward, fast: a bunny hop.'],
-];
+// The keyboard, the gamepad and the phone demo's steps (one loop, the captions light in turn): the game's
+// own facts, the same list as its CONTROLS card (src/data/controls.ts).
+const keys = KEYS, pad = PAD, phone = TOUCH;
 // The ways to ride: the game's grouping. Live entries link to /play/?mode=; SOON ones are not built yet.
 const freeCount = FREE_MAPS.length + FREE_SX.length;
 const rounds = [Math.min(...TIERS.map((t) => t.rounds)), Math.max(...TIERS.map((t) => t.rounds))];
@@ -92,7 +80,7 @@ const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound'
       <h1 id="dt-title"><span class="sr">Holeshot.</span><Wordmark tab id="hs-wm-hero" class="hero-lockup" /><em>One bike. Every kind of dirt.</em></h1>
       <p class="lead">A dirt bike game on a tabletop. Pick one bike, race it, fly it, wheelie it through town, and keep it alive in the garage, paid for with what you win.</p>
       <div class="dt-ctas">
-        <a class="bui-key bui-sticker-key start-key" href={base('play/')}><b>PLAY</b><span>free · in your browser</span></a>
+        <a class="bui-key bui-sticker-key start-key" href={base('play/')} target="_blank" rel="noopener"><b>PLAY</b><span>free · in your browser</span></a>
         <a class="dt-watch" href="#controls">How do I ride? ↓</a>
       </div>
     </div>
@@ -131,7 +119,7 @@ const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound'
         </div>
         <figure class="panel ctl-phone">
           <h3>Phone</h3>
-          <p class="ctl-sub">The stick under your left thumb leans and steers. Under your right: one throttle rocker. Slide, never lift.</p>
+          <p class="ctl-sub">{TOUCH_LINE}</p>
           <div class="phone" role="img" aria-label="A phone held sideways: the stick on the left; on the right the throttle rocker, gas on top, the middle seam for a wheelie, brake below, and the COMBO button that slides out of the gas side.">
             <div class="ph-screen">
               <div class="ph-stick"><span class="ph-knob"></span><span class="ph-dot ph-dot-l"></span><b class="ph-tag ph-tag-l">STICK</b></div>
@@ -170,7 +158,7 @@ const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound'
             <div class="way-body">
               <p class="way-line">{w.line}</p>
               <ul class="way-items">
-                {w.items.map((it) => <li><b>{it.name}</b> <span>{it.note}</span>{it.mode ? <a class="go" href={base(`play/?mode=${it.mode}`)} aria-label={`Ride ${it.name}`}>Ride ▸</a> : <span class="chip-soon small">SOON</span>}</li>)}
+                {w.items.map((it) => <li><b>{it.name}</b> <span>{it.note}</span>{it.mode ? <a class="go" href={base(`play/?mode=${it.mode}`)} target="_blank" rel="noopener" aria-label={`Ride ${it.name}`}>Ride ▸</a> : <span class="chip-soon small">SOON</span>}</li>)}
               </ul>
             </div>
           </li>
@@ -249,7 +237,7 @@ const bricks = ['kernel', 'diorama', 'terrain', 'drive', 'input', 'pad', 'sound'
         <p>Made by teen game creator <a href="https://fizlet.com/people/david-cooley/">David Cooley</a>, who loves doing wheelies on his gas and electric bikes.</p>
         <h3>It started as three tiny games.</h3>
         <p>Holeshot grew out of three pieces in Fizlet's Daily: Moto Track, Big Air and Wheelie City. They shared one bike; now they share one garage.</p>
-        <a class="bui-key bui-arcade bui-go" href={base('play/')}>▶ Play Holeshot</a>
+        <a class="bui-key bui-arcade bui-go" href={base('play/')} target="_blank" rel="noopener">▶ Play Holeshot</a>
       </div>
     </div>
   </section>
