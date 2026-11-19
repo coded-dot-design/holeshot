@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 — 2026-11-18
+
+Three naming tiers (REAL on the private test links, NOD by default, SAFE for app stores) and the
+naked bike a red V4; a garage that keeps the bike in view with live previews; phone controls with
+the TRICK and HOP bubbles off the rocker, one ☰ menu key and Add to Home Screen. Sections below.
+
+### Names
 
 - **Three naming tiers** ([docs/names.md](docs/names.md)): every maker, model and maker paint has
   one id and three display names. **NOD** (the default build, the web) are owner-approved
@@ -78,8 +84,8 @@
 
 ### Size
 
-- **Budget 207,300 B gzip** (was 203,000): the three rounds together measure 205,280 B
-  (holeshot.js; +5,217 B over 0.4.0's 200,063: the phone controls' bubbles, tether, ☰ column, CSS
+- **Budget 207,300 B gzip** (was 203,000): the three rounds together measure 205,309 B
+  (holeshot.js; +5,246 B over 0.4.0's 200,063: the phone controls' bubbles, tether, ☰ column, CSS
   and Home Screen tip +1,627 on their own; the NOD and REAL name tables +1,196; the garage dock,
   live preview and card layout +2,246), plus about 2 KB of room (`scripts/size.mjs`).
 
