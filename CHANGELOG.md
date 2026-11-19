@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **New icon and share image.** The app icon is a lime setting sun with pink stripes and a wheelie silhouette on a cyan horizon (all icon sizes, maskable and Apple touch); the share image is the new launch cover's landscape cut; the cover art is in `site/public/shots/cover.jpg`.
+
 ## 0.5.6 — 2026-11-19
 
 - **Big Air is an endless line.** No more oval: a roll-in deck and a hill down for speed, then a
