@@ -28,10 +28,13 @@ import {
   DONE, E_AIR, E_BARK, E_BONUS, E_CRASH, E_END, E_GRUMP, E_HOP, E_RESPAWN, E_RESET, E_STUCK, E_SPLASH, E_START, E_TRICK,
   E_TICKET, E_ESCAPE, E_STARS, E_UNIT, E_CLEAR, E_DRAG, E_BANKED, E_LOST, HAND_T, LINES, READY, RUN, CRASH, SP_REACH,
 } from "./rules.ts";
-import { openRun, E_TOWN, NNB, NSPK, S_TOWNS } from "./roam.ts";
+import { openRun, E_TOWN, E_BIOME, E_BIG, NNB, NSPK, S_TOWNS } from "./roam.ts";
+import { field, MASH, M_CITY } from "../mashup/field.ts";
+import { biomePal } from "../desert/look.ts";
+import { B_DESERT, B_FOREST, B_QUARRY, B_PARK } from "../desert/world.ts";
 import {
   openWindow, CITY_SEED, IS, RC, RB_R, RB_HW, FAR_WIN, FAR_CELL, FAR_STEP, KICK_L, KICK_W, NITEM, I_PROP,
-  I_HOUSE, I_HOUSE2, I_SHOP, I_DINER, I_STORE, I_GAS, I_FLATS, I_TOWER, I_WARE, I_BARN, I_SILO, I_TREE, I_PINE, I_ROCK, I_HAY, I_LAMP, I_SIGN, I_MAIL, I_BENCH, I_CAR, I_FENCE, I_CONE, I_ISLE, I_SPRINK, I_DOG, I_CROSS, I_KICK,
+  I_HOUSE, I_HOUSE2, I_SHOP, I_DINER, I_STORE, I_GAS, I_FLATS, I_TOWER, I_WARE, I_BARN, I_SILO, I_TREE, I_PINE, I_ROCK, I_HAY, I_LAMP, I_SIGN, I_MAIL, I_BENCH, I_CAR, I_FENCE, I_CONE, I_ISLE, I_SPRINK, I_DOG, I_CROSS, I_KICK, I_CACTUS,
 } from "./open.ts";
 import { HEAT, STARS, HOT, ESC, TIX, NEAR, MAXP, PS, P_ON, P_KIND, P_X, P_Z, P_YAW, P_FADE, U_CART, U_DRONE } from "./cops.ts";
 import type { RideSpec } from "./ride.ts";
@@ -121,6 +124,9 @@ const VR = 46, VMOVE = 5, VCAP = 520;
 /** Pool sizes per item kind (what can be on screen at once). */
 const POOL = new Int32Array(NITEM);
 [[I_HOUSE, 20], [I_HOUSE2, 16], [I_SHOP, 10], [I_DINER, 2], [I_STORE, 5], [I_GAS, 2], [I_FLATS, 7], [I_TOWER, 5], [I_WARE, 4], [I_BARN, 3], [I_SILO, 3], [I_TREE, 44], [I_PINE, 24], [I_ROCK, 14], [I_HAY, 14], [I_LAMP, 40], [I_SIGN, 8], [I_MAIL, 18], [I_BENCH, 10], [I_CAR, 14], [I_FENCE, 28], [I_CONE, 8], [I_ISLE, 3], [I_DOG, 2], [I_KICK, 3]].forEach(([k, v]) => (POOL[k!] = v!));
+/** The Endless Mashup's pool: the city's, plus the wild regions' cactus stands, pines, rocks and pylons. */
+const POOL_M = POOL.slice();
+[[I_CACTUS, 36], [I_PINE, 64], [I_ROCK, 36], [I_CONE, 24], [I_BARN, 4]].forEach(([k, v]) => (POOL_M[k!] = v!));
 /** Occlusion: a building in front of the bike fades to GHOST over OCC_T seconds. */
 const GHOST = 0.1, OCC_T = 0.15;
 /** Within this of a building's footprint the bike is up against it (its radius 0.45 and a margin). */
@@ -131,11 +137,13 @@ const B_TOP = [0.9, 0.9, 0.15, 0.6, 0.15, 0.9, 0.15, 1.5, 0.25, 1.6, 0.5];
 /** Endless Wheelie City; online (`net`) this seat's run in the match's ride together (../../online/
  *  match.ts steps it; the scene draws every rider, reads this screen's input and commands, and plays
  *  the first run of each frame's events). */
-export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
+export function mountCity(ctx: ModeCtx, net: NetView | null = null, mash = false): NetRun {
   const stage = modeStage(ctx.host, "wc");
   const engine = createEngine({ root: stage, settle: 0.5, seed: ctx.seed });
   const seat = net ? net.seat : 0, cj = net ? net.ride.city! : null, H = cj ? cj.humans : 1;
-  const m = net ? net.ride.meters[seat]! : meter("endcity");
+  const m = net ? net.ride.meters[seat]! : meter(mash ? "mashup" : "endcity");
+  /** The Endless Mashup: the open world composed with the biome field (../mashup/field.ts); its pool. */
+  const PL = mash ? POOL_M : POOL;
   /** Online: this screen's END (sticky) and REGROUP (frames left), the tags, the callouts. */
   const CMDQ = new Uint8Array(2), TAGS: string[] = net ? net.names.slice() : [], CALLS: string[] = [], CALLT = new Float64Array(H);
   const SPEC: RideSpec = { id: ctx.bike.model.id, name: ctx.bike.model.name, kind: ctx.bike.power.name, blurb: "", bars: [3, 3, 3], power: ctx.bike.power, shape: ctx.bike.shape, sweet: ctx.bike.sweet, hop: ctx.bike.hop, bar: ctx.bike.bar };
@@ -207,7 +215,7 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
   paintMute();
 
   // ---- the run and the diorama ----
-  const run = cj ? cj.runs[seat]! : openRun([SPEC], ctx.seed >>> 0 || 1, CITY_SEED), bike = run.bike, S = run.S, sc = run.sc.S, cop = run.cop, Wd = run.world, t = run.win.t;
+  const run = cj ? cj.runs[seat]! : openRun([SPEC], ctx.seed >>> 0 || 1, CITY_SEED, mash ? field(CITY_SEED) : null), bike = run.bike, S = run.S, sc = run.sc.S, cop = run.cop, Wd = run.world, t = run.win.t;
   const hgt = (x: number, z: number) => t.height(x, z);
   // The far ring: the same ground on a coarse window (the view's: never the bike's).
   const FR = openWindow(Wd, FAR_WIN, FAR_CELL, FAR_STEP, false);
@@ -239,11 +247,14 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
     dio.setLight(P.light, P.amb);
     dio.cluster("sky", { fixed: -10 });
     dio.decal("sky", 0, paintSky);
+    // The Mashup's wild kinds after the city's: each endless ground's own sand, floor, stone and turf
+    // (../desert/look.ts), the trail the ploughed dirt.
+    const KC = mash ? [...F.kindC, ...[B_DESERT, B_FOREST, B_QUARRY, B_PARK].map((bi) => (P.night ? biomePal(bi).dark : biomePal(bi).light).ground![1]!), F.kindC[4]!] : F.kindC;
     tv = terrainView(dio, run.win.view, {
-      bands: [[0.9, F.meadow[0]!], [2.2, F.meadow[1]!], [3.6, F.meadow[2]!], [99, F.meadow[3]!]], steep: 0.6, steepColor: F.meadow[0]!, kinds: F.kindC,
+      bands: [[0.9, F.meadow[0]!], [2.2, F.meadow[1]!], [3.6, F.meadow[2]!], [99, F.meadow[3]!]], steep: 0.6, steepColor: F.meadow[0]!, kinds: KC,
       light: P.light, ambient: P.amb, lod: [14, 26], shadows: 1, shadowColor: P.shadow, split: "adaptive",
     });
-    rib.colors(F.kindC, P.light, P.amb);
+    rib.colors(KC, P.light, P.amb);
     dio.decal("terrain", 0.5, paintRibbons);
     dio.decal("terrain", 1, paintRoads);
     dio.decal("terrain", 1.5, paintPools);
@@ -256,7 +267,7 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
     // The pool, kind by kind (every object hidden until placed).
     for (let k = 0; k < NITEM; k++) {
       P0[k] = OBJ.length;
-      for (let q = 0; q < POOL[k]!; q++) OBJ.push(make(k, OBJ.length));
+      for (let q = 0; q < PL[k]!; q++) OBJ.push(make(k, OBJ.length));
     }
     P0[NITEM] = OBJ.length;
     ON_.fill(0);
@@ -368,6 +379,13 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
         for (let q = 0; q < 3; q++) part([1.5 - q * 0.38, 1.0, 1.5 - q * 0.38], [0, -0.1 + q * 0.6, 0], P.pine[q & 1]!, false, { shape: "cyl", sides: 7, top: 0 });
         return o;
       }
+      case I_CACTUS: {
+        // A saguaro: a ribbed trunk and two arms.
+        const o = dio.add({ id, shape: "cyl", sides: 7, size: [0.36, 1.9, 0.36], color: P.pine[1]!, ...hide });
+        part([0.22, 0.7, 0.22], [0.32, -1.3, 0], P.pine[0]!, false, { shape: "cyl", sides: 6 });
+        part([0.2, 0.55, 0.2], [-0.3, -1.05, 0], P.pine[0]!, false, { shape: "cyl", sides: 6 });
+        return o;
+      }
       case I_ROCK: return dio.add({ id, shape: "cyl", sides: 5, top: 0.5, size: [1.1, 0.6, 0.9], color: F.rock, ...hide });
       case I_HAY: return dio.add({ id, shape: "cyl", sides: 10, size: [1.1, 1.1, 0.9], rot: [Math.PI / 2, 0, 0], color: F.hay, ...hide });
       case I_LAMP: {
@@ -455,7 +473,7 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
         if (ncross < 16) ncross++;
         continue;
       }
-      if (k === I_SPRINK || UC[k]! >= POOL[k]!) continue;
+      if (k === I_SPRINK || UC[k]! >= PL[k]!) continue;
       const i = P0[k]! + UC[k]!;
       UC[k] = UC[k]! + 1;
       const ob = OBJ[i]!, ux = VG[o + 3]!, uz = VG[o + 4]!;
@@ -471,7 +489,7 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
       ON_[i] = 1;
       OI[r] = VG[o + 1]!; OI[r + 1] = VG[o + 2]!; OI[r + 2] = ux; OI[r + 3] = uz; OI[r + 4] = VG[o + 5]!; OI[r + 5] = VG[o + 6]!; OI[r + 6] = VG[o + 7]!; OI[r + 7] = k; OI[r + 8] = VG[o + 9]!;
     }
-    for (let k = 0; k < NITEM; k++) for (let q = UC[k]!; q < POOL[k]!; q++) {
+    for (let k = 0; k < NITEM; k++) for (let q = UC[k]!; q < PL[k]!; q++) {
       const i = P0[k]! + q;
       // Let go: diorama's `hidden` hides only the object itself, never its parts (a canopy, a roof,
       // windows), so alpha 0 takes the whole of it out (alpha multiplies down), and it goes back
@@ -872,6 +890,13 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
       } else if (type === E_BONUS) {
         engine.events.emit("bonus");
         toast(val === F_CROSS ? "CROSSWALK WHEELIE!" : val === F_SPRINK ? "SPRINKLER RUN!" : "GRUMPY BONUS!", "meh");
+      } else if (type === E_BIOME) {
+        const name = MASH[val]!.name;
+        toast(`ENTERING ${name}`, "clean");
+        say(`Entering ${name.toLowerCase()}`);
+      } else if (type === E_BIG) {
+        engine.events.emit("trick");
+        toast(val === 2 ? `FLIP! ×${1 + sc[CB]!}` : `BIG AIR ×${1 + sc[CB]!}`, "go");
       } else if (type === E_TOWN) {
         engine.events.emit("town");
         if (val) {
@@ -879,7 +904,7 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
           toast(`ENTERING ${name}`, "clean");
           say(`Entering ${name}`);
         } else if (!toastEl.hidden && /LOST/.test(toastEl.textContent ?? "")) void 0;
-        else toast("OPEN ROAD", "clean");
+        else if (!mash || run.biome === M_CITY) toast("OPEN ROAD", "clean");
       } else if (type === E_ESCAPE) {
         engine.events.emit("escape");
         toast(`LOST THEM! +${val.toLocaleString("en-US")} · COMBO ×${1 + sc[CB]!}`, "go");
@@ -981,6 +1006,7 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
   }
   function stats() {
     const esc = cop.S[ESC]!, tix = cop.S[TIX]!, tw = S[S_TOWNS]!;
+    if (mash) return m.stats({ finished: true, score: sc[SC]!, where: "mashup", farKey: "mashup", far: run.far, escapes: esc, tickets: tix, tricks: run.bigAirs, flips: run.flips, summary: `${dist(run.far, ctx.units)} out · ${tw} ${tw === 1 ? "town" : "towns"} · ${run.bigAirs} big ${run.bigAirs === 1 ? "air" : "airs"} · longest wheelie ${sc[BEST_W]!.toFixed(1)} m · ${tix} ${tix === 1 ? "ticket" : "tickets"}` });
     return m.stats({ finished: true, score: sc[SC]!, where: "city", farKey: "city", far: run.far, escapes: esc, tickets: tix, summary: `${dist(run.far, ctx.units)} out · ${tw} ${tw === 1 ? "town" : "towns"} · longest wheelie ${sc[BEST_W]!.toFixed(1)} m · ${esc} ${esc === 1 ? "escape" : "escapes"} · ${tix} ${tix === 1 ? "ticket" : "tickets"}` });
   }
   function end() {
@@ -1174,6 +1200,8 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
             Wd.at(e, s);
             const px = Wd.PQ[0]! - Wd.PQ[3]! * off, pz = Wd.PQ[1]! + Wd.PQ[2]! * off, ddx = px - x, ddz = pz - z;
             if (ddx * ddx + ddz * ddz > RREACH * RREACH) { pen = false; continue; }
+            // The Mashup: no paint on a trail.
+            if (Wd.mix && ((Wd.XT[0] = px), (Wd.XT[1] = pz), !Wd.pavedI())) { pen = false; continue; }
             if (!dio.project(px, t.height(px, pz) + 0.03, pz, tmp) || tmp[2]! < 0.6) { pen = false; continue; }
             if (pen) c2.lineTo(tmp[0]!, tmp[1]!);
             else c2.moveTo(tmp[0]!, tmp[1]!), (pen = true);
@@ -1522,7 +1550,7 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null): NetRun {
       return {
         phase: ph === READY ? "ready" : ph === RUN || ph === CRASH ? "run" : ph === DONE ? "done" : "idle", walking: bike.b.walking, clock: S[1]!, score: sc[SC]!, combo: sc[CB]!, trick: sc[ON] === 1, nose: bike.nose, view: view ? "chase" : "map", speed: bike.b.speed, crashes, grumps: S[4]!, best: sc[BEST_W]!, ended,
         gas: I[0]!, brake: I[1]!, air: bike.air, flicks: flk.n, drag: run.HD[1]!, hold: run.HD[0]!, stunt: run.st.trick, whip: run.st.whip,
-        far: run.far, endless: true, towns: S[S_TOWNS]!, inTown: run.inTown, near: cop.S[NEAR]!, heat: cop.S[HEAT]!, stars: cop.S[STARS]!, units: cop.chasing, risk: cop.S[HOT]!, escapes: cop.S[ESC]!, tickets: cop.S[TIX]!, x: bike.b.pos[0]!, z: bike.b.pos[2]!, objects: dio.stats.objects, faces: dio.stats.faces, ground: tv.stats.faces, ribbons: rib.stats.quads, tiles: run.win.stats[0]!,
+        far: run.far, endless: true, biome: mash ? MASH[run.biome]!.id : "city", bigAirs: run.bigAirs, towns: S[S_TOWNS]!, inTown: run.inTown, near: cop.S[NEAR]!, heat: cop.S[HEAT]!, stars: cop.S[STARS]!, units: cop.chasing, risk: cop.S[HOT]!, escapes: cop.S[ESC]!, tickets: cop.S[TIX]!, x: bike.b.pos[0]!, z: bike.b.pos[2]!, objects: dio.stats.objects, faces: dio.stats.faces, ground: tv.stats.faces, ribbons: rib.stats.quads, tiles: run.win.stats[0]!,
       };
     },
     get camera() { return { dist: view ? dio.cam.dist : chaseO.dist, fov: dio.cam.fov, view: view ? "chase" : "map" }; },

@@ -9,7 +9,7 @@ import type { Engine } from "@fzlt/core/kernel";
 import type { RigColors, RigHelmet } from "../bike/rig.ts";
 import type { Tuned } from "../model/tune.ts";
 
-export type ModeId = "race" | "freeride" | "bigair" | "wheelie" | "series" | "desert" | "endcity" | "trackday";
+export type ModeId = "race" | "freeride" | "bigair" | "wheelie" | "series" | "desert" | "endcity" | "trackday" | "mashup";
 
 /** What a ride did, for the payout and the wear. Every mode fills the common part. */
 export interface RunStats {

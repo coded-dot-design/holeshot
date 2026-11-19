@@ -189,6 +189,9 @@ function heightQ(seed: number, bi = 0) {
   Q[6] = h + y * across;
 }
 /** The ground at (x, z). Pure: the same seed and place, the same height, on every engine. */
+/** The same through scratch (nothing boxed across a call: other worlds that compose this ground,
+ *  ../mashup/field.ts): the place in GQ[4], GQ[5]; `groundQ(seed, bi)`; the height in GQ[6]. */
+export const GQ = Q, groundQ = heightQ;
 export function heightAt(seed: number, x: number, z: number, bi = 0) {
   Q[4] = x; Q[5] = z;
   heightQ(seed, bi);

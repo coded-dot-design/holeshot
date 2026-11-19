@@ -14,10 +14,11 @@
 //   inlined (V8 would box it): inputs and results go through scratch arrays. The colours are made when
 //   the scene is built.
 import type { OpenWorld } from "./open.ts";
-import { RC, NS, RB_R, RB_HW, RB_ISLE, TOWN_R, GRAVEL_W, WALK_W, F_ROAD, F_WALK, F_GRAVEL, F_ISLE } from "./open.ts";
+import { RC, NS, RB_R, RB_HW, RB_ISLE, TOWN_R, GRAVEL_W, WALK_W, F_ROAD, F_WALK, F_GRAVEL, F_ISLE, F_TRAIL } from "./open.ts";
 
-/** The materials, in the order they are painted: gravel, sidewalk, asphalt, a roundabout's island. */
-const M_GRAVEL = 0, M_WALK = 1, M_ROAD = 2, M_ISLE = 3, NM = 4, LV = 33, NK = NM * LV;
+/** The materials, in the order they are painted: gravel, sidewalk, asphalt, a roundabout's island,
+ *  and the dirt trail a road becomes past the city (the Endless Mashup: shoulders and all). */
+const M_GRAVEL = 0, M_WALK = 1, M_ROAD = 2, M_ISLE = 3, M_TRAIL = 4, NM = 5, LV = 33, NK = NM * LV;
 /** Quads a frame (past it they are dropped), sides of a roundabout's circles. */
 const QMAX = 3072, RS = 48;
 /** The near plane the quads are clipped at (depth, world units). */
@@ -56,7 +57,7 @@ export function roadRibbons(W: OpenWorld, t: RibbonGround, view: RibbonView) {
   /** The colours (a theme change): the kinds' colours as the terrain draws them, light and ambient. */
   function colors(kindC: ArrayLike<string>, light: ArrayLike<number>, amb: number) {
     COL.length = 0;
-    const kc = [kindC[F_GRAVEL - 1]!, kindC[F_WALK - 1]!, kindC[F_ROAD - 1]!, kindC[F_ISLE - 1]!];
+    const kc = [kindC[F_GRAVEL - 1]!, kindC[F_WALK - 1]!, kindC[F_ROAD - 1]!, kindC[F_ISLE - 1]!, kindC[F_TRAIL - 1] ?? kindC[F_GRAVEL - 1]!];
     for (let m = 0; m < NM; m++) for (let l = 0; l < LV; l++) COL.push(shade(kc[m]!, 0.5 + (l / 40) * 0.62));
     const ll = Math.sqrt(light[0]! * light[0]! + light[1]! * light[1]! + light[2]! * light[2]!) || 1;
     L[0] = light[0]! / ll; L[1] = light[1]! / ll; L[2] = light[2]! / ll; L[3] = amb;
@@ -144,11 +145,11 @@ export function roadRibbons(W: OpenWorld, t: RibbonGround, view: RibbonView) {
         const pa = R[a * 3 + c]!, pb = R[b * 3 + c]!, ta = R[18 + a * 3 + c]!, tb = R[18 + b * 3 + c]!;
         WP[c] = pa + (pa - ta) * OV; WP[3 + c] = pb + (pb - tb) * OV; WP[6 + c] = tb; WP[9 + c] = ta;
       }
-      emit(p === 1 ? M_ROAD : m, 4);
+      emit(p === 1 && m !== M_TRAIL ? M_ROAD : m, 4);
     }
   }
   /** The shoulder's material at (XT[0], XT[1]): the sidewalk inside a town's limits, else gravel. */
-  const mat = () => (W.townI(), TQ[0]! < TOWN_R ? M_WALK : M_GRAVEL);
+  const mat = () => (W.townI(), TQ[0]! < TOWN_R ? M_WALK : W.pavedI() ? M_GRAVEL : M_TRAIL);
 
   /** One road (edge slot e): its polyline, segment by segment, cut finer near the eye; the shoulder's
    *  material changes where the road crosses a town's limits (found by halving). */

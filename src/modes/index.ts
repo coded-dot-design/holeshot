@@ -76,6 +76,11 @@ export const MODES: Mode[] = [
     maps: [{ id: "city", name: "THE OPEN ROAD" }],
     start: (ctx) => mountCity(ctx),
   },
+  {
+    id: "mashup", name: "ENDLESS MASHUP", blurb: "One endless world that changes as you ride: the city's roads and towns, then out along the trail into the dunes, the mountains, the quarry or the park, and into a city again. Wheelie the streets, send the dunes. How far can you go?",
+    maps: [{ id: "mashup", name: "THE WHOLE WORLD" }],
+    start: (ctx) => mountCity(ctx, null, true),
+  },
 ];
 /** TRACK DAY: three laps against three rivals on paved road circuits (./race/circuits.ts), street
  *  bikes on their own rubber (a dirt bike may ride, on knobblies: ../model/families.ts ROAD_FX). Not on

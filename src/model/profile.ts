@@ -12,8 +12,9 @@ import { freshSeries, normSeries, type SeriesSave } from "./series.ts";
 import { fitsWhere } from "./families.ts";
 
 export const VERSION = 7;
-/** The endless bests a profile keeps (world units): the ENDLESS grounds and Endless Wheelie City. */
-export const FAR_KEYS = ["desert", "quarry", "forest", "night-park", "city"];
+/** The endless bests a profile keeps (world units): the ENDLESS grounds, Endless Wheelie City and the
+ *  Endless Mashup (`mashup`: new keys start at 0 in `normalize`, no version step). */
+export const FAR_KEYS = ["desert", "quarry", "forest", "night-park", "city", "mashup"];
 const farZero = () => Object.fromEntries(FAR_KEYS.map((k) => [k, 0])) as Record<string, number>;
 export const STORE_KEY = "holeshot:profile";
 /** Where the game saved before it was called HOLESHOT (it was "Dirt Hop"): read when STORE_KEY is

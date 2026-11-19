@@ -41,10 +41,13 @@ export const RB_R = 9, RB_HW = 3, RB_ISLE = RB_R - RB_HW;
 export const NS = 20;
 /** Face kinds (0 the meadow): asphalt, the town's sidewalk, a lawn, the gravel shoulder, ploughed dirt, crops, a roundabout's island. */
 export const F_GRASS = 0, F_ROAD = 1, F_WALK = 2, F_LAWN = 3, F_GRAVEL = 4, F_DIRT = 5, F_CROP = 6, F_ISLE = 7;
+/** The wild grounds' kinds (only with a Mix, the Endless Mashup: ../mashup/field.ts): sand, the
+ *  mountains' forest floor, the quarry's stone, the park's turf, and a road past the city: a dirt trail. */
+export const F_SAND = 8, F_FLOOR = 9, F_STONE = 10, F_TURF = 11, F_TRAIL = 12;
 /** Items (`gather`): buildings first (< I_PROP), then props. */
 export const I_HOUSE = 0, I_HOUSE2 = 1, I_SHOP = 2, I_DINER = 3, I_STORE = 4, I_GAS = 5, I_FLATS = 6, I_TOWER = 7, I_WARE = 8, I_BARN = 9, I_SILO = 10, I_PROP = 11;
-export const I_TREE = 11, I_PINE = 12, I_ROCK = 13, I_HAY = 14, I_LAMP = 15, I_SIGN = 16, I_MAIL = 17, I_BENCH = 18, I_CAR = 19, I_FENCE = 20, I_CONE = 21, I_ISLE = 22, I_SPRINK = 23, I_DOG = 24, I_CROSS = 25, I_KICK = 26;
-export const NITEM = 27;
+export const I_TREE = 11, I_PINE = 12, I_ROCK = 13, I_HAY = 14, I_LAMP = 15, I_SIGN = 16, I_MAIL = 17, I_BENCH = 18, I_CAR = 19, I_FENCE = 20, I_CONE = 21, I_ISLE = 22, I_SPRINK = 23, I_DOG = 24, I_CROSS = 25, I_KICK = 26, I_CACTUS = 27;
+export const NITEM = 28;
 /** Building sizes by item: width (along the road), depth, height. */
 export const BW = [3.4, 4.2, 5, 6.4, 6, 4.4, 5.2, 4.4, 8.5, 5.6, 2.2], BD = [3, 3.4, 3.6, 4.2, 4.4, 3.4, 3.8, 4.4, 6.5, 4.4, 2.2], BH = [1.9, 2.3, 2.2, 2.1, 2.5, 2.4, 3.9, 8.5, 3.4, 3, 5.2];
 /** An item record in `gather`'s output: kind, x, z, ux, uz (its local x axis: along the road), w, d, h, look, key, y. */
@@ -68,8 +71,23 @@ const mod = (a: number, m: number) => ((a % m) + m) % m;
 /** The kind two or three of a triangle's corners share (else the first's). */
 const maj = (a: number, b: number, c: number) => (b === c ? b : a);
 
+/** A biome field the open world composes with (the Endless Mashup, ../mashup/field.ts): through its
+ *  scratch X, `at()` reads the place (X[0], X[1]) and writes [2] how much of it is city (0..1), [3]
+ *  the wild ground's height there, [4] its face kind, [5] its biome, [6] about twice the distance to
+ *  the nearest border with another biome; `scatter` adds the wild regions' scenery to a gather.
+ *  Without one (Endless Wheelie City) every place is city and nothing below changes. */
+export interface Mix {
+  X: Float64Array;
+  at(): void;
+  scatter(W: { XH: Float64Array; heightI: () => void; HQ: Float64Array; RQ: Float64Array; roadQ: (x: number, z: number) => void }, x: number, z: number, R: number, out: Float64Array, n: number, cap: number): number;
+}
+/** With a Mix: a town needs its junction this deep in a city region (X[6], about twice the distance
+ *  to the border: its limits, its flattened ground, the blend's half-band and a margin), so the town,
+ *  its patrol and its streets never reach the blend. */
+const TOWN_DEEP = 2 * (TOWN_R + 32 + 80 + 10);
+
 /** One open world for a seed: its pure ground and the caches that speed it up. */
-export function openWorld(seed: number) {
+export function openWorld(seed: number, mix: Mix | null = null) {
   // Scratch: noise (Q), a node (NQ), the road query (RQ), the town query (TQ), a point on an edge (PQ).
   const X_baseQ = new Float64Array(2), X_groundQ = new Float64Array(2), X_roadQ = new Float64Array(2), X_townQ = new Float64Array(2), X_heightQ = new Float64Array(2), X_kindQ = new Float64Array(2);
   const LB = new Float64Array(3), Q = new Float64Array(4), NQ = new Float64Array(2), RQ = new Float64Array(10), TQ = new Float64Array(6), PQ = new Float64Array(4), GQ = new Float64Array(2);
@@ -92,16 +110,29 @@ export function openWorld(seed: number) {
     Q[3] = h + 0.45 * Q[2]!;
   }
   // ---- the lattice ----
-  /** Junction (i, j)'s place into NQ. */
-  function nodeQ(i: number, j: number) {
-    NQ[0] = (i + 0.5 + (hashI(i, j, seed + 7) * HI - 0.5) * 2 * JIT) * RC;
-    NQ[1] = (j + 0.5 + (hashI(i, j, seed + 8) * HI - 0.5) * 2 * JIT) * RC;
+  /** Junction (i, j)'s place into A (NQ by default). */
+  function nodeQ(i: number, j: number, A = NQ) {
+    A[0] = (i + 0.5 + (hashI(i, j, seed + 7) * HI - 0.5) * 2 * JIT) * RC;
+    A[1] = (j + 0.5 + (hashI(i, j, seed + 8) * HI - 0.5) * 2 * JIT) * RC;
   }
-  const isTown = (i: number, j: number) => (i === 0 && j === 0) || hashI(i, j, seed + 11) * HI < 0.4;
+  // With a Mix: how city junction (i, j) is (2 deep enough for a town, 1 all city, 0 in or past the
+  // blend), in a small cache whose contents are pure (never state).
+  const MX = mix ? mix.X : new Float64Array(8), CK = new Int32Array(mix ? 512 * 3 : 0), CN = new Float64Array(2);
+  function cityNode(i: number, j: number) {
+    if (!mix) return 2;
+    const s = (hashI(i, j, 97) & 255) * 3;
+    if (CK[s + 2]! > 0 && CK[s] === i && CK[s + 1] === j) return CK[s + 2]! - 1;
+    nodeQ(i, j, CN);
+    MX[0] = CN[0]!; MX[1] = CN[1]!; mix.at();
+    const v = MX[2]! < 1 ? 0 : MX[6]! >= TOWN_DEEP ? 2 : 1;
+    CK[s] = i; CK[s + 1] = j; CK[s + 2] = v + 1;
+    return v;
+  }
+  const isTown = (i: number, j: number) => ((i === 0 && j === 0) || hashI(i, j, seed + 11) * HI < 0.4) && (!mix || cityNode(i, j) === 2);
   /** The road north from junction (i, j) to (i, j + 1): always on every fourth column, mostly from a town, else one in two. */
   const vOn = (i: number, j: number) => mod(i, 4) === 0 || hashI(i, j, seed + 13) * HI < ((isTown(i, j) || isTown(i, j + 1)) ? 0.85 : 0.5);
   /** A roundabout at junction (i, j): only where three or more roads meet. */
-  const isRound = (i: number, j: number) => (vOn(i, j) || vOn(i, j - 1)) && !(i === 0 && j === 0) && hashI(i, j, seed + 12) * HI < (isTown(i, j) ? 0.3 : 0.45);
+  const isRound = (i: number, j: number) => (vOn(i, j) || vOn(i, j - 1)) && !(i === 0 && j === 0) && hashI(i, j, seed + 12) * HI < (isTown(i, j) ? 0.3 : 0.45) && (!mix || cityNode(i, j) > 0);
   const highway = (j: number) => mod(j, 3) === 0;
 
   // ---- the edges: a fixed table of sampled curves (pure contents: never state) ----
@@ -161,7 +192,13 @@ export function openWorld(seed: number) {
     const f = e * 8;
     EF[f] = hw; EF[f + 1] = len; EF[f + 2] = x0 - m; EF[f + 3] = z0 - m; EF[f + 4] = x1 + m; EF[f + 5] = z1 + m;
     // A kicker on the crown of an open road between two junctions that are not towns, now and then.
-    EF[f + 6] = !isTown(i, j) && !isTown(i + di, j + dj) && hashI(i, j, seed + 41 + dir) * HI < 0.55 ? len * (0.35 + hashI(i, j, seed + 42 + dir) * HI * 0.3) : -1;
+    EF[f + 6] = !isTown(i, j) && !isTown(i + di, j + dj) && hashI(i, j, seed + 41 + dir) * HI < 0.55 && (!mix || (cityNode(i, j) > 0 && cityNode(i + di, j + dj) > 0)) ? len * (0.35 + hashI(i, j, seed + 42 + dir) * HI * 0.3) : -1;
+    // (With a Mix, only where the city holds the whole ramp: its lip never half-blended into the wild.)
+    if (mix && EF[f + 6]! >= 0) {
+      at(e, EF[f + 6]!);
+      MX[0] = PQ[0]!; MX[1] = PQ[1]!; mix.at();
+      if (MX[2]! < 1 || MX[6]! < 2 * KICK_L + 170) EF[f + 6] = -1;
+    }
   }
   /** The point s along edge e (from its start) into PQ: x, z, tangent x, z. */
   function at(e: number, s: number) {
@@ -277,8 +314,19 @@ export function openWorld(seed: number) {
    *  road ribbons into HQ[2] (asphalt, gravel and sidewalk: what lies round them; the ribbons, drawn
    *  along the road's true curve, paint the strips themselves, so their edges never follow the grid). */
   const HQ = new Float64Array(3);
+  /** With a Mix: the last point heightQ blended (x, z), its city weight, the wild height and kind. */
+  const MW = new Float64Array(5);
   function heightQI() {
     const x = X_heightQ[0]!, z = X_heightQ[1]!;
+    if (mix) {
+      MX[0] = x; MX[1] = z; mix.at();
+      MW[0] = x; MW[1] = z; MW[2] = MX[2]!; MW[3] = MX[3]!; MW[4] = MX[4]!;
+      if (MW[2]! <= 0) {
+        // All wild: its ground; the roads run on as trails over it (the road query for the kind).
+        ((X_roadQ[0] = x), (X_roadQ[1] = z), roadQI());
+        return void (HQ[0] = MW[3]!);
+      }
+    }
     ((X_groundQ[0] = x), (X_groundQ[1] = z), groundQI());
     const g = GQ[0]!;
     ((X_roadQ[0] = x), (X_roadQ[1] = z), roadQI());
@@ -294,11 +342,23 @@ export function openWorld(seed: number) {
       w = w * w * (3 - 2 * w);
       h = yc + (g + bump - yc) * w;
     } else h = g + bump;
-    HQ[0] = h;
+    // In a border's band: the city's ground and the wild one, weighed.
+    HQ[0] = mix && MW[2]! < 1 ? MW[3]! + (h - MW[3]!) * MW[2]! : h;
   }
   /** The face kind at (x, z) into HQ[1] (heightQ's road query reused: call right after it, same point). */
   function kindQI() {
     const x = X_kindQ[0]!, z = X_kindQ[1]!;
+    if (mix) {
+      if (MW[0] !== x || MW[1] !== z) (MX[0] = x), (MX[1] = z), mix.at(), (MW[0] = x), (MW[1] = z), (MW[2] = MX[2]!), (MW[3] = MX[3]!), (MW[4] = MX[4]!);
+      const wc = MW[2]!;
+      if (wc < 1) {
+        // The road: asphalt while the city has most of it, a dirt trail past that (the ribbons cut
+        // at the same line); off it the wild kind where a noise draw beats the city's weight.
+        if (RQ[0]! <= 0 && RQ[3] !== 1) return void ((HQ[1] = wc >= 0.5 ? F_ROAD : F_TRAIL), (HQ[2] = MW[4]!));
+        Q[0] = x / 3.2; Q[1] = z / 3.2; valueQ(seed + 5);
+        if (wc <= 0 || Q[2]! * 0.9 + 0.05 >= wc) return void (HQ[1] = HQ[2] = MW[4]!);
+      }
+    }
     const ex = RQ[0]!;
     if (RQ[3] === 1) return void (HQ[1] = HQ[2] = F_ISLE);
     ((X_townQ[0] = x), (X_townQ[1] = z), townQI());
@@ -433,6 +493,43 @@ export function openWorld(seed: number) {
   /** Into out (IS numbers an item), at most cap items, in a fixed order; returns the count. */
   function gather(x: number, z: number, R: number, outA: Float64Array, capN: number) {
     G = outA; n = 0; cap = capN;
+    // With a Mix: all city round here (as without one), all wild (no city scenery: the wild scatter
+    // only), or a border near (each city item kept as the city's weight at its spot says).
+    let city = 1, wildOnly = false;
+    if (mix) {
+      MX[0] = x; MX[1] = z; mix.at();
+      const clear = MX[6]! > 2 * (R + TOWN_R + 20) + 160;
+      city = clear ? (MX[2]! >= 1 ? 1 : 0) : 0.5;
+      wildOnly = clear && MX[2]! <= 0;
+    }
+    if (!wildOnly) cityItems(x, z, R);
+    if (mix && city < 1) {
+      if (city > 0 || !wildOnly) thin();
+      n = mix.scatter(WQ, x, z, R, G, n, cap);
+    }
+    return n;
+  }
+  /** The scatter's view of this world (scratch-based queries). */
+  const WQ = { XH: X_heightQ, heightI: heightQI, HQ, RQ, roadQ: (x: number, z: number) => ((X_roadQ[0] = x), (X_roadQ[1] = z), roadQI()) };
+  /** Near a border: the city's items kept where the city holds the spot (its weight against a hashed
+   *  draw), each on the blended ground. */
+  function thin() {
+    let m = 0;
+    for (let q = 0; q < n; q++) {
+      const o = q * IS, x = G[o + 1]!, z = G[o + 2]!;
+      MX[0] = x; MX[1] = z; mix!.at();
+      const wc = MX[2]!;
+      if (wc < 1) {
+        if (wc <= (hashI(G[o + 9]! % 1e9 | 0, 3, seed + 99) & 1023) / 1024) continue;
+        ((X_heightQ[0] = x), (X_heightQ[1] = z), heightQI());
+        G[o + 10] = HQ[0]!;
+      }
+      if (m !== q) G.copyWithin(m * IS, o, o + IS);
+      m++;
+    }
+    n = m;
+  }
+  function cityItems(x: number, z: number, R: number) {
     // The lattice cells whose junctions, roads or towns can reach within R.
     const i0 = (Math.floor((x - R - TOWN_R) / RC) | 0) - 1, i1 = (Math.floor((x + R + TOWN_R) / RC) | 0) + 1, j0 = (Math.floor((z - R - TOWN_R) / RC) | 0) - 1, j1 = (Math.floor((z + R + TOWN_R) / RC) | 0) + 1;
     // Towns (their lots).
@@ -531,7 +628,6 @@ export function openWorld(seed: number) {
       } else if (r < 0.32) ((PU[0] = I_ROCK), (PU[1] = px), (PU[2] = pz), (PU[3] = ux), (PU[4] = uz), (PU[5] = 0), (PU[6] = 0), (PU[7] = 0), (PU[8] = i & 3), (PU[9] = key), (PU[10] = y), push());
       else ((PU[0] = I_HAY), (PU[1] = px), (PU[2] = pz), (PU[3] = ux), (PU[4] = uz), (PU[5] = 0), (PU[6] = 0), (PU[7] = 0), (PU[8] = 0), (PU[9] = key), (PU[10] = y), push());
     }
-    return n;
   }
 
   // ---- a town's street graph (the patrol): its junction and points along every road out of it ----
@@ -579,6 +675,10 @@ export function openWorld(seed: number) {
     /** The window's fill (no double crosses a call: V8 would box it): the point in XH, then `fillQ`. */
     XH: X_heightQ, heightI: heightQI, XT: X_townQ, townI: townQI, fillQ: () => (heightQI(), (X_kindQ[0] = X_heightQ[0]!), (X_kindQ[1] = X_heightQ[1]!), kindQI()),
     height, nodeQ, edge, at, out, incident, isTown, isRound, vOn, gather, town, townName, townGraph, graph,
+    /** The biome field composed in (null: Endless Wheelie City, all city). */
+    mix,
+    /** Is the road at (XT[0], XT[1]) paved (the city holds most of it)? Always without a Mix. */
+    pavedI: () => !mix || ((MX[0] = X_townQ[0]!), (MX[1] = X_townQ[1]!), mix.at(), MX[2]! >= 0.5),
     /** Town slot s's lots (for a test): count and the table. */
     lotsOf: (s: number) => TN[s]!, TL, MAXL,
   };

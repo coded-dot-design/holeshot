@@ -239,7 +239,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       <label class="dh-field">IMPORT A CODE<textarea class="dh-codein" rows="3" spellcheck="false" placeholder="DH1-…"></textarea></label><p class="dh-row"><button type="button" class="bui-key dh-import">LOAD IT</button><button type="button" class="bui-key dh-reset">START OVER</button></p><p class="dh-sub dh-note" role="status">${esc(note)}</p></div>`;
   }
   /** Rides with no finish line end when you say so, and pay for what you rode (the pause card's END & BANK). */
-  const banks = () => runMode === "freeride" || runMode === "desert" || runMode === "endcity";
+  const banks = () => runMode === "freeride" || runMode === "desert" || runMode === "endcity" || runMode === "mashup";
   function pauseCard() {
     // Online, the endless rides together bank too: END &amp; BANK rides this screen's END bit.
     const roamBank = N.on && (N.pick.kind === K_ENDLESS || N.pick.kind === K_ENDCITY);

@@ -20,7 +20,8 @@ import { unstuck, U_AUTO, U_PROMPT } from "../unstuck.ts";
 import { tricks, ON, SC, PTS, F_CROSS, F_SPRINK, F_GRUMP, BANKED, MAXCB, CB as T_CB, GAP as T_GAP } from "./tricks.ts";
 import { cops, heading, C_TICKET, C_STARS, C_UNIT, C_CLEAR, STARS, NEAR } from "./cops.ts";
 import {
-  openWorld, openWindow, CITY_SEED, IS, TOWN_R, I_PROP, I_HOUSE, I_HOUSE2, I_TREE, I_PINE, I_ROCK, I_HAY, I_LAMP, I_SIGN, I_MAIL, I_BENCH, I_CAR, I_FENCE, I_DOG, I_SPRINK, I_CROSS, I_SILO, F_LAWN,
+  openWorld, openWindow, CITY_SEED, IS, TOWN_R, I_PROP, I_HOUSE, I_HOUSE2, I_TREE, I_PINE, I_ROCK, I_HAY, I_LAMP, I_SIGN, I_MAIL, I_BENCH, I_CAR, I_FENCE, I_DOG, I_SPRINK, I_CROSS, I_SILO, I_CACTUS, F_LAWN,
+  type Mix,
 } from "./open.ts";
 import {
   READY, RUN, CRASH, DONE, E_START, E_TRICK, E_CRASH, E_RESPAWN, E_GRUMP, E_BARK, E_SPLASH, E_BONUS, E_HOP, E_AIR, E_TICKET, E_ESCAPE, E_STARS, E_UNIT, E_CLEAR,
@@ -29,6 +30,12 @@ import {
 
 /** Into a town (value 1) or out of its limits (0). */
 export const E_TOWN = 24;
+/** With a biome field (the Endless Mashup): into another region (value: its biome, ../mashup/field.ts);
+ *  a big air (1) or a flip (2) landed clean out of the city (the endless grounds' tricks). */
+export const E_BIOME = 25, E_BIG = 26;
+/** Out of the city: a clean landing after this much air is a big air; this much pitch turned, a flip
+ *  (Free Ride's numbers, ../freeride/session.ts); and what each pays (× the combo). */
+const BIG_AIR = 0.6, BIG_SPIN = 5.2, BIG_PTS = 150, FLIP_PTS = 500;
 const TAU = 6.283185307179586, CRASH_T = 1.8, R_BIKE = 0.45, BONK_V = 5;
 /** The gather: its reach round the rider, how far the rider goes before it is redone, its cap; the
  *  neighbours and sprinklers it keeps live. */
@@ -37,7 +44,7 @@ export const GR = 26, REGATHER = 6, GCAP = 200, NNB = 6, NSPK = 4;
 export const LIMIT = TOWN_R + 3;
 /** Solid radii of the round props by item (0: not solid). */
 const ROUND = new Float64Array(32);
-ROUND[I_TREE] = 0.3; ROUND[I_PINE] = 0.3; ROUND[I_ROCK] = 0.5; ROUND[I_HAY] = 0.55; ROUND[I_LAMP] = 0.12; ROUND[I_SIGN] = 0.14; ROUND[I_MAIL] = 0.1; ROUND[I_SILO] = 1.1;
+ROUND[I_TREE] = 0.3; ROUND[I_PINE] = 0.3; ROUND[I_ROCK] = 0.5; ROUND[I_HAY] = 0.55; ROUND[I_LAMP] = 0.12; ROUND[I_SIGN] = 0.14; ROUND[I_MAIL] = 0.1; ROUND[I_SILO] = 1.1; ROUND[I_CACTUS] = 0.24;
 
 // S: the session's state, by index.
 const PH = 0, CLOCK = 1, RIDE = 2, CT = 3, GRUMPS = 4, SPLASH = 5, BARKS = 6, HOPAIR = 8, WHY = 9, WALL = 10, SPCLK = 11, TOWN = 12, TI = 13, TJ = 14, STUCK = 20, UNSTUCK = 21;
@@ -46,8 +53,10 @@ const AI = 22, AJ = 23, AD = 24, AS = 25, AN = 26, TOWNS = 27;
 export const S_TOWN = TOWN, S_UNSTUCK = UNSTUCK, S_TOWNS = TOWNS, S_AN = AN;
 
 /** A session in the open world. Inputs each step: gas, brake, lean (−1 back .. 1 forward), steer, hop. */
-export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEED) {
-  const W = openWorld(citySeed), win = openWindow(W), t = win.t;
+export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEED, mix: Mix | null = null) {
+  const W = openWorld(citySeed, mix), win = openWindow(W), t = win.t;
+  // With a biome field: the region the rider is in (its biome), big airs and flips landed out of the city.
+  const BI = new Float64Array(3);
   // The town patrol: hood 0 is the town the rider is in (its junction in HC, its streets in W.graph).
   const HC = new Float64Array(2), G = [W.graph];
   // SG: what was gathered round GC (the state's centre: x, z) when SGC said; scratch for a probe.
@@ -167,6 +176,7 @@ export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEE
     st.bar(bike.spec.bar?.dragX);
     S[AI] = 0; S[AJ] = 0; S[AD] = 0; S[AS] = 1;
     ES[0] = sx; ES[1] = sz; ES[2] = 0;
+    BI.fill(0);
     SGC[2] = 0;
     regather(sx, sz);
     towns(sx, sz);
@@ -187,6 +197,13 @@ export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEE
       emit(E_TOWN, 1);
     }
     if (S[TOWN]! >= 0) graphFor(S[TI]!, S[TJ]!);
+  }
+  /** The region round (x, z): a new one once its biome holds most of the spot (a toast). */
+  function biome(x: number, z: number) {
+    const X = mix!.X;
+    X[0] = x; X[1] = z; mix!.at();
+    const top = X[5]!;
+    if (top !== BI[0] && X[7 + top]! > 0.6) (BI[0] = top), emit(E_BIOME, top);
   }
   /** The patrol's graph and centre for town (i, j) (rebuilt only when it changes: pure, never state). */
   function graphFor(i: number, j: number) {
@@ -288,6 +305,15 @@ export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEE
       } else if (wasAir) {
         if (sc.hop(S[HOPAIR]!, bike.nose > 0.14) === BANKED) bankedNow(E_HOP);
         S[HOPAIR] = 0;
+        if (mix && BI[0] !== 0 && !b.crashed) {
+          const spin = b.airSpin < 0 ? -b.airSpin : b.airSpin, flip = spin > BIG_SPIN;
+          if (flip || (b.landAir > BIG_AIR && b.landErr < 0.3)) {
+            BI[1] = BI[1]! + 1;
+            if (flip) BI[2] = BI[2]! + 1;
+            sc.S[SC] = sc.S[SC]! + (flip ? FLIP_PTS : BIG_PTS) * (1 + sc.S[T_CB]!);
+            emit(E_BIG, flip ? 2 : 1);
+          }
+        }
       }
       if (sc.step(dt, bike.nose, bike.balance, bike.spec.sweet, speed, b.throttle, bike.air) === BANKED) bankedNow(E_TRICK);
       if (sc.S[ON]) {
@@ -311,6 +337,7 @@ export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEE
     }
     const on = S[PH] === RUN || S[PH] === CRASH;
     towns(b.pos[0]!, b.pos[2]!);
+    if (mix) biome(b.pos[0]!, b.pos[2]!);
     if (on && world(dt, x, z, speed)) moving = true;
     if (cop.step(dt, x, z, 0, false, on && S[TOWN]! >= 0, speed, S[PH] === CRASH, S[TOWN]! < 0)) moving = true;
     for (let k = 0; k < cop.n; k++) {
@@ -519,7 +546,7 @@ export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEE
   }
   reset(0);
   const u8 = (a: Float64Array | Uint32Array) => new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
-  const bytes = [u8(S), u8(NB), u8(SPK), u8(DG), ...st.bytes, u8(GC), u8(ES), u8(sc.S), u8(cop.S), u8(cop.P), u8(cop.R), u8(bike.R), u8(bike.vel), u8(U.S), u8(U.R), u8(US), ...bike.all.map((bb) => bb.state)];
+  const bytes = [...(mix ? [u8(BI)] : []), u8(S), u8(NB), u8(SPK), u8(DG), ...st.bytes, u8(GC), u8(ES), u8(sc.S), u8(cop.S), u8(cop.P), u8(cop.R), u8(bike.R), u8(bike.vel), u8(U.S), u8(U.R), u8(US), ...bike.all.map((bb) => bb.state)];
   return {
     S, ev, bike, sc, st, cop, NB, NI, SPK, SPI, DG, DI, HD, bytes, unstuck: U, world: W, win, HC, SG, ES,
     get sn() { return sn; },
@@ -527,6 +554,10 @@ export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEE
     get far() { return ES[2]!; },
     get towns() { return S[TOWNS]!; },
     get inTown() { return S[TOWN]! >= 0; },
+    /** With a biome field: the region's biome now, big airs and flips landed out of the city. */
+    get biome() { return BI[0]!; },
+    get bigAirs() { return BI[1]!; },
+    get flips() { return BI[2]!; },
     get stuck() { return US[0] === 1; },
     get n() { return n; },
     clear() { n = 0; st.clear(); FW[0] = 0; },
