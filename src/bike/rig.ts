@@ -280,6 +280,7 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
   //   6.1–6.4   facing away (the face group and the far side's strap drop by 1): under the shell
   //   7         the shell's slabs, the chin bar's, the dome's visor rim (solids, sorted together by
   //             depth), like the torso, the arms and the legs on the near side
+  //   7.05      the dome visor's side plates (under the shell from the far side or past 102°)
   //   7.1       the strap (each side's half under the shell from the other side); the fin and the
   //             spikes (on the crown, over it from any side)
   //   7.2       the goggle's frame, the open face's dark face
@@ -322,6 +323,18 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
     // The lens inside the shell's own slabs (never past its outline), the rim standing proud of it.
     slabs(k(VISOR, 1.06), 0.1, 0.055, 0.86, 0, 1, band, 7, [id + ":h"]);
     slabs(k(VISOR, 0.98), ...SH, C.visor, 7.3, [hf]);
+    // Its side, as the portrait shows it: the rim and the lens as thin plates on the side slabs' outer
+    // face, each on a group off its side and in it one off the front turned 12° to that side (`behind`
+    // on both: under the shell once the eye is round the other side or over 102° from the face), so
+    // side-on the visor's dark shape sits on the front of the shell even with the face turned just away.
+    for (const sd of [-1, 1]) {
+      const gid = id + (sd < 0 ? ":hvL" : ":hvR");
+      d.add({ id: gid + "s", shape: "group", size: [0.2, 0, 0.2], pos: [0, 0, sd * END], on: id + ":h", behind: 1, pick: false });
+      d.add({ id: gid, shape: "group", size: [0.2, 0, 0.2], pos: [END, 0, sd * 0.21 * END], on: gid + "s", behind: 1, pick: false });
+      for (const [sc, z, c, l] of [[0.96, 0.105, band, 7.05], [0.9, 0.107, C.visor, 7.06]] as const)
+        part([0, 0.004 * HS, 0], [O[0]! * HS, O[1]! * HS, sd * (z + 0.004) * HS], c, { on: gid, shape: "prism", layer: l, rot: [sd > 0 ? -PI / 2 : PI / 2, 0, 0],
+          outline: VISOR.map(([x, y]) => [x! * PK * sc * HS, (sd > 0 ? -y! : y!) * PK * sc * HS]) });
+    }
   } else {
     // The strap: the shell's band round from the back to the goggle, a little bigger than the shell; its
     // middle slab on the head, each side's slabs on a group off that side and a little back (`behind`:
