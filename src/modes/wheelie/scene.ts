@@ -313,7 +313,7 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null, mash = false
   }
   /** One pool object of item kind k (hidden; `place` puts it down). Fronts face local +z (the road). */
   function make(k: number, n: number): DioramaObject {
-    const id = "o" + n, hide = { pos: [0, -50, 0], pick: false, hidden: true, alpha: 0 };
+    const id = "o" + n, hide = { pos: [0, -50, 0], pick: false, off: true, alpha: 0 };
     const part = (size: number[], pos: number[], color: string, emissive = false, o2: { shape?: "box" | "wedge" | "cyl"; rot?: number[]; sides?: number; top?: number; layer?: number } = {}) =>
       dio.add({ shape: o2.shape ?? "box", size, pos, rot: o2.rot, sides: o2.sides, top: o2.top, on: id, color, emissive, pick: false, layer: o2.layer ?? 6 });
     if (k < I_PROP) {
@@ -482,7 +482,7 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null, mash = false
       if (k < I_PROP && k !== I_SILO) ob.size[1] = BHv(k) + 0.3;
       if (k === I_ISLE) (ob.size[0] = ob.size[2] = VG[o + 5]! * 2), (ob.pos[1] = VG[o + 10]!);
       if (k === I_KICK) ob.pos[1] = VG[o + 10]!;
-      ob.hidden = false;
+      ob.off = false;
       const r = i * 9;
       // A slot that takes another item starts it unghosted (the fade is that item's own).
       if (!ON_[i] || OI[r + 8] !== VG[o + 9] || OI[r + 7] !== k) GH[i] = 0;
@@ -491,10 +491,9 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null, mash = false
     }
     for (let k = 0; k < NITEM; k++) for (let q = UC[k]!; q < PL[k]!; q++) {
       const i = P0[k]! + q;
-      // Let go: diorama's `hidden` hides only the object itself, never its parts (a canopy, a roof,
-      // windows), so alpha 0 takes the whole of it out (alpha multiplies down), and it goes back
-      // to the hide spot: nothing of it is left standing where it was.
-      if (ON_[i]) (ON_[i] = 0), (OBJ[i]!.hidden = true), (OBJ[i]!.alpha = 0), (OBJ[i]!.pos[0] = 0), (OBJ[i]!.pos[1] = -50), (OBJ[i]!.pos[2] = 0), (GH[i] = 0);
+      // Let go: `off` takes the object and all its parts (a canopy, a roof, windows) out of the draw
+      // and skips their matrices; alpha 0 so a placed item fades in from nothing.
+      if (ON_[i]) (ON_[i] = 0), (OBJ[i]!.off = true), (OBJ[i]!.alpha = 0), (GH[i] = 0);
     }
     return true;
   }
@@ -1663,7 +1662,7 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null, mash = false
             if (GH[i]! > 0.02) out[2] = out[2]! + 1;
             continue;
           }
-          if (o.hidden || Math.abs(o.pos[0]! - OI[r]!) > 1e-6 || Math.abs(o.pos[2]! - OI[r + 1]!) > 1e-6 || (OI[r + 7]! < I_PROP && OI[r + 7] !== I_SILO && (Math.abs(o.size[0]! - OI[r + 4]!) > 1e-6 || Math.abs(o.size[2]! - OI[r + 5]!) > 1e-6))) out[3] = out[3]! + 1;
+          if (o.off || Math.abs(o.pos[0]! - OI[r]!) > 1e-6 || Math.abs(o.pos[2]! - OI[r + 1]!) > 1e-6 || (OI[r + 7]! < I_PROP && OI[r + 7] !== I_SILO && (Math.abs(o.size[0]! - OI[r + 4]!) > 1e-6 || Math.abs(o.size[2]! - OI[r + 5]!) > 1e-6))) out[3] = out[3]! + 1;
           for (let j = i + 1; j < OBJ.length; j++) if (ON_[j] && OI[j * 9 + 7] === OI[r + 7] && Math.abs(OI[j * 9]! - OI[r]!) < 1e-6 && Math.abs(OI[j * 9 + 1]! - OI[r + 1]!) < 1e-6) out[5] = out[5]! + 1;
           if (i < P0[I_PROP]! && GH[i]! > 1.05 && touching(i, x, z)) out[6] = out[6]! + 1;
         }
@@ -1724,9 +1723,9 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null, mash = false
         for (let i = 0; i < NSPK; i++) if (run.SPI[i]! >= 0) live.add(sprHeads[i]!);
         for (let i = 0; i < MAXP; i++) if (cop.P[i * PS + P_ON]! > 0) live.add(units[i]!);
         dio.recolor((ob) => {
-          if (ob.shape === "group" || ob.hidden) return;
+          if (ob.shape === "group" || ob.hidden || ob.off) return;
           let a = ob.alpha, top = ob, cut = false;
-          for (let p = ob.parent; p; p = p.parent) (a *= p.alpha), (cut = cut || p.hidden), (top = p);
+          for (let p = ob.parent; p; p = p.parent) (a *= p.alpha), (cut = cut || p.hidden || p.off), (top = p);
           if (a <= 0.01 || (live.has(top) && !cut)) return;
           if (tint) ob.color = "#ff00ff";
           const m = ob.M, ok = dio.project(m[9]!, m[10]!, m[11]!, PJ);

@@ -74,27 +74,27 @@ export function desertView(d: Diorama, W: World) {
         let g: DioramaObject;
         if (bi === B_FOREST) {
           // A neon tree: a trunk, a dark crown, a lit tip (the woods' posts).
-          g = d.add({ id, shape: "cyl", sides: 5, size: [0.3, 0.9, 0.3], pos: [0, -50, 0], color: q.trunk!, pick: false, hidden: true });
+          g = d.add({ id, shape: "cyl", sides: 5, size: [0.3, 0.9, 0.3], pos: [0, -50, 0], color: q.trunk!, pick: false, off: true });
           d.add({ id: id + "c", shape: "cyl", sides: 6, top: 0, size: [1.7, 2.2, 1.7], pos: [0, 0, 0], on: id, color: q.leaf!, pick: false });
           d.add({ shape: "cyl", sides: 6, top: 0, size: [0.8, 0.8, 0.8], pos: [0, -1, 0], on: id + "c", color: q.leafTop!, emissive: p.night, pick: false });
         } else if (bi !== B_DESERT) {
           // A pylon: a post with a neon tip (the park's and the quarry's markers).
-          g = d.add({ id, shape: "cyl", sides: 6, size: [0.16, 1.1, 0.16], pos: [0, -50, 0], color: p.gatePost ?? p.tower, pick: false, hidden: true });
+          g = d.add({ id, shape: "cyl", sides: 6, size: [0.16, 1.1, 0.16], pos: [0, -50, 0], color: p.gatePost ?? p.tower, pick: false, off: true });
           d.add({ shape: "cyl", sides: 6, size: [0.26, 0.2, 0.26], on: id, color: k & 1 ? p.edge : p.edge2, emissive: true, pick: false });
         } else {
-          g = d.add({ id, shape: "cyl", sides: 6, size: [0.32, 2, 0.32], pos: [0, -50, 0], color: p.night ? "#1f5a4a" : "#5f9a6a", pick: false, hidden: true });
+          g = d.add({ id, shape: "cyl", sides: 6, size: [0.32, 2, 0.32], pos: [0, -50, 0], color: p.night ? "#1f5a4a" : "#5f9a6a", pick: false, off: true });
           d.add({ shape: "cyl", sides: 6, size: [0.2, 0.8, 0.2], pos: [0.3, -1.1, 0], rot: [0, 0, 0], on: id, color: p.night ? "#1f5a4a" : "#5f9a6a", pick: false });
           d.add({ shape: "cyl", sides: 6, size: [0.34, 0.08, 0.34], on: id, color: p.night ? p.edge : "#b8f0a0", emissive: p.night, pick: false });
         }
         cacti.push(g), objs.push(g);
       }
       for (let k = 0; k < ROCKS; k++) {
-        const r = d.add({ shape: "cyl", sides: 5, top: 0.5, size: [1, 0.6, 0.9], pos: [0, -50, 0], color: q.rock ?? (p.night ? "#2a1a48" : "#c98f6a"), pick: false, hidden: true });
+        const r = d.add({ shape: "cyl", sides: 5, top: 0.5, size: [1, 0.6, 0.9], pos: [0, -50, 0], color: q.rock ?? (p.night ? "#2a1a48" : "#c98f6a"), pick: false, off: true });
         rocks.push(r), objs.push(r);
       }
       // A camp: a tent and its beacon (a tall pole with a lamp: something to ride to); the quarry's a
       // hopper on a rig, the woods' a cabin, the park's a light tower on its own.
-      const cid = `dk${s}`, c = d.add({ id: cid, shape: "group", size: [1, 0, 1], pos: [0, -50, 0], pick: false, hidden: true, alpha: 0 });
+      const cid = `dk${s}`, c = d.add({ id: cid, shape: "group", size: [1, 0, 1], pos: [0, -50, 0], pick: false, off: true, alpha: 0 });
       if (bi === B_DESERT) d.add({ shape: "cyl", sides: 4, top: 0, size: [2.2, 1.4, 2.2], pos: [2.2, 0, 1.4], on: cid, color: p.night ? "#3a1d5c" : "#ffffff", pick: false });
       else if (bi === B_QUARRY) {
         d.add({ id: cid + "h", size: [2.2, 1.4, 1.6], pos: [2.4, 0, 1.4], on: cid, color: p.tower, pick: false });
@@ -116,11 +116,11 @@ export function desertView(d: Diorama, W: World) {
     const ci = Math.floor(x / FCELL), cj = Math.floor(z / FCELL);
     if (ci === ci0 && cj === cj0) return;
     ci0 = ci; cj0 = cj;
-    // Let go: alpha 0 too (diorama's `hidden` hides only the object, never a camp's tent, pole and
-    // lamp) and back to the hide spot; `frame` fades in what is placed.
+    // Let go: `off` takes the object and its parts (a camp's tent, pole and lamp) out of the draw and
+    // skips their matrices; alpha 0 so `frame` fades in what is placed.
     for (let o = 0; o < objs.length; o++) {
       const ob = objs[o]!;
-      ob.hidden = true; ob.alpha = 0; ob.pos[0] = 0; ob.pos[1] = -50; ob.pos[2] = 0;
+      ob.off = true; ob.alpha = 0;
     }
     let s = 0;
     for (let j = cj - 1; j <= cj + 1; j++)
@@ -139,12 +139,12 @@ export function desertView(d: Diorama, W: World) {
               const sz = 0.32 + hash2(i + q, j + q, W.seed + 92) * 0.3;
               ob.size[0] = sz * 3; ob.size[1] = sz * 1.8; ob.size[2] = sz * 2.6;
             } else ob.size[1] = bi === B_FOREST ? 0.8 + q * 0.15 : bi !== B_DESERT ? 1.1 : 1.6 + q * 0.3;
-            ob.hidden = false;
+            ob.off = false;
           }
         } else if (k === D_CAMP) {
           const c = camps[s]!;
           c.pos[0] = F[1]!; c.pos[1] = W.height(F[1]!, F[2]!) - 0.1; c.pos[2] = F[2]!;
-          c.hidden = false;
+          c.off = false;
         }
       }
   }
@@ -154,7 +154,7 @@ export function desertView(d: Diorama, W: World) {
     FR.follow(x, z);
     for (let o = 0; o < objs.length; o++) {
       const ob = objs[o]!;
-      if (ob.hidden) continue;
+      if (ob.off) continue;
       const dx = ob.pos[0]! - x, dz = ob.pos[2]! - z, dd = Math.sqrt(dx * dx + dz * dz);
       // Camps' beacons show further: they are what you ride to.
       const far = HAZE1 + 6;
