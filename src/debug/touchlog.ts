@@ -21,6 +21,15 @@ export function touchLog(search: string) {
     lines.push(`${e.type}${p.pointerType ? "/" + p.pointerType : ""} ${Math.round(x ?? -1)},${Math.round(y ?? -1)} ${name(path[0])}${host ? " ✓rocker" : ""}${e.defaultPrevented ? " prevented" : ""}`);
     if (lines.length > 14) lines.shift();
     box.textContent = lines.join("\n");
+    // 60 ms after a press on the rocker: what it made of it (its lit zone, the game's gas/brake).
+    const rk = host as HTMLElement | undefined;
+    if (rk && e.type === "pointerdown") setTimeout(() => {
+      const g = (window as unknown as { game?: { getSnapshot(): { run?: { gas?: number; brake?: number } } } }).game;
+      const run = g ? g.getSnapshot().run : undefined;
+      lines.push(`  → zone=${rk.dataset.zone ?? "-"} gas=${run?.gas ?? "?"} brake=${run?.brake ?? "?"}`);
+      if (lines.length > 14) lines.shift();
+      box.textContent = lines.join("\n");
+    }, 60);
   };
   for (const t of ["pointerdown", "pointerup", "pointercancel", "lostpointercapture", "touchstart", "touchend", "touchcancel"]) addEventListener(t, log, { capture: true, passive: true });
 }
