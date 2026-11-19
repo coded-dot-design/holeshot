@@ -93,7 +93,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   // the saved profile with its credits topped up after every change, and nothing is saved; the
   // export code stays the real profile's. Online is off with it.
   const inf = !o.attract && testCredits(typeof location === "object" ? location.search : "");
-  // The names shown (./data/names.ts): REAL only with ?names=real or ?money=inf, else the build's; never saved.
+  // The names shown (./data/names.ts): REAL only with ?names=real or test credits, else the build's; never saved.
   useNames(tierFor(typeof location === "object" ? location.search : ""));
   const real = inf ? structuredClone(loaded.profile) : null;
   let profile = inf ? topUp(loaded.profile) : loaded.profile;

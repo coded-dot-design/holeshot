@@ -1,5 +1,6 @@
 // The three naming tiers in Chromium, at 1440 and 390 (docs/names.md): the default build's garage and
-// showroom read in NOD names; ?names=real and ?money=inf read in REAL ones, and the saved profile is
+// showroom read in NOD names; ?names=real and the test-credits links (?money=inf, ?credits=infinite)
+// read in REAL ones, and the saved profile is
 // byte for byte what it was (REAL is never saved); a SAFE build (HOLESHOT_NAMES=safe, built here into
 // a scratch directory) reads in SAFE names, and ?names=real cannot reach REAL there. The bike in the
 // bay is the naked V4 in its factory red. With MEDIA set, screenshots of each tier's showroom and bay.
@@ -36,6 +37,7 @@ const CASES = [
   ["nod", main, "", "DUCELLI", "DUCELLI RED", ["YAMORI YOWLER 250 2T", "HONZO CRIMSON 450 FACTORY", "SURGE-ON LIGHT BUZZ", "HONZO GROWL 125", "DUCELLI STRIKER V4", "HONZO · YAMORI · DUCELLI"], ["YAMAHA", "HONDA", "DUCATI", "BLUEWAKE", "STING"]],
   ["real", main, "?names=real", "DUCATI", "DUCATI RED", ["YAMAHA YZ250", "HONDA CRF450R WORKS EDITION", "SUR-RON LIGHT BEE", "HONDA GROM", "DUCATI STREETFIGHTER V4", "STARK VARG MX"], ["YAMORI", "BLUEWAKE"]],
   ["real-money", main, "?money=inf", "DUCATI", "SUR-RON BLACK", ["YAMAHA YZ250", "KAWASAKI KX450", "YAMAHA R6"], ["YAMORI", "BLUEWAKE"]],
+  ["real-credits", main, "?credits=infinite", "DUCATI", "SUR-RON BLACK", ["YAMAHA YZ250", "KAWASAKI KX450", "YAMAHA R6"], ["YAMORI", "BLUEWAKE"]],
   ["safe", safe, "?names=real", "IRONJAW", "BUZZWORKS BLACK", ["BLUEWAKE RIPPER 250", "EMBERLINE BLAZE 450 PRO", "BUZZWORKS DART", "EMBERLINE BLOCK PUP 125", "IRONJAW BARE KNUCKLE V4", "EMBERLINE · BLUEWAKE · IRONJAW"], ["YAMAHA", "YAMORI", "HONZO", "DUCELLI", "DUCATI"]],
 ];
 try {

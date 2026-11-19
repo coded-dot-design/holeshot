@@ -7,7 +7,7 @@ badges and art are our own in every tier.
 
 | Tier | What it is | When it is OK | How it is chosen |
 |---|---|---|---|
-| **REAL** | The real makers and models the roster nods to. | Private testing only (a link shared with family and friends). Revisit before any wider promotion. | `?names=real` on the page, or `?money=inf` (the test-credits link). Never the default, never saved: drop the parameter and the build's names are back. Not in a SAFE build at all. |
+| **REAL** | The real makers and models the roster nods to. | Private testing only (a link shared with family and friends). Revisit before any wider promotion. | `?names=real` on the page, or any test-credits link (`?credits=inf` or `?money=inf`; also `infinite`, `infinity`, `∞`). Never the default, never saved: drop the parameter and the build's names are back. Not in a SAFE build at all. |
 | **NOD** (default) | Near-names: each a nod by sound, meaning and colour, never the real name, model code or logo. | The public web (the default build, the site). | The default build (`npm run build`). |
 | **SAFE** | Fully original names. | App stores, and anywhere trademark-sensitive. | `HOLESHOT_NAMES=safe npm run build`: the REAL and NOD tables are left out of the bundle entirely. |
 

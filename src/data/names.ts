@@ -4,11 +4,13 @@
 //   ./looks.ts), so a SAFE build needs no table at all.
 // - NOD: recognisable near-names (the public web, the default build): ./names/nod.ts.
 // - REAL: the real makers and models, only with `?names=real` or `?money=inf` on the page (the
-//   private family test link), never the default, never saved: ./names/real.ts.
+//   private family test link; any test-credits param: ?credits= or ?money= inf, infinite, infinity
+//   or ∞), never the default, never saved: ./names/real.ts.
 // The build picks the tier (scripts/build.mjs: HOLESHOT_NAMES=safe → __NAMES__ "safe"); in a SAFE
 // build both tables fold away (`BUILD === "safe"` is a constant there) and none of their strings ship.
 import { NOD } from "./names/nod.ts";
 import { REAL } from "./names/real.ts";
+import { testCredits } from "../model/testcredits.ts";
 
 export type NameTier = "safe" | "nod" | "real";
 /** A tier's names over the data's own (SAFE): by maker id, model id and paint id. */
@@ -29,10 +31,11 @@ export const BUILD: "nod" | "safe" = (typeof __NAMES__ === "string" ? __NAMES__ 
 const SETS: Partial<Record<NameTier, NameSet>> = (typeof __NAMES__ === "string" ? __NAMES__ : env) === "safe" ? {} : { nod: NOD, real: REAL };
 export const tiers = (): NameTier[] => ["safe", ...(Object.keys(SETS) as NameTier[])];
 
-/** The tier a page asks for: REAL with `?names=real` or `?money=inf` (if the build carries it), else the build's. */
+/** The tier a page asks for: REAL with `?names=real` or test credits (`?credits=inf`, `?money=inf`, …:
+ *  ../model/testcredits.ts) if the build carries it, else the build's. */
 export function tierFor(search: string | URLSearchParams): NameTier {
   const q = typeof search === "string" ? new URLSearchParams(search) : search;
-  const real = (q.get("names") ?? "").trim().toLowerCase() === "real" || (q.get("money") ?? "").trim().toLowerCase() === "inf";
+  const real = (q.get("names") ?? "").trim().toLowerCase() === "real" || testCredits(q);
   return real && SETS.real ? "real" : BUILD;
 }
 

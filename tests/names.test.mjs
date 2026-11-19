@@ -1,5 +1,5 @@
 // The three naming tiers (src/data/names.ts, docs/names.md), headless: one set of ids, three sets of
-// display names. The default is NOD; REAL only with ?names=real or ?money=inf; SAFE is the data's own
+// display names. The default is NOD; REAL only with ?names=real or test credits; SAFE is the data's own
 // names. Every tier names every maker, model and maker paint; switching tiers changes display names
 // only (ids, prices, the power and the paints' colours are untouched) and always comes back to the
 // same names. docs/names.md lists every name of every tier. The SAFE build (HOLESHOT_NAMES=safe)
@@ -24,11 +24,11 @@ const shown = () => ({
 });
 const at = (t) => (N.useNames(t), shown());
 
-test("names: the default is NOD; REAL only with ?names=real or ?money=inf, never with test credits alone", () => {
+test("names: the default is NOD; REAL only with ?names=real or test credits (any ?credits= or ?money= inf value)", () => {
   assert.equal(N.BUILD, "nod");
   assert.equal(N.names(), "nod");
   assert.deepEqual(N.tiers(), ["safe", "nod", "real"]);
-  for (const [q, t] of [["", "nod"], ["?names=real", "real"], ["?names=REAL", "real"], ["?money=inf", "real"], ["?credits=inf", "nod"], ["?names=safe", "nod"], ["?names=nod", "nod"], ["?money=1", "nod"]]) assert.equal(N.tierFor(q), t, q || "(none)");
+  for (const [q, t] of [["", "nod"], ["?names=real", "real"], ["?names=REAL", "real"], ["?money=inf", "real"], ["?credits=inf", "real"], ["?money=infinite", "real"], ["?credits=∞", "real"], ["?money=INFINITY", "real"], ["?names=safe", "nod"], ["?names=nod", "nod"], ["?money=1", "nod"]]) assert.equal(N.tierFor(q), t, q || "(none)");
 });
 
 test("names: every tier names every maker, model and factory paint, and the approved rows read as approved", () => {

@@ -6,7 +6,8 @@
   one id and three display names. **NOD** (the default build, the web) are owner-approved
   near-names: YAMORI, HONZO, KAWAZAKURA, STARHOWL, SURGE-ON, MACVIX and DUCELLI (the YAMORI YOWLER
   250 2T, the HONZO CRIMSON 450 FACTORY, the DUCELLI STRIKER V4, …). **REAL** names show only with
-  `?names=real` or `?money=inf` on the page (private testing), never by default and never saved.
+  `?names=real` or test credits (`?credits=inf` or `?money=inf`, also infinite, infinity or ∞) on
+  the page (private testing), never by default and never saved.
   **SAFE** names are fully original (BLUEWAKE, EMBERLINE, LIMEJET, VOLTHOWL, BUZZWORKS, TRAILKIT,
   IRONJAW) and `HOLESHOT_NAMES=safe npm run build` builds an app-store bundle with neither the REAL
   nor the NOD table in it (`tests/names.test.mjs` builds one and greps it). Ids, saves, export codes
