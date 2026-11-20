@@ -7,41 +7,10 @@
 .dh[data-day]{--amber:#b86a00}
 .dh-tag{justify-self:start;padding:1px 7px;border:2px solid var(--rim);border-radius:6px;font-size:10px;letter-spacing:.08em;background:var(--amber);color:var(--rim)}
 .dh-alert{padding:8px 12px;border:2.5px solid var(--rim);border-radius:10px;background:color-mix(in srgb,var(--hot) 20%,var(--surface));font-weight:800;font-size:13px}
-.dh-blurb{color:var(--muted);font-weight:700;font-size:12px}
-.dh-classes{gap:4px}
-.dh-classes>li.dh-class{display:block}
-.dh-show>li[data-locked]{opacity:.7}
-.dh-mini-bars{display:grid;gap:2px;margin-top:2px}
-.dh-mini-bars .dh-bar{grid-template-columns:4.5em minmax(3em,1fr) 3em;font-size:10px}
-.dh-mini-bars .dh-bar i{height:8px}
 /* PACE (measured: src/model/pace.ts): three numbers side by side. */
-.dh-pace{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0}
-.dh-pace>div{padding:4px 8px;border:2px solid var(--rim);border-radius:8px;background:color-mix(in srgb,var(--cy) 10%,var(--surface))}
-.dh-pace dt{font-size:10px;letter-spacing:.08em;color:var(--muted)}
-.dh-pace dd{margin:0;font-size:15px;font-variant-numeric:tabular-nums}
-.dh-pace-s{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
-.dh-pace-s>div{white-space:nowrap;padding:2px 6px;border-width:1.5px}
-.dh-pace-s dt{font-size:9px}
-.dh-pace-s dd{font-size:12px}
 .dh-risk{width:min(100%,560px)}
-.dh-maker{display:inline-block;width:14px;height:14px;margin-right:6px;vertical-align:-1px;border:2px solid var(--rim);border-radius:4px;background:linear-gradient(135deg,var(--a) 55%,var(--b) 0)}
-.dh-clh{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin:14px 0 6px;padding-bottom:4px;border-bottom:2px solid color-mix(in srgb,var(--rim) 35%,transparent);font-size:14px;color:var(--ink)}
-.dh-clh small{font-size:11px;letter-spacing:.1em;color:var(--muted)}
-.dh-show{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px}
-.dh-list.dh-show>li.dh-bc{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto;align-items:start;align-content:start;gap:6px 10px;padding:10px 12px;border:2px solid color-mix(in srgb,var(--rim) 55%,transparent);border-radius:12px;background:var(--raised);cursor:pointer}
-.dh-bc>.dh-blurb,.dh-bc>.dh-mini-bars,.dh-bc>.dh-pace{grid-column:1/-1}
-.dh-bc:hover,.dh-bc:focus-within{border-color:var(--rim);background:color-mix(in srgb,var(--cy) 10%,var(--raised))}
-.dh-bc-head{display:flex;gap:8px;align-items:flex-start;min-width:0}
-.dh-bc-head .dh-maker{flex:none;margin:2px 0 0;width:18px;height:18px}
-.dh-bc-head b{font-size:15px;line-height:1.15}
-.dh-bc .dh-buy{min-width:7.5em}
-.dh-stars span{color:var(--hot);letter-spacing:.06em}
 /* The racer's helmet portrait (./portrait.ts): beside the name in the top bar, and big in the bay while
    dressing the rider, on the preview's tinted tile so a dark shell still reads; the shadow falls straight down. */
-.dh-face{margin:0;display:flex;align-items:center;gap:10px}
-.dh-face .dh-helm{inline-size:104px;block-size:78px;flex:none;padding:4px 6px;box-sizing:border-box;border:2px solid var(--rim);border-radius:12px;background:linear-gradient(180deg,color-mix(in srgb,var(--cy) 22%,var(--raised)),var(--raised));box-shadow:calc(3px * var(--bui-sx)) calc(3px * var(--bui-sy)) 0 var(--bui-shadow)}
-.dh-face figcaption{font-weight:800;letter-spacing:.06em;overflow-wrap:anywhere}
-@media (max-width:620px){.dh-face .dh-helm{inline-size:72px;block-size:54px;padding:2px 4px}}
 /* The page: a full-bleed sheet under a sticky header. */
 .dh-cards:has(>.dh-garage){display:block;padding:calc(var(--dh-top,0px) + min(6px, var(--dh-top,0px))) 0 0}
 .dh .dh-garage{width:100%;min-height:100%;align-content:start;gap:0;padding:0;border:0;border-radius:0;box-shadow:none;background:var(--shop-bg);color:var(--shop-ink);font-weight:800}
@@ -70,7 +39,6 @@
 .dh-who .dh-helm [stroke="#0b0a14"]{stroke-width:7}
 .shop-tile-art .dh-helm [stroke="#0b0a14"]{stroke-width:7}
 .shop-tile-art:has(>.dh-helm){box-sizing:border-box;padding:6px;border-radius:8px;background:var(--shop-contrast)}
-.dh-face .dh-helm{background:var(--shop-contrast)}
 /* Two columns: the bike panel (sticky where the screen is tall enough) and the tabs. */
 @media (min-height:700px){.dh-bikep{position:sticky;top:110px}}
 .dh-gwrap{display:grid;grid-template-columns:minmax(0,480px) minmax(0,1fr);gap:30px;padding:30px 36px 40px;align-items:start}
@@ -90,7 +58,6 @@
 .dh-gbody{display:grid;gap:22px;align-content:start;min-width:0}
 .dh-gbody>.shop-heading{margin-top:12px}
 .dh-gbody .shop-h3{font-size:26px}
-.dh-cond{padding:14px 24px}
 .dh-feelc{padding:24px 20px}
 .dh-log{padding:20px 22px 8px}
 .dh-note:empty{display:none}
@@ -98,7 +65,6 @@
 .shop-tile-art .dh-helm{width:110px;height:84px}
 .dh-tag{margin-top:2px}
 .dh-gbody>.dh-alert{margin:0}
-.dh-oldshow{display:grid;gap:12px}
 /* Tablets: the header's keys go to icons (Rider's helmet, ☀ / ☾) so the tabs keep their line, and the
    condition rows narrow; under 960 px they stack as on phones (name and %, the bar, the key). */
 @media (max-width:1100px){.dh-gwrap{grid-template-columns:minmax(0,400px) minmax(0,1fr);gap:20px;padding-inline:20px}.dh-ghead{grid-template-columns:auto minmax(0,1fr) auto;padding-inline:20px}.dh-brand .shop-eyebrow{white-space:nowrap}.dh .dh-ghead .shop-tabs-big{flex-wrap:nowrap;gap:0 32px}
@@ -136,7 +102,6 @@
 .shop .shop-barrow .shop-meter{grid-column:1/-1;grid-row:2}
 .shop .shop-barrow .shop-barrow-a{grid-column:1/-1}
 .shop .shop-bars-loose .shop-btn{min-width:0}
-.dh-cond{padding:8px 14px}
 .shop .shop-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 .shop .shop-feel{grid-template-columns:minmax(0,1fr);gap:10px}
 .shop .shop-opts{gap:6px}.shop .shop-opts .shop-btn{padding:0 8px;font-size:14px}
@@ -149,7 +114,6 @@
    2026-11-20); the header's bar and the page's ground still span the window, their content centres. */
 .dh-garage,.dh-ride{--dh-g:36px}
 .dh .dh-ghead,.dh .dh-gwrap{padding-inline:max(var(--dh-g),calc(50% - 720px + var(--dh-g)))}
-.dh .dh-rwrap{max-width:1440px;padding-inline:var(--dh-g)}
 @media (max-width:1100px){.dh-garage,.dh-ride{--dh-g:20px}}
 @media (max-width:820px){.dh-garage,.dh-ride{--dh-g:16px}.dh .dh-gwrap{padding-inline:12px}}
 /* Part tags (WORN, MAY FAIL, FAILED): one ink on one fill, WCAG AA in both themes (ink on pink 5.9:1
@@ -171,7 +135,6 @@
 .dh-cards:has(>.dh-garage),.dh-cards:has(>.dh-ride){box-sizing:border-box;height:100%;overflow:hidden}
 .dh .dh-garage{display:grid;grid-template-rows:auto minmax(0,1fr);height:100%;min-height:0}
 .dh .dh-ride{height:100%;min-height:0}
-.dh-ride .dh-rwrap{min-height:0;overflow-y:auto;overscroll-behavior:contain}
 .dh .dh-gwrap{min-height:0;align-items:stretch;padding-block:20px}
 .dh .dh-bikep{position:static;display:flex;flex-direction:column;gap:12px;min-height:0;overflow:hidden}
 .dh .dh-bikep>.shop-turn{flex:none;height:clamp(220px,calc(100dvh - 610px),560px);aspect-ratio:auto;overflow:hidden}
@@ -181,7 +144,6 @@
 .dh .dh-gbody{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:2px 6px 16px 2px;margin:-2px -6px 0 -2px;gap:18px}
 }
 @media (min-width:1280px){.dh .dh-gwrap{grid-template-columns:minmax(0,540px) minmax(0,1fr)}}
-.dh-bikep .shop-bay-t .dh-warn{color:var(--shop-price)}
 /* PARTS & MODS as cards (Paint & Kit's grid is the model): condition beside crash damage where there
    is room, the tuning cards two up, the service log as rows with their icons. */
 .dh-two{display:grid;gap:18px;align-items:start}

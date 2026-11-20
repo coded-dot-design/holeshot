@@ -9,7 +9,7 @@ import type { ModFit } from "../data/economy.ts";
 import { CLASSES, model, type FamilyId, type Model } from "../data/roster.ts";
 import type { ModeId } from "../modes/mode.ts";
 import type { Tuned } from "./tune.ts";
-import { perHour, speed, type Units } from "./units.ts";
+import { perHour, type Units } from "./units.ts";
 import { pace, timeTo } from "./pace.ts";
 
 /** The modes on asphalt (everything else is dirt, sand or a jump yard). */
@@ -60,9 +60,4 @@ export interface PaceMarks { t20: number | null; t30: number | null; t60: number
 export function paceOf(t: Pick<Tuned, "power" | "shape">): PaceMarks {
   const p = pace(t), at = (v: number, u: Units) => timeTo(p, v / perHour(1, u));
   return { t20: at(20, "imperial"), t30: at(30, "imperial"), t60: at(60, "imperial"), k50: at(50, "metric"), k100: at(100, "metric"), top: perHour(p.top), ups: p.top };
-}
-/** A pace as the garage says it, in the rider's units: "0–30 1.47 S · 0–60 — · 50 MPH" (Metric: 0–50 and 0–100 km/h). */
-export function paceLine(p: PaceMarks, units: Units = "imperial") {
-  const s = (v: number | null) => (v === null ? "—" : v.toFixed(2) + " S"), m = units === "metric";
-  return `${m ? "0–50" : "0–30"} ${s(m ? p.k50 : p.t30)} · ${m ? "0–100" : "0–60"} ${s(m ? p.k100 : p.t60)} · ${speed(p.ups, units)}`;
 }

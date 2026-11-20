@@ -43,7 +43,7 @@ import { dist } from "../../model/units.ts";
 import { modeStage, CMD_END, CMD_REGROUP, CMD_HOP, CMD_COMBO, type NetView, type NetRun } from "../race/scene.ts";
 import { font as tagFont, tag, marker } from "../../online/tags.ts";
 import { E_REGROUP } from "./jam.ts";
-import type { ModeCtx, ModeRun } from "../mode.ts";
+import type { ModeCtx } from "../mode.ts";
 import { LOOP, ENDO, CASE, BAIL } from "../../bike/bike.ts";
 import { rig, type Rig } from "../../bike/rig.ts";
 import { DRAG_NAME, FENDER } from "../stunts.ts";
@@ -1685,7 +1685,7 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null, mash = false
           const o = OBJ[i]!, r = i * 9, m = o.M, k = OI[r + 7]!;
           if (!ON_[i] || o.alpha < 0.05 || k === I_SILO) continue;
           if (!dio.project(m[9]!, m[10]!, m[11]!, PJ) || PJ[2]! < 2) continue;
-          const y0 = PJ[1]!, x0 = PJ[0]!, z0 = PJ[2]!;
+          const y0 = PJ[1]!, x0 = PJ[0]!;
           if (x0 < 0 || x0 > dio.width || y0 < 0 || y0 > dio.height) continue;
           const h = o.size[1]!;
           if (!dio.project(m[9]! + m[1]! * h, m[10]! + m[4]! * h, m[11]! + m[7]! * h, PJ)) continue;

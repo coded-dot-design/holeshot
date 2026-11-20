@@ -4,7 +4,6 @@
 // one map per frame (building a map's terrain takes a few tens of ms), and kept per map and theme.
 import { FREE_MAPS } from "../index.ts";
 import { makeTrack, MOTO_TRACK } from "../race/course.ts";
-import type { RideMap } from "./maps.ts";
 import { previewColors } from "./scenery.ts";
 
 const cache = new Map<string, ImageData>();

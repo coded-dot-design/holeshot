@@ -9,15 +9,14 @@
 import { CLASSES, makerOf, model as modelOf } from "../data/roster.ts";
 import { DAMAGE_NAME, FAIL, MODS, SETUPS, TYRES, type DamageId, type ModId, type PartId, type SetupId, type TyreId } from "../data/economy.ts";
 import { GRAPHICS, HELMETS, OUTFITS, PAINTS, PATTERNS, PLASTICS, PLATES, SWATCHES, VISORS } from "../data/looks.ts";
-import { bar, esc, num } from "../html.ts";
-import { portraitOf } from "./portrait.ts";
+import { esc, num } from "../html.ts";
 import { newBike, riding, type BikeSave, type Profile } from "../model/profile.ts";
 import { tune } from "../model/tune.ts";
 import type { Units } from "../model/units.ts";
 import { atRisk, failChance, failName, warnings } from "../model/upkeep.ts";
 import { DIRT_LINE } from "../model/families.ts";
 import { BACKDROPS, PICKS, pickOf } from "./backdrop.ts";
-import { buySpot, cosmeticPrice, choose, dress, fits, modPrice, repair, sell, service, setChoice, tryOn, unlocked, upgrade, type Buy, type Slot } from "../model/garage.ts";
+import { buySpot, cosmeticPrice, choose, dress, fits, modPrice, repair, sell, service, setChoice, tryOn, upgrade, type Buy, type Slot } from "../model/garage.ts";
 import { optKey, badge, bayRail, btn, card, chipPick, chips, drop, feel, heading, icon, itemGrid, menu, pill, price, row, seg, stat, stats, tabs, title, turntable, upgradeGrid, wearKeys } from "../../vendor/shop/shop.js";
 import { DMG_ICON, MOD_ICON, RIDER_SLOTS, SETUP_ICON, SLOT_ICON, SLOT_NAME, bays, bikeItems, bikeSlots, cap, damageRows, feelRows, isE, modKey, modName, modStage, outfitItems, pace, partIcon, partName, riderItems, riderSlots, setups, tyreItems, upgradeItems, wearRows, words, type BikeSlot, type RiderSlot } from "./adapters.ts";
 

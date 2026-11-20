@@ -17,7 +17,7 @@
 // rides three laps without a crash while the other three starter classes ride it too. A draft that
 // fails any of it is thrown away and the next seed tries (generateTrack), so a seed always gives a
 // rideable track, the same one every time.
-import { CELL, DONE, F_DOUBLE, F_FINISH, F_STEPDOWN, F_STEPUP, F_TABLE, F_TRIPLE, F_WHOOPS, FEATURE_LEN, LAPS, TRACK_W, makeTrack, motoRace, secLen, secTurn, type Section, type TrackPlan, type Turn } from "./course.ts";
+import { CELL, DONE, F_DOUBLE, F_FINISH, F_STEPDOWN, F_STEPUP, F_TABLE, F_TRIPLE, F_WHOOPS, FEATURE_LEN, LAPS, makeTrack, motoRace, secLen, secTurn, type Section, type TrackPlan, type Turn } from "./course.ts";
 import { STARTERS } from "../../data/roster.ts";
 import { tune, type Tuned } from "../../model/tune.ts";
 import { newBike } from "../../model/profile.ts";

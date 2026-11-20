@@ -11,12 +11,11 @@
 // same bike, the same line) and zero allocation per step in the run's own code.
 import { bike, type Bike, type BikeShape, type Power, TWO_STROKE, B_CRASH, B_LAND, BAIL } from "../../bike/bike.ts";
 import { pace } from "../../model/pace.ts";
-import { tricks, TRICKS, HOP, WHIPPED, T_TRICK, T_DONE, T_WHIP } from "./tricks.ts";
+import { tricks, TRICKS, HOP, WHIPPED, T_TRICK, T_DONE } from "./tricks.ts";
 import { atan } from "../../math.ts";
 import { PROGRESS, PROMPT_T, AUTO_T } from "../unstuck.ts";
 import { FK, HW, L as LL, LSP, LX0, OUT, PF, P_DOWN, P_FLOOR, P_KICK, P_ROLL, ROLL_X, footAt, kickAt, knuckleAt, lineFor, prof, strip } from "./line.ts";
 
-export { HW, KIND_LAND, KIND_STEEL, KIND_TRACK } from "./line.ts";
 export const PICK = 0, READY = 1, RUN = 2, DONE = 3;
 /** Seconds in a run. */
 export const RUN_T = 60;

@@ -22,7 +22,7 @@ import type { ModeCtx, ModeId, ModeRun, RunStats } from "./modes/mode.ts";
 import { venueOf, type Venue } from "./modes/race/venue.ts";
 import { paintMaps } from "./modes/freeride/picker.ts";
 import { rideCard as rideScreen, type RideTab } from "./ride-ui.ts";
-import { controlsPage, page, settingsPage } from "./menu-ui.ts";
+import { controlsPage, settingsPage } from "./menu-ui.ts";
 import { APPICON, WORDMARK } from "./logo.ts";
 import { exportCode, importCode, load, local, newBike, ready, riding, save, setup, fresh, type Profile, type Store, type RiderKit } from "./model/profile.ts";
 import { testCredits, topUp } from "./model/testcredits.ts";
@@ -46,7 +46,6 @@ import { seriesCard as seriesScreen, seriesKeys, seriesName, seriesResult, start
 import type { TierId } from "./data/series.ts";
 import type { Transport } from "@fzlt/core/presence";
 import { blankStats } from "./modes/mode.ts";
-import { ICON } from "./modes/keys.ts";
 import { mountTrack, type NetRun, type NetView } from "./modes/race/scene.ts";
 import { applyOnline, settleOnline } from "./model/economy.ts";
 import { match, OVER, type Match, type Ride, type SeatResult } from "./online/match.ts";
@@ -240,7 +239,6 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     const b = riding(profile), m = modelOf(b.model);
     return `${makerOf(m).name} ${m.name} · #${b.look.number}`;
   };
-  const cost = (n: number, can: boolean) => (n ? `<small class="dh-price"${can ? "" : " data-short"}>◈ ${num(n)}</small>` : `<small class="dh-price">OWNED</small>`);
 
   function setupCard() {
     const starters = STARTERS.map((m, i) => {

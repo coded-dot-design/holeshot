@@ -285,7 +285,7 @@ function buildOf(m: RideMap, d: Diorama, t: Terrain, p: P) {
   }
   {
     // Cars parked in the lot either side of the gap, tail lights on.
-    const [x0, z0, x1, z1] = LOT as [number, number, number, number];
+    const [x0, z0, x1] = LOT as [number, number, number, number];
     for (let k = 0; k < 6; k++) {
       const x = x0 + 1.6 + (k % 3) * 1.1 + (k >= 3 ? x1 - x0 - 5.4 : 0), z = z0 + 1.2 + (k % 2) * 3.2, id = "car" + k;
       m.near(x, z);
