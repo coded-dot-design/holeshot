@@ -7,14 +7,16 @@
 // the drawn edge is found across the edge (where the colour turns from the asphalt's to the
 // shoulder's, sub-pixel) and set against where the road's true edge lands on screen. Near (under 15
 // units from the eye) and far, none may be off by more than 1.5 px.
-// The modes whose closed line is drawn as ribbons are measured the same way (TRACKS below; Track
-// Day's circuits now: the asphalt's edge and the run-off's), on the straightest and the most curved
-// stretch with no jump on it, the chase camera on the line, the ground, dust and overlay drawn bare.
+// The modes whose closed line is drawn as ribbons are measured the same way (TRACKS below: the race
+// tracks, Free Ride's trail maps, Track Day's circuits with the asphalt's edge and the run-off's), on
+// the straightest and the most curved stretch with no jump on it (and the next ones where too few
+// points are measurable), the chase camera on the line, the ground, dust and overlay drawn bare.
 // "Off by" is the distance on screen from the true edge's line (its tangent there). Left out, as they
-// say nothing either way: an edge the ground in front hides (behind a crest: not drawn), and a point
-// where the ground past the edge is not one colour across the window (a bank's or a steep face's own
-// shades), or under 24 px from the frame's side. Within TOL2 px, near and far (measured max 1.51 px:
-// a few points on the tightest turns; most under 0.4). ONLY=<name> runs one.
+// say nothing either way: an edge the ground in front hides (behind a crest: not drawn, nor where it
+// goes over one), a point within 6 units of a jump, on a bank (a berm's, the dirt lip along a track:
+// the ground beside the edge rising or falling over 0.1 in half a unit), or where either side is not
+// one colour across the window (a second shade there), or under 24 px from the frame's side. Within
+// TOL2 px, near and far (measured: every mode's max 0.3–1.2 px). ONLY=<name> runs one.
 // DIST=<url path> measures another build (the one before, for the compare); REPORT=1 only prints.
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
@@ -23,6 +25,7 @@ import { serve, launchOptions } from "./serve.mjs";
 const DIST = process.env.DIST || "/dist", REPORT = !!process.env.REPORT, TOL = 1.5, TOL2 = 1.6, ONLY = process.env.ONLY || "";
 /** The modes with a closed line: [name, mode, options]. */
 const TRACKS = [
+  ["mx", "race", {}],
   ["meridian", "trackday", { map: "td-meridian" }], ["knotworks", "trackday", { map: "td-knotworks" }], ["bottlecap", "trackday", { map: "td-bottlecap" }],
 ];
 const full = `<!doctype html><html lang="en" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Holeshot</title></head><body style="margin:0"><div id="game" style="position:fixed;inset:0"></div><script type="module">import { createHoleshot } from "${DIST}/holeshot.mjs"; window.game = createHoleshot({ host: document.getElementById("game"), seed: 5, sound: false }); game.setup({ starter: "sparkhound" });</script></body></html>`;
@@ -128,7 +131,8 @@ const pickLine = (p) => p.evaluate(() => {
   // (A loop with a jump everywhere: every stretch counts.)
   if (cand.some((c) => c[2])) cand.splice(0, cand.length, ...cand.filter((c) => c[2]));
   cand.sort((a, b) => a[0] - b[0]);
-  return { seg, n, hw: L.hw, off: L.off, td: L.td, straight: cand[0], curved: cand[cand.length - 1] };
+  // The straightest and the most curved first, then the next ones (where too few points are measurable).
+  return { seg, n, hw: L.hw, off: L.off, td: L.td, straight: cand.slice(0, 6), curved: cand.slice(-6).reverse() };
 });
 /** The chase camera on line point i (`lat` across), the ground drawn bare: every edge from behind
  *  the camera's target out into the distance, [depth, off by px]. */
@@ -156,22 +160,34 @@ const measureLine = (p, i0, line, lat) => p.evaluate(([i0, L, lat]) => {
   for (let ds = -6; ds <= 44; ds += 1) for (const side of [-1, 1]) for (const ew of edges) {
     const f = i0 + ds / L.seg + 0.5, ff = ((f % L.n) + L.n) % L.n, e = r.across(ff, side * ew);
     if (!on(e) || !inner(e)) continue;
-    // Only where the line lies on the ground (no jump within 4 units: a lip hides what is past it).
+    // Only where the line lies on the ground (no jump within 6 units: a lip and its face are shades of their own).
     let lifted = false;
-    for (let d = -4; d <= 4 && !lifted; d += 0.5) lifted = r.prof(((f + d / L.seg) % L.n + L.n) % L.n) > 0.05;
+    for (let d = -6; d <= 6 && !lifted; d += 0.5) lifted = r.prof(((f + d / L.seg) % L.n + L.n) % L.n) > 0.02;
     if (lifted) continue;
+    // Nor on a bank: the ground beside the edge (a berm's, the lip of dirt along a track) rising or
+    // falling more than 0.1 over the half unit either side of it.
+    const g0 = r.ground(ff, side * ew), gi = r.ground(ff, side * (ew - 0.5)), go = r.ground(ff, side * (ew + 0.5));
+    if (Math.abs(go - g0) > 0.1 || Math.abs(gi - g0) > 0.1) continue;
     const qa = r.across(ff, side * (ew - 0.3)), qs = r.across(ff, side * (ew + 0.3));
     if (!on(qa) || !on(qs)) continue;
     const A = at(qa[0], qa[1]).slice(), S = at(qs[0], qs[1]).slice(), dx = S[0] - A[0], dy = S[1] - A[1], dz = S[2] - A[2], n2 = dx * dx + dy * dy + dz * dz;
     if (n2 < 900) continue;
     // An edge hidden by the ground in front of it (behind a crest or a lip) is not drawn, so not measured.
-    if (!r.seen(ff, side * ew)) continue;
+    // (So is one where the edge goes over a crest: it, or the edge half a unit either way, hidden.)
+    const fa = ((ff - 0.5 / L.seg) % L.n + L.n) % L.n, fb = (ff + 0.5 / L.seg) % L.n;
+    if (!r.seen(ff, side * ew) || !r.seen(fa, side * ew) || !r.seen(fb, side * ew) || !r.seen(ff, side * (ew + 0.3)) || !r.seen(ff, side * (ew - 0.3))) continue;
     const N = 72, U = 0.28;
-    let prev = 0, hit = null, pq = null, ok = true, cross = 0, f0 = 0, f1 = 0;
+    let prev = 0, hit = null, pq = null, ok = true, cross = 0, f0 = 0, f1 = 0, mixed = false;
     for (let k = 0; k <= N && ok; k++) {
       const u = -U + (2 * U * k) / N, q = r.across(ff, side * (ew + u));
       if (!on(q)) { ok = false; break; }
       const c = at(q[0], q[1]), fr = ((c[0] - A[0]) * dx + (c[1] - A[1]) * dy + (c[2] - A[2]) * dz) / n2;
+      // Away from the edge each side must be its own one colour (a band and the ground past it):
+      // a second shade there (a berm's, a lip's, a jump's face) makes the half-way point mean nothing.
+      if (u > 0.08 || u < -0.08) {
+        const ex = c[0] - A[0] - fr * dx, ey = c[1] - A[1] - fr * dy, ez = c[2] - A[2] - fr * dz;
+        if ((u > 0 ? Math.abs(fr - 1) : Math.abs(fr)) > 0.2 || (ex * ex + ey * ey + ez * ez) / n2 > 0.04) mixed = true;
+      }
       if (k === 0) f0 = fr;
       f1 = fr;
       if (k > 0 && (prev < 0.5) !== (fr < 0.5)) {
@@ -183,7 +199,7 @@ const measureLine = (p, i0, line, lat) => p.evaluate(([i0, L, lat]) => {
     if (!ok) continue;
     // The ground past the edge must be one colour across the window (not a bank's or a steep face's
     // own shades), else the half-way colour is not the edge: those points say nothing either way.
-    if (hit && (cross !== 1 || f0 > 0.25 || f1 < 0.75)) continue;
+    if (mixed || (hit && (cross !== 1 || f0 > 0.25 || f1 < 0.75))) continue;
     const lo = r.across(ff, side * (ew - U)), hi = r.across(ff, side * (ew + U)), span = Math.hypot(hi[0] - lo[0], hi[1] - lo[1]) / 2;
     // Off by: the distance on screen from the true edge's line there (its tangent through e), not along
     // the line across it (seen edge-on, that would grow without bound).
@@ -211,9 +227,16 @@ try {
       await p.evaluate(([m, o]) => game.start(m, o), [mode, opts]);
       await until(p, () => game.run && game.getSnapshot().run && game.run.probe && game.run.probe.line, null, `${name} ${tn}: mounts`);
       const L = await pickLine(p);
-      for (const [kind, sel0] of [["straight", L.straight], ["curved", L.curved]]) {
+      for (const [kind, list] of [["straight", L.straight], ["curved", L.curved]]) {
+        // A stretch, and the next like it while either band has under 6 measurable points (a few tries).
         const pts = [];
-        for (const lat of [0, -0.6, 0.6]) pts.push(...(await measureLine(p, sel0[1], L, lat)));
+        let sel0 = list[0];
+        for (let c = 0; c < list.length; c++) {
+          if (c && pts.filter((q) => q[0] < 15).length >= 6 && pts.filter((q) => q[0] >= 15).length >= 6) break;
+          if (c && Math.abs(list[c][1] - list[0][1]) < 4) continue;
+          if (!c) sel0 = list[c];
+          for (const lat of [0, -0.6, 0.6]) pts.push(...(await measureLine(p, list[c][1], L, lat)));
+        }
         for (const band of ["near", "far"]) {
           const sel = pts.filter((q) => (band === "near" ? q[0] < 15 : q[0] >= 15));
           const devs = sel.map((q) => q[1]).sort((a, b) => a - b), max = devs.length ? devs[devs.length - 1] : NaN, mean = devs.reduce((a, b) => a + b, 0) / (devs.length || 1);

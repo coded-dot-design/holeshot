@@ -56,13 +56,13 @@ export function ribbons(t: RibbonGround, view: RibbonView, nm: number, nb = 1, q
    *  ground splits it ("adaptive": along the smaller height difference; else along (i, j)–(i + 1, j + 1)). */
   // The ground's grid as numbers (x0, z0, cell, cols, rows, adaptive 1): read once a frame (begin),
   // so the height lookups do no property loads.
-  const G = new Float64Array(6);
+  const G = new Float64Array(6), VW = new Float64Array(2), HS = t.h;
   function grid() {
     G[0] = t.x0; G[1] = t.z0; G[2] = t.cell; G[3] = t.cols; G[4] = t.rows; G[5] = t.split === "adaptive" ? 1 : 0;
   }
   grid();
   function hy(A: Float64Array, o: number) {
-    const c = G[2]!, n = G[3]!, m = G[4]!, W1 = n + 1, hs = t.h, x = A[o]!, z = A[o + 2]!;
+    const c = G[2]!, n = G[3]!, m = G[4]!, W1 = n + 1, hs = HS, x = A[o]!, z = A[o + 2]!;
     let u = (x - G[0]!) / c, v = (z - G[1]!) / c;
     u = u < 0 ? 0 : u > n ? n : u; v = v < 0 ? 0 : v > m ? m : v;
     let i = Math.floor(u), j = Math.floor(v);
@@ -100,7 +100,7 @@ export function ribbons(t: RibbonGround, view: RibbonView, nm: number, nb = 1, q
     const vx = WP[b * 3]! - WP[c1 * 3]!, vy = WP[b * 3 + 1]! - WP[c1 * 3 + 1]!, vz = WP[b * 3 + 2]! - WP[c1 * 3 + 2]!;
     let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
     if (ny < 0) (nx = -nx), (ny = -ny), (nz = -nz);
-    const nl = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1, dot = (nx * L[0]! + ny * L[1]! + nz * L[2]!) / nl;
+    const nl = Math.sqrt(nx * nx + ny * ny + nz * nz) + 1e-12, dot = (nx * L[0]! + ny * L[1]! + nz * L[2]!) / nl;
     const lvl = Math.round((L[3]! + (1 - L[3]!) * (dot > 0 ? dot : 0)) * 32);
     const o = nq * 10;
     let k = 0;
@@ -118,7 +118,7 @@ export function ribbons(t: RibbonGround, view: RibbonView, nm: number, nb = 1, q
       }
     // Off screen: every corner past the same side.
     let l0 = 0, r0 = 0, t0 = 0, b0 = 0;
-    const Wd = view.width, H = view.height;
+    const Wd = VW[0]!, H = VW[1]!;
     for (let i = 0; i < k; i++) {
       const x = QV[o + i * 2]!, y = QV[o + i * 2 + 1]!;
       if (x < 0) l0++; if (x > Wd) r0++; if (y < 0) t0++; if (y > H) b0++;
@@ -150,6 +150,7 @@ export function ribbons(t: RibbonGround, view: RibbonView, nm: number, nb = 1, q
     B[12] = view.height / 2 / Math.tan(cm.fov / 2); B[13] = view.width / 2 + cm.ox; B[14] = view.height / 2 + cm.oy;
     X[0] = t.x0; X[1] = t.z0; X[2] = t.x0 + t.cols * t.cell; X[3] = t.z0 + t.rows * t.cell;
     grid();
+    VW[0] = view.width; VW[1] = view.height;
   }
   /** Paint the frame's quads: sorted by key (depth bucket far to near, material, shade), one path and
    *  one fill each. */
@@ -205,7 +206,7 @@ export type Ribbons = ReturnType<typeof ribbons>;
  *  (point index + fraction; −1: not drawn there). Paints the bands round (x, z) within `reach` (set
  *  in `at`) through the painter `R` (begin and flush are the caller's). */
 export function lineRibbon(R: Ribbons, P: Float64Array, n: number, E: ArrayLike<number>, BM: ArrayLike<number>, along: () => number) {
-  const nb = BM.length, WP = R.WP, X = R.X, B = R.B;
+  const nb = BM.length, WP = R.WP, B = R.B, hy = R.hy, emit = R.emit;
   /** Where to paint round: x, z, reach (set before `paint`). The line position along() reads. */
   const at = new Float64Array([0, 0, 1e9]), XS = new Float64Array(1);
   /** Each point's mitred across direction (unit normal scaled by 1 / cos of half the turn) and the
@@ -235,9 +236,9 @@ export function lineRibbon(R: Ribbons, P: Float64Array, n: number, E: ArrayLike<
     const o = r * RW, x = RA[0]!, z = RA[1]!, nx = RA[2]!, nz = RA[3]!;
     for (let e = 0; e < ne; e++) {
       const w = E[e]!, k = o + e * 6;
-      Rw[k] = x + nx * w; Rw[k + 2] = z + nz * w; R.hy(Rw, k);
+      Rw[k] = x + nx * w; Rw[k + 2] = z + nz * w; hy(Rw, k);
       const w2 = w + UD[e]! * UL;
-      Rw[k + 3] = x + nx * w2; Rw[k + 5] = z + nz * w2; R.hy(Rw, k + 3);
+      Rw[k + 3] = x + nx * w2; Rw[k + 5] = z + nz * w2; hy(Rw, k + 3);
     }
   }
   /** Hidden by the ground? Each row's edges are tested on the way to the eye (a ray over the
@@ -257,7 +258,7 @@ export function lineRibbon(R: Ribbons, P: Float64Array, n: number, E: ArrayLike<
       const f = (k * st) / lh, y = qy + dy * f;
       if (y > HMAX) return 1;
       Q[3] = qx + dx * f; Q[5] = qz + dz * f;
-      R.hy(Q, 3);
+      hy(Q, 3);
       if (Q[4]! > y) return 0;
     }
     return 1;
@@ -274,7 +275,7 @@ export function lineRibbon(R: Ribbons, P: Float64Array, n: number, E: ArrayLike<
   function edgeAt(e: number) {
     pos();
     Q[0] = RA[0]! + RA[2]! * E[e]!; Q[2] = RA[1]! + RA[3]! * E[e]!;
-    R.hy(Q, 0);
+    hy(Q, 0);
     return seen();
   }
   /** Point on band side `o` (an offset into a row: an edge or its twin) at v (0: the previous row,
@@ -282,9 +283,11 @@ export function lineRibbon(R: Ribbons, P: Float64Array, n: number, E: ArrayLike<
    *  still cover a pixel's anti-aliasing) into WP slot q. */
   const SV = new Float64Array(1);
   function side(o: number, q: number) {
-    const v = SV[0]!, ax = Rw[o]!, az = Rw[o + 2]!, bx = Rw[RW + o]!, bz = Rw[RW + o + 2]!, ln = Math.sqrt((bx - ax) * (bx - ax) + (bz - az) * (bz - az)) || 1, w = v <= 0 ? -(OV > 0.08 / ln ? OV : 0.08 / ln) : v;
-    WP[q * 3] = ax + (bx - ax) * w; WP[q * 3 + 2] = az + (bz - az) * w;
-    R.hy(WP, q * 3);
+    const ax = Rw[o]!, az = Rw[o + 2]!, dx = Rw[RW + o]! - ax, dz = Rw[RW + o + 2]! - az, ln = Math.sqrt(dx * dx + dz * dz) + 1e-9, back = 0.08 / ln;
+    let w = SV[0]!;
+    if (w <= 0) w = back > OV ? -back : -OV;
+    WP[q * 3] = ax + dx * w; WP[q * 3 + 2] = az + dz * w;
+    hy(WP, q * 3);
   }
   /** The quads between the previous row and this one, band by band (along material m), each cut to
    *  the part in view. */
@@ -312,7 +315,7 @@ export function lineRibbon(R: Ribbons, P: Float64Array, n: number, E: ArrayLike<
       if (!lp && !lt && !rp && !rt) continue;
       if (lp && lt && rp && rt) {
         ((SV[0] = 0), side(la, 0)); ((SV[0] = 0), side(lb, 1)); ((SV[0] = 1), side(lb, 2)); ((SV[0] = 1), side(la, 3));
-        R.emit(mat, 4);
+        emit(mat, 4);
         continue;
       }
       // Each side's part in view [lo, hi] (none: −1).
@@ -322,7 +325,7 @@ export function lineRibbon(R: Ribbons, P: Float64Array, n: number, E: ArrayLike<
       else ((SV[0] = rp ? r1 : r0), side(la, q++));
       if (r0 >= 0) ((SV[0] = r1), side(lb, q++)), ((SV[0] = r0), side(lb, q++));
       else ((SV[0] = lp ? l1 : l0), side(lb, q++));
-      R.emit(mat, q);
+      emit(mat, q);
     }
   }
   /** The line position XS[0] (point index + fraction) into RA (place, across). */
@@ -396,7 +399,7 @@ export function lineRibbon(R: Ribbons, P: Float64Array, n: number, E: ArrayLike<
         turn += TA[p]!;
       }
       if (dbx * dbx + dbz * dbz > (reach + wid) * (reach + wid)) { open = false; continue; }
-      const dex = x - ex, dez = z - ez, de = Math.sqrt(dex * dex + dez * dez) * 0.04, step = de < fine ? fine : de > 3 ? 3 : de;
+      const dex = x - ex, dez = z - ez, de = Math.sqrt(dex * dex + dez * dez) * 0.025, step = de < fine ? fine : de > 2 ? 2 : de;
       XS[0] = i;
       if (open && i < n && acc < step && turn < 0.06 && along() === RM[1]) continue;
       // A long last stretch near the eye: rows between the points too.

@@ -17,6 +17,9 @@ const A = await import("../src/modes/bigair/show.ts");
 const W = await import("../src/modes/wheelie/city.ts");
 const flat = { sample(x, z, o) { o[0] = 0; o[1] = 0; o[2] = 1; o[3] = 0; return 0; } };
 const t = tune(newBike("buzzline", "b1"));
+/** A 2D context that draws nothing, one for every ribbon test (two of them would make the painter's
+ *  calls into it polymorphic, and the doubles it passes would be boxed: a test artifact, not the game's). */
+const c2 = { fillStyle: "", beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, fill() {} };
 const measure = async (work) => (work(), work(), minorGCs(work, 5));
 
 test("alloc: one bike walked about (stopped, the lean held: the push, the probe), 6,000 steps", async () => {
@@ -83,7 +86,6 @@ test("alloc: Endless Wheelie City's road ribbons, 600 frames along a ride", asyn
   const run = openRun([{ id: "x", name: "x", kind: "", blurb: "", bars: [3, 3, 3], power: t.power, shape: t.shape, sweet: t.sweet, hop: t.hop }], 1), I = new Float64Array(5);
   // A chase camera 9 units back from the bike, looking along +x (the diorama's camera), and a 2D context that draws nothing.
   const view = { width: 1440, height: 900, cam: { yaw: -Math.PI / 2, pitch: 0.45, dist: 9, tx: 0, ty: 0, tz: 0, fov: 0.9, ox: 0, oy: 0 } };
-  const c2 = { fillStyle: "", beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, fill() {} };
   const rib = roadRibbons(run.world, run.win.t, view);
   rib.colors(["#6b7088", "#dcd6cc", "#7cc47a", "#cdbf9f", "#b98a5e", "#c8d36a", "#74c69d"], [0.6, 1, 0.45], 0.58);
   // The ride first (its own allocation is the session test's), then the frames along it, measured.
@@ -114,7 +116,6 @@ test("alloc: Track Day's line ribbons (run-off, asphalt, run-off; cut where the 
   const { circuit } = await import("../src/modes/race/circuits.ts");
   const tr = C.makeTrack(circuit("td-knotworks")), ter = tr.course(), P = tr.TRACK, n = tr.NT, hw = tr.W / 2, off = hw + C.TD_RUNOFF;
   const view = { width: 1440, height: 900, cam: { yaw: 0, pitch: 0.36, dist: 9.5, tx: 0, ty: 0, tz: 0, fov: 0.9, ox: 0, oy: 0 } };
-  const c2 = { fillStyle: "", beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, fill() {} };
   const R = ribbons(ter, view, 2, 48, 4096), L = lineRibbon(R, P, n, [-off, -hw, hw, off], [0, 1, 0], () => 0);
   R.colors(["#c4beb2", "#555766"], [-0.4, 1, 0.5], 0.5);
   // The camera's places round the lap first (the frames are what is measured).
@@ -132,10 +133,7 @@ test("alloc: Track Day's line ribbons (run-off, asphalt, run-off; cut where the 
     }
   });
   assert.ok(quads > 0, "the ribbons drew");
-  // Not zero yet: 3 to 8 scavenges over the 600 frames, measured (V8's sampling profiler puts about
-  // 10 KB over 1,200 frames, all of it in the height lookup `hy`); bounded here so it cannot grow. The
-  // city's road ribbons, on the same painter, measure none.
-  assert.ok(n2 <= 10, `${n2} young-generation GCs over 600 frames`);
+  assert.ok(n2 <= 1, `${n2} young-generation GCs over 600 frames`);
 });
 
 test("alloc: Wheelie City's patrol (heat, spawns, the chase on the street graph, tickets), 20,000 steps", async () => {

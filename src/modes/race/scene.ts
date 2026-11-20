@@ -254,8 +254,8 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   // Race (MX, SX): the track, its jumps' faces along it; Free Ride's maps: the trail and the faces;
   // Track Day: the run-off, the asphalt, the run-off. Materials in paint order (the asphalt over the run-off).
   const RHW = map ? map.def.width / 2 : TW / 2, ROFF = td ? RHW + TD_RUNOFF : RHW, PFk = (track as Track).PF, FKk = (track as Track).FK;
-  // (Track Day first; the race tracks and Free Ride follow as each passes the edge test.)
-  const RIB = endless || !td ? null : ribbons(t, dio, 2, 48, 4096);
+  // (Track Day and the MX tracks so far; SX and Free Ride's maps follow as each passes the edge test.)
+  const RIB = endless || !(td || (!map && !sx)) ? null : ribbons(t, dio, 2, 48, 4096);
   const rline = RIB ? lineRibbon(RIB, TRACK, NT, td ? [-ROFF, -RHW, RHW, ROFF] : [-RHW, RHW], td ? [0, 1, 0] : [-1], () => {
     if (!rline) return 0;
     const s = track.sAt(rline.XS[0]!);
@@ -1373,6 +1373,11 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
         const i = Math.floor(f) % NT, j = (i + 1) % NT, u = f - Math.floor(f), dx = TRACK[j * 2]! - TRACK[i * 2]!, dz = TRACK[j * 2 + 1]! - TRACK[i * 2 + 1]!, l = Math.sqrt(dx * dx + dz * dz) || 1;
         const x = TRACK[i * 2]! + dx * u - (dz / l) * off, z = TRACK[i * 2 + 1]! + dz * u + (dx / l) * off;
         return dio.project(x, t.height(x, z), z, tmp) ? [tmp[0]!, tmp[1]!, tmp[2]!] : null;
+      },
+      /** The ground's height at line point f, `off` across. */
+      ground(f: number, off: number) {
+        const i = Math.floor(f) % NT, j = (i + 1) % NT, u = f - Math.floor(f), dx = TRACK[j * 2]! - TRACK[i * 2]!, dz = TRACK[j * 2 + 1]! - TRACK[i * 2 + 1]!, l = Math.sqrt(dx * dx + dz * dz) || 1;
+        return t.height(TRACK[i * 2]! + dx * u - (dz / l) * off, TRACK[i * 2 + 1]! + dz * u + (dx / l) * off);
       },
       /** Is line point f offset `off` across in view (no ground between it and the eye)? */
       seen(f: number, off: number) {
