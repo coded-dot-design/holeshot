@@ -109,6 +109,35 @@ test("alloc: Endless Wheelie City's road ribbons, 600 frames along a ride", asyn
   assert.ok(n <= 1, `${n} young-generation GCs over 600 frames`);
 });
 
+test("alloc: Track Day's line ribbons (run-off, asphalt, run-off; cut where the ground hides them), 600 frames round a circuit", async () => {
+  const { ribbons, lineRibbon } = await import("../src/modes/ribbons.ts");
+  const { circuit } = await import("../src/modes/race/circuits.ts");
+  const tr = C.makeTrack(circuit("td-knotworks")), ter = tr.course(), P = tr.TRACK, n = tr.NT, hw = tr.W / 2, off = hw + C.TD_RUNOFF;
+  const view = { width: 1440, height: 900, cam: { yaw: 0, pitch: 0.36, dist: 9.5, tx: 0, ty: 0, tz: 0, fov: 0.9, ox: 0, oy: 0 } };
+  const c2 = { fillStyle: "", beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, fill() {} };
+  const R = ribbons(ter, view, 2, 48, 4096), L = lineRibbon(R, P, n, [-off, -hw, hw, off], [0, 1, 0], () => 0);
+  R.colors(["#c4beb2", "#555766"], [-0.4, 1, 0.5], 0.5);
+  // The camera's places round the lap first (the frames are what is measured).
+  const CP = new Float64Array(600 * 4);
+  for (let f = 0; f < 600; f++) {
+    const i = (f * 3) % n, j = (i + 1) % n, dx = P[j * 2] - P[i * 2], dz = P[j * 2 + 1] - P[i * 2 + 1];
+    CP[f * 4] = P[i * 2]; CP[f * 4 + 1] = ter.height(P[i * 2], P[i * 2 + 1]) + 0.9; CP[f * 4 + 2] = P[i * 2 + 1]; CP[f * 4 + 3] = Math.atan2(-dx, -dz);
+  }
+  let quads = 0;
+  const n2 = await measure(() => {
+    for (let f = 0; f < 600; f++) {
+      view.cam.tx = CP[f * 4]; view.cam.ty = CP[f * 4 + 1]; view.cam.tz = CP[f * 4 + 2]; view.cam.yaw = CP[f * 4 + 3];
+      R.begin(); L.paint(); R.flush(c2);
+      quads += R.stats.quads;
+    }
+  });
+  assert.ok(quads > 0, "the ribbons drew");
+  // Not zero yet: 3 to 8 scavenges over the 600 frames, measured (V8's sampling profiler puts about
+  // 10 KB over 1,200 frames, all of it in the height lookup `hy`); bounded here so it cannot grow. The
+  // city's road ribbons, on the same painter, measure none.
+  assert.ok(n2 <= 10, `${n2} young-generation GCs over 600 frames`);
+});
+
 test("alloc: Wheelie City's patrol (heat, spawns, the chase on the street graph, tickets), 20,000 steps", async () => {
   const { TIX } = await import("../src/modes/wheelie/cops.ts");
   const cop = W.fixedCops(3), X = new Float64Array(1);

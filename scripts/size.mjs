@@ -165,7 +165,12 @@ import { readdirSync, readFileSync } from "node:fs";
 // holeshot.mjs 245,488 → 249,587), about 1.2 KB of it the icon table. Budget → 250,500.
 // Then the backdrops (above) on top of R47, on main fbb5c25 with vendor/shop from factory 5ee299f:
 // +771 B measured (holeshot.js 249,892 → 250,663; holeshot.mjs 249,587 → 250,355). Budget 250,500 → 251,500.
-const BUDGET = 251_500;
+// Clean track edges, Track Day first: the shared ribbon painter's line ribbons (bands along a closed
+// line, cut where the ground in front hides them), the drawn kinds under them (every level of detail),
+// and the race scene's wiring and edge-test probes, on main 1222660: +3,840 B measured (holeshot.js
+// 250,917 → 254,757; holeshot.mjs 250,674 → 254,507); most of it is code the shared module already
+// held but the bundle left out while nothing used it. Budget 251,500 → 255,500.
+const BUDGET = 255_500;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

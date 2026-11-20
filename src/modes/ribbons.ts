@@ -54,15 +54,22 @@ export function ribbons(t: RibbonGround, view: RibbonView, nm: number, nb = 1, q
 
   /** The ground's height under point (A[o], A[o + 2]) into A[o + 1]: the face there, split as the
    *  ground splits it ("adaptive": along the smaller height difference; else along (i, j)–(i + 1, j + 1)). */
+  // The ground's grid as numbers (x0, z0, cell, cols, rows, adaptive 1): read once a frame (begin),
+  // so the height lookups do no property loads.
+  const G = new Float64Array(6);
+  function grid() {
+    G[0] = t.x0; G[1] = t.z0; G[2] = t.cell; G[3] = t.cols; G[4] = t.rows; G[5] = t.split === "adaptive" ? 1 : 0;
+  }
+  grid();
   function hy(A: Float64Array, o: number) {
-    const c = t.cell, n = t.cols, m = t.rows, W1 = n + 1, hs = t.h, x = A[o]!, z = A[o + 2]!;
-    let u = (x - t.x0) / c, v = (z - t.z0) / c;
+    const c = G[2]!, n = G[3]!, m = G[4]!, W1 = n + 1, hs = t.h, x = A[o]!, z = A[o + 2]!;
+    let u = (x - G[0]!) / c, v = (z - G[1]!) / c;
     u = u < 0 ? 0 : u > n ? n : u; v = v < 0 ? 0 : v > m ? m : v;
     let i = Math.floor(u), j = Math.floor(v);
     if (i > n - 1) i = n - 1;
     if (j > m - 1) j = m - 1;
     const fu = u - i, fv = v - j, k = j * W1 + i, a = hs[k]!, b = hs[k + 1]!, cc = hs[k + W1 + 1]!, d = hs[k + W1]!;
-    const fl = t.split === "adaptive" && Math.abs(b - d) < Math.abs(cc - a), up = fl ? fu + fv > 1 : fu >= fv;
+    const fl = G[5]! > 0 && Math.abs(b - d) < Math.abs(cc - a), up = fl ? fu + fv > 1 : fu >= fv;
     const sx = up !== fl ? b - a : cc - d, sz = up ? cc - b : d - a;
     A[o + 1] = a + sx * fu + sz * fv + (fl && up ? b - a - sx : 0);
   }
@@ -117,6 +124,18 @@ export function ribbons(t: RibbonGround, view: RibbonView, nm: number, nb = 1, q
       if (x < 0) l0++; if (x > Wd) r0++; if (y < 0) t0++; if (y > H) b0++;
     }
     if (l0 === k || r0 === k || t0 === k || b0 === k) return;
+    // One winding on screen for every piece (a path of pieces fills by the non-zero rule: two that
+    // overlap wound opposite ways would cut a hole).
+    let ar = 0;
+    for (let i = 0; i < k; i++) {
+      const j = i + 1 === k ? 0 : i + 1;
+      ar += QV[o + i * 2]! * QV[o + j * 2 + 1]! - QV[o + j * 2]! * QV[o + i * 2 + 1]!;
+    }
+    if (ar < 0)
+      for (let i = 0, j = k - 1; i < j; i++, j--) {
+        const x = QV[o + i * 2]!, y = QV[o + i * 2 + 1]!;
+        QV[o + i * 2] = QV[o + j * 2]!; QV[o + i * 2 + 1] = QV[o + j * 2 + 1]!; QV[o + j * 2] = x; QV[o + j * 2 + 1] = y;
+      }
     QN[nq] = k; QK[nq] = BK[0]! * NK + m * LV + lvl; nq++;
   }
 
@@ -130,6 +149,7 @@ export function ribbons(t: RibbonGround, view: RibbonView, nm: number, nb = 1, q
     B[9] = -sy * cp; B[10] = -sp; B[11] = -cy * cp;
     B[12] = view.height / 2 / Math.tan(cm.fov / 2); B[13] = view.width / 2 + cm.ox; B[14] = view.height / 2 + cm.oy;
     X[0] = t.x0; X[1] = t.z0; X[2] = t.x0 + t.cols * t.cell; X[3] = t.z0 + t.rows * t.cell;
+    grid();
   }
   /** Paint the frame's quads: sorted by key (depth bucket far to near, material, shade), one path and
    *  one fill each. */
@@ -175,7 +195,7 @@ export function ribbons(t: RibbonGround, view: RibbonView, nm: number, nb = 1, q
       emit(m, n);
     }
   }
-  return { WP, B, X, BK, GA, hy, emit, bucket, begin, flush, ring, colors, stats };
+  return { T: t, G, WP, B, X, BK, GA, hy, emit, bucket, begin, flush, ring, colors, stats };
 }
 export type Ribbons = ReturnType<typeof ribbons>;
 
@@ -220,19 +240,89 @@ export function lineRibbon(R: Ribbons, P: Float64Array, n: number, E: ArrayLike<
       Rw[k + 3] = x + nx * w2; Rw[k + 5] = z + nz * w2; R.hy(Rw, k + 3);
     }
   }
-  /** The quads between the previous row and this one, band by band (along material m). */
+  /** Hidden by the ground? Each row's edges are tested on the way to the eye (a ray over the
+   *  heights), and a band piece is cut where its edge goes behind a crest, so ground in front of a
+   *  ribbon hides it as it hides the ground (the ribbons are painted after the ground). VS: each
+   *  edge's visibility, previous row then this; RF: each row's line position; CV: each edge's cut
+   *  (0..1 from the previous row) where its visibility changes; Q: the point tested. */
+  const VS = new Uint8Array(ne * 2), RF = new Float64Array(2), CV = new Float64Array(ne), Q = new Float64Array(6);
+  let HMAX = -Infinity;
+  for (let k = 0; k < R.T.h.length; k++) if (R.T.h[k]! > HMAX) HMAX = R.T.h[k]!;
+  /** Is (Q[0], Q[1], Q[2]) in view (no ground between it and the eye)? */
+  function seen() {
+    const qx = Q[0]!, qy = Q[1]! + 0.03, qz = Q[2]!, dx = B[0]! - qx, dy = B[1]! - qy, dz = B[2]! - qz, lh = Math.sqrt(dx * dx + dz * dz);
+    if (lh < 1e-6) return 1;
+    const st = R.G[2]! * 0.5, n2 = Math.floor(lh / st);
+    for (let k = 2; k <= n2; k++) {
+      const f = (k * st) / lh, y = qy + dy * f;
+      if (y > HMAX) return 1;
+      Q[3] = qx + dx * f; Q[5] = qz + dz * f;
+      R.hy(Q, 3);
+      if (Q[4]! > y) return 0;
+    }
+    return 1;
+  }
+  /** Row slot r's edges' visibility into VS. */
+  function vrow(r: number) {
+    for (let e = 0; e < ne; e++) {
+      const k = r * RW + e * 6;
+      Q[0] = Rw[k]!; Q[1] = Rw[k + 1]!; Q[2] = Rw[k + 2]!;
+      VS[r * ne + e] = seen();
+    }
+  }
+  /** Edge e's point at line position XS[0] into Q (and its visibility). */
+  function edgeAt(e: number) {
+    pos();
+    Q[0] = RA[0]! + RA[2]! * E[e]!; Q[2] = RA[1]! + RA[3]! * E[e]!;
+    R.hy(Q, 0);
+    return seen();
+  }
+  /** Point on band side `o` (an offset into a row: an edge or its twin) at v (0: the previous row,
+   *  1: this one; 0 reaches back OV of the length, at least 0.08 units: a short piece's overlap must
+   *  still cover a pixel's anti-aliasing) into WP slot q. */
+  const SV = new Float64Array(1);
+  function side(o: number, q: number) {
+    const v = SV[0]!, ax = Rw[o]!, az = Rw[o + 2]!, bx = Rw[RW + o]!, bz = Rw[RW + o + 2]!, ln = Math.sqrt((bx - ax) * (bx - ax) + (bz - az) * (bz - az)) || 1, w = v <= 0 ? -(OV > 0.08 / ln ? OV : 0.08 / ln) : v;
+    WP[q * 3] = ax + (bx - ax) * w; WP[q * 3 + 2] = az + (bz - az) * w;
+    R.hy(WP, q * 3);
+  }
+  /** The quads between the previous row and this one, band by band (along material m), each cut to
+   *  the part in view. */
   function quads(m: number) {
+    // Where each edge goes out of (or into) view between the rows.
+    for (let e = 0; e < ne; e++) {
+      const pv = VS[e]!, tv = VS[ne + e]!;
+      if (pv === tv) continue;
+      let lo = 0, hi = 1;
+      for (let it = 0; it < 8; it++) {
+        const h2 = (lo + hi) / 2;
+        XS[0] = RF[0]! + (RF[1]! - RF[0]!) * h2;
+        if (edgeAt(e) === pv) lo = h2;
+        else hi = h2;
+      }
+      CV[e] = (lo + hi) / 2;
+    }
     for (let b = 0; b < nb; b++) {
       const mat = BM[b]! >= 0 ? BM[b]! : m;
       if (mat < 0) continue;
       // The band's left edge: its twin if this band reaches under the left neighbour (UD < 0 there);
       // its right edge: the twin if it reaches under the right one (UD > 0).
       const la = b * 6 + (UD[b]! < 0 ? 3 : 0), lb = (b + 1) * 6 + (UD[b + 1]! > 0 ? 3 : 0);
-      for (let c = 0; c < 3; c++) {
-        const pa = Rw[la + c]!, pb = Rw[lb + c]!, ta = Rw[RW + la + c]!, tb = Rw[RW + lb + c]!;
-        WP[c] = pa + (pa - ta) * OV; WP[3 + c] = pb + (pb - tb) * OV; WP[6 + c] = tb; WP[9 + c] = ta;
+      const lp = VS[b]!, lt = VS[ne + b]!, rp = VS[b + 1]!, rt = VS[ne + b + 1]!;
+      if (!lp && !lt && !rp && !rt) continue;
+      if (lp && lt && rp && rt) {
+        ((SV[0] = 0), side(la, 0)); ((SV[0] = 0), side(lb, 1)); ((SV[0] = 1), side(lb, 2)); ((SV[0] = 1), side(la, 3));
+        R.emit(mat, 4);
+        continue;
       }
-      R.emit(mat, 4);
+      // Each side's part in view [lo, hi] (none: −1).
+      const l0 = lp ? 0 : lt ? CV[b]! : -1, l1 = lt ? 1 : lp ? CV[b]! : -1, r0 = rp ? 0 : rt ? CV[b + 1]! : -1, r1 = rt ? 1 : rp ? CV[b + 1]! : -1;
+      let q = 0;
+      if (l0 >= 0) ((SV[0] = l0), side(la, q++)), ((SV[0] = l1), side(la, q++));
+      else ((SV[0] = rp ? r1 : r0), side(la, q++));
+      if (r0 >= 0) ((SV[0] = r1), side(lb, q++)), ((SV[0] = r0), side(lb, q++));
+      else ((SV[0] = lp ? l1 : l0), side(lb, q++));
+      R.emit(mat, q);
     }
   }
   /** The line position XS[0] (point index + fraction) into RA (place, across). */
@@ -250,53 +340,73 @@ export function lineRibbon(R: Ribbons, P: Float64Array, n: number, E: ArrayLike<
     }
   }
 
-  /** Paint the bands round `at` as the camera sees them now (between the painter's begin and flush). */
+  let open = false;
+  /** A row at line position FR[0]: the quads back to the previous row (the material's change between
+   *  them found by halving), or the first row of a stretch. (The position goes through FR: no double
+   *  crosses the call.) */
+  const FR = new Float64Array(1);
+  function rowAt() {
+    const f = FR[0]!;
+    XS[0] = f;
+    const m = along();
+    pos();
+    if (!open) {
+      row(1); RM[1] = m; open = true; RF[1] = f; vrow(1);
+      R.bucket(Rw, RW + Math.floor(ne / 2) * 6);
+      return;
+    }
+    Rw.copyWithin(0, RW, RW * 2); RM[0] = RM[1]!; RF[0] = RF[1]!; VS.copyWithin(0, ne, ne * 2);
+    if (m !== RM[0]) {
+      // The material changes between the rows: halve to where, end the old stretch there and start the new.
+      let lo = RF[0]!, hi = f;
+      for (let it = 0; it < 9; it++) {
+        XS[0] = (lo + hi) / 2;
+        if (along() === RM[0]) lo = XS[0]!;
+        else hi = XS[0]!;
+      }
+      XS[0] = hi;
+      pos();
+      row(1); RF[1] = hi; vrow(1);
+      R.bucket(Rw, RW + Math.floor(ne / 2) * 6);
+      quads(RM[0]!);
+      Rw.copyWithin(0, RW, RW * 2); RF[0] = hi; VS.copyWithin(0, ne, ne * 2);
+      XS[0] = f;
+      pos();
+    }
+    row(1); RF[1] = f; vrow(1);
+    R.bucket(Rw, RW + Math.floor(ne / 2) * 6);
+    RM[1] = m;
+    quads(m);
+  }
+  /** Paint the bands round `at` as the camera sees them now (between the painter's begin and flush).
+   *  Rows every half cell near the eye (an edge between two rows is a straight line: the ground under
+   *  it folds at every cell, so near it must be cut as fine), coarser out to 3 units far off, and at
+   *  every point where the line turns. */
   function paint() {
-    const bx = at[0]!, bz = at[1]!, reach = at[2]!, ex = B[0]!, ez = B[2]!, rim = E[0]! < 0 ? -E[0]! : E[0]!, rim2 = E[nb]! < 0 ? -E[nb]! : E[nb]!, wid = rim > rim2 ? rim : rim2;
-    const x0 = X[0]!, z0 = X[1]!, x1 = X[2]!, z1 = X[3]!;
-    let open = false, acc = 0, turn = 0, prevF = 0;
+    const bx = at[0]!, bz = at[1]!, reach = at[2]!, ex = B[0]!, ez = B[2]!, rim = E[0]! < 0 ? -E[0]! : E[0]!, rim2 = E[nb]! < 0 ? -E[nb]! : E[nb]!, wid = rim > rim2 ? rim : rim2, fine = R.G[2]! * 0.5;
+    let acc = 0, turn = 0;
+    open = false;
     for (let i = 0; i <= n; i++) {
       const k = i === n ? 0 : i, x = P[k * 2]!, z = P[k * 2 + 1]!, dbx = x - bx, dbz = z - bz;
+      let sl = 0;
       if (i > 0) {
         const p = i - 1, dx = x - P[p * 2]!, dz = z - P[p * 2 + 1]!;
-        acc += Math.sqrt(dx * dx + dz * dz);
+        sl = Math.sqrt(dx * dx + dz * dz);
+        acc += sl;
         turn += TA[p]!;
       }
-      if (dbx * dbx + dbz * dbz > (reach + wid) * (reach + wid) || x - wid < x0 || z - wid < z0 || x + wid > x1 || z + wid > z1) { open = false; continue; }
-      // Rows finer near the eye, and wherever the line turns.
-      const dex = x - ex, dez = z - ez, de = Math.sqrt(dex * dex + dez * dez) * 0.04, step = de < 0.5 ? 0.5 : de > 3 ? 3 : de;
+      if (dbx * dbx + dbz * dbz > (reach + wid) * (reach + wid)) { open = false; continue; }
+      const dex = x - ex, dez = z - ez, de = Math.sqrt(dex * dex + dez * dez) * 0.04, step = de < fine ? fine : de > 3 ? 3 : de;
       XS[0] = i;
-      const m = along();
-      if (open && i < n && acc < step && turn < 0.06 && m === RM[1]) continue;
-      pos();
-      if (!open) {
-        row(1); RM[1] = m; open = true; acc = turn = 0; prevF = i;
-        R.bucket(Rw, RW + Math.floor(ne / 2) * 6);
-        continue;
+      if (open && i < n && acc < step && turn < 0.06 && along() === RM[1]) continue;
+      // A long last stretch near the eye: rows between the points too.
+      if (open && sl > step * 1.5) {
+        const sub = Math.ceil(sl / step);
+        for (let q = 1; q < sub; q++) (FR[0] = i - 1 + q / sub), rowAt();
       }
-      Rw.copyWithin(0, RW, RW * 2); RM[0] = RM[1]!;
-      if (m !== RM[0]) {
-        // The material changes between the rows: halve to where, end the old stretch there and start the new.
-        let lo = prevF, hi = i;
-        for (let it = 0; it < 9; it++) {
-          XS[0] = (lo + hi) / 2;
-          if (along() === RM[0]) lo = XS[0]!;
-          else hi = XS[0]!;
-        }
-        XS[0] = hi;
-        pos();
-        row(1);
-        R.bucket(Rw, RW + Math.floor(ne / 2) * 6);
-        quads(RM[0]!);
-        Rw.copyWithin(0, RW, RW * 2);
-        XS[0] = i;
-        pos();
-      }
-      row(1);
-      R.bucket(Rw, RW + Math.floor(ne / 2) * 6);
-      RM[1] = m;
-      quads(m);
-      acc = turn = 0; prevF = i;
+      FR[0] = i;
+      rowAt();
+      acc = turn = 0;
     }
   }
   return { at, XS, paint };
@@ -337,20 +447,33 @@ export function drawnKinds(t: RibbonGround & { kind: Uint8Array }, P: Float64Arr
     if (VB[k]! < 0) VB[k] = band(t.x0 + i * cell, t.z0 + j * cell);
     return VB[k]!;
   };
+  // A face is drawn at every level of detail its cell anchors (terrainView draws a coarse cell, 2, 4 or
+  // 8 fine ones a side, with its first fine cell's kind): it keeps its kind only if, at each of them,
+  // its corners lie in one band.
   const adaptive = t.split === "adaptive", h = t.h;
   for (let j = 0; j < t.rows; j++)
     for (let i = 0; i < C; i++)
       for (let q = 0; q < 2; q++) {
         const o = (j * C + i) * 2 + q;
         if (!isOwn.has(DK[o]!)) continue;
-        // The triangle's corners: fixed split along (i, j)–(i + 1, j + 1), the one with (i + 1, j) first;
-        // adaptive, split along 10–01, the one with (i + 1, j + 1) first.
-        const k = j * W1 + i, fl = adaptive && Math.abs(h[k + 1]! - h[k + W1]!) < Math.abs(h[k + W1 + 1]! - h[k]!);
-        let a: number, b: number, c: number;
-        if (!fl) (a = vb(i, j)), (b = q ? vb(i, j + 1) : vb(i + 1, j)), (c = vb(i + 1, j + 1));
-        else (a = vb(i + 1, j)), (b = vb(i, j + 1)), (c = q ? vb(i, j) : vb(i + 1, j + 1));
-        const lo = Math.min(a, b, c), hi = Math.max(a, b, c);
-        if (lo !== hi) DK[o] = BK[hi]!;
+        let top = -1, split = false;
+        for (let st = 1; st <= 8 && i % st === 0 && j % st === 0 && i + st <= C && j + st <= t.rows; st *= 2) {
+          // The triangle's corners: fixed split along (i, j)–(i + s, j + s), the one with (i + s, j)
+          // first; adaptive, split along the smaller height difference (10–01: the one with (i + s, j + s) first).
+          const k = j * W1 + i, fl = adaptive && Math.abs(h[k + st]! - h[k + st * W1]!) < Math.abs(h[k + st * W1 + st]! - h[k]!);
+          // (Corners as [i, j] offsets in steps; each side's middle too: inside a turn the band's edge
+          // bends in, and a side between two corners in the band can dip out of it.)
+          const T = !fl ? (q ? [0, 0, 0, 1, 1, 1] : [0, 0, 1, 0, 1, 1]) : (q ? [1, 0, 0, 1, 0, 0] : [1, 0, 0, 1, 1, 1]);
+          let lo = 99, hi = -1;
+          for (let c = 0; c < 3; c++) {
+            const u = T[c * 2]!, w = T[c * 2 + 1]!, u2 = T[((c + 1) % 3) * 2]!, w2 = T[((c + 1) % 3) * 2 + 1]!;
+            const v = vb(i + u * st, j + w * st), m = band(t.x0 + (i + ((u + u2) / 2) * st) * cell, t.z0 + (j + ((w + w2) / 2) * st) * cell);
+            lo = Math.min(lo, v, m); hi = Math.max(hi, v, m);
+          }
+          if (lo !== hi) split = true;
+          if (hi > top) top = hi;
+        }
+        if (split) DK[o] = BK[top]!;
       }
   return DK;
 }

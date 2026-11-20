@@ -30,6 +30,9 @@ import { callout, stuntCalls, stuntCall, friendStunt } from "../callout.ts";
 import { E_REGROUP, E_STUNT } from "../freeride/jam.ts";
 import { font as tagFont, tag, marker } from "../../online/tags.ts";
 import { RESET } from "../unstuck.ts";
+import { ribbons, lineRibbon, drawnKinds } from "../ribbons.ts";
+import { F_WHOOPS as R_WHOOPS } from "./course.ts";
+import { F_WHOOPS as M_WHOOPS, F_ROOTS as M_ROOTS, F_ROCKS as M_ROCKS } from "../freeride/maps.ts";
 import { desertView, biomePal, desertBands, GRID_A, type DesertView } from "../desert/look.ts";
 import type { DesertTrack } from "../desert/track.ts";
 import type { RideMap } from "../freeride/maps.ts";
@@ -246,6 +249,52 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   const EDGE = track.trackEdges(t);
   // The neon lines over the terrain: the track's edges, or the map's own (Endless: the grid, drawn live).
   const LINES: MapLine[] = endless || td ? [] : look ? look.lines(t) : [{ p: EDGE.subarray(0, NT * 3), n: NT, closed: true, c: "edge2", a: 1 }, { p: EDGE.subarray(NT * 3), n: NT, closed: true, c: "edge", a: 1 }];
+  // The track, trail or circuit as ribbons (../ribbons.ts): its bands along the line at their true
+  // widths, the ground under them drawn as what lies round them (render only: `t` keeps its kinds).
+  // Race (MX, SX): the track, its jumps' faces along it; Free Ride's maps: the trail and the faces;
+  // Track Day: the run-off, the asphalt, the run-off. Materials in paint order (the asphalt over the run-off).
+  const RHW = map ? map.def.width / 2 : TW / 2, ROFF = td ? RHW + TD_RUNOFF : RHW, PFk = (track as Track).PF, FKk = (track as Track).FK;
+  // (Track Day first; the race tracks and Free Ride follow as each passes the edge test.)
+  const RIB = endless || !td ? null : ribbons(t, dio, 2, 48, 4096);
+  const rline = RIB ? lineRibbon(RIB, TRACK, NT, td ? [-ROFF, -RHW, RHW, ROFF] : [-RHW, RHW], td ? [0, 1, 0] : [-1], () => {
+    if (!rline) return 0;
+    const s = track.sAt(rline.XS[0]!);
+    track.prof(s);
+    const f = FKk[0]!, face = PFk[0]! > 0.05;
+    if (map) return f && face && f !== M_WHOOPS && f !== M_ROOTS && f !== M_ROCKS ? 1 : map.def.trail ? 0 : -1;
+    return face && f !== R_WHOOPS ? 1 : 0;
+  }) : null;
+  /** What terrainView draws: `t` with the drawn kinds (static grounds). */
+  const tdraw = RIB ? Object.assign(Object.create(t) as typeof t, { kind: drawnKinds(t as Parameters<typeof drawnKinds>[0], TRACK, NT, td ? [RHW, ROFF] : [RHW], td ? [1, 2, 0] : [1, 0], [1, 2]) }) : t;
+  /** Probe: 1 draws the bare ground and its ribbons (no lines, kerbs, objects or riders). */
+  let BARE = 0;
+  /** Each rider's shadow over the ribbons: x, z, alpha (a disc of radius 0.95 on the ground, as the
+   *  terrain draws one). */
+  const SHD = new Float64Array(8 * 3);
+  function paintRibbons(c2: CanvasRenderingContext2D) {
+    RIB!.begin();
+    rline!.paint();
+    RIB!.flush(c2);
+    if (BARE) return;
+    c2.fillStyle = P.shadow;
+    for (let r = 0; r < RIDERS; r++) {
+      const a = SHD[r * 3 + 2]!;
+      if (a <= 0) continue;
+      c2.beginPath();
+      let ok = true;
+      for (let q = 0; q < 16 && ok; q++) {
+        const x = SHD[r * 3]! + Math.cos((q / 16) * TAU) * 0.95, z = SHD[r * 3 + 1]! + Math.sin((q / 16) * TAU) * 0.95;
+        if (!dio.project(x, t.height(x, z) + 0.03, z, tmp) || tmp[2]! < 0.1) ok = false;
+        else if (q) c2.lineTo(tmp[0]!, tmp[1]!);
+        else c2.moveTo(tmp[0]!, tmp[1]!);
+      }
+      if (!ok) continue;
+      c2.closePath();
+      c2.globalAlpha = a;
+      c2.fill();
+      c2.globalAlpha = 1;
+    }
+  }
   const rnd = seeded(ctx.seed);
   let sky: CanvasGradient | null = null;
   const STARS = new Float32Array(120);
@@ -265,7 +314,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       dio.add({ id: "rim", size: [HX * 2 + 0.7, 0.12, HZ * 2 + 0.7], pos: [0, -0.2, 0], color: P.rim, cluster: "table", layer: 2, emissive: true, pick: false });
       if (sx) stadium();
     }
-    tv = terrainView(dio, t, {
+    tv = terrainView(dio, tdraw, {
       bands: endless ? desertBands(P, endless.biome.bi) : look ? look.bands(P as Parameters<typeof look.bands>[0]) : [[0.45, P.ground[0]!], [0.85, P.ground[1]!], [1.25, P.ground[2]!], [99, P.crest]], steep: 0.5, steepColor: P.steep, kinds: look ? look.kinds(P as Parameters<typeof look.kinds>[0]) : [P.track, P.face],
       light: P.light, ambient: P.amb, lod: endless ? [14, 26] : td ? TD_LOD : TW !== TRACK_W ? [19, 36] : [24, 44], shadows: RIDERS + 1, shadowColor: P.shadow,
       // (MX and SX tracks, on bigger tables, step their detail down sooner: about the same faces a frame.)
@@ -279,7 +328,14 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       dio.decal("terrain", 2, (c2) => dv.paintFog(c2, me.pos[0]!, me.pos[2]!, dv.hazeColor(), FOG));
       dio.decal("terrain", 3, (c2) => dv.paintFar(c2));
       FOG.g = null;
-    } else dio.decal("terrain", 1, td ? paintCircuit : paintLines);
+    } else {
+      if (RIB) {
+        const kc = look ? look.kinds(P as Parameters<typeof look.kinds>[0]) : [P.track, P.face];
+        RIB.colors(td ? [kc[1]!, kc[0]!] : [kc[0]!, kc[1]!], P.light, P.amb);
+        dio.decal("terrain", 0.5, paintRibbons);
+      }
+      dio.decal("terrain", 1, (c2) => BARE || (td ? paintCircuit(c2) : paintLines(c2)));
+    }
     if (look) look.build(dio, t, P as Parameters<typeof look.build>[2]);
     else if (td) circuitScenery();
     else if (!endless) trackScenery();
@@ -660,7 +716,10 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
         if (far) continue;
       }
       const x = b.pos[0]!, z = b.pos[2]!, inside = Math.abs(x) < HX && Math.abs(z) < HZ, lift = inside ? b.pos[1]! - t.height(x, z) : 9;
-      tv.shadow(r, x, z, 0.95, inside ? Math.max(0, 0.36 - lift * 0.09) : 0);
+      const sa = inside ? Math.max(0, 0.36 - lift * 0.09) : 0;
+      // (Over ribbons the shadows are painted after them: the ground's own would be under the track.)
+      if (RIB) (SHD[r * 3] = x), (SHD[r * 3 + 1] = z), (SHD[r * 3 + 2] = sa), tv.shadow(r, x, z, 0.95, 0);
+      else tv.shadow(r, x, z, 0.95, sa);
     }
     walkHud.update(me);
     const drop = free ? 1 : Math.min(1, gateT / 0.28);
@@ -1046,6 +1105,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   }
   /** The tach (revs, the power band lit) and, up on the back wheel, the balance meter: a Board UI sticker. */
   function drawOverlay(ctx2: CanvasRenderingContext2D) {
+    if (BARE) return;
     if (net) drawTags(ctx2);
     if (ctx.attract || (sim.phase !== RACE && sim.phase !== GRID)) return;
     const W = dio.width, H = dio.height, s = Math.max(0.8, Math.min(1.2, W / 720)), w = 168 * s, h = 46 * s, x = 10, y = H - V[4]! - h - 6;
@@ -1297,6 +1357,49 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
       dirty = true;
     },
     probe: {
+      /** The ribbons' line (the edge test): points, its band edges, the last frame's quads and fills. */
+      line: () => ({ P: Array.from(TRACK), n: NT, hw: RHW, off: ROFF, td, quads: RIB ? RIB.stats.quads : 0, fills: RIB ? RIB.stats.fills : 0, dropped: RIB ? RIB.stats.dropped : 0 }),
+      /** The line's feature height at point f (0: no jump there). */
+      prof: (f: number) => (track.prof(track.sAt(f)), (track as Track).PF[0]!),
+      /** The chase camera behind line point f (index + fraction), `lat` units across, looking along the line. */
+      look(f: number, lat = 0) {
+        const i = Math.floor(f) % NT, j = (i + 1) % NT, u = f - Math.floor(f), dx = TRACK[j * 2]! - TRACK[i * 2]!, dz = TRACK[j * 2 + 1]! - TRACK[i * 2 + 1]!, l = Math.sqrt(dx * dx + dz * dz) || 1;
+        const x = TRACK[i * 2]! + dx * u - (dz / l) * lat, z = TRACK[i * 2 + 1]! + dz * u + (dx / l) * lat;
+        const cm = dio.cam;
+        cm.tx = x; cm.ty = t.height(x, z) + chaseO.lift; cm.tz = z; cm.yaw = Math.atan2(-dx, -dz); cm.pitch = chaseO.pitch; cm.dist = chaseO.dist;
+      },
+      /** Line point f offset `off` across (as the ribbons offset it) on the ground, on screen: [x, y, depth]. */
+      across(f: number, off: number) {
+        const i = Math.floor(f) % NT, j = (i + 1) % NT, u = f - Math.floor(f), dx = TRACK[j * 2]! - TRACK[i * 2]!, dz = TRACK[j * 2 + 1]! - TRACK[i * 2 + 1]!, l = Math.sqrt(dx * dx + dz * dz) || 1;
+        const x = TRACK[i * 2]! + dx * u - (dz / l) * off, z = TRACK[i * 2 + 1]! + dz * u + (dx / l) * off;
+        return dio.project(x, t.height(x, z), z, tmp) ? [tmp[0]!, tmp[1]!, tmp[2]!] : null;
+      },
+      /** Is line point f offset `off` across in view (no ground between it and the eye)? */
+      seen(f: number, off: number) {
+        const i = Math.floor(f) % NT, j = (i + 1) % NT, u = f - Math.floor(f), dx = TRACK[j * 2]! - TRACK[i * 2]!, dz = TRACK[j * 2 + 1]! - TRACK[i * 2 + 1]!, l = Math.sqrt(dx * dx + dz * dz) || 1;
+        const x = TRACK[i * 2]! + dx * u - (dz / l) * off, z = TRACK[i * 2 + 1]! + dz * u + (dx / l) * off, y = t.height(x, z) + 0.03;
+        const cm = dio.cam, cp = Math.cos(cm.pitch), ex = cm.tx + cm.dist * Math.sin(cm.yaw) * cp, ey = cm.ty + cm.dist * Math.sin(cm.pitch), ez = cm.tz + cm.dist * Math.cos(cm.yaw) * cp;
+        const n = Math.ceil(Math.hypot(ex - x, ez - z) / (t.cell * 0.25));
+        for (let k = 2; k < n; k++) {
+          const g = k / n, px = x + (ex - x) * g, pz = z + (ez - z) * g;
+          if (t.height(px, pz) > y + (ey - y) * g) return false;
+        }
+        return true;
+      },
+      /** Draw the bare ground and its ribbons now (no lines, kerbs, objects, riders, dust or shadows). */
+      bare() {
+        const keep: [DioramaObject, number][] = [];
+        dio.recolor((ob) => void (keep.push([ob, ob.alpha]), (ob.alpha = 0)));
+        for (let r = 0; r <= RIDERS; r++) tv.shadow(r, 0, 0, 0, 0);
+        const pn = [dust.P.n, roost.P.n, spark.P.n];
+        dust.P.n = roost.P.n = spark.P.n = 0;
+        BARE = 1;
+        dio.draw();
+        BARE = 0;
+        (dust.P.n = pn[0]!), (roost.P.n = pn[1]!), (spark.P.n = pn[2]!);
+        for (const [ob, a] of keep) ob.alpha = a;
+        dirty = true;
+      },
       /** Step the ride n times by dt without drawing, as the loop does (a long autopilot ride in a test). */
       tick(n: number, dt = 1 / 60) {
         for (let q = 0; q < n; q++) loop.step!(engine, dt);
