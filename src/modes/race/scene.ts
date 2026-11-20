@@ -254,8 +254,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   // Race (MX, SX): the track, its jumps' faces along it; Free Ride's maps: the trail and the faces;
   // Track Day: the run-off, the asphalt, the run-off. Materials in paint order (the asphalt over the run-off).
   const RHW = map ? map.def.width / 2 : TW / 2, ROFF = td ? RHW + TD_RUNOFF : RHW, PFk = (track as Track).PF, FKk = (track as Track).FK;
-  // (Track Day and the race tracks so far; Free Ride's open maps follow once they pass the edge test.)
-  const RIB = endless || map ? null : ribbons(t, dio, 2, 48, 4096);
+  const RIB = endless ? null : ribbons(t, dio, 2, 48, 4096);
   const rline = RIB ? lineRibbon(RIB, TRACK, NT, td ? [-ROFF, -RHW, RHW, ROFF] : [-RHW, RHW], td ? [0, 1, 0] : [-1], () => {
     if (!rline) return 0;
     const s = track.sAt(rline.XS[0]!);
