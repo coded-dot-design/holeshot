@@ -25,8 +25,9 @@ export interface ShowroomApi {
   /** Buy model `id` into bay `bay` (0-based; a bay with a bike trades it in): the shell applies the
    *  result (../model/garage.ts `buyInto`), saves, says it, and redraws. */
   buy(id: string, bay: number): Buy;
-  /** The turntable: put the shell's preview into `host` showing model `id`, new. */
-  turntable(host: HTMLElement, id: string): void;
+  /** The turntable: show model `id`, new, on the shell's preview (moved into `host` when given; null:
+   *  it stays in the bike panel's frame). */
+  turntable(host: HTMLElement | null, id: string): void;
   /** Called with a redraw to run whenever the profile changes; returns the unsubscribe. */
   onChange?(redraw: () => void): () => void;
   say?(s: string): void;
@@ -54,8 +55,9 @@ export function itemOf(m: Model, p: Profile, night: boolean): CatalogueItem {
 }
 
 export const showroomState = catalogueState;
-/** Mount the showroom in `host` (the state `st` kept by the shell across redraws). */
-export function mountShowroom(host: HTMLElement, api: ShowroomApi, st: CatalogueState = catalogueState()) {
+/** Mount the showroom in `host` (the state `st` kept by the shell across redraws); with `side`, the
+ *  preview card (title, compare, destination, Buy) goes there, under the bike panel's turntable. */
+export function mountShowroom(host: HTMLElement, api: ShowroomApi, st: CatalogueState = catalogueState(), side?: HTMLElement) {
   const P = () => api.profile(), units = () => P().settings.units ?? "imperial";
   const slots = (): CatalogueSlot[] => {
     const p = P(), B = baysOf(p), first = B.find((b) => !b.bike);
@@ -75,6 +77,7 @@ export function mountShowroom(host: HTMLElement, api: ShowroomApi, st: Catalogue
     },
     buy: (it, s) => { const r = api.buy(it.id, s.index); return r.ok ? null : r.why; },
     preview: (h, it) => api.turntable(h, it.id),
+    ...(side ? { side, stage: false } : {}),
     say: api.say,
   }, st);
   const off = api.onChange?.(view.update);

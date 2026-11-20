@@ -105,7 +105,7 @@ try {
       assert.equal(await $(p, "!!root.querySelector('[data-shop-more]')"), false, `${at}: no More key`);
       assert.deepEqual(await layout(p), { small: [], sideways: false }, `${at}: keys ≥ 44 px, no sideways scroll`);
       // preview: a card's picture puts it on the turntable
-      await until(p, "root.querySelector('.shop-cat-stage .dh-preview')?.width > 50", `${at}: the turntable draws in the preview`);
+      await until(p, "root.querySelector('.dh-bikep .shop-turn .dh-preview')?.width > 50", `${at}: the turntable draws in the preview`);
       const i0 = await ink(p);
       await pick(p, "forgeback");
       await until(p, "root.querySelector('[data-shop-pick=forgeback]').getAttribute('aria-pressed') === 'true'", `${at}: picked`);
@@ -149,6 +149,25 @@ try {
       await click(p, ".shop-cat-tools [data-shop-cmp]");
       await until(p, "!!root.querySelector('.shop-cat-sum')", `${at}: Compare bikes opens it`);
       await click(p, "[data-shop-back]");
+      // A pick, a filter, Compare and back, and a bay never move the catalogue: the list's own scroll (a
+      // desktop) and the page's (a phone) stay within 1 px (owner, 2026-11-20: "the showroom jumps to the top"); on a phone the card is pressed below the pinned turntable.
+      {
+        const scrolls = () => $(p, "(() => { const l = root.querySelector('.dh-showroom .shop-cat-list'), c = root.querySelector('.dh-cards'); return [l ? l.scrollTop : 0, c.scrollTop, scrollY]; })()");
+        // (The fourth card's top brought just under the turntable, or the list's top: it is then pressed near its top.)
+        const low = await $(p, "(() => { const l = root.querySelector('.dh-showroom .shop-cat-list'), s = l && getComputedStyle(l).overflowY === 'auto' ? l : root.querySelector('.dh-cards'); const e = [...root.querySelectorAll('[data-shop-pick]:not([aria-pressed=true])')][3]; const top = Math.max(s.getBoundingClientRect().top, root.querySelector('.dh-bikep .shop-turn').getBoundingClientRect().bottom) + 40; s.scrollTop += e.getBoundingClientRect().top - top; return e.dataset.shopPick; })()");
+        await p.waitForTimeout(100);
+        const s0 = await scrolls();
+        assert.ok(s0[0] + s0[1] > 300, `${at}: the catalogue scrolled (${s0})`);
+        assert.ok(low, `${at}: a card on screen lower down`);
+        const steady = async (what) => { await p.waitForTimeout(120); const s1 = await scrolls(); assert.ok(s1.every((v, i) => Math.abs(v - s0[i]) <= 1), `${at}: ${what} keeps the scroll (${s0} → ${s1})`); };
+        await p.locator(`[data-fizlet-host] >> [data-shop-pick="${low}"]`).first()[touch ? "tap" : "click"]({ position: { x: 40, y: 40 } });
+        await until(p, `root.querySelector('[data-shop-pick="${low}"]').getAttribute('aria-pressed') === 'true'`, `${at}: picked lower down`);
+        await steady("a pick lower down");
+        await click(p, "[data-shop-set=slot]:not([aria-checked=true])");
+        await steady("a bay pick");
+        await $(p, "(() => { const l = root.querySelector('.dh-showroom .shop-cat-list'); if (l) l.scrollTop = 0; root.querySelector('.dh-cards').scrollTop = 0; })()");
+        await p.waitForTimeout(400);
+      }
       assert.deepEqual(errs, [], `${at}: no page errors`);
       await ctx.close();
     }
@@ -187,7 +206,7 @@ try {
       await ctx.close();
     }
   }
-  console.log("Holeshot showroom: filters, all nineteen shown, preview on the turntable, compare (rows and the one line), the disabled buy with credits needed, the bay picker (tiles, trade-ins marked), buy into the empty bay and a trade-in into bay 1; 1440 and 390, day and night.");
+  console.log("Holeshot showroom: filters, all nineteen shown, a pick or a bay lower down keeps the scroll (1 px), preview on the turntable, compare (rows and the one line), the disabled buy with credits needed, the bay picker (tiles, trade-ins marked), buy into the empty bay and a trade-in into bay 1; 1440 and 390, day and night.");
 } finally {
   await browser.close();
   await server.close();

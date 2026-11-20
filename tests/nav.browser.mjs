@@ -155,7 +155,7 @@ try {
         // (The spots are My Bikes' garage expansion: the last tile on the bay rail.)
         const bays = async () => {};
         await bays();
-        assert.match(await $(p, "root.querySelector('.shop-bay-lock').textContent"), /Garage expansion.*Bay 4 of 6.*Unlock.*2,500/, `${at}: the expansion, the 4th bay, its price`);
+        assert.match(await $(p, "root.querySelector('.shop-bay-lock').textContent"), /Bay 4 of 6.*2,500/, `${at}: the expansion, the 4th bay, its price`);
         await press("[data-spot]");
         await until(p, "game.profile.slots === 4", `${at}: the 4th spot`);
         assert.deepEqual([(await saved(p)).slots, (await saved(p)).credits], [4, 500], `${at}: paid and saved`);

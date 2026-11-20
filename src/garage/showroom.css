@@ -1,8 +1,7 @@
-/* Holeshot's showroom (./showroom.ts): on the Showroom tab the catalogue brings its own preview panel
-   (the turntable moves into it), so the garage's bike panel steps aside and the host takes the row. */
-.dh-garage[data-tab=showroom] .dh-gwrap{grid-template-columns:minmax(0,1fr)}
-.dh-garage[data-tab=showroom] .dh-bikep{display:none}
-@media (min-width:900px){.dh-garage[data-tab=showroom] .shop-cat{grid-template-columns:minmax(0,480px) minmax(0,1fr);gap:30px}}
-@media (min-width:900px) and (max-width:820.5px),(min-width:900px) and (max-height:559.5px){.dh-garage[data-tab=showroom] .shop-cat-pv{position:sticky;top:110px}}
-/* The preview's frame never moves on a pick: the name above it keeps one line (an ellipsis if long). */
-.dh-showroom .shop-cat-pv>.shop-title .shop-name{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Holeshot's showroom (./showroom.ts): the catalogue's list takes the tabs' column; its preview card
+   (title, compare, destination, Buy) sits under the bike panel's turntable (.dh-srside), so the bike
+   never moves between the garage and the showroom. */
+/* The preview card's name keeps one line (an ellipsis if long), so a pick never moves Buy. */
+.dh-srside .shop-cat-pv>.shop-title .shop-name{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dh-srside .shop-cat-pv>.shop-title{padding:0 16px}
+.dh-srside .shop-cat-cmp{padding:12px 16px 0}

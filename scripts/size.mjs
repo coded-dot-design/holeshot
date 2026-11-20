@@ -186,7 +186,11 @@ import { readdirSync, readFileSync } from "node:fs";
 // The helmet's final pass (the goggle across the eye port and big, its side plates, the strap a thin
 // ring round the head at goggle height, the head carried level) on main fa0cef9: +534 B measured
 // (holeshot.js 260,041 → 260,575; holeshot.mjs 259,778 → 260,369). Budget unchanged (261,000).
-const BUDGET = 261_000;
+// The bike panel rebuilt (the turntable first, one frame on the garage and the showroom, the panel one
+// screen tall and pinned on phones, My Bikes as equal tiles with a ◈ sell popover, the showroom's card
+// under the turntable and its scroll kept; vendor/shop f0eae23), on main ab4ec8f: +685 B measured
+// (holeshot.js 260,575 → 261,260; holeshot.mjs 260,369 → 261,041). Budget 261,000 → 262,000.
+const BUDGET = 262_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

@@ -116,10 +116,10 @@ try {
     await q.waitForTimeout(200);
     assert.deepEqual(await size(), s0, `${name}: the frame keeps its size through Day / Night`);
     await press("[data-gtab=showroom]");
-    await until(q, "!!root.querySelector('.shop-cat') && !!root.querySelector('.shop-cat-pv .dh-preview')", `${name}: the showroom's preview`);
+    await until(q, "!!root.querySelector('.shop-cat') && !!root.querySelector('.dh-bikep .shop-turn .dh-preview')", `${name}: the showroom's preview`);
     await q.waitForTimeout(300);
     const S = await tyres("showroom");
-    if (MEDIA) await q.locator("[data-fizlet-host] >> .shop-cat-pv .dh-preview").first().screenshot({ path: `${MEDIA}/game-${name}-showroom.png` });
+    if (MEDIA) await q.locator("[data-fizlet-host] >> .dh-bikep .shop-turn .dh-preview").first().screenshot({ path: `${MEDIA}/game-${name}-showroom.png` });
     assert.ok(S.inside[0] && S.inside[1], `${name} showroom: both tyres on the disc's top (${JSON.stringify(S)})`);
     console.log(`  ${name} showroom: tyres inside the disc`);
     assert.deepEqual(errs, [], `${name}: no page errors`);

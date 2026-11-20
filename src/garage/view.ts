@@ -35,7 +35,9 @@ export interface GarageUI {
   page: number;
   owned: boolean;
   /** The open popover: the tyre compounds, the paint/kit menu, the turntable's backdrop picker ("bays" is kept for old callers: My Bikes is a rail now). */
-  menu: "" | "bays" | "tyre" | "slot" | "backdrop";
+  menu: "" | "bays" | "tyre" | "slot" | "backdrop" | "sell";
+  /** The bay whose sell popover is open (with menu "sell"). */
+  sellAt?: number;
   /** Pinned preview (tapped): shown on the turntable with BUY / CANCEL until bought or put back. */
   trial: Pv | null;
   /** Passing preview (hover or keyboard focus on a list item): wins over `trial` while it lasts. */
@@ -182,10 +184,16 @@ const BD_DOTS = PICKS.map(([id, t]) => { const b = BACKDROPS.find((x) => x.id ==
  *  the bike shown and its pace, LET'S RIDE) and PARTS & MODS / PAINT & KIT on the right; the
  *  SHOWROOM tab leaves an empty `.dh-showroom` host for the shell to mount into. */
 export function garageCard(p: Profile, ui: GarageUI, head: string, go: string, note: string, extra = "", art?: (b: BikeSave) => string) {
-  const b = riding(p), B = bays(p, art);
+  const b = riding(p), B = bays(p, art, ui.menu === "sell" ? ui.sellAt ?? -1 : -1);
   // MY BIKES is part of the garage: a rail of bays over the turntable (the shop's bayRail).
   const rail = bayRail({ title: "My Bikes", line: B.line, bays: B.bays, add: "+ Add bike", expand: B.expand, credits: p.credits, cur: "◈ " });
-  const left = `<aside class="shop-card dh-bikep">${rail}${turntable("<canvas-slot></canvas-slot>", "data-turn", "bike", p.bikes.length > 1, chipPick("Backdrop", BD_DOTS, pickOf(p.settings.backdrop), "backdrop", { open: ui.menu === "backdrop", attrs: 'data-gmenu="backdrop"', cls: "shop-chipseg-top" }))}<div class="dh-pvinfo">${bayInfo(p, ui)}</div>${go}${extra}</aside>`;
+  // The turntable first, always in the same place and size on both tabs (owner, 2026-11-20); what changes
+  // goes under it: the bike's name and pace and My Bikes here (LET'S RIDE docked at the bottom), the showroom's preview card
+  // (title, compare, destination, Buy) on the Showroom tab, mounted into .dh-srside.
+  const turn = turntable("<canvas-slot></canvas-slot>", "data-turn", "bike", ui.tab !== "showroom" && p.bikes.length > 1, chipPick("Backdrop", BD_DOTS, pickOf(p.settings.backdrop), "backdrop", { open: ui.menu === "backdrop", attrs: 'data-gmenu="backdrop"', cls: "shop-chipseg-top" }));
+  const below = ui.tab === "showroom" ? `<div class="dh-below dh-srside"></div>` : `<div class="dh-below"><div class="dh-pvinfo">${bayInfo(p, ui)}</div>${rail}</div>`;
+  // (LET'S RIDE docks under the scrolling part, always in view.)
+  const left = `<aside class="shop-card dh-bikep">${turn}${below}${ui.tab === "showroom" ? "" : `<div class="dh-dock">${go}${extra}</div>`}</aside>`;
   const right = ui.tab === "showroom" ? `<div class="dh-showroom"></div>`
     : `${seg([["bike", "Parts & Mods", "wrench"], ["look", "Paint & Kit", "paint"]], ui.tab, "gtab", "Garage")}${ui.tab === "bike" ? tabs([["cond", "Condition", "tyre"], ["tune", "Tuning", "sprocket"], ["up", "Upgrades", "exhaust"], ["log", "Service log", "log"]], ui.sub, "gsub", "Parts and mods") + (ui.sub === "cond" ? condTab(p, b, ui) : ui.sub === "tune" ? tuneTab(p, b) : ui.sub === "up" ? upTab(p, b, ui) : logTab(b)) : lookTab(p, b, ui)}`;
   return `<div class="dh-card dh-garage shop" data-screen="garage" data-tab="${ui.tab}">${head}<div class="dh-gwrap">${left}<div class="dh-gbody">${right}<p class="shop-sub dh-note" role="status">${esc(note)}</p></div></div></div>`;
@@ -229,12 +237,10 @@ export function garageClick(p: Profile, ui: GarageUI, t: HTMLElement, root: Pare
   if (d.untry !== undefined) return (ui.trial = null), {};
   if (d.number !== undefined) return { buy: [dress(p, "number", root.querySelector<HTMLInputElement>(".dh-numin")!.value), "Number set"] };
   if (d.spot !== undefined) return { buy: [buySpot(p), "Garage bay unlocked"] };
-  if (d.sell) {
-    // Sell asks once: the key turns into its confirmation, then a second tap sells (the sheet stays open).
-    ui.menu = was;
-    if (d.sure === undefined) return (d.sure = ""), t.querySelector("svg")?.remove(), (t.firstChild!.textContent = "Sure? Sell for"), null;
-    return { buy: [sell(p, +d.sell), "Sold"] };
-  }
+  // Sell: the ◈ corner key opens its popover ("Sell for ◈ 2,460"), which is the confirm: Sell sells, Cancel closes.
+  if (d.sellopen !== undefined) return (ui.menu = was === "sell" && ui.sellAt === +d.sellopen ? "" : "sell"), (ui.sellAt = +d.sellopen), {};
+  if (d.sellx !== undefined) return {};
+  if (d.sell) return { buy: [sell(p, +d.sell), "Sold"] };
   ui.menu = was;
   return null;
 }

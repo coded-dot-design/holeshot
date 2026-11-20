@@ -78,9 +78,10 @@ try {
     assert.deepEqual(L0, { small: [], sideways: false }, `${name}: garage keys ≥ 44 px, no sideways scroll (${JSON.stringify(L0)})`);
     await shot(p, `${name}-2-garage-warnings`);
     // ---- My Bikes: the bay rail over the turntable (part of the garage, no popover): yours rides next, the empty bays add a bike, the expansion at the end ----
-    const bays = await $(p, "[...root.querySelectorAll('.dh-bikep .shop-rail :is(.shop-bay, .shop-bay-add, .shop-bay-lock)')].map((r) => r.textContent)");
-    assert.ok(bays.length === 3 && /^Bay 1.*#23.*Rides next/.test(bays[0]) && /\+ Add bike2 empty bays$/.test(bays[1]), `${name}: yours rides next; the two empty bays are one + Add bike tile (${bays})`);
-    assert.match(bays[2], /Garage expansion.*Bay 4 of 6.*Unlock/s, `${name}: the expansion, last on the rail`);
+    const bays = await $(p, "[...root.querySelectorAll('.dh-bikep .shop-rail .shop-bay')].map((r) => r.textContent)");
+    assert.ok(bays.length === 3 && /#23.*Rides next/.test(bays[0]) && /^\+ Add bike$/.test(bays[1]), `${name}: yours rides next; the two empty bays are one + Add bike tile (${bays})`);
+    assert.equal(await $(p, "root.querySelector('.shop-bay-add').getAttribute('aria-label')"), "+ Add bike: 2 empty bays", `${name}: + Add bike says how many bays`);
+    assert.match(bays[2], /Bay 4 of 6.*2,500/s, `${name}: the expansion, last on the rail, with its price`);
     assert.equal(await $(p, "!!root.querySelector('.dh-bikep .shop-rail .shop-bay[data-on] .shop-bay-art')"), true, `${name}: the selected bay marked, with its picture`);
     assert.equal(await $(p, "root.querySelector('.shop-sheet')"), null, `${name}: no My Bikes popover`);
     await shot(p, `${name}-2b-my-bikes`);

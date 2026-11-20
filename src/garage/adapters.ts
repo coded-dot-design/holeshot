@@ -15,7 +15,7 @@ import { cosmeticPrice, fits, fixPrice, modPrice, partPrice, setupPrice, spotPri
 import { helmetSVG } from "./portrait.ts";
 import { helmetOf } from "./look.ts";
 import type { Item, RailBay, Slot as LkSlot, Upgrade, Wear } from "../../vendor/shop/shop.js";
-import { btn, esc, pill, price, swatch } from "../../vendor/shop/shop.js";
+import { btn, cornerPop, esc, num, pill, price, swatch } from "../../vendor/shop/shop.js";
 
 /** "CHAIN & SPROCKETS" → "Chain & sprockets" (the design's sentence case). */
 export const cap = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
@@ -115,17 +115,19 @@ export function outfitItems(p: Profile): Item[] {
 }
 
 /** MY BIKES: every bay you own (your bikes, each with its picture from `art`, then the empty ones),
- *  and the next bay for sale. */
-export function bays(p: Profile, art: (b: BikeSave) => string = () => ""): { bays: RailBay[]; sub: string; line: string; expand: { title: string; line: string; key: { label: string; price: number; attrs: string } } | null } {
+ *  and the next bay for sale. Selling is secondary: a quiet ◈ corner key on each bike (with more than
+ *  one), its popover (open on bay `sellAt`) the confirm: "Sell for ◈ 2,460", Sell, Cancel. */
+export function bays(p: Profile, art: (b: BikeSave) => string = () => "", sellAt = -1): { bays: RailBay[]; sub: string; line: string; expand: { title: string; line: string; key: { label: string; price: number; attrs: string } } | null } {
   const n = p.bikes.length, empty = p.slots - n;
   const list: RailBay[] = [];
   for (let i = 0; i < p.slots; i++) {
     const b = p.bikes[i];
-    if (!b) { list.push({ label: `Bay ${i + 1}`, add: 'data-gtab="showroom" aria-label="Add a bike: to the showroom"' }); continue; }
+    if (!b) { list.push({ label: `Bay ${i + 1}`, add: 'data-gtab="showroom"' }); continue; }
     const warn = atRisk(b).length || b.fail ? ` <span class="dh-warn" title="A part may fail" aria-label="a part may fail">⚠</span>` : "";
-    const sellKey = n > 1 ? price({ label: "Sell", price: tradeValue(b), attrs: `data-sell="${i}" aria-label="Sell for ${tradeValue(b)} credits"` }) : "";
+    const tv = tradeValue(b);
+    const corner = n > 1 ? cornerPop({ label: "Sell options", attrs: `data-sellopen="${i}"`, glyph: "◈", open: sellAt === i, body: `Sell for ◈ ${num(tv)}`, keys: `${btn("Sell", `data-sell="${i}" aria-label="Sell for ${tv} credits"`, false, "shop-btn-go")}${btn("Cancel", "data-sellx")}` }) : "";
     const pic = art(b);
-    list.push({ label: `Bay ${i + 1}`, name: `${esc(words(modelOf(b.model).name))} #${b.look.number}${warn}`, art: pic ? `<img alt="" src="${pic}" />` : "", on: i === p.ride, pick: `data-ride="${i}" aria-label="${i === p.ride ? "Rides next" : "Select"}: bay ${i + 1}, ${esc(words(modelOf(b.model).name))} #${b.look.number}"`, keys: sellKey });
+    list.push({ label: `Bay ${i + 1}`, name: `${esc(words(modelOf(b.model).name))} #${b.look.number}${warn}`, art: pic ? `<img alt="" src="${pic}" />` : "", on: i === p.ride, pick: `data-ride="${i}" aria-label="${i === p.ride ? "Rides next" : "Select"}: bay ${i + 1}, ${esc(words(modelOf(b.model).name))} #${b.look.number}"`, corner });
   }
   const pr = spotPrice(p), pl = (k: number, w: string) => `${k} ${w}${k === 1 ? "" : "s"}`;
   return {

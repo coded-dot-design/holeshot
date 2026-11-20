@@ -265,9 +265,10 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   const srApi = {
     profile: () => profile, all: gui.all, night: () => pageTheme() === "dark", say,
     buy: (id: string, bay: number) => { const r = buyInto(profile, id, bay, gui.all); did(r, bay < profile.bikes.length ? "Traded in" : "Bought"); return r; },
-    turntable: (h: HTMLElement, id: string) => { gui.trial = ["bike", id]; h.append(pv); pvKey = ""; requestAnimationFrame(preview); },
+    // (The turntable stays in the bike panel, the same frame as the garage's: the pick shows in it.)
+    turntable: (h: HTMLElement | null, id: string) => { gui.trial = ["bike", id]; if (h) h.append(pv); pvKey = ""; requestAnimationFrame(preview); },
   };
-  const mountShowroom = (host: HTMLElement) => void mountSr(host, srApi, srState);
+  const mountShowroom = (host: HTMLElement, side?: HTMLElement) => void mountSr(host, srApi, srState, side);
   /** LET'S RIDE and the pages follow the theme (its Day / Night key, the map thumbnails), the focus kept on the key. */
   const reTheme = () => {
     const k = (cards.getRootNode() as Document | ShadowRoot).activeElement?.classList.contains("dh-theme");
@@ -347,12 +348,15 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     const slot = cards.querySelector("canvas-slot");
     if (slot) slot.replaceWith(pv), (pvKey = ""), requestAnimationFrame(preview);
     const sr = s === "garage" ? cards.querySelector<HTMLElement>(".dh-showroom") : null;
-    if (sr) mountShowroom(sr);
+    if (sr) mountShowroom(sr, cards.querySelector<HTMLElement>(".dh-srside") ?? undefined);
+    // (Phones pin the turntable under the header: ./garage/garage.css --dh-headh.)
+    const gh = cards.querySelector<HTMLElement>(".dh-ghead");
+    if (gh) cards.style.setProperty("--dh-headh", `${gh.offsetHeight}px`);
     if (s === "ride") paintMaps(cards, pageTheme() === "dark");
     note = "";
     // (Into the garage from elsewhere, LET'S RIDE takes the focus: its one main action.)
     // (Within the garage, the focus stays on the key that was pressed, redrawn: or the open menu's first row.)
-    const again = s === "garage" && was === "garage" ? (gui.menu ? cards.querySelector<HTMLElement>(".shop-menu-i, .shop-sheet .shop-x, .shop-chippick [aria-pressed=true]") : refocus ? cards.querySelector<HTMLElement>(refocus) : null) : null;
+    const again = s === "garage" && was === "garage" ? (gui.menu ? cards.querySelector<HTMLElement>(".shop-menu-i, .shop-sheet .shop-x, .shop-chippick [aria-pressed=true], .shop-corner-pop [data-sell]") : refocus ? cards.querySelector<HTMLElement>(refocus) : null) : null;
     refocus = "";
     const tab = s === "ride" && was === "ride" ? cards.querySelector<HTMLElement>(".dh-rtabs [aria-pressed=true]") : null;
     const first = tab ?? again ?? (s === "garage" && was !== "garage" ? cards.querySelector<HTMLElement>(".dh-letsride") : null) ?? cards.querySelector<HTMLElement>(".dh-go, [aria-pressed=true], button, input");
@@ -464,16 +468,18 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   cards.addEventListener("focusin", (e) => { if (touched) return; const v = pvOf(e.target as Element); byFocus = !!v; peek(v, true); }, sig);
   cards.addEventListener("focusout", (e) => !cards.contains(e.relatedTarget as Node) && peek(null), sig);
   cards.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && screen === "garage" && gui.menu) return e.stopPropagation(), gui.menu === "backdrop" && (refocus = '[data-gmenu="backdrop"]'), (gui.menu = ""), show("garage");
+    if (e.key === "Escape" && screen === "garage" && gui.menu) return e.stopPropagation(), (refocus = menuKey()), (gui.menu = ""), show("garage");
     if (e.key !== "Escape" || screen !== "garage" || !gui.trial) return;
     gui.trial = gui.peek = null;
     say("Preview cancelled");
     show("garage");
   }, sig);
 
-  // (A press outside the open backdrop picker folds it: a key's own press already did, in garageClick.)
+  // (A press outside the open backdrop picker or sell popover folds it, the focus back on its key: a
+  // key's own press already did, in garageClick.)
+  const menuKey = () => (gui.menu === "backdrop" ? '[data-gmenu="backdrop"]' : gui.menu === "sell" ? `[data-sellopen="${gui.sellAt}"]` : "");
   document.addEventListener("click", (ev) => {
-    if (screen !== "garage" || gui.menu !== "backdrop" || ev.composedPath().some((n) => n instanceof Element && n.classList.contains("shop-chippick"))) return;
+    if (screen !== "garage" || (gui.menu !== "backdrop" && gui.menu !== "sell") || ev.composedPath().some((n) => n instanceof Element && n.matches(".shop-chippick, .shop-corner"))) return;
     gui.menu = "";
     show("garage");
   }, sig);
@@ -494,7 +500,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     if (d.rider !== undefined && screen !== "garage") return garageClick(profile, gui, t, cards), show("garage");
     refocus = [...t.attributes].filter((a) => a.name.startsWith("data-") && a.name !== "data-sure").map((a) => `[${a.name}="${CSS.escape(a.value)}"]`).join("");
     // (A backdrop pick folds the picker back to its round key, and the focus goes back to that key.)
-    if (d.backdrop) refocus = '[data-gmenu="backdrop"]';
+    if (d.backdrop || d.sellx !== undefined) refocus = menuKey();
     const g = screen === "garage" ? garageClick(profile, gui, t, cards) : null;
     if (g) return g.buy ? did(g.buy[0], g.buy[1]) : (g.profile && ((profile = g.profile), keep()), show("garage"));
     if (t.classList.contains("dh-risk-go") && pending) return (sure = true), startEvent(pending[0], pending[1]);

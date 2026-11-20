@@ -140,6 +140,21 @@ export declare const chipPick: (label: string, items: readonly (readonly [string
     attrs: string;
     cls?: string;
 }) => string;
+/** A quiet key in a tile's corner with a small popover (a secondary action beside a tile that is
+ *  itself a key: the bay rail's sell). Closed, one small round key (`glyph` text or `icon`, no words,
+ *  `label` for screen readers, `aria-expanded`); open, a popover over the tile with its line (`body`,
+ *  raw HTML, already escaped) and its keys (raw HTML: the action and a cancel). Sits on the tile's
+ *  wrapper (position: relative), never inside the tile's own key, so it never presses the tile. The
+ *  game owns `open`, Escape, a press outside and the focus. */
+export declare const cornerPop: (o: {
+    label: string;
+    attrs: string;
+    glyph?: string;
+    icon?: string;
+    open?: boolean;
+    body?: string;
+    keys?: string;
+}) => string;
 /** The main call to action: `cta("LET'S RIDE", 'class-extra', "Race · Endless · Free ride · Track day")`; `cls` adds the screen's hook class. */
 export declare const cta: (label: string, cls?: string, sub?: string, attrs?: string) => string;
 /** Stars: `stars(2)` → ★★☆☆ (of 4, with its words for screen readers). */
@@ -378,8 +393,10 @@ export declare function upgradeGrid(o: {
     maxed?: string;
     copy?: ShopCopy;
 }): string;
-/** One bay on the rail: a bike (its picture, name; `pick` the attrs that select it; `keys` any keys
- *  beside the tile, such as Sell) or an empty bay (`add`, its add key's attrs). */
+/** One bay on the rail: a bike (its picture, name; `pick` the attrs that select it; `corner` a quiet
+ *  corner key over the tile, such as ui.ts cornerPop for sell; `keys` any keys under the tile) or an
+ *  empty bay (`add`, its add key's attrs). `label` ("Bay 1") is for the game's own words: the tile
+ *  shows only the picture, the name and RIDES NEXT. */
 export interface RailBay {
     label: string;
     name?: string;
@@ -387,12 +404,14 @@ export interface RailBay {
     on?: boolean;
     pick?: string;
     keys?: string;
+    corner?: string;
     attrs?: string;
     add?: string;
 }
-/** MY BIKES as a rail: each bike a key tile (press it to ride it; the one that rides pressed in and
- *  ringed), then one side column: a single "+ Add bike" tile for every empty bay (its count) over the
- *  expansion, itself a key with its price. Part of the screen, not a popover; it wraps, never scrolls. */
+/** MY BIKES as a rail: one grid of equal tiles. Each bike a key tile (press it to ride it; the one that
+ *  rides pressed in and ringed, RIDES NEXT): its picture, its whole name (it wraps, never an ellipsis)
+ *  and its corner key; then one "+ Add bike" tile for every empty bay, then the expansion, a key tile
+ *  with its price chip. Part of the screen, not a popover; it wraps to more rows, never scrolls. */
 export declare function bayRail(o: {
     title: string;
     line: string;
@@ -489,8 +508,14 @@ export interface CatalogueConfig {
     offer(item: CatalogueItem, slot: CatalogueSlot): CatalogueOffer;
     /** Buy it there: null when done, else why not. */
     buy(item: CatalogueItem, slot: CatalogueSlot): string | null;
-    /** Show `item` in the preview: the game mounts its preview into `host`. */
-    preview(host: HTMLElement, item: CatalogueItem): void;
+    /** Show `item` in the preview: the game mounts its preview into `host` (null with `stage: false`:
+     *  the game shows it in its own frame). */
+    preview(host: HTMLElement | null, item: CatalogueItem): void;
+    /** Where the preview card goes (its title, the comparison, the destination, Buy) when the game keeps
+     *  it apart from the list, e.g. under its own turntable; unset, beside the list in `host`. */
+    side?: HTMLElement;
+    /** false: no stage in the preview card (the game's own frame shows the pick). */
+    stage?: boolean;
     /** (Unused: every item the filters let through shows; kept so a game's config still fits.) */
     page?: number;
     /** The words (a game's voice; defaults are the shop's). */
@@ -534,7 +559,8 @@ export interface CatalogueState {
     pick: string;
     slot: number;
     compare: [string, string] | null;
-    open: "" | "type" | "brand" | "slot";
+    open: "" | "type" | "brand" | "slot"; /** The list's scroll (kept across redraws and remounts). */
+    scroll?: number;
 }
 export declare const catalogueState: () => CatalogueState;
 /** The distinct values of a facet, in item order. */

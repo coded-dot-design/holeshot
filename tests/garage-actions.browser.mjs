@@ -154,20 +154,42 @@ try {
 
     // ---- My Bikes: select, sell (confirm, trade value), unlock a bay ----
     // (My Bikes is the rail over the turntable: every bay's keys are on screen.)
-    assert.deepEqual(await $(p, "[root.querySelectorAll('.dh-bikep .shop-rail .shop-bay').length, root.querySelectorAll('.dh-bikep .shop-rail .shop-bay-add').length, root.querySelectorAll('.dh-bikep .shop-rail .shop-bay-lock').length]"), [2, 1, 1], `${name}: the bay rail (two bikes, an empty bay, the expansion)`);
+    assert.deepEqual(await $(p, "[root.querySelectorAll('.dh-bikep .shop-rail .shop-bay').length, root.querySelectorAll('.dh-bikep .shop-rail .shop-bay-add').length, root.querySelectorAll('.dh-bikep .shop-rail .shop-bay-lock').length]"), [4, 1, 1], `${name}: the bay rail (two bikes, an empty bay, the expansion: four tiles)`);
+    // One grid of equal tiles: one height, whole names (no ellipsis), no SELECT words; sell is only a quiet ◈ corner key.
+    const R = await $(p, "(() => { const t = [...root.querySelectorAll('.shop-rail .shop-bay > .shop-kt')]; return { h: t.map((e) => Math.round(e.getBoundingClientRect().height)), clip: [...root.querySelectorAll('.shop-rail .shop-bay-n')].filter((e) => e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1 || getComputedStyle(e).textOverflow === 'ellipsis' || getComputedStyle(e).webkitLineClamp !== 'none').map((e) => e.textContent), words: root.querySelector('.shop-rail-l').textContent, corner: [...root.querySelectorAll('.shop-rail .shop-corner-k')].map((e) => [e.getAttribute('aria-label'), e.textContent.trim(), !!e.closest('.shop-kt')]) }; })()");
+    assert.ok(R.h.every((v) => Math.abs(v - R.h[0]) <= 1), `${name}: the rail's tiles share one height (${R.h})`);
+    assert.deepEqual(R.clip, [], `${name}: no name is cut or ellipsised`);
+    assert.ok(!/Select|Sell/.test(R.words), `${name}: no SELECT or Sell words on the tiles (${R.words})`);
+    assert.deepEqual(R.corner, [["Sell options", "◈", false], ["Sell options", "◈", false]], `${name}: each bike has a quiet ◈ corner key, outside its select key`);
     await press("[data-ride='1']");
     await until(p, "game.profile.ride === 1", `${name}: Select bike`);
-    assert.equal(await $(p, "root.querySelector('.shop-rail .shop-bay[data-on] [data-sell]').dataset.sell"), "1", `${name}: the selected bay is marked`);
+    assert.equal(await $(p, "root.querySelector('.shop-rail .shop-bay[data-on] [data-sellopen]').dataset.sellopen"), "1", `${name}: the selected bay is marked`);
     const c0 = (await prof(p)).credits;
-    const sellText = await $(p, "root.querySelector(\"[data-sell='0']\").textContent");
-    const value = +sellText.replace(/[^\d]/g, "");
-    await press("[data-sell='0']");
-    assert.match(await $(p, "root.querySelector(\"[data-sell='0']\").textContent"), /Sure/, `${name}: sell asks first`);
+    // The corner key opens its popover (never selects the tile); Escape and a press outside close it; Sell in it sells.
+    await press("[data-sellopen='0']");
+    await until(p, "root.querySelector(\"[data-sellopen='0']\").getAttribute('aria-expanded') === 'true' && !!root.querySelector('.shop-corner-pop [data-sell]')", `${name}: the sell popover opens`);
+    assert.equal((await prof(p)).ride, 1, `${name}: the corner key does not select its bike`);
+    const pop = await $(p, "root.querySelector('.shop-corner-pop').textContent");
+    assert.match(pop, /^Sell for ◈ [\d,]+SellCancel$/, `${name}: the popover says what it sells for (${pop})`);
+    const value = +pop.replace(/SellCancel$/, "").replace(/[^\d]/g, "");
+    assert.ok(await $(p, "root.activeElement?.hasAttribute('data-sell')"), `${name}: the focus moves into the popover`);
+    await p.keyboard.press("Escape");
+    await until(p, "!root.querySelector('.shop-corner-pop')", `${name}: Escape closes the popover`);
+    assert.ok(await $(p, "root.activeElement === root.querySelector(\"[data-sellopen='0']\")"), `${name}: the focus back on the ◈ key`);
+    await press("[data-sellopen='0']");
+    await until(p, "!!root.querySelector('.shop-corner-pop')", `${name}: open again`);
+    await press(".dh-gbody .shop-heading");
+    await until(p, "!root.querySelector('.shop-corner-pop')", `${name}: a press outside closes the popover`);
+    await press("[data-sellopen='0']");
+    await press("[data-sellx]");
+    await until(p, "!root.querySelector('.shop-corner-pop')", `${name}: Cancel closes the popover`);
     assert.equal((await prof(p)).bikes.length, 2, `${name}: nothing sold yet`);
-    await press("[data-sell='0']");
+    await press("[data-sellopen='0']");
+    await press(".shop-corner-pop [data-sell='0']");
     await until(p, "game.profile.bikes.length === 1", `${name}: sold`);
     assert.equal((await prof(p)).credits, c0 + value, `${name}: paid its trade value (${value})`);
-    ok("sell a bike (My Bikes, confirm, trade value)");
+    ok("sell a bike (My Bikes › ◈ corner key › Sell for ◈ … popover as the confirm; Escape, outside, Cancel close it; never selects)");
+    ok("My Bikes: one row of equal tiles, whole names, no SELECT words");
     ok("select the bike that rides (My Bikes › Select bike)");
     await press("[data-spot]");
     await until(p, "game.profile.slots === 4", `${name}: a bay unlocked`);
@@ -364,6 +386,8 @@ try {
       await until(p, `window.game && game.getSnapshot().screen === 'garage' && game.profile.bikes.length === ${R}`, `${w}: ${n} bikes`);
       const S = await $(p, "(() => { const l = root.querySelector('.shop-rail-l'), k = root.querySelector('.dh-bikep'); return { sw: l.scrollWidth, cw: l.clientWidth, right: Math.max(...[...l.querySelectorAll('.shop-kt')].map((e) => e.getBoundingClientRect().right)), left: Math.min(...[...l.querySelectorAll('.shop-kt')].map((e) => e.getBoundingClientRect().left)) - l.getBoundingClientRect().left + 0.5, edge: l.getBoundingClientRect().right + 0.5, bays: l.querySelectorAll('.shop-bay').length }; })()");
       assert.ok(S.sw <= S.cw && S.right <= S.edge && S.left >= 0, `${w}: ${n} bike${n > 1 ? "s" : ""}: the bay rail fits (${JSON.stringify(S)})`);
+      const below = await $(p, "(() => { const b = root.querySelector('.dh-below'); return b.scrollHeight - b.clientHeight; })()");
+      assert.ok(below <= 1, `${w}: ${n} bike${n > 1 ? "s" : ""}: everything under the turntable fits, no scroll (${below} px over)`);
     }
     await p.evaluate((s) => localStorage.setItem("holeshot:profile", s), JSON.stringify(SAVE));
     await p.reload();
@@ -371,7 +395,8 @@ try {
     if (w === 1440) {
       await p.evaluate(`${root}.querySelector('[data-gtab=garage]').click()`);
       await until(p, `!!${root}.querySelector('.dh-bikep .shop-turn')`, "back to the garage");
-      const T = await $(p, "(() => { const k = root.querySelector('.dh-bikep').getBoundingClientRect(), t = root.querySelector('.dh-bikep .shop-turn').getBoundingClientRect(), c = root.querySelector('.dh-bikep .shop-cta-w').getBoundingClientRect(); return { panel: k.bottom, cta: c.bottom, turn: t.height, H: innerHeight }; })()");
+      const T = await $(p, "(() => { const k = root.querySelector('.dh-bikep').getBoundingClientRect(), t = root.querySelector('.dh-bikep .shop-turn').getBoundingClientRect(), c = root.querySelector('.dh-bikep .shop-cta-w').getBoundingClientRect(), b = root.querySelector('.dh-below'); return { panel: k.bottom, cta: c.bottom, turn: t.height, H: innerHeight, top: t.top - k.top, below: b.scrollHeight - b.clientHeight }; })()");
+      assert.ok(T.top <= 20, `${w}: the turntable first, at the top of the panel (${JSON.stringify(T)})`);
       assert.ok(T.panel <= T.H && T.cta <= T.panel && T.turn >= 200, `${w}: the bike panel fits the screen and the turntable takes its height (${JSON.stringify(T)})`);
       await p.evaluate(`${root}.querySelector('[data-go=ride]').click()`);
       await until(p, "game.getSnapshot().screen === 'ride'", `${w}: LET'S RIDE`);

@@ -207,10 +207,12 @@ try {
     await until(p, "window.game && game.getSnapshot().screen === 'garage' && root.querySelector('.dh-preview').width > 50", `${w}: loads`);
     const box = (sel) => $(p, `(() => { const r = root.querySelector(${JSON.stringify(sel)}).getBoundingClientRect(); return [r.width, r.height, r.left, r.top + (root.querySelector('.dh-cards').scrollTop || 0)]; })()`);
     const same = (a, b) => a.every((v, i) => Math.abs(v - b[i]) <= 0.5);
-    const T0 = await box(".dh-bikep .shop-turn"), S0 = await box(".dh-pace-bay");
+    // (The turntable's box on screen: on a phone it is pinned under the header, so the page's scroll never moves it.)
+    const turn = () => $(p, "(() => { const r = root.querySelector('.dh-bikep .shop-turn').getBoundingClientRect(); return [r.width, r.height, r.left, r.top]; })()");
+    const T0 = await turn(), S0 = await box(".dh-pace-bay");
     const check = async (what) => {
       await p.waitForTimeout(60);
-      const T = await box(".dh-bikep .shop-turn"), S = await box(".dh-pace-bay");
+      const T = await turn(), S = await box(".dh-pace-bay");
       assert.ok(same(T, T0), `${w}: ${what}: the turntable stays put (${T0} → ${T})`);
       assert.ok(same(S, S0), `${w}: ${what}: the pace tiles stay put (${S0} → ${S})`);
     };
@@ -231,19 +233,20 @@ try {
     await hover("[data-dress=helmet]:not([data-eq])"), await check("pointing at a helmet");
     await click(p, "[data-look=outfit]"), await check("Paint & Kit › Outfits");
     await click(p, "[data-gtab=bike]"), await check("back to Parts & Mods");
-    // The showroom's preview frame: the same box across picks.
+    // The showroom: the very same turntable, in the same place and size as the garage's (owner, 2026-11-20),
+    // across its picks, a comparison, a destination and back to the garage.
     await click(p, "[data-gtab=showroom]");
-    await until(p, "root.querySelectorAll('.shop-cat-item').length === 19 && root.querySelector('.shop-cat-stage .dh-preview')", `${w}: showroom`);
-    const F0 = await box(".shop-cat-stage");
-    for (const id of ["forgeback", "bare-knuckle", "glidewire", "nectar-burn"]) {
-      await click(p, `[data-shop-pick="${id}"]`);
-      await p.waitForTimeout(60);
-      const F = await box(".shop-cat-stage");
-      assert.ok(same(F, F0), `${w}: showroom pick ${id}: the frame stays put (${F0} → ${F})`);
-    }
+    await until(p, "root.querySelectorAll('.shop-cat-item').length === 19 && root.querySelector('.dh-srside .shop-cat-pv') && root.querySelector('.dh-bikep .shop-turn .dh-preview')", `${w}: showroom`);
+    const onTurn = async (what) => { await p.waitForTimeout(60); const F = await turn(); assert.ok(same(F, T0), `${w}: ${what}: the turntable is the garage's, unmoved (${T0} → ${F})`); };
+    await onTurn("Showroom tab");
+    for (const id of ["forgeback", "bare-knuckle", "glidewire", "nectar-burn"]) await click(p, `[data-shop-pick="${id}"]`), await onTurn(`showroom pick ${id}`);
+    await click(p, "[data-shop-cmp]"), await onTurn("showroom compare");
+    await click(p, "[data-shop-back]");
+    await click(p, "[data-shop-set=slot]:not([aria-checked=true])"), await onTurn("showroom destination");
+    await click(p, "[data-gtab=garage]"), await onTurn("back to the garage");
     await ctx.close();
   }
-  console.log("Holeshot garage UX: the turntable's frame and the pace tiles locked (0.5 px) across backdrops, bikes, every tab, pointing and pinned previews, showroom picks (1440, 390); the bike panel stays in view while the showroom scrolls (its preview) (1440); a showroom bike on the turntable with its pace against yours; an upgrade or a paint → PREVIEW with BUY / CANCEL, CANCEL restores; pointing and focus preview too; the plinth stands out (3:1 by night, its hue by day); the helmet portrait by the name and on RIDER KIT follows the shape, paint and visor, and head-on the goggle reads.");
+  console.log("Holeshot garage UX: the turntable's frame and the pace tiles locked (0.5 px) across backdrops, bikes, every tab, pointing and pinned previews, showroom picks, compare and destination; the garage and the showroom share one turntable box (1440, 390); the bike panel stays in view while the showroom scrolls (its preview) (1440); a showroom bike on the turntable with its pace against yours; an upgrade or a paint → PREVIEW with BUY / CANCEL, CANCEL restores; pointing and focus preview too; the plinth stands out (3:1 by night, its hue by day); the helmet portrait by the name and on RIDER KIT follows the shape, paint and visor, and head-on the goggle reads.");
 } finally {
   await browser.close();
   await server.close();
