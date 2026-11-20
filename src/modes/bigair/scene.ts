@@ -120,6 +120,36 @@ export function mountAir(ctx: ModeCtx): ModeRun {
 
   // ---- the run and the diorama ----
   const show = airShow(ctx.seed, { power: ctx.bike.power, shape: ctx.bike.shape }), t = show.t, me = show.b, sc = show.sc;
+  // The ground is drawn a whole cell at a time: a cell with a steep face all in the steep colour (a
+  // kind of its own, 4), any other in its middle's height band (kinds 5–8), so the walls along the
+  // line (which run along the cells' rows) meet the flat, and one band the next, in straight lines,
+  // not in a sawtooth of half-cells (render only: the
+  // strip's heights and kinds are untouched; the drawn kinds are kept in step with its slides).
+  const DK = new Uint8Array(t.kind.length), tdraw = Object.assign(Object.create(t) as typeof t, { kind: DK });
+  let DKV = -1;
+  /** The squared slope past which a face is steep (1 − 1 / √(1 + s²) > 0.6, the view's `steep`). */
+  const SL2 = 1 / (0.4 * 0.4) - 1;
+  function drawnSteep() {
+    if (t.version === DKV) return;
+    DKV = t.version;
+    const C = t.cols, W1 = C + 1, h = t.h, K = t.kind, c = t.cell;
+    for (let j = 0; j < t.rows; j++)
+      for (let i = 0; i < C; i++) {
+        const o = (j * C + i) * 2;
+        if (K[o] || K[o + 1]) { DK[o] = K[o]!; DK[o + 1] = K[o + 1]!; continue; }
+        const k = j * W1 + i, a = h[k]!, b = h[k + 1]!, cc = h[k + W1 + 1]!, d = h[k + W1]!;
+        // Both triangles' slopes as the view splits the cell (adaptive: along the smaller difference).
+        const fl = Math.abs(b - d) < Math.abs(cc - a);
+        let s0x: number, s0z: number, s1x: number, s1z: number;
+        if (fl) (s0x = cc - d), (s0z = cc - b), (s1x = b - a), (s1z = d - a);
+        else (s0x = b - a), (s0z = cc - b), (s1x = cc - d), (s1z = d - a);
+        // Steep as the view has it, face by face (its squared slope over SL2).
+        const m0 = (s0x * s0x + s0z * s0z) / (c * c), m1 = (s1x * s1x + s1z * s1z) / (c * c);
+        // Else the height band of the cell's middle (the bands' tops 0.55, 1.4, 2.6), both halves alike.
+        const y = (a + b + cc + d) / 4;
+        DK[o] = DK[o + 1] = m0 > SL2 || m1 > SL2 ? 4 : y < 0.55 ? 5 : y < 1.4 ? 6 : y < 2.6 ? 7 : 8;
+      }
+  }
   const dio = diorama(canvas, { light: P.light, ambient: P.amb, background: () => P.table, overlay: drawOverlay, get shadowColor() { return P.shadow; } });
   let tv: TerrainView, dust: Pool, spark: Pool, fans: Pool, g: Rig;
   const G = show.G;
@@ -138,10 +168,13 @@ export function mountAir(ctx: ModeCtx): ModeRun {
     dio.cluster("sky", { fixed: -10 });
     dio.cluster("table", { fixed: -5 });
     dio.decal("sky", 0, paintSky);
-    tv = terrainView(dio, t, {
-      bands: [[0.55, P.ground[0]!], [1.4, P.ground[1]!], [2.6, P.ground[2]!], [99, P.crest]], steep: 0.6, steepColor: P.steep, kinds: [P.track, P.steel, P.land],
+    // (The drawn kinds are brought up to date first, in the same cluster, before the ground's faces.)
+    DKV = -1;
+    tv = terrainView(dio, tdraw, {
+      bands: [[0.55, P.ground[0]!], [1.4, P.ground[1]!], [2.6, P.ground[2]!], [99, P.crest]], steep: 0.6, steepColor: P.steep, kinds: [P.track, P.steel, P.land, P.steep, P.ground[0]!, P.ground[1]!, P.ground[2]!, P.crest],
       light: P.light, ambient: P.amb, lod: [22, 40], shadows: 2, shadowColor: P.shadow, split: "adaptive",
     });
+    dio.decal("terrain", -1, drawnSteep);
     dio.decal("terrain", 1, paintLines);
     // One scenery set per jump, all alike (every jump is the same shape), positions relative to its
     // kicker's start: the kicker's posts and neon lights at the lip, flags at the knuckle, a crowd
