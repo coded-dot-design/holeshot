@@ -159,7 +159,11 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   /** The turntable's backdrop now (./garage/backdrop.ts): the profile's pick, AUTO following Day / Night;
    *  painted once per backdrop and size, then laid under the bike each redraw (one drawImage). */
   const scene = () => backdropOf(profile.settings.backdrop, pageTheme() === "dark");
-  const pdio = diorama(pv, { light: [-0.4, 1, 0.6], ambient: 0.55, background: () => scene().sky });
+  // The frame is locked: its size comes from the layout (./garage/garage.css), its backing store is set
+  // once per size, and every frame is drawn offscreen and swapped in whole (no blank or half frame).
+  const pvOff = document.createElement("canvas"), pctx = pv.getContext("2d")!;
+  let pvW = 0, pvH = 0, pvD = 0;
+  const pdio = diorama(pvOff, { light: [-0.4, 1, 0.6], ambient: 0.55, background: () => scene().sky });
   const bdPaint = backdropCache();
   let bdImg: HTMLCanvasElement | null = null, bdW = 0, bdH = 0;
   const bdDecal = (ctx: CanvasRenderingContext2D) => bdImg && ctx.drawImage(bdImg, 0, 0, bdW, bdH);
@@ -173,7 +177,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     if (key === pvKey) return;
     pvKey = key;
     const dpr = Math.min(2, devicePixelRatio || 1);
-    pdio.resize(w, h, dpr);
+    if (w !== pvW || h !== pvH || dpr !== pvD) (pvW = w), (pvH = h), (pvD = dpr), pdio.resize(w, h, dpr), (pv.width = Math.round(w * dpr)), (pv.height = Math.round(h * dpr));
     pdio.clear();
     const night = pageTheme() === "dark";
     const kit = rigKit(night);
@@ -192,6 +196,8 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     // Dressing the rider (RIDER KIT, OUTFITS), the turntable closes in on them: helmet, kit and boots.
     Object.assign(pdio.cam, close ? { yaw: pvYaw, pitch: 0.16, dist: 3, tx: 0.05, ty: 0.96, tz: 0, ox: 0, oy: 0, fov: 0.55 } : { yaw: pvYaw, pitch: 0.2, dist: 4.9, tx: 0, ty: 0.55, tz: 0, ox: 0, oy: 0, fov: 0.55 });
     pdio.draw();
+    pctx.clearRect(0, 0, pv.width, pv.height);
+    pctx.drawImage(pvOff, 0, 0, pv.width, pv.height);
   }
   let grip = -1, gx = 0;
   pv.addEventListener("pointerdown", (e) => {
@@ -228,7 +234,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
    *  and the Day / Night key. */
   const garageHead = (mid?: string, cog = true, rider = true) => {
     const day = pageTheme() === "light";
-    return `<header class="dh-top dh-ghead${mid ? " dh-rhead" : ""}"><span class="dh-brand">${APPICON}<span class="dh-brand-t">${WORDMARK}<small class="shop-eyebrow"><span>V${__VERSION__}</span><i aria-hidden="true">·</i>BY DAVID COOLEY</small></span></span>${mid ?? shopTabs([["garage", "Garage"], ["showroom", "Showroom"]], gui.tab === "showroom" ? "showroom" : "garage", "gtab", "Garage or showroom", true)}<span class="dh-hkeys">${inf ? `<span class="shop-btn dh-cr" title="Test credits: nothing is saved, online is off"><span class="dh-crn">◈ ∞</span><small class="dh-test" aria-label="Test credits">TEST</small></span>` : `<span class="shop-btn dh-cr" title="Credits"><span class="dh-crn">◈ ${num(profile.credits)}</span></span>`}${rider ? `<button type="button" class="shop-btn dh-who" data-rider aria-label="Rider gear"><span class="dh-disc">${portraitOf(profile.kit)}</span><span>${esc(profile.name ? profile.name.charAt(0) + profile.name.slice(1).toLowerCase() : "Rider")}</span></button>` : ""}${cog ? `<button type="button" class="shop-btn dh-icon dh-cog" data-go="settings" aria-label="Settings">${shopIcon("cog")}</button>` : ""}<button type="button" class="shop-btn dh-theme" aria-label="Day or night">${shopIcon(day ? "sun" : "moon")}<span>${day ? "Day" : "Night"}</span></button></span></header>`;
+    return `<header class="dh-top dh-ghead${mid ? " dh-rhead" : ""}"><span class="dh-brand">${APPICON}<span class="dh-brand-t">${WORDMARK}<small class="shop-eyebrow"><span>V${__VERSION__}</span><i aria-hidden="true">·</i>BY DAVID COOLEY</small></span></span>${mid ?? shopTabs([["garage", "Garage"], ["showroom", "Showroom"]], gui.tab === "showroom" ? "showroom" : "garage", "gtab", "Garage or showroom", true)}<span class="dh-hkeys">${inf ? `<span class="shop-btn dh-cr" title="Test credits: nothing is saved, online is off"><span class="dh-crn">◈ ∞</span><small class="dh-test" aria-label="Test credits">TEST</small></span>` : `<span class="shop-btn dh-cr" title="Credits"><span class="dh-crn">◈ ${num(profile.credits)}</span></span>`}${rider ? `<button type="button" class="shop-btn dh-who" data-rider aria-label="Rider gear">${portraitOf((screen === "garage" ? shown(profile, { ...gui, peek: null }) : profile).kit, "Your helmet")}<span>${esc(profile.name ? profile.name.charAt(0) + profile.name.slice(1).toLowerCase() : "Rider")}</span></button>` : ""}${cog ? `<button type="button" class="shop-btn dh-icon dh-cog" data-go="settings" aria-label="Settings">${shopIcon("cog")}</button>` : ""}<button type="button" class="shop-btn dh-theme" aria-label="Day or night">${shopIcon(day ? "sun" : "moon")}<span>${day ? "Day" : "Night"}</span></button></span></header>`;
   };
   const bikeLine = () => {
     const b = riding(profile), m = modelOf(b.model);

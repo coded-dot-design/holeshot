@@ -49,12 +49,12 @@ export function wearRows(b: BikeSave, tyreKey: string): Wear[] {
 /** The tyre compounds as menu items (a new set of each, its price; the fitted one ticked). */
 export const tyreItems = (b: BikeSave) => (Object.keys(TYRES) as TyreId[]).map((c) => ({ label: cap(TYRES[c].name), meta: `${partPrice(b, "tyres", c)} credits`, on: c === b.tyre, attrs: `data-tyre="${c}" title="${esc(TYRES[c].blurb)}"` }));
 /** CRASH DAMAGE: only what is damaged (none → the "No crash damage" card). */
-export const damageRows = (b: BikeSave): Wear[] => (Object.keys(DAMAGE_NAME) as DamageId[]).filter((k) => b.dmg[k] > 0.005).map((k) => ({ label: cap(DAMAGE_NAME[k]), icon: DMG_ICON[k], v: 1 - b.dmg[k], state: b.dmg[k] > 0.5 ? "worn" : "", key: { label: "Fix", price: fixPrice(b, k), attrs: `data-fix="${k}"` } }));
+export const damageRows = (b: BikeSave): Wear[] => (Object.keys(DAMAGE_NAME) as DamageId[]).filter((k) => b.dmg[k] > 0.005).map((k) => ({ label: cap(DAMAGE_NAME[k]), icon: DMG_ICON[k], pct: `${Math.round(b.dmg[k] * 100)}% damage`, v: 1 - b.dmg[k], state: b.dmg[k] > 0.5 ? "worn" : "", key: { label: "Fix", price: fixPrice(b, k), attrs: `data-fix="${k}"` } }));
 
 /** TUNING: each setup with its options (price, or ticked when fitted) and the fitted one's blurb. */
 export const setups = (b: BikeSave) => (Object.keys(SETUPS) as SetupId[]).filter((k) => SETUPS[k].only !== "e" || isE(b)).map((k) => ({
   id: k, icon: SETUP_ICON[k] ?? "wrench", name: cap(SETUPS[k].name), blurb: SETUPS[k].opts.find((o) => o.id === b[k])?.blurb ?? "",
-  opts: SETUPS[k].opts.map((o) => ({ label: cap(o.name), on: b[k] === o.id, price: setupPrice(b, k, o.id), attrs: `data-setup="${k}" data-id="${o.id}" title="${esc(o.blurb)}"` })),
+  opts: SETUPS[k].opts.map((o) => ({ label: cap(o.name), on: b[k] === o.id, price: o.price, state: (b[k] === o.id ? "fitted" : !o.price ? "free" : !setupPrice(b, k, o.id) ? "owned" : "price") as "fitted" | "owned" | "free" | "price", attrs: `data-setup="${k}" data-id="${o.id}" title="${esc(o.blurb)}"` })),
 }));
 /** RIDE FEEL: the six feel numbers as bars (0..1). */
 export const feelRows = (t: Tuned): [string, number][] => [["Pull", t.feel.pull], ["Top speed", t.feel.top], ["Grip", t.feel.grip], ["Suspension", t.feel.susp], ["Brakes", t.feel.brakes], ["Light", t.feel.light]];
@@ -125,7 +125,7 @@ export function bays(p: Profile, art: (b: BikeSave) => string = () => ""): { bay
     const warn = atRisk(b).length || b.fail ? ` <span class="dh-warn" title="A part may fail" aria-label="a part may fail">⚠</span>` : "";
     const sellKey = n > 1 ? price({ label: "Sell", price: tradeValue(b), attrs: `data-sell="${i}" aria-label="Sell for ${tradeValue(b)} credits"` }) : "";
     const pic = art(b);
-    list.push({ label: `Bay ${i + 1}`, name: `${esc(words(modelOf(b.model).name))} #${b.look.number}${warn}`, art: pic ? `<img alt="" src="${pic}" />` : "", on: i === p.ride, keys: (i === p.ride ? pill("Rides next", "plain") : btn("Select", `data-ride="${i}" aria-label="Select bike ${i + 1}"`)) + sellKey });
+    list.push({ label: `Bay ${i + 1}`, name: `${esc(words(modelOf(b.model).name))} #${b.look.number}${warn}`, art: pic ? `<img alt="" src="${pic}" />` : "", on: i === p.ride, pick: `data-ride="${i}" aria-label="${i === p.ride ? "Rides next" : "Select"}: bay ${i + 1}, ${esc(words(modelOf(b.model).name))} #${b.look.number}"`, keys: sellKey });
   }
   const pr = spotPrice(p), pl = (k: number, w: string) => `${k} ${w}${k === 1 ? "" : "s"}`;
   return {

@@ -19,7 +19,7 @@ export declare const stat: (label: string, value: string, delta?: {
 /** A row of stat tiles: `stats([stat(…), stat(…), stat(…)], "Pace, measured")`; `small` for the showroom cards' row. */
 export declare const stats: (tiles: string[], label: string, small?: boolean) => string;
 /** A bar alone (0..1): `meter(0.9)`; `state` "worn" | "risk" | "failed" | "low" recolours it. */
-export declare const meter: (v: number, state?: string) => string;
+export declare const meter: (v: number, state?: string, from?: number) => string;
 /** A labelled bar row: `barRow({ label: "Tyres", sub, v: 0.9, action: price(…) })`; `attrs` go on the row. */
 export declare const barRow: (o: {
     label: string;
@@ -157,6 +157,61 @@ export declare const wearTile: (o: {
     action?: string;
     attrs?: string;
 }) => string;
+/** A wear tile that is itself the key (the Board UI key's raise): a part that needs work stands up with
+ *  its price chip and one press does the work (`verb`: Service, Rebuild, Fix…); done, it sits pressed in,
+ *  calm and disabled. Short of credits it stays raised but disabled, with what's needed. `extra` is a
+ *  small control of its own (a tyre compound menu) laid over the tile, outside the key, so it never
+ *  presses it. `pct` replaces the % (crash damage says "24% damage"); `from` animates the bar from the
+ *  old value after a press; `cur` prefixes the price chip (a game's credit mark). */
+export declare const wearKey: (o: {
+    label: string;
+    icon?: string;
+    v: number;
+    state?: string;
+    tag?: string;
+    verb: string;
+    price?: number;
+    credits: number;
+    attrs: string;
+    done?: boolean;
+    doneWord?: string;
+    pct?: string;
+    extra?: string;
+    from?: number;
+    cur?: string;
+    li?: string;
+}) => string;
+/** A key tile: the whole tile is one raised key, the Board UI key's base straight down; one press does
+ *  its thing. `down` sits it pressed in (the work done, the option fitted, the one picked) and `pick`
+ *  rings it in the go colour (the chosen one); `off` disables it (raised but short of credits). `body`
+ *  is its content: words, a picture, a price chip; never another key (put those beside it). */
+export declare const keyTile: (o: {
+    body: string;
+    attrs?: string;
+    label?: string;
+    down?: boolean;
+    pick?: boolean;
+    off?: boolean;
+    pressed?: boolean;
+    cls?: string;
+}) => string;
+/** A price chip on a key tile ("◈ 80"): `chipPrice(80, "◈ ")`; `short` greys it (can't pay). */
+export declare const chipPrice: (n: number, cur?: string, short?: boolean) => string;
+/** An option as a key tile (a tuning step): the big line is its price or its state (Fitted ✓, Owned,
+ *  Free), the small line its name; fitted, it is pressed in and ringed. */
+export declare const optKey: (o: {
+    name: string;
+    state: "fitted" | "owned" | "free" | "price";
+    price?: number;
+    credits: number;
+    attrs: string;
+    cur?: string;
+    words?: {
+        fitted?: string;
+        owned?: string;
+        free?: string;
+    };
+}) => string;
 /** Words the flows use; a game overrides any of them (its language, its tone). */
 export interface ShopCopy {
     credits: string;
@@ -217,6 +272,7 @@ export declare function itemGrid(o: {
 export interface Wear {
     label: string;
     icon?: string;
+    pct?: string;
     sub?: string;
     v: number;
     state?: string;
@@ -310,19 +366,21 @@ export declare function upgradeGrid(o: {
     maxed?: string;
     copy?: ShopCopy;
 }): string;
-/** One bay on the rail: a bike (its picture, name, keys) or an empty bay (its add key's attrs). */
+/** One bay on the rail: a bike (its picture, name; `pick` the attrs that select it; `keys` any keys
+ *  beside the tile, such as Sell) or an empty bay (`add`, its add key's attrs). */
 export interface RailBay {
     label: string;
     name?: string;
     art?: string;
     on?: boolean;
+    pick?: string;
     keys?: string;
     attrs?: string;
     add?: string;
 }
-/** MY BIKES as a rail: the bikes side by side (the selected one marked), then one side column with a
- *  single "+ Add bike" tile for every empty bay (its count) over the expansion's key, locked. Part of
- *  the screen, not a popover; it wraps onto a second row rather than scroll sideways. */
+/** MY BIKES as a rail: each bike a key tile (press it to ride it; the one that rides pressed in and
+ *  ringed), then one side column: a single "+ Add bike" tile for every empty bay (its count) over the
+ *  expansion, itself a key with its price. Part of the screen, not a popover; it wraps, never scrolls. */
 export declare function bayRail(o: {
     title: string;
     line: string;
@@ -338,7 +396,18 @@ export declare function bayRail(o: {
         };
     } | null;
     credits: number;
+    cur?: string;
+    rides?: string;
+    select?: string;
 }): string;
+/** CONDITION as keys: each part's tile is its own key (./ui.ts wearKey): raised when it needs work,
+ *  pressed in when it doesn't. `just` names the key just pressed (its attrs) and the bar's old value,
+ *  so the bar fills from there. */
+export declare const wearKeys: (rows: Wear[], credits: number, label: string, o?: {
+    cur?: string;
+    just?: [string, number] | null;
+    doneWord?: string;
+}) => string;
 /** A number the screen shows: its label, how to write it, and which way is better (for deltas). */
 export interface StatDef {
     key: string;

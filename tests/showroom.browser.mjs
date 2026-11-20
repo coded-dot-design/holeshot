@@ -119,8 +119,8 @@ try {
       const s0 = await sizes();
       await pick(p, "bare-knuckle");
       await p.waitForTimeout(300);
-      assert.deepEqual(await sizes(), s0, `${at}: a pick keeps every card's size`);
-      assert.equal(await $(p, "getComputedStyle(root.querySelector('.shop-cat-item[data-on] > .shop-card')).borderTopColor"), await $(p, "getComputedStyle(root.querySelector('.dh-hkeys .dh-cr')).backgroundColor"), `${at}: the picked ring is the mint go colour (Buy, LET'S RIDE, the credits)`);
+      { const s1 = await sizes(); assert.deepEqual(s1, s0, `${at}: a pick keeps every card's size (${JSON.stringify([s0, s1])})`); }
+      assert.equal(await $(p, "getComputedStyle(root.querySelector('.shop-cat-item[data-on] > .shop-kt')).borderTopColor"), await $(p, "getComputedStyle(root.querySelector('.dh-hkeys .dh-cr')).backgroundColor"), `${at}: the picked ring is the mint go colour (Buy, LET'S RIDE, the credits)`);
       await pick(p, "forgeback");
       assert.match(await text(p, "[data-shop-id=bare-knuckle] [data-shop-cmp]"), new RegExp(`Compare with ${A}`));
       // compare with your bike: deltas coloured better (up) or worse (down)

@@ -18,7 +18,7 @@ import { atRisk, failChance, failName, warnings } from "../model/upkeep.ts";
 import { DIRT_LINE } from "../model/families.ts";
 import { PICKS, pickOf } from "./backdrop.ts";
 import { buySpot, cosmeticPrice, choose, dress, fits, modPrice, repair, sell, service, setChoice, tryOn, unlocked, upgrade, type Buy, type Slot } from "../model/garage.ts";
-import { badge, bayRail, btn, card, chipSeg, chips, drop, feel, heading, icon, itemGrid, menu, pill, price, row, seg, stat, stats, tabs, title, turntable, upgradeGrid, wearGrid } from "../../vendor/shop/shop.js";
+import { optKey, badge, bayRail, btn, card, chipSeg, chips, drop, feel, heading, icon, itemGrid, menu, pill, price, row, seg, stat, stats, tabs, title, turntable, upgradeGrid, wearKeys } from "../../vendor/shop/shop.js";
 import { DMG_ICON, MOD_ICON, RIDER_SLOTS, SETUP_ICON, SLOT_ICON, SLOT_NAME, bays, bikeItems, bikeSlots, cap, damageRows, feelRows, isE, modKey, modName, modStage, outfitItems, pace, partIcon, partName, riderItems, riderSlots, setups, tyreItems, upgradeItems, wearRows, words, type BikeSlot, type RiderSlot } from "./adapters.ts";
 
 /** What the turntable can preview: a cosmetic (its slot), a mod's next level, or a showroom bike. */
@@ -42,6 +42,8 @@ export interface GarageUI {
   peek: Pv | null;
   /** Test credits (../model/testcredits.ts): the showroom sells every bike, unlocks or not. */
   all: boolean;
+  /** The wear key just pressed (its attrs) and its bar's value before: the bar fills from there. */
+  just?: [string, number] | null;
 }
 export const garageUI = (all = false): GarageUI => ({ tab: "bike", sub: "cond", look: "bike", slot: "paint", rslot: "helmet", page: 0, owned: false, menu: "", trial: null, peek: null, all });
 
@@ -97,11 +99,11 @@ function condTab(p: Profile, b: BikeSave, ui: GarageUI) {
   const tyre = `<span class="shop-pop">${drop(`${cap(TYRES[b.tyre].name)} compound`, 'data-gmenu="tyre"', open, "shop-drop-text")}${open ? menu({ title: "Tyre compound", label: "Tyre compound", items: tyreItems(b) }) : ""}</span>`;
   const dmg = damageRows(b);
   // Condition and crash damage side by side where there is room (./garage.css .dh-two).
-  return `${banner}<div class="dh-two"><section class="dh-sec" aria-label="Bike condition">${heading("Bike condition")}${wearGrid(wearRows(b, tyre), p.credits, "Bike condition")}</section><section class="dh-sec dh-side" aria-label="Crash damage">${heading("Crash damage", "", 3)}${dmg.length ? wearGrid(dmg, p.credits, "Crash damage") : card(`${icon("check")} No crash damage`, "shop-soft dh-okcard")}</section></div>`;
+  return `${banner}<div class="dh-two"><section class="dh-sec" aria-label="Bike condition">${heading("Bike condition")}${wearKeys(wearRows(b, tyre), p.credits, "Bike condition", { cur: "◈ ", just: ui.just })}</section><section class="dh-sec dh-side" aria-label="Crash damage">${heading("Crash damage", "", 3)}${dmg.length ? wearKeys(dmg, p.credits, "Crash damage", { cur: "◈ ", just: ui.just }) : card(`${icon("check")} No crash damage`, "shop-soft dh-okcard")}</section></div>`;
 }
 function tuneTab(p: Profile, b: BikeSave) {
   const t = tune(b);
-  const rows = setups(b).map((s) => card(`<div class="dh-cardh">${badge(s.icon)}<b class="shop-h4">${s.name}</b></div><div class="shop-opts">${s.opts.map((o) => (o.on ? btn(o.label, o.attrs, true, "", "check") : price({ label: o.label, price: o.price || undefined, credits: p.credits, attrs: o.attrs }))).join("")}</div><p class="shop-blurb">${esc(s.blurb)}</p>`, "dh-setc")).join("");
+  const rows = setups(b).map((s) => card(`<div class="dh-cardh">${badge(s.icon)}<b class="shop-h4">${s.name}</b></div><div class="shop-opts dh-optk">${s.opts.map((o) => optKey({ name: o.label, state: o.state, price: o.price, credits: p.credits, attrs: o.attrs, cur: "◈ " })).join("")}</div><p class="shop-blurb">${esc(s.blurb)}</p>`, "dh-setc")).join("");
   return `${heading("Tuning")}<div class="dh-cards2">${rows}</div>${heading("Ride feel", "", 3)}${card(feel(feelRows(t), 2), "dh-feelc")}`;
 }
 function upTab(p: Profile, b: BikeSave, ui: GarageUI) {
@@ -165,11 +167,13 @@ function delta(now: string, next: string, top: boolean): { text: string; good: b
 export function bayInfo(p: Profile, ui: GarageUI) {
   const v = ui.peek ?? ui.trial, s = shown(p, ui), b = riding(s), m = modelOf(b.model), u = unitsOf(p);
   const now = pace(tune(riding(p)), u), next = v ? pace(tune(b), u) : now;
-  const tiles = stats(next.map(([k, val], i) => stat(k, val, v ? delta(now[i]![1], val, i === 2) : null)), v ? "Pace of the preview, against yours" : "Pace, measured");
-  // Dressing the rider: their helmet portrait (the racer's profile picture), from the kit as shown.
-  const face = ui.tab === "look" && ui.look !== "bike" ? `<figure class="dh-face">${portraitOf(s.kit, "Your helmet")}<figcaption>${esc(p.name || "RIDER")}</figcaption></figure>` : "";
+  // Every tile keeps its delta line (empty when there's no preview or no change), so the tiles never
+  // change height and the turntable above them never moves.
+  const NONE = { text: "", good: null };
+  const tiles = stats(next.map(([k, val], i) => { const d = v ? delta(now[i]![1], val, i === 2) : null; return stat(k, val, d && d.good !== null ? d : NONE); }), v ? "Pace of the preview, against yours" : "Pace, measured");
   const tag = v ? `${pill("Preview", "", "dh-pvtag")} ${esc(v[0] === "bike" ? "Showroom" : v[0] === "own" ? "Your bikes" : words(pvName(p, v)))}` : "";
-  return `${face}${tag ? `<small class="dh-bayline">${tag}</small>` : ""}${title({ maker: words(makerOf(m).name), kind: CLASSES[m.cls].name, name: words(m.name), number: b.look.number })}<div class="dh-pace-bay">${tiles}</div>`;
+  // (The PREVIEW tag is an overlay chip on the turntable's frame, never a row: ./garage.css .dh-bayline.)
+  return `${tag ? `<small class="dh-bayline">${tag}</small>` : ""}${title({ maker: words(makerOf(m).name), kind: CLASSES[m.cls].name, name: words(m.name), number: b.look.number })}<div class="dh-pace-bay">${tiles}</div>`;
 }
 /** The garage card: the header (the shell's), the bike panel on the left (My Bikes, the turntable,
  *  the bike shown and its pace, LET'S RIDE) and PARTS & MODS / PAINT & KIT on the right; the
@@ -177,7 +181,7 @@ export function bayInfo(p: Profile, ui: GarageUI) {
 export function garageCard(p: Profile, ui: GarageUI, head: string, go: string, note: string, extra = "", art?: (b: BikeSave) => string) {
   const b = riding(p), B = bays(p, art);
   // MY BIKES is part of the garage: a rail of bays over the turntable (the shop's bayRail).
-  const rail = bayRail({ title: "My Bikes", line: B.line, bays: B.bays, add: "+ Add bike", expand: B.expand, credits: p.credits });
+  const rail = bayRail({ title: "My Bikes", line: B.line, bays: B.bays, add: "+ Add bike", expand: B.expand, credits: p.credits, cur: "◈ " });
   const left = `<aside class="shop-card dh-bikep">${rail}${turntable("<canvas-slot></canvas-slot>", "data-turn", "bike", p.bikes.length > 1, chipSeg("Backdrop", PICKS, pickOf(p.settings.backdrop), "backdrop", "shop-chipseg-top"))}<div class="dh-pvinfo">${bayInfo(p, ui)}</div>${go}${extra}</aside>`;
   const right = ui.tab === "showroom" ? `<div class="dh-showroom"></div>`
     : `${seg([["bike", "Parts & Mods", "wrench"], ["look", "Paint & Kit", "paint"]], ui.tab, "gtab", "Garage")}${ui.tab === "bike" ? tabs([["cond", "Condition", "tyre"], ["tune", "Tuning", "sprocket"], ["up", "Upgrades", "exhaust"], ["log", "Service log", "log"]], ui.sub, "gsub", "Parts and mods") + (ui.sub === "cond" ? condTab(p, b, ui) : ui.sub === "tune" ? tuneTab(p, b) : ui.sub === "up" ? upTab(p, b, ui) : logTab(b)) : lookTab(p, b, ui)}`;
@@ -187,8 +191,9 @@ export function garageCard(p: Profile, ui: GarageUI, head: string, go: string, n
 /** A click in the garage: a purchase to report ([result, what]), a new profile, or just a redraw
  *  (`{}`); null when the click is not the garage's. */
 export function garageClick(p: Profile, ui: GarageUI, t: HTMLElement, root: ParentNode): { buy?: [Buy, string]; profile?: Profile } | null {
-  const d = t.dataset, was = ui.menu;
+  const d = t.dataset, was = ui.menu, b0 = riding(p);
   ui.peek = null;
+  ui.just = null;
   ui.menu = "";
   if (d.gtab) return (ui.tab = d.gtab === "garage" ? (ui.tab === "showroom" ? "bike" : ui.tab) : (d.gtab as GarageUI["tab"])), (ui.trial = null), {};
   if (d.gsub) return (ui.sub = d.gsub as GarageUI["sub"]), (ui.trial = null), {};
@@ -202,6 +207,10 @@ export function garageClick(p: Profile, ui: GarageUI, t: HTMLElement, root: Pare
   if (d.turn) return (ui.trial = null), { profile: choose(p, (p.ride + +d.turn + p.bikes.length) % p.bikes.length) };
   if (d.ride) return (ui.trial = null), { profile: choose(p, +d.ride) };
   if (d.backdrop) return { profile: { ...p, settings: { ...p.settings, backdrop: pickOf(d.backdrop) } } };
+  // (A wear key's bar fills from where it was: ./garage.css, the shop's wearKey.)
+  if (d.tyre) ui.just = ['data-service="tyres"', b0.parts.tyres];
+  if (d.service) ui.just = [`data-service="${d.service}"`, b0.parts[d.service as PartId]];
+  if (d.fix) ui.just = [`data-fix="${d.fix}"`, 1 - b0.dmg[d.fix as DamageId]];
   if (d.tyre) return { buy: [service(p, "tyres", d.tyre as TyreId), `New ${TYRES[d.tyre as TyreId].name.toLowerCase()} tyres`] };
   if (d.service) return { buy: [service(p, d.service as PartId), "Serviced"] };
   if (d.fix) return { buy: [repair(p, d.fix as DamageId), "Fixed"] };

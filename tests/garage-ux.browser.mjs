@@ -156,13 +156,14 @@ try {
     assert.ok(await $(p, "!!root.querySelector('.dh-who .dh-helm[data-helmet=peak]')"), `${name}: the name chip wears the helmet portrait`);
     await click(p, "[data-gtab=look]");
     await click(p, "[data-look=rider]");
-    await until(p, "!!root.querySelector('.dh-face .dh-helm[role=img]')", `${name}: RIDER KIT shows the big portrait`);
-    const svg = () => $(p, "root.querySelector('.dh-face .dh-helm').outerHTML");
+    // (The portrait lives on the header's Rider key, and follows what you try on; no block in the bike panel.)
+    assert.equal(await $(p, "root.querySelector('.dh-face')"), null, `${name}: no portrait block in the bike panel`);
+    const svg = () => $(p, "root.querySelector('.dh-who .dh-helm').outerHTML");
     let was = await svg();
     for (const [slot, id, sees] of [["helmet", "duck", "data-helmet=\"duck\""], ["helmetPaint", "gold", "#ffd166"], ["visor", "gold", "#c9922a"]]) {
       if (slot !== "helmet") await click(p, `[data-gslot=${slot}]`);
       await click(p, `[data-dress=${slot}][data-id=${id}]`);
-      await until(p, `root.querySelector('.dh-face .dh-helm').outerHTML !== ${JSON.stringify(was)}`, `${name}: the portrait follows the ${slot}`);
+      await until(p, `root.querySelector('.dh-who .dh-helm').outerHTML !== ${JSON.stringify(was)}`, `${name}: the portrait follows the ${slot}`);
       const now = await svg();
       if (sees) assert.ok(now.includes(sees), `${name}: the portrait shows ${slot} ${id}`);
       was = now;
@@ -189,7 +190,54 @@ try {
     assert.deepEqual(errs, [], `${name}: no page errors`);
     await ctx.close();
   }
-  console.log("Holeshot garage UX: the bike panel stays in view while the showroom scrolls (its preview) (1440); a showroom bike on the turntable with its pace against yours; an upgrade or a paint → PREVIEW with BUY / CANCEL, CANCEL restores; pointing and focus preview too; the plinth ≥ 3:1 in dark and light; the helmet portrait by the name and on RIDER KIT follows the shape, paint and visor, and head-on the goggle reads.");
+  // ---- the turntable's frame is locked: its box and the pace tiles' box stay put (0.5 px) across backdrop
+  // toggles, bike switches, every tab (Paint & Kit's Bike, Rider gear, Outfits; Parts & Mods'), pointing at a
+  // scheme, a helmet or an upgrade, a pinned preview, and showroom picks; 1440 and 390 ----
+  for (const [w, h, touch] of [[1440, 900, false], [390, 844, true]]) {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h }, hasTouch: touch, isMobile: touch });
+    await ctx.addInitScript((s) => localStorage.setItem("holeshot:profile", s), JSON.stringify({ ...SAVE, slots: 3, bikes: [...SAVE.bikes, { ...SAVE.bikes[0], uid: "b2", model: "anvil", look: { paint: "pinkout", number: 8 } }] }));
+    const p = await ctx.newPage();
+    await p.goto(server.url + "/");
+    await until(p, "window.game && game.getSnapshot().screen === 'garage' && root.querySelector('.dh-preview').width > 50", `${w}: loads`);
+    const box = (sel) => $(p, `(() => { const r = root.querySelector(${JSON.stringify(sel)}).getBoundingClientRect(); return [r.width, r.height, r.left, r.top + (root.querySelector('.dh-cards').scrollTop || 0)]; })()`);
+    const same = (a, b) => a.every((v, i) => Math.abs(v - b[i]) <= 0.5);
+    const T0 = await box(".dh-bikep .shop-turn"), S0 = await box(".dh-pace-bay");
+    const check = async (what) => {
+      await p.waitForTimeout(60);
+      const T = await box(".dh-bikep .shop-turn"), S = await box(".dh-pace-bay");
+      assert.ok(same(T, T0), `${w}: ${what}: the turntable stays put (${T0} → ${T})`);
+      assert.ok(same(S, S0), `${w}: ${what}: the pace tiles stay put (${S0} → ${S})`);
+    };
+    const hover = async (sel) => { if (touch) await $(p, `root.querySelector(${JSON.stringify(sel)}).focus()`); else { await $(p, `root.querySelector(${JSON.stringify(sel)}).scrollIntoView({ block: 'center' })`); await p.locator(sel).first().hover(); } };
+    for (const b of ["track", "sunset", "auto"]) await click(p, `[data-backdrop=${b}]`), await check(`backdrop ${b}`);
+    await click(p, "[data-turn='1']"), await until(p, "game.profile.ride === 1", "bike 2"), await check("‹ › bike switch");
+    await click(p, "[data-turn='1']"), await until(p, "game.profile.ride === 0", "bike 1"), await check("‹ › back");
+    for (const s of ["tune", "up", "log", "cond"]) await click(p, `[data-gsub=${s}]`), await check(`Parts & Mods › ${s}`);
+    await click(p, "[data-gsub=up]");
+    await hover("[data-pv^='mod:']"), await check("pointing at an upgrade");
+    await click(p, "[data-pv^='mod:']"), await until(p, "!!root.querySelector('.dh-pvtag')", "upgrade preview"), await check("a pinned upgrade preview");
+    await click(p, "[data-gtab=look]"), await check("Paint & Kit › Bike");
+    await hover("[data-dress=paint]:not([data-eq])"), await check("pointing at a scheme");
+    await click(p, "[data-dress=paint]:not([data-eq])"), await until(p, "!!root.querySelector('.dh-pvtag')", "scheme preview"), await check("a pinned scheme (PREVIEW over the turntable)");
+    assert.equal(await $(p, "getComputedStyle(root.querySelector('.dh-bayline')).position"), "absolute", `${w}: the PREVIEW tag is an overlay`);
+    await click(p, "[data-untry]");
+    await click(p, "[data-look=rider]"), await check("Paint & Kit › Rider gear");
+    await hover("[data-dress=helmet]:not([data-eq])"), await check("pointing at a helmet");
+    await click(p, "[data-look=outfit]"), await check("Paint & Kit › Outfits");
+    await click(p, "[data-gtab=bike]"), await check("back to Parts & Mods");
+    // The showroom's preview frame: the same box across picks.
+    await click(p, "[data-gtab=showroom]");
+    await until(p, "root.querySelectorAll('.shop-cat-item').length === 19 && root.querySelector('.shop-cat-stage .dh-preview')", `${w}: showroom`);
+    const F0 = await box(".shop-cat-stage");
+    for (const id of ["forgeback", "bare-knuckle", "glidewire", "nectar-burn"]) {
+      await click(p, `[data-shop-pick="${id}"]`);
+      await p.waitForTimeout(60);
+      const F = await box(".shop-cat-stage");
+      assert.ok(same(F, F0), `${w}: showroom pick ${id}: the frame stays put (${F0} → ${F})`);
+    }
+    await ctx.close();
+  }
+  console.log("Holeshot garage UX: the turntable's frame and the pace tiles locked (0.5 px) across backdrops, bikes, every tab, pointing and pinned previews, showroom picks (1440, 390); the bike panel stays in view while the showroom scrolls (its preview) (1440); a showroom bike on the turntable with its pace against yours; an upgrade or a paint → PREVIEW with BUY / CANCEL, CANCEL restores; pointing and focus preview too; the plinth ≥ 3:1 in dark and light; the helmet portrait by the name and on RIDER KIT follows the shape, paint and visor, and head-on the goggle reads.");
 } finally {
   await browser.close();
   await server.close();

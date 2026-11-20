@@ -62,13 +62,15 @@
 .shop .dh-hkeys>.dh-icon{padding:0;width:44px}
 .dh-hkeys .shop-i{width:20px;height:20px}
 .dh-theme .shop-i{color:var(--shop-bar)}
-/* The rider's portrait on a key: a light disc behind it and its ink outline thickened at this size, so
-   any helmet colour (black on the night key, white on the day key) reads. */
-.dh-disc{display:inline-grid;place-items:center;width:30px;height:30px;flex:none;border-radius:50%;background:#d6d0ec;box-shadow:0 0 0 1.5px var(--shop-line2)}
-.dh-disc .dh-helm{inline-size:24px;block-size:20px}
-.dh-disc .dh-helm [stroke="#0b0a14"],.shop-tile-art .dh-helm [stroke="#0b0a14"]{stroke-width:9}
-.shop-tile-art:has(>.dh-helm){box-sizing:border-box;padding:6px;border-radius:8px;background:#d6d0ec;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,#17152b 18%,transparent)}
-.dh-face .dh-helm{background:radial-gradient(closest-side,#d6d0ec 0 88%,transparent 92%),linear-gradient(180deg,color-mix(in srgb,var(--cy) 22%,var(--raised)),var(--raised))}
+/* The rider's portrait on a key: no disc, the helmet filling the key's height on the contrast surface
+   (light by night, dark by day: ../../vendor/shop/shop.css --shop-contrast), its ink outline thickened
+   at this size, so any helmet colour reads; the helmet tiles and the dressing portrait on the same surface. */
+.shop .dh-hkeys>.dh-who{gap:6px;padding:0 14px 0 4px;background:var(--shop-contrast);border-color:var(--shop-contrast);color:var(--shop-contrast-ink)}
+.dh-who .dh-helm{inline-size:44px;block-size:36px;flex:none}
+.dh-who .dh-helm [stroke="#0b0a14"]{stroke-width:7}
+.shop-tile-art .dh-helm [stroke="#0b0a14"]{stroke-width:7}
+.shop-tile-art:has(>.dh-helm){box-sizing:border-box;padding:6px;border-radius:8px;background:var(--shop-contrast)}
+.dh-face .dh-helm{background:var(--shop-contrast)}
 /* Two columns: the bike panel (sticky where the screen is tall enough) and the tabs. */
 @media (min-height:700px){.dh-bikep{position:sticky;top:110px}}
 .dh-gwrap{display:grid;grid-template-columns:minmax(0,480px) minmax(0,1fr);gap:30px;padding:30px 36px 40px;align-items:start}
@@ -96,7 +98,7 @@
    condition rows narrow; under 960 px they stack as on phones (name and %, the bar, the key). */
 @media (max-width:1100px){.dh-gwrap{grid-template-columns:minmax(0,400px) minmax(0,1fr);gap:20px;padding-inline:20px}.dh-ghead{grid-template-columns:auto minmax(0,1fr) auto;padding-inline:20px}.dh-brand .shop-eyebrow{white-space:nowrap}.dh .dh-ghead .shop-tabs-big{flex-wrap:nowrap;gap:0 32px}
 .dh-ghead .dh-who>span:last-child,.dh-ghead .dh-theme>span{display:none}
-.shop .dh-hkeys>:is(.dh-who,.dh-theme){padding:0 10px}
+.shop .dh-hkeys>.dh-theme{padding:0 10px}.shop .dh-hkeys>.dh-who{padding:0 4px}
 .shop .shop-barrow,.shop .shop-colhead{grid-template-columns:minmax(7em,1fr) minmax(48px,1fr) 3.2em minmax(7.5em,auto);gap:6px 12px}}
 @media (max-width:960px){.shop .shop-colhead{display:none}.shop .shop-barrow{grid-template-columns:minmax(0,1fr) auto}.shop .shop-barrow .shop-meter{grid-column:1/-1;grid-row:2}.shop .shop-barrow .shop-barrow-a{grid-column:1/-1}}
 /* Phone: the header compacts (logo, credits, Day / Night; the tabs under it), the sections stack and
@@ -184,7 +186,7 @@
 .dh-sec .shop-heading{margin-top:4px}
 @media (min-width:1200px){.dh-two{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}.dh-two .shop-wts{grid-template-columns:repeat(2,minmax(0,1fr))}.dh-side .shop-wts{grid-template-columns:minmax(0,1fr)}.dh-side .shop-wt-a .shop-btn{min-width:0;width:100%}}
 .dh-okcard{display:flex;align-items:center;gap:10px}
-.dh-gbody .shop-wt-t .shop-drop-text{margin:-8px 0 -10px;justify-content:start}
+.dh-gbody .shop-wk-x .shop-drop-text{margin:0;min-height:44px;justify-content:start}
 .dh-cards2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:12px}
 .dh-setc{display:grid;align-content:start;gap:4px}
 .dh-cardh{display:flex;align-items:center;gap:12px}
@@ -207,5 +209,16 @@
 .dh-showroom .shop-cat-list{align-content:start;padding:2px 6px 16px 2px}
 .dh-showroom .shop-cat-pv{display:flex;flex-direction:column}
 .dh-showroom .shop-cat-pv>*{flex:none}
-.dh-showroom .shop-cat-pv>.shop-cat-stage{flex:1 1 0;aspect-ratio:auto;min-height:180px}
+.dh-showroom .shop-cat-pv>.shop-cat-stage{flex:none;aspect-ratio:16/10;min-height:0}
 }
+/* The bike panel never moves (owner, 2026-11-20): the bay rail, the turntable taking the rest, the bike's
+   name and pace at a fixed height, LET'S RIDE. Nothing inserts a row: the PREVIEW tag is a chip over the
+   turntable's bottom-left corner, every pace tile keeps its delta line (empty when there's none), the
+   name stays on one line. So toggling a backdrop, switching bikes or tabs, or a preview never resizes it. */
+.dh-pvinfo{position:relative}
+.dh .dh-bayline{position:absolute;left:0;bottom:calc(100% + 22px);z-index:2;max-width:100%;box-sizing:border-box;padding:6px 10px;border:1.5px solid var(--shop-line);border-radius:6px;background:color-mix(in srgb,var(--shop-panel) 92%,transparent);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dh-pace-bay .shop-stat em{min-height:1.3em}
+.dh-pvinfo .shop-name{flex-wrap:nowrap;white-space:nowrap;overflow:hidden}
+.dh-bikep .shop-turn .dh-preview{position:absolute;inset:0;aspect-ratio:auto}
+.dh-bikep>.shop-turn{aspect-ratio:16/11;flex:none}
+@media (min-width:821px) and (min-height:560px){.dh-bikep>.shop-turn{flex:1 1 0;aspect-ratio:auto}}

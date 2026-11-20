@@ -170,7 +170,13 @@ import { readdirSync, readFileSync } from "node:fs";
 // and the race scene's wiring and edge-test probes, on main 1222660: +3,840 B measured (holeshot.js
 // 250,917 → 254,757; holeshot.mjs 250,674 → 254,507); most of it is code the shared module already
 // held but the bundle left out while nothing used it. Budget 251,500 → 255,500.
-const BUDGET = 255_500;
+// Key tiles (the condition and crash-damage tiles, the tuning options, the bay rail and the showroom
+// cards are each one raised key; vendor/shop ba923ec, its icon library), on main 1222660: +1,509 B
+// measured (holeshot.js 250,917 → 252,426; holeshot.mjs 250,674 → 252,194). Budget then 253,000.
+// Then the locked turntable frame and the Rider key on the contrast surface (vendor/shop 26620da): holeshot.js
+// 252,653 B gzip measured (+227 B). Budget unchanged.
+// Rebased on main 7723ae2 (the edge ribbons): holeshot.js 256,858 B gzip measured; budget 255,500 → 257,500.
+const BUDGET = 257_500;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

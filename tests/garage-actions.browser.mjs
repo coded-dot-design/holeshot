@@ -131,7 +131,7 @@ try {
 
     // ---- My Bikes: select, sell (confirm, trade value), unlock a bay ----
     // (My Bikes is the rail over the turntable: every bay's keys are on screen.)
-    assert.equal(await $(p, "root.querySelectorAll('.dh-bikep .shop-rail .shop-bay').length"), 4, `${name}: the bay rail (two bikes, an empty bay, the expansion)`);
+    assert.deepEqual(await $(p, "[root.querySelectorAll('.dh-bikep .shop-rail .shop-bay').length, root.querySelectorAll('.dh-bikep .shop-rail .shop-bay-add').length, root.querySelectorAll('.dh-bikep .shop-rail .shop-bay-lock').length]"), [2, 1, 1], `${name}: the bay rail (two bikes, an empty bay, the expansion)`);
     await press("[data-ride='1']");
     await until(p, "game.profile.ride === 1", `${name}: Select bike`);
     assert.equal(await $(p, "root.querySelector('.shop-rail .shop-bay[data-on] [data-sell]').dataset.sell"), "1", `${name}: the selected bay is marked`);
@@ -167,17 +167,47 @@ try {
       await until(p, `game.profile.bikes[game.profile.ride].tyre === ${JSON.stringify(c)}`, `${name}: ${c} tyres`);
     }
     ok("a new set of tyres in each compound (Condition › Tyres ▾)");
+    // Each part's tile is its key: raised (its price chip, its aria-label says the work and the price),
+    // one press does the work and it sits pressed in, disabled; Enter presses it too; a pressed tile does nothing.
+    let raised = 0;
     for (const k of ["chain", "motor", "susp", "brakes"]) {
-      if (await has(p, `[data-service=${k}]:not(:disabled)`)) await press(`[data-service=${k}]`), await until(p, `game.profile.bikes[game.profile.ride].parts.${k} === 1`, `${name}: ${k}`);
+      const sel = `[data-service=${k}]`;
+      if (!(await has(p, `${sel}:not(:disabled)`))) continue;
+      raised++;
+      const K = await $(p, `(() => { const b = root.querySelector('${sel}'); return { tile: b.classList.contains('shop-wk-b'), li: b.parentElement.hasAttribute('data-done'), chip: !!b.querySelector('.shop-kt-chip'), aria: b.getAttribute('aria-label'), inner: b.querySelectorAll('button').length }; })()`);
+      assert.ok(K.tile && !K.li && K.chip && /^(Service|Rebuild|New cells) .+, [\d,]+ credits$/.test(K.aria) && K.inner === 0, `${name}: ${k}: a raised key tile (${JSON.stringify(K)})`);
+      if (k === "susp" && !touch) await p.locator(sel).first().focus(), await p.keyboard.press("Enter");
+      else await press(sel);
+      await until(p, `game.profile.bikes[game.profile.ride].parts.${k} === 1 && root.querySelector('${sel}').disabled && root.querySelector('${sel}').parentElement.hasAttribute('data-done')`, `${name}: ${k} serviced, the tile pressed in`);
+      const c1 = (await prof(p)).credits;
+      await $(p, `root.querySelector('${sel}').click()`);
+      await p.waitForTimeout(100);
+      assert.equal((await prof(p)).credits, c1, `${name}: ${k}: a pressed tile does nothing`);
     }
-    ok("service / rebuild each part (Condition)");
+    assert.ok(raised >= 2, `${name}: raised tiles pressed (${raised})`);
+    ok("service / rebuild each part: the tile is the key (raised → pressed in; Enter; a pressed tile can't be pressed)");
+    assert.match(await $(p, "root.querySelector('[data-fix=bars]').textContent"), /\d+% damage/, `${name}: crash damage says how much`);
     for (const k of ["bars", "plastics"]) await press(`[data-fix=${k}]`), await until(p, `game.profile.bikes[game.profile.ride].dmg.${k} === 0`, `${name}: fix ${k}`);
     assert.ok(await has(p, ".shop-soft"), `${name}: No crash damage`);
     ok("fix crash damage (Condition › Crash damage)");
     await press("[data-gsub=tune]");
+    // Each option is a key tile: its cost (or Free / Owned / Fitted ✓) always shows, the fitted one is pressed in.
+    const opt = (k, id) => $(p, `(() => { const e = root.querySelector('[data-setup=${k}][data-id=${id}]'); return { big: e.querySelector('.shop-kt-big').textContent.trim(), down: e.hasAttribute('data-down'), pressed: e.getAttribute('aria-pressed') }; })()`);
     for (const [k, id] of await $(p, "[...root.querySelectorAll('[data-setup]')].map((e) => [e.dataset.setup, e.dataset.id])")) {
+      const before = await opt(k, id);
+      if (before.down) { assert.equal(before.big, "Fitted", `${name}: ${k} ${id}: the fitted one says so`); continue; }
+      assert.match(before.big, /^(◈ [\d,]+|Free|Owned)$/, `${name}: ${k} ${id}: its cost shows (${before.big})`);
       await press(`[data-setup=${k}][data-id=${id}]`);
       await until(p, `game.profile.bikes[game.profile.ride][${JSON.stringify(k)}] === ${JSON.stringify(id)}`, `${name}: ${k} ${id}`);
+      assert.deepEqual(await opt(k, id), { big: "Fitted", down: true, pressed: "true" }, `${name}: ${k} ${id}: pressed in, Fitted`);
+      if (/^◈/.test(before.big)) {
+        const other = await $(p, `[...root.querySelectorAll('[data-setup=${k}]')].find((e) => !e.hasAttribute('data-down') && e.querySelector('.shop-kt-big').textContent.trim() === 'Free')?.dataset.id ?? ''`);
+        if (other) {
+          await press(`[data-setup=${k}][data-id=${other}]`);
+          await until(p, `game.profile.bikes[game.profile.ride][${JSON.stringify(k)}] === ${JSON.stringify(other)}`, `${name}: back to ${other}`);
+          assert.equal((await opt(k, id)).big, "Owned", `${name}: ${k} ${id}: once paid, Owned (no price lost)`);
+        }
+      }
     }
     assert.ok(await has(p, ".shop-feel"), `${name}: ride feel`);
     ok("every tune choice (Tuning), the ride feel");
@@ -309,8 +339,8 @@ try {
       const R = await p.evaluate(async ([s, n]) => { localStorage.setItem("holeshot:profile", s); return n; }, [JSON.stringify({ ...SAVE, slots: 3, bikes: [bike("b1", "buzzline"), bike("b2", "anvil", { look: { paint: "pinkout", number: 8 } }), bike("b3", "glidewire", { look: { paint: "acid", number: 44 } })].slice(0, n) }), n]);
       await p.reload();
       await until(p, `window.game && game.getSnapshot().screen === 'garage' && game.profile.bikes.length === ${R}`, `${w}: ${n} bikes`);
-      const S = await $(p, "(() => { const l = root.querySelector('.shop-rail-l'), k = root.querySelector('.dh-bikep'); return { sw: l.scrollWidth, cw: l.clientWidth, right: Math.max(...[...l.querySelectorAll('.shop-bay')].map((e) => e.getBoundingClientRect().right)), edge: l.getBoundingClientRect().right + 0.5, bays: l.querySelectorAll('.shop-bay').length }; })()");
-      assert.ok(S.sw <= S.cw && S.right <= S.edge, `${w}: ${n} bike${n > 1 ? "s" : ""}: the bay rail fits (${JSON.stringify(S)})`);
+      const S = await $(p, "(() => { const l = root.querySelector('.shop-rail-l'), k = root.querySelector('.dh-bikep'); return { sw: l.scrollWidth, cw: l.clientWidth, right: Math.max(...[...l.querySelectorAll('.shop-kt')].map((e) => e.getBoundingClientRect().right)), left: Math.min(...[...l.querySelectorAll('.shop-kt')].map((e) => e.getBoundingClientRect().left)) - l.getBoundingClientRect().left + 0.5, edge: l.getBoundingClientRect().right + 0.5, bays: l.querySelectorAll('.shop-bay').length }; })()");
+      assert.ok(S.sw <= S.cw && S.right <= S.edge && S.left >= 0, `${w}: ${n} bike${n > 1 ? "s" : ""}: the bay rail fits (${JSON.stringify(S)})`);
     }
     await p.evaluate((s) => localStorage.setItem("holeshot:profile", s), JSON.stringify(SAVE));
     await p.reload();
