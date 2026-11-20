@@ -286,7 +286,7 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
   const dish = mix(C.tyre, C.rim, 0.16);
   for (let i = 0; i < 2; i++) {
     const hid = id + ":w" + i, f = i ? 1 : -1;
-    const a = d.add({ id: hid + "a", shape: "group", size: [0.2, 0, 0.2], pos: [f * END, 0, END], on: id, behind: END_DROP, pick: false });
+    d.add({ id: hid + "a", shape: "group", size: [0.2, 0, 0.2], pos: [f * END, 0, END], on: id, behind: END_DROP, pick: false });
     d.add({ id: hid + "b", shape: "group", size: [0.2, 0, 0.2], pos: [f * END, 0, -END], on: hid + "a", behind: END_DROP, pick: false });
     const hub = group(hid, hid + "b");
     // The tyre: one closed band (tread and both sidewalls). Each face of the wheel (rim ring, a solid

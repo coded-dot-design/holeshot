@@ -15,7 +15,7 @@ import { cosmeticPrice, fits, fixPrice, modPrice, partPrice, setupPrice, spotPri
 import { helmetSVG } from "./portrait.ts";
 import { helmetOf } from "./look.ts";
 import type { Item, RailBay, Slot as LkSlot, Upgrade, Wear } from "../../vendor/shop/shop.js";
-import { btn, cornerPop, esc, num, pill, price, swatch } from "../../vendor/shop/shop.js";
+import { btn, cornerPop, esc, num, swatch } from "../../vendor/shop/shop.js";
 
 /** "CHAIN & SPROCKETS" → "Chain & sprockets" (the design's sentence case). */
 export const cap = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();

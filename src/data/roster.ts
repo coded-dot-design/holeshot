@@ -183,8 +183,6 @@ export const makerOf = (m: Model): Maker => MAKERS[m.maker];
 export const model = (id: string): Model => MODELS.find((m) => m.id === id) ?? MODELS[0]!;
 /** The four starter choices: the cheapest model in each dirt class (street bikes are bought). */
 export const STARTERS: Model[] = (Object.keys(CLASSES) as ClassId[]).filter((c) => CLASSES[c].family !== "street").map((c) => MODELS.filter((m) => m.cls === c).sort((a, b) => a.price - b.price)[0]!);
-/** What the v1 shop sells new (a subset; the data holds the full roster). */
-export const SHOP_MODELS: string[] = MODELS.filter((m) => m.tier <= 2).map((m) => m.id);
 
 // The names in the tier shown (./names.ts): the makers, the models, then each class's maker line.
 const classMakers = () => {

@@ -22,7 +22,6 @@ export const D_NONE = 0, D_KICKER = 1, D_WHOOPS = 2, D_CACTUS = 3, D_ROCKS = 4, 
 /** A post's place round its feature: one of eight directions (the scene places the same). */
 export const postDir = (i: number, j: number, q: number, seed: number) => ((hashI(i * 7 + q, j, seed + 90) & 7) + q * 2) & 7;
 export const DIRS = [1, 0, 0.7071067811865476, 0.7071067811865476, 0, 1, -0.7071067811865476, 0.7071067811865476, -1, 0, -0.7071067811865476, -0.7071067811865476, 0, -1, 0.7071067811865476, -0.7071067811865476];
-export const D_NAMES = ["", "KICKER", "WHOOPS", "CACTUS", "ROCKS", "CAMP"];
 /** The endless biomes: the desert (Free Ride's DUNE SEA, endless) and one per other open Free Ride
  *  map, each its own ground on the same streaming window: B_QUARRY benches and faces, B_FOREST
  *  wooded hills, B_PARK a flat park of jump lines. Feature kinds keep their slots: per biome a kicker

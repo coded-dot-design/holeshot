@@ -50,7 +50,7 @@ const SLOTS = 9, CACTI = 4, ROCKS = 4;
 
 export function desertView(d: Diorama, W: World) {
   const bi = W.biome;
-  const P3 = new Float64Array(3), F = new Float64Array(4), SL = new Float64Array(SLOTS * 3);
+  const F = new Float64Array(4), SL = new Float64Array(SLOTS * 3);
   const cacti: DioramaObject[] = [], rocks: DioramaObject[] = [], camps: DioramaObject[] = [], beams: DioramaObject[] = [];
   const objs: DioramaObject[] = [];
   let ci0 = NaN, cj0 = NaN;

@@ -35,8 +35,8 @@ export const FLY_V = 5, FLY_T = 1, LAND_AT = 2.4, FLY_PITCH = -0.08;
 
 /** The world's lists for the scene: buildings (x, z, w, d, height, face, look, base), their hoods,
  *  cars, crosswalks, sprinklers, trees and lamps (with their hoods). */
-export const HOUSES = W.houses, NH = HOUSES.length / 8, CARS = W.cars, NCARS = CARS.length / 4, CAR_L = 2.3, CAR_W = 1.1;
-export const CROSS = W.cross, SPRINK = W.sprink, NSP = SPRINK.length / 4, TREES = W.trees, LAMPS = W.lamps;
+export const HOUSES = W.houses, CARS = W.cars, CAR_L = 2.3, CAR_W = 1.1;
+export const CROSS = W.cross, SPRINK = W.sprink, NSP = SPRINK.length / 4;
 /** The dog's yard on THE BLOCK (world): x0, x1, z where it trots, and its fence [x0, z0, x1, z1]. */
 export const DOG = [7.8 + CX[0]!, 10.2 + CX[0]!, 5.0 + CZ[0]!];
 const FENCE_L = [7.4, 3.6, 10.6, 5.6];
@@ -213,11 +213,10 @@ export const FIXED_C = Float64Array.from([CX[0]!, CZ[0]!, CX[1]!, CZ[1]!, CX[2]!
 export const fixedCops = (seed = 1) => cops(seed, FIXED_C, GRAPH, 0, HX, HZ);
 /** The fixed table's ground (the scene, the tests). */
 export const height = FIXED.height, kindAt = FIXED.kindAt, ground = FIXED.ground, streetClear = FIXED.streetClear;
-const heightQ = FIXED.heightQ;
 
 // S: the session's state, by index.
 const PH = 0, CLOCK = 1, RIDE = 2, CT = 3, GRUMPS = 4, SPLASH = 5, BARKS = 6, LEG = 7, HOPAIR = 8, WHY = 9, WALL = 10, SPCLK = 11, HOOD = 12, FLY = 13, FLYTO = 14, FLYT = 15, DIR = 16, GO = 17, JUMPS = 18, VISITED = 19, STUCK = 20, UNSTUCK = 21;
-export const S_HOOD = HOOD, S_FLY = FLY, S_JUMPS = JUMPS, S_VISITED = VISITED, S_UNSTUCK = UNSTUCK;
+export const S_HOOD = HOOD, S_JUMPS = JUMPS, S_UNSTUCK = UNSTUCK;
 
 /** A session in town. Inputs each step: gas, brake, lean (−1 back .. 1 forward), steer, hop. */
 export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
@@ -522,7 +521,7 @@ export function cityRun(specs: RideSpec[] = RIDES, seed = 1) {
     let ax: number, az: number, thru = 0;
     if (S[GO]! > 0) {
       // For the hump: past its lip, on its line.
-      const i = S[GO]! - 1, E = T.HU[h]!;
+      const i = S[GO]! - 1;
       const lx = HUMPS[i * 5]! - cx, lz = HUMPS[i * 5 + 1]! - cz, dx = HUMPS[i * 5 + 2]!, dz = HUMPS[i * 5 + 3]!;
       ax = lx + dx * 6; az = lz + dz * 6;
       if (dx !== 0) az = lz; else ax = lx;

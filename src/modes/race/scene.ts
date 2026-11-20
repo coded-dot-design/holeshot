@@ -22,10 +22,10 @@ import { sound } from "@fzlt/core/sound";
 import { LOOP, ENDO, CASE, BAIL, type Power } from "../../bike/bike.ts";
 import { rig, type Rig, type RigColors } from "../../bike/rig.ts";
 import { pool, voice, gamepad, type Pool } from "../../bike/kit.ts";
-import { DONE, E_CRASH, E_FINISH, E_GATE, E_LAND, E_LAP, E_PLACE, E_RESPAWN, E_WHEELIE, E_COUNT, GRID, LAPS, RACE, TRACK_W, TD_GRID, TD_RUNOFF, TD_SLOT, motoRace, type RaceOpts, type Track } from "./course.ts";
+import { DONE, E_CRASH, E_FINISH, E_GATE, E_LAND, E_LAP, E_PLACE, E_RESPAWN, E_WHEELIE, E_COUNT, GRID, LAPS, RACE, TRACK_W, TD_GRID, TD_RUNOFF, motoRace, type RaceOpts, type Track } from "./course.ts";
 import { freeRun, E_TRICK, E_STUCK, E_RESET, E_GROUND, E_DRAG, E_BANKED, E_LOST } from "../freeride/session.ts";
 import { DRAG_NAME, FENDER } from "../stunts.ts";
-import { SC as T_SC, CB as T_CB, PTS as T_PTS, KIND as T_KIND, DIST as T_DIST, TIME as T_TIME, MANUAL, STOPPIE } from "../wheelie/tricks.ts";
+import { SC as T_SC, CB as T_CB, PTS as T_PTS, DIST as T_DIST, TIME as T_TIME, MANUAL, STOPPIE } from "../wheelie/tricks.ts";
 import { callout, stuntCalls, stuntCall, friendStunt } from "../callout.ts";
 import { E_REGROUP, E_STUNT } from "../freeride/jam.ts";
 import { font as tagFont, tag, marker } from "../../online/tags.ts";
@@ -189,8 +189,7 @@ export function mountTrack(ctx: ModeCtx, track: Track | RideMap, free: boolean, 
   /** Online endless: the ride together (END banks yours, REGROUP brings you to the host). */
   const roam = !!(net && endless), jamOnly = jam && !roam ? jam : null;
   const m = net ? net.ride.meters[seat]! : meter(endless ? "desert" : free ? "freeride" : td ? "trackday" : "race");
-  /** A placed ride (a race, a jam): its place, against whom. */
-  const placed = !!race || !!jam, TAGS: string[] = net ? net.names.slice() : [];
+  const TAGS: string[] = net ? net.names.slice() : [];
   const NAME = ctx.bike.model.name;
 
   // ---- the page: the canvas, the play surface over it, the stickers, the pad ----
