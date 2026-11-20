@@ -176,7 +176,11 @@ import { readdirSync, readFileSync } from "node:fs";
 // Then the locked turntable frame and the Rider key on the contrast surface (vendor/shop 26620da): holeshot.js
 // 252,653 B gzip measured (+227 B). Budget unchanged.
 // Rebased on main 7723ae2 (the edge ribbons): holeshot.js 256,858 B gzip measured; budget 255,500 → 257,500.
-const BUDGET = 257_500;
+// The turntable's backdrops redrawn from the owner's carousel designs (the day field's traced
+// polygon table, the night's bands, sun and ridges, the carousel in the diorama and its fixed camera),
+// replacing the procedural scenes, on main f7051e9: +2,684 B measured (holeshot.js 256,858 → 259,542;
+// holeshot.mjs 256,605 → 259,282). Budget 257,500 → 260,000.
+const BUDGET = 260_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

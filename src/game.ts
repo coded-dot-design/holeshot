@@ -37,7 +37,7 @@ import { btn, card, cta as shopCta, heading, icon as shopIcon, meter as shopMete
 import { lookOf } from "./garage/look.ts";
 import { mountShowroom as mountSr, showroomState } from "./garage/showroom.ts";
 import { rigKit, snap } from "./garage/snap.ts";
-import { backdropCache, backdropOf } from "./garage/backdrop.ts";
+import { backdropCache, backdropOf, camOf, plinth } from "./garage/backdrop.ts";
 import { buyInto } from "./model/garage.ts";
 import { words } from "./garage/adapters.ts";
 import { bar, esc, num } from "./html.ts";
@@ -157,7 +157,8 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     preview();
   };
   /** The turntable's backdrop now (./garage/backdrop.ts): the profile's pick, AUTO following Day / Night;
-   *  painted once per backdrop and size, then laid under the bike each redraw (one drawImage). */
+   *  its background painted once per backdrop and size, then laid under the carousel and the bike each
+   *  redraw (one drawImage), all seen by the backdrop's one fixed camera. */
   const scene = () => backdropOf(profile.settings.backdrop, pageTheme() === "dark");
   // The frame is locked: its size comes from the layout (./garage/garage.css), its backing store is set
   // once per size, and every frame is drawn offscreen and swapped in whole (no blank or half frame).
@@ -173,7 +174,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     if (!pv.isConnected || !ready(profile)) return;
     const r = pv.getBoundingClientRect(), w = Math.round(r.width), h = Math.round(r.height);
     if (w < 10 || h < 10) return;
-    const P2 = screen === "garage" ? shown(profile, gui) : profile, b = riding(P2), t = tune(b), L2 = lookOf(P2), close = screen === "garage" && gui.tab === "look" && gui.look !== "bike", bd = scene(), key = JSON.stringify([w, h, b.model, b.look, b.dmg, b.mods, P2.kit, pageTheme(), pvYaw, close, bd.id]);
+    const P2 = screen === "garage" ? shown(profile, gui) : profile, b = riding(P2), t = tune(b), L2 = lookOf(P2), bd = scene(), key = JSON.stringify([w, h, b.model, b.look, b.dmg, b.mods, P2.kit, pageTheme(), pvYaw, bd.id]);
     if (key === pvKey) return;
     pvKey = key;
     const dpr = Math.min(2, devicePixelRatio || 1);
@@ -185,16 +186,15 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     (bdImg = bdPaint(bd, w, h, dpr)), (bdW = w), (bdH = h);
     pdio.cluster("bd", { fixed: 0 });
     pdio.decal("bd", 0, bdDecal);
-    // The plinth: a lifted top with a lighter lip, on an edge glow (the palette's cyan by night, hot
-    // pink by day): 3:1 or more against the preview's background in both themes (tests/garage-ux).
-    pdio.add({ shape: "cyl", sides: 24, size: [3.2, 0.12, 3.2], pos: [0, -0.06, 0], color: night ? "#a49bf0" : "#5b4a7c", pick: false });
-    pdio.add({ shape: "cyl", sides: 24, size: [2.96, 0.13, 2.96], pos: [0, -0.055, 0], color: night ? "#7a70cc" : "#6c5a92", pick: false });
-    pdio.add({ shape: "cyl", sides: 24, size: [3.34, 0.05, 3.34], pos: [0, -0.11, 0], color: night ? "#22e6ff" : "#d81b72", emissive: night, pick: false });
+    // The carousel: the backdrop's disc (its top, faceted side and ring), drawn after the background
+    // and before the bike.
+    pdio.cluster("pl", { fixed: 1 });
+    plinth(pdio.add, bd, "pl");
     const g = rig(pdio, "pv", { ...kit, ...L2.look } as RigColors, t.rig, L2.helmet, t.model.id), bk = makeBike(flat, t.power, t.shape);
     bk.reset(0, 0, 0);
     g.pose(bk, 0.6);
-    // Dressing the rider (RIDER KIT, OUTFITS), the turntable closes in on them: helmet, kit and boots.
-    Object.assign(pdio.cam, close ? { yaw: pvYaw, pitch: 0.16, dist: 3, tx: 0.05, ty: 0.96, tz: 0, ox: 0, oy: 0, fov: 0.55 } : { yaw: pvYaw, pitch: 0.2, dist: 4.9, tx: 0, ty: 0.55, tz: 0, ox: 0, oy: 0, fov: 0.55 });
+    // One fixed camera on every tab and screen (no zoom): only the turn moves it.
+    Object.assign(pdio.cam, camOf(w, h, pvYaw));
     pdio.draw();
     pctx.clearRect(0, 0, pv.width, pv.height);
     pctx.drawImage(pvOff, 0, 0, pv.width, pv.height);
