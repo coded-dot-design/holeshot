@@ -1,64 +1,127 @@
-// The turntable's backdrops, built from the diorama's own shapes in flat colours (no images): TRACK,
-// an MX day (rolling green hills, a dirt track with jumps, marker poles, a light sky) and SUNSET, a
-// synthwave night (the cover's striped sun, purple mountains, stars, the neon floor). AUTO follows
-// Day / Night. A list, so more can join later (as shop items: `price` is there for that, 0 now).
-// The scene is static: it is added with the bike and drawn only when the preview redraws (on a
-// change: a turn, a peek, a resize), never on a loop. Its group turns with the camera, so the
-// scenery always stands behind the bike.
-import type { Diorama } from "@fzlt/core/diorama";
-
-export interface Backdrop { id: "auto" | "track" | "sunset"; name: string; price: number }
-export const BACKDROPS: Backdrop[] = [
-  { id: "auto", name: "Auto", price: 0 },
-  { id: "track", name: "Track", price: 0 },
-  { id: "sunset", name: "Sunset", price: 0 },
-];
-export type Scene = "track" | "sunset";
-/** The scene shown: the pick, or (AUTO) the theme's. */
-export const sceneOf = (pick: string | undefined, night: boolean): Scene => (pick === "track" || pick === "sunset" ? pick : night ? "sunset" : "track");
-/** The pick after `pick` (the backdrop key cycles through the list). */
-export const nextBackdrop = (pick: string | undefined) => BACKDROPS[(BACKDROPS.findIndex((b) => b.id === (pick ?? "auto")) + 1) % BACKDROPS.length]!.id;
-/** The sky behind the scene (the diorama's background). */
-export const skyOf = (s: Scene) => (s === "track" ? "#bfe4f2" : "#24124a");
+// The turntable's backdrops: scenery behind the bike, built from the diorama's own shapes in flat
+// colours (no images), simple on purpose (a few big shapes). TRACK is an MX day: soft hills, one
+// flowing dirt ribbon, a few marker poles, a light sky. SUNSET a synthwave night: a sun with a few
+// stripes, two mountain silhouettes, stars and the vanishing tron grid. AUTO follows Day / Night.
+// The scenes are a data list: one more is one more entry (with a `price` when backdrops become
+// shop items; none are sold now).
+// The scenery is static, so it is drawn ONCE per scene and size into a canvas of its own (its own
+// diorama and a lower camera, a painted cyclorama) and the turntable paints that canvas first, in a
+// fixed cluster under the bike: a redraw (a turn, a peek, a resize) costs one drawImage, not the
+// scene's faces.
+import { diorama, type Diorama } from "@fzlt/core/diorama";
 
 type Add = Parameters<Diorama["add"]>[0];
-/** Adds the scene to `dio` in a group facing the camera at `yaw` (the scene's back is −z from the view). */
-export function addBackdrop(dio: Diorama, s: Scene, yaw: number) {
-  dio.add({ id: "bd", shape: "group", size: [0, 0, 0], rot: [0, yaw, 0], pick: false });
-  // Children of the group: positions in its frame (−z away from the eye), on its centre.
-  const at = (d: Add) => dio.add({ pick: false, on: "bd", ...d });
-  if (s === "track") {
-    at({ size: [90, 0.04, 90], pos: [0, -0.16, -30], color: "#a6d98f", layer: 0 });
-    for (const [x, z, w, h, c] of [[-22, -40, 30, 3.2, "#8fcf7d"], [12, -46, 38, 4, "#9ad687"], [32, -36, 24, 2.6, "#86c574"], [-2, -32, 20, 1.6, "#94d281"]] as const)
-      at({ shape: "cyl", sides: 14, top: 0.25, size: [w, h, w * 0.45], pos: [x, -0.2, z], color: c, layer: 0.5 });
-    // The dirt track: a loop of straights with two jumps (wedges) and its berm.
-    for (const [x, z, w, r] of [[-5, -7, 14, 0.1], [8, -9.5, 10, -0.3], [-12, -11, 9, 0.5], [2, -13, 18, 0.04]] as const)
-      at({ size: [w, 0.06, 1.8], pos: [x, -0.12, z], rot: [0, r, 0], color: "#d9b28a", layer: 1 });
-    for (const [x, z, f] of [[-1, -7.3, 1], [10, -10, -1], [5, -13, 1]] as const)
-      at({ shape: "wedge", size: [2.2, 0.9, 1.5], pos: [x, -0.1, z], rot: [0, f > 0 ? 0 : Math.PI, 0], color: "#c99a6e", layer: 1.2 });
-    for (const [x, z] of [[-12, -5.6], [-5, -5.5], [3, -5.7], [10, -7.6], [15, -10.5], [-16, -10], [-7, -12.6], [11, -14.6]] as const) {
-      at({ size: [0.12, 1.3, 0.12], pos: [x, -0.1, z], color: "#3a3a4c", layer: 1.5 });
-      at({ size: [0.2, 0.22, 0.2], pos: [x, 1.2, z], color: "#ff6b2c", layer: 1.6 });
-    }
-  } else {
-    at({ size: [90, 0.04, 90], pos: [0, -0.16, -30], color: "#2a1458", layer: 0 });
-    for (let i = 0; i < 7; i++) at({ size: [90, 0.05, 0.08], pos: [0, -0.14, -3 - i * i * 1.2], color: i % 2 ? "#22e6ff" : "#ff4fa8", emissive: true, layer: 0.2 });
-    // The sun: horizontal slices of a disc, yellow to pink, the gaps widening toward the horizon.
-    const R = 6.5, cy = 1.2, z = -44;
-    for (let i = 0; i < 14; i++) {
-      const y0 = R - i * (2 * R / 14), gap = i < 6 ? 0 : (i - 5) * 0.05, h = 2 * R / 14 - gap * 2 * R / 14 * 2.4, y = y0 - R / 14;
-      const w = 2 * Math.sqrt(Math.max(0, R * R - y * y));
-      if (w < 0.3 || h <= 0.05) continue;
-      const t = i / 13, col = t < 0.5 ? mix("#ffe27a", "#ffa04a", t * 2) : mix("#ffa04a", "#ff4f9a", (t - 0.5) * 2);
-      at({ size: [w, h, 0.1], pos: [0, cy + y - h / 2, z], color: col, emissive: true, layer: 0.3 });
-    }
-    for (const [x, w, h, c] of [[-20, 16, 4.5, "#6a2f9e"], [-9, 12, 3.2, "#7d3cb5"], [9, 14, 4, "#6a2f9e"], [22, 18, 5, "#5a2788"], [1, 10, 2, "#8a47c4"]] as const)
-      at({ shape: "cyl", sides: 4, top: 0, size: [w, h, w * 0.5], pos: [x, -0.2, -36], rot: [0, Math.PI / 4, 0], color: c, layer: 0.6 });
-    for (let i = 0; i < 26; i++) {
-      const x = ((i * 37) % 52) - 26, y = 4 + ((i * 53) % 9) * 0.9;
-      if (Math.abs(x) < 8 && y < cy + R) continue;
-      at({ size: [0.12, 0.12, 0.05], pos: [x, y, -46], color: "#fff4d6", emissive: true, layer: 0.25 });
-    }
+type Put = (d: Add) => void;
+/** One backdrop: its key, its name on the picker, the sky (the cache's clear colour), the camera's
+ *  look down and height (the horizon's place) and its parts. */
+export interface Backdrop { id: string; name: string; sky: string; pitch: number; ty: number; build: (put: Put) => void }
+
+/** A flat silhouette standing across the view: `pts` are [x, y] in the plane z (a prism on its side). */
+const cut = (put: Put, pts: [number, number][], z: number, color: string, layer: number) =>
+  put({ shape: "prism", outline: pts.map(([x, y]) => [x, -y]), size: [1, 0.05, 1], pos: [0, 0, z], rot: [Math.PI / 2, 0, 0], color, layer, emissive: true });
+/** A rolling ridge from x0 to x1: `n` humps of height `h` over `base`, sampled smooth. */
+const ridge = (x0: number, x1: number, base: number, h: number, n: number, ph: number): [number, number][] => {
+  const P: [number, number][] = [[x0, -1]];
+  for (let i = 0; i <= 32; i++) {
+    const t = i / 32, x = x0 + (x1 - x0) * t;
+    P.push([x, base + h * (0.55 + 0.45 * Math.sin(t * n * Math.PI * 2 + ph)) * (0.7 + 0.3 * Math.sin(t * 2.3 + ph * 2))]);
   }
-}
+  P.push([x1, -1]);
+  return P;
+};
 const mix = (a: string, b: string, t: number) => "#" + [1, 3, 5].map((i) => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, "0")).join("");
+
+/** A flat band along the ground through `pts` ([x, z]), `w` wide (a prism lying down): the dirt. */
+const band = (put: Put, pts: [number, number][], w: number, y: number, color: string, layer: number) => {
+  const L: number[][] = [], R: number[][] = [];
+  for (let i = 0; i < pts.length; i++) {
+    const [x, z] = pts[i]!, [x0, z0] = pts[Math.max(0, i - 1)]!, [x1, z1] = pts[Math.min(pts.length - 1, i + 1)]!;
+    const dx = x1 - x0, dz = z1 - z0, n = Math.hypot(dx, dz) || 1, nx = (-dz / n) * w / 2, nz = (dx / n) * w / 2;
+    L.push([x + nx, z + nz]), R.push([x - nx, z - nz]);
+  }
+  put({ shape: "prism", outline: [...L, ...R.reverse()], size: [1, 0.03, 1], pos: [0, y, 0], color, layer });
+};
+
+export const BACKDROPS: Backdrop[] = [
+  {
+    id: "track", name: "Track", sky: "#c4e8f5", pitch: 0.2, ty: 3,
+    build(put) {
+      put({ size: [260, 0.02, 196], pos: [0, -0.02, -100], color: "#a9da92", layer: 0 });
+      // Soft hills: a hazy far ridge and a green near one.
+      cut(put, ridge(-120, 120, 5, 6, 1.6, 0.4), -95, "#c6e4bb", 0.1);
+      cut(put, ridge(-90, 90, 1, 5, 2.2, 2.1), -62, "#98d184", 0.2);
+      // One flowing dirt ribbon across the field, its lighter edge under it.
+      const P: [number, number][] = [];
+      for (let i = 0; i <= 40; i++) {
+        const t = i / 40, x = -46 + 92 * t;
+        P.push([x, -24 - 7 * Math.sin(t * Math.PI * 2.2 + 0.6) - 4 * t]);
+      }
+      band(put, P, 5.6, 0, "#efd8ab", 1);
+      band(put, P, 4.4, 0.01, "#d4a578", 1.1);
+      // A few marker poles along it: a dark post and an orange flag top.
+      for (const i of [4, 13, 22, 31]) {
+        const [x, z] = P[i]!;
+        put({ size: [0.16, 2, 0.16], pos: [x, 0, z + 3.6], color: "#3a3a4c", layer: 1.5 });
+        put({ size: [0.3, 0.4, 0.3], pos: [x, 1.8, z + 3.6], color: "#ff6b2c", layer: 1.6 });
+      }
+    },
+  },
+  {
+    id: "sunset", name: "Sunset", sky: "#2a1458", pitch: -0.1, ty: 2.4,
+    build(put) {
+      // A magenta haze at the horizon under the night sky, and a few stars.
+      cut(put, [[-140, 0], [140, 0], [140, 6], [-140, 6]], -120, "#7a1f86", 0.01);
+      for (let i = 0; i < 14; i++) {
+        const r = Math.imul(i + 1, 2654435761) >>> 0, x = (r & 1023) / 1023 * 80 - 40, y = 12 + ((r >>> 12) & 1023) / 1023 * 24;
+        if (Math.abs(x - 24) < 14 && y < 27) continue;
+        put({ size: [0.24, 0.24, 0.05], pos: [x, y, -110], color: "#fff4d6", emissive: true, layer: 0.05 });
+      }
+      // The sun, up and to the right (clear of the rider): solid on top, a few stripes below.
+      const R = 11, cy = 13, sx = 24, z = -104, N = 16;
+      for (let i = 0; i < N; i++) {
+        const top = R - (i * 2 * R) / N, gap = i < 9 ? 0 : 0.25 + (i - 9) * 0.16, h = (2 * R) / N - gap;
+        const y = top - h / 2, w = 2 * Math.sqrt(Math.max(0, R * R - y * y));
+        if (w < 0.4 || h <= 0.1) continue;
+        const col = mix("#ffe27a", "#ff5a9a", i / (N - 1));
+        cut(put, [[sx - w / 2, cy + top - h], [sx + w / 2, cy + top - h], [sx + w / 2, cy + top], [sx - w / 2, cy + top]], z, col, 0.1);
+      }
+      // Two mountain silhouettes.
+      cut(put, [[-70, -1], [-50, 7], [-38, 3], [-22, 11], [-6, 2], [6, 2], [70, -1]], -80, "#5b2a96", 0.2);
+      cut(put, [[-10, -1], [12, 3], [30, 9], [44, 4], [58, 8], [80, -1]], -72, "#7a3cb8", 0.3);
+      // The floor: the vanishing tron grid, cyan on dark purple, running to the horizon.
+      put({ size: [260, 0.02, 196], pos: [0, -0.02, -100], color: "#1c0d40", layer: 0.4 });
+      for (let k = -14; k <= 14; k++) put({ size: [0.07, 0.03, 96], pos: [k * 3, 0, -50], color: "#22e6ff", emissive: true, layer: 0.5 });
+      for (let j = 0; j < 9; j++) put({ size: [200, 0.03, 0.07 + j * 0.06], pos: [0, 0, -2 - 1.6 * j * j], color: "#22e6ff", emissive: true, layer: 0.5 });
+    },
+  },
+];
+/** The picks: AUTO, then every backdrop. */
+export const PICKS: readonly (readonly [string, string])[] = [["auto", "Auto"], ...BACKDROPS.map((b) => [b.id, b.name] as const)];
+/** AUTO's backdrop for the theme. */
+const AUTO = { day: "track", night: "sunset" };
+/** A saved pick kept only when it is still a backdrop (else AUTO). */
+export const pickOf = (v: unknown): string => (typeof v === "string" && BACKDROPS.some((b) => b.id === v) ? v : "auto");
+/** The backdrop shown: the pick, or (AUTO) the theme's. */
+export const backdropOf = (pick: string | undefined, night: boolean): Backdrop => {
+  const id = pickOf(pick) === "auto" ? AUTO[night ? "night" : "day"] : pick;
+  return BACKDROPS.find((b) => b.id === id)!;
+};
+
+/** The painted backdrop for `b` at w × h CSS px (dpr), drawn once and kept until any of those change. */
+export function backdropCache() {
+  const cv = document.createElement("canvas");
+  let dio: ReturnType<typeof diorama> | null = null, key = "", sky = "#000000";
+  return (b: Backdrop, w: number, h: number, dpr: number) => {
+    const k = b.id + w + "x" + h + "@" + dpr;
+    if (k === key) return cv;
+    key = k;
+    sky = b.sky;
+    dio ??= diorama(cv, { light: [-0.4, 1, 0.6], ambient: 0.62, background: () => sky, maxDpr: 2 });
+    dio.resize(w, h, dpr);
+    dio.clear();
+    b.build((d) => void dio!.add({ pick: false, ...d }));
+    Object.assign(dio.cam, { yaw: 0, pitch: b.pitch, dist: 6, tx: 0, ty: b.ty, tz: 0, ox: 0, oy: 0, fov: 0.55 });
+    dio.draw();
+    return cv;
+  };
+}

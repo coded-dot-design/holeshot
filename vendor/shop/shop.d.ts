@@ -126,6 +126,8 @@ export declare const title: (o: {
 export declare const turntable: (inner: string, key?: string, label?: string, arrows?: boolean, extra?: string) => string;
 /** A small chip over a frame's corner (the turntable's BACKDROP · Auto): `chip("Backdrop", "Auto", 'data-backdrop')`. */
 export declare const chip: (label: string, value: string, attrs: string) => string;
+/** A small pick over a frame's corner (the turntable's backdrop: Auto · Track · Sunset): `chipSeg("Backdrop", [["auto", "Auto"], …], "auto", "backdrop")` (the keys carry `data-backdrop="auto"`…). Each key is a 44 px hit area round a small pill; `label` names the group for screen readers; `cls` places it (`shop-chipseg-top`: the top-left corner). */
+export declare const chipSeg: (label: string, items: readonly (readonly [string, string])[], on: string, key: string, cls?: string) => string;
 /** The main call to action: `cta("LET'S RIDE", 'class-extra', "Race · Endless · Free ride · Track day")`; `cls` adds the screen's hook class. */
 export declare const cta: (label: string, cls?: string, sub?: string, attrs?: string) => string;
 /** Stars: `stars(2)` → ★★☆☆ (of 4, with its words for screen readers). */

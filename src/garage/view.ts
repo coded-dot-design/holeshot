@@ -16,9 +16,9 @@ import { tune } from "../model/tune.ts";
 import type { Units } from "../model/units.ts";
 import { atRisk, failChance, failName, warnings } from "../model/upkeep.ts";
 import { DIRT_LINE } from "../model/families.ts";
-import { BACKDROPS, nextBackdrop } from "./backdrop.ts";
+import { PICKS, pickOf } from "./backdrop.ts";
 import { buySpot, cosmeticPrice, choose, dress, fits, modPrice, repair, sell, service, setChoice, tryOn, unlocked, upgrade, type Buy, type Slot } from "../model/garage.ts";
-import { badge, bayRail, btn, card, chip, chips, drop, feel, heading, icon, itemGrid, menu, pill, price, row, seg, stat, stats, tabs, title, turntable, upgradeGrid, wearGrid } from "../../vendor/shop/shop.js";
+import { badge, bayRail, btn, card, chipSeg, chips, drop, feel, heading, icon, itemGrid, menu, pill, price, row, seg, stat, stats, tabs, title, turntable, upgradeGrid, wearGrid } from "../../vendor/shop/shop.js";
 import { DMG_ICON, MOD_ICON, RIDER_SLOTS, SETUP_ICON, SLOT_ICON, SLOT_NAME, bays, bikeItems, bikeSlots, cap, damageRows, feelRows, isE, modKey, modName, modStage, outfitItems, pace, partIcon, partName, riderItems, riderSlots, setups, tyreItems, upgradeItems, wearRows, words, type BikeSlot, type RiderSlot } from "./adapters.ts";
 
 /** What the turntable can preview: a cosmetic (its slot), a mod's next level, or a showroom bike. */
@@ -178,7 +178,7 @@ export function garageCard(p: Profile, ui: GarageUI, head: string, go: string, n
   const b = riding(p), B = bays(p, art);
   // MY BIKES is part of the garage: a rail of bays over the turntable (the shop's bayRail).
   const rail = bayRail({ title: "My Bikes", line: B.line, bays: B.bays, add: "+ Add bike", expand: B.expand, credits: p.credits });
-  const left = `<aside class="shop-card dh-bikep">${rail}${turntable("<canvas-slot></canvas-slot>", "data-turn", "bike", p.bikes.length > 1, chip("Backdrop", BACKDROPS.find((x) => x.id === (p.settings.backdrop ?? "auto"))!.name, 'data-backdrop aria-label="Backdrop: change"'))}<div class="dh-pvinfo">${bayInfo(p, ui)}</div>${go}${extra}</aside>`;
+  const left = `<aside class="shop-card dh-bikep">${rail}${turntable("<canvas-slot></canvas-slot>", "data-turn", "bike", p.bikes.length > 1, chipSeg("Backdrop", PICKS, pickOf(p.settings.backdrop), "backdrop", "shop-chipseg-top"))}<div class="dh-pvinfo">${bayInfo(p, ui)}</div>${go}${extra}</aside>`;
   const right = ui.tab === "showroom" ? `<div class="dh-showroom"></div>`
     : `${seg([["bike", "Parts & Mods", "wrench"], ["look", "Paint & Kit", "paint"]], ui.tab, "gtab", "Garage")}${ui.tab === "bike" ? tabs([["cond", "Condition", "tyre"], ["tune", "Tuning", "sprocket"], ["up", "Upgrades", "exhaust"], ["log", "Service log", "log"]], ui.sub, "gsub", "Parts and mods") + (ui.sub === "cond" ? condTab(p, b, ui) : ui.sub === "tune" ? tuneTab(p, b) : ui.sub === "up" ? upTab(p, b, ui) : logTab(b)) : lookTab(p, b, ui)}`;
   return `<div class="dh-card dh-garage shop" data-screen="garage" data-tab="${ui.tab}">${head}<div class="dh-gwrap">${left}<div class="dh-gbody">${right}<p class="shop-sub dh-note" role="status">${esc(note)}</p></div></div></div>`;
@@ -201,7 +201,7 @@ export function garageClick(p: Profile, ui: GarageUI, t: HTMLElement, root: Pare
   if (d.rider !== undefined) return (ui.tab = "look"), (ui.look = "rider"), (ui.trial = null), {};
   if (d.turn) return (ui.trial = null), { profile: choose(p, (p.ride + +d.turn + p.bikes.length) % p.bikes.length) };
   if (d.ride) return (ui.trial = null), { profile: choose(p, +d.ride) };
-  if (d.backdrop !== undefined) return { profile: { ...p, settings: { ...p.settings, backdrop: nextBackdrop(p.settings.backdrop) } } };
+  if (d.backdrop) return { profile: { ...p, settings: { ...p.settings, backdrop: pickOf(d.backdrop) } } };
   if (d.tyre) return { buy: [service(p, "tyres", d.tyre as TyreId), `New ${TYRES[d.tyre as TyreId].name.toLowerCase()} tyres`] };
   if (d.service) return { buy: [service(p, d.service as PartId), "Serviced"] };
   if (d.fix) return { buy: [repair(p, d.fix as DamageId), "Fixed"] };

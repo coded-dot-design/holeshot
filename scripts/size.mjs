@@ -151,14 +151,21 @@ import { readdirSync, readFileSync } from "node:fs";
 // measured on main 9645327; holeshot.mjs 243,792 → 245,191): the settings, controls, series and room pages
 // and the cards over a ride on the shop's pieces (src/menu-ui.ts, src/pages.css), less the old cards'
 // CSS. Budget 244,500 → 246,500 (about 1.1 KB of room).
+// The turntable backdrops (TRACK, SUNSET as a data list, painted once and cached) and the shop's chipSeg
+// pick: holeshot.js 243,218 → 243,887 B gzip (+669 B measured on main da81ebb). Rebased on main e22df27; budget 246,500 → 247,500.
+// vendor/shop re-synced from factory 5ee299f (chipSeg, plus the icon set, stages, wear/upgrade tiles, bay
+// rail and bay picker the UX pass adds): holeshot.js 248,623 B gzip measured with the backdrops on main e22df27.
+// Budget 247,500 → 249,500.
 // The helmet's goggle and the street dome's visor (a low rounded goggle in the eye port, a strap cut
 // from the shell's outline, the visor clipped to the shell), on main e22df27: +298 B measured
-// (holeshot.js 245,404 → 245,702; holeshot.mjs 245,191 → 245,488). Budget unchanged (about 0.8 KB of room).
+// (holeshot.js 245,404 → 245,702; holeshot.mjs 245,191 → 245,488).
 // R47 (the garage UX pass: the shop's icon set, stages, wear and upgrade tiles, the bay rail and the
 // showroom's bay picker from vendor/shop/ d567a7d; the garage fits the viewport, ≤ 1440 px, bay
 // pictures from the rig), on main c6bb162: +4,190 B measured (holeshot.js 245,702 → 249,892;
-// holeshot.mjs 245,488 → 249,587), about 1.2 KB of it the icon table. Budget 246,500 → 250,500.
-const BUDGET = 250_500;
+// holeshot.mjs 245,488 → 249,587), about 1.2 KB of it the icon table. Budget → 250,500.
+// Then the backdrops (above) on top of R47, on main fbb5c25 with vendor/shop from factory 5ee299f:
+// +771 B measured (holeshot.js 249,892 → 250,663; holeshot.mjs 249,587 → 250,355). Budget 250,500 → 251,500.
+const BUDGET = 251_500;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;
