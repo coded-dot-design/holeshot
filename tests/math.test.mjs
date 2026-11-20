@@ -30,6 +30,7 @@ const RENDER = {
   "game.ts": "the shell's cards and preview",
   "garage/view.ts": "the garage card",
   "garage/look.ts": "colours",
+  "garage/backdrop.ts": "the turntable's backdrops (drawn once)",
   "series-ui.ts": "the series card",
   "online/room.ts": "the room card",
   "html.ts": "card helpers",

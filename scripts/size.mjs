@@ -151,7 +151,12 @@ import { readdirSync, readFileSync } from "node:fs";
 // measured on main 9645327; holeshot.mjs 243,792 → 245,191): the settings, controls, series and room pages
 // and the cards over a ride on the shop's pieces (src/menu-ui.ts, src/pages.css), less the old cards'
 // CSS. Budget 244,500 → 246,500 (about 1.1 KB of room).
-const BUDGET = 246_500;
+// The turntable backdrops (TRACK, SUNSET as a data list, painted once and cached) and the shop's chipSeg
+// pick: holeshot.js 243,218 → 243,887 B gzip (+669 B measured on main da81ebb). Rebased on main e22df27; budget 246,500 → 247,500.
+// vendor/shop re-synced from factory 5ee299f (chipSeg, plus the icon set, stages, wear/upgrade tiles, bay
+// rail and bay picker the UX pass adds): holeshot.js 248,623 B gzip measured with the backdrops on main e22df27.
+// Budget 247,500 → 249,500.
+const BUDGET = 249_500;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;
