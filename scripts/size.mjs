@@ -180,7 +180,10 @@ import { readdirSync, readFileSync } from "node:fs";
 // polygon table, the night's bands, sun and ridges, the carousel in the diorama and its fixed camera),
 // replacing the procedural scenes, on main f7051e9: +2,684 B measured (holeshot.js 256,858 → 259,542;
 // holeshot.mjs 256,605 → 259,282). Budget 257,500 → 260,000.
-const BUDGET = 260_000;
+// The backdrop picker folded to a round key (vendor/shop 3b40c27's chipPick: its markup and CSS, the
+// picker's open state, Escape and the press outside), on main 86d4308: +498 B measured (holeshot.js
+// 259,543 → 260,041; holeshot.mjs 259,283 → 259,778). Budget 260,000 → 261,000.
+const BUDGET = 261_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

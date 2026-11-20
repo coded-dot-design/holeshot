@@ -16,9 +16,9 @@ import { tune } from "../model/tune.ts";
 import type { Units } from "../model/units.ts";
 import { atRisk, failChance, failName, warnings } from "../model/upkeep.ts";
 import { DIRT_LINE } from "../model/families.ts";
-import { PICKS, pickOf } from "./backdrop.ts";
+import { BACKDROPS, PICKS, pickOf } from "./backdrop.ts";
 import { buySpot, cosmeticPrice, choose, dress, fits, modPrice, repair, sell, service, setChoice, tryOn, unlocked, upgrade, type Buy, type Slot } from "../model/garage.ts";
-import { optKey, badge, bayRail, btn, card, chipSeg, chips, drop, feel, heading, icon, itemGrid, menu, pill, price, row, seg, stat, stats, tabs, title, turntable, upgradeGrid, wearKeys } from "../../vendor/shop/shop.js";
+import { optKey, badge, bayRail, btn, card, chipPick, chips, drop, feel, heading, icon, itemGrid, menu, pill, price, row, seg, stat, stats, tabs, title, turntable, upgradeGrid, wearKeys } from "../../vendor/shop/shop.js";
 import { DMG_ICON, MOD_ICON, RIDER_SLOTS, SETUP_ICON, SLOT_ICON, SLOT_NAME, bays, bikeItems, bikeSlots, cap, damageRows, feelRows, isE, modKey, modName, modStage, outfitItems, pace, partIcon, partName, riderItems, riderSlots, setups, tyreItems, upgradeItems, wearRows, words, type BikeSlot, type RiderSlot } from "./adapters.ts";
 
 /** What the turntable can preview: a cosmetic (its slot), a mod's next level, or a showroom bike. */
@@ -34,8 +34,8 @@ export interface GarageUI {
   /** The scheme grid's page, and "owned only". */
   page: number;
   owned: boolean;
-  /** The open popover: the tyre compounds, the paint/kit menu ("bays" is kept for old callers: My Bikes is a rail now). */
-  menu: "" | "bays" | "tyre" | "slot";
+  /** The open popover: the tyre compounds, the paint/kit menu, the turntable's backdrop picker ("bays" is kept for old callers: My Bikes is a rail now). */
+  menu: "" | "bays" | "tyre" | "slot" | "backdrop";
   /** Pinned preview (tapped): shown on the turntable with BUY / CANCEL until bought or put back. */
   trial: Pv | null;
   /** Passing preview (hover or keyboard focus on a list item): wins over `trial` while it lasts. */
@@ -175,6 +175,9 @@ export function bayInfo(p: Profile, ui: GarageUI) {
   // (The PREVIEW tag is an overlay chip on the turntable's frame, never a row: ./garage.css .dh-bayline.)
   return `${tag ? `<small class="dh-bayline">${tag}</small>` : ""}${title({ maker: words(makerOf(m).name), kind: CLASSES[m.cls].name, name: words(m.name), number: b.look.number })}<div class="dh-pace-bay">${tiles}</div>`;
 }
+/** The backdrop picker's picks with their dot (folded to a round key, closed by default): AUTO in the
+ *  shop's mint, each backdrop its sky over its ground. */
+const BD_DOTS = PICKS.map(([id, t]) => { const b = BACKDROPS.find((x) => x.id === id); return [id, t, b ? `linear-gradient(${b.sky} 50%,${b.ground} 50%)` : undefined] as const; });
 /** The garage card: the header (the shell's), the bike panel on the left (My Bikes, the turntable,
  *  the bike shown and its pace, LET'S RIDE) and PARTS & MODS / PAINT & KIT on the right; the
  *  SHOWROOM tab leaves an empty `.dh-showroom` host for the shell to mount into. */
@@ -182,7 +185,7 @@ export function garageCard(p: Profile, ui: GarageUI, head: string, go: string, n
   const b = riding(p), B = bays(p, art);
   // MY BIKES is part of the garage: a rail of bays over the turntable (the shop's bayRail).
   const rail = bayRail({ title: "My Bikes", line: B.line, bays: B.bays, add: "+ Add bike", expand: B.expand, credits: p.credits, cur: "◈ " });
-  const left = `<aside class="shop-card dh-bikep">${rail}${turntable("<canvas-slot></canvas-slot>", "data-turn", "bike", p.bikes.length > 1, chipSeg("Backdrop", PICKS, pickOf(p.settings.backdrop), "backdrop", "shop-chipseg-top"))}<div class="dh-pvinfo">${bayInfo(p, ui)}</div>${go}${extra}</aside>`;
+  const left = `<aside class="shop-card dh-bikep">${rail}${turntable("<canvas-slot></canvas-slot>", "data-turn", "bike", p.bikes.length > 1, chipPick("Backdrop", BD_DOTS, pickOf(p.settings.backdrop), "backdrop", { open: ui.menu === "backdrop", attrs: 'data-gmenu="backdrop"', cls: "shop-chipseg-top" }))}<div class="dh-pvinfo">${bayInfo(p, ui)}</div>${go}${extra}</aside>`;
   const right = ui.tab === "showroom" ? `<div class="dh-showroom"></div>`
     : `${seg([["bike", "Parts & Mods", "wrench"], ["look", "Paint & Kit", "paint"]], ui.tab, "gtab", "Garage")}${ui.tab === "bike" ? tabs([["cond", "Condition", "tyre"], ["tune", "Tuning", "sprocket"], ["up", "Upgrades", "exhaust"], ["log", "Service log", "log"]], ui.sub, "gsub", "Parts and mods") + (ui.sub === "cond" ? condTab(p, b, ui) : ui.sub === "tune" ? tuneTab(p, b) : ui.sub === "up" ? upTab(p, b, ui) : logTab(b)) : lookTab(p, b, ui)}`;
   return `<div class="dh-card dh-garage shop" data-screen="garage" data-tab="${ui.tab}">${head}<div class="dh-gwrap">${left}<div class="dh-gbody">${right}<p class="shop-sub dh-note" role="status">${esc(note)}</p></div></div></div>`;

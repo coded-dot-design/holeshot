@@ -113,21 +113,44 @@ try {
     await press("[data-turn='-1']");
     await until(p, "game.profile.ride === 0", `${name}: ‹ previous bike`);
     ok("turntable ‹ › (swap the bike that rides)");
-    // The backdrop picker: each pick pressed, shown on the turntable (AUTO: the theme's), saved, and the showroom's preview wears it.
+    // The backdrop picker: folded to one round key by default (a ring, the pick's dot, aria-expanded,
+    // "Backdrop: <pick>"); a press opens Auto · Track · Sunset with the focus on the pick; a pick applies
+    // it, shown on the turntable (AUTO: the theme's), saved, folds back and gives the focus to the key;
+    // Escape and a press outside fold it too; the showroom's preview wears the pick.
+    const KEY = "[data-gmenu=backdrop]";
+    const pick = await $(p, "(() => { const k = root.querySelector('.shop-chippick-k'), r = k?.getBoundingClientRect(); return { key: !!k, exp: k?.getAttribute('aria-expanded'), label: k?.getAttribute('aria-label'), opts: root.querySelectorAll('[data-backdrop]').length, dot: !!k?.querySelector('.shop-chippick-dot'), w: r?.width, h: r?.height }; })()");
+    assert.deepEqual({ ...pick, w: undefined, h: undefined }, { key: true, exp: "false", label: "Backdrop: Auto", opts: 0, dot: true, w: undefined, h: undefined }, `${name}: the picker is folded by default (${JSON.stringify(pick)})`);
+    assert.ok(pick.w >= 44 && pick.h >= 44, `${name}: the round key is a 44 px target (${pick.w} × ${pick.h})`);
+    const open = async () => { await press(KEY); await until(p, `root.querySelector(${JSON.stringify(KEY)})?.getAttribute('aria-expanded') === 'true' && root.querySelectorAll('[data-backdrop]').length === 3`, `${name}: the picker opens`); };
+    const folded = (what) => until(p, `root.querySelector(${JSON.stringify(KEY)})?.getAttribute('aria-expanded') === 'false' && !root.querySelector('[data-backdrop]')`, `${name}: ${what} folds the picker`);
     for (const want of ["track", "sunset", "auto"]) {
+      await open();
+      assert.equal(await $(p, "root.activeElement?.dataset.backdrop"), (await prof(p)).settings.backdrop ?? "auto", `${name}: open, the focus is on the pick`);
       await press(`[data-backdrop=${want}]`);
-      await until(p, `game.profile.settings.backdrop === ${JSON.stringify(want)} && root.querySelector('[data-backdrop=${want}]').getAttribute('aria-pressed') === 'true'`, `${name}: backdrop ${want}`);
+      await until(p, `game.profile.settings.backdrop === ${JSON.stringify(want)}`, `${name}: backdrop ${want}`);
+      await folded(`picking ${want}`);
+      await until(p, `root.querySelector(${JSON.stringify(KEY)}).getAttribute('aria-label') === 'Backdrop: ' + ${JSON.stringify(want[0].toUpperCase() + want.slice(1))} && root.activeElement === root.querySelector(${JSON.stringify(KEY)})`, `${name}: the key names ${want} and has the focus`);
       await until(p, `root.querySelector('.dh-preview')?.dataset.scene === (${JSON.stringify(want)} === 'auto' ? (document.documentElement.dataset.theme === 'light' ? 'track' : 'sunset') : ${JSON.stringify(want)})`, `${name}: the turntable shows ${want}`);
     }
+    await open();
+    await p.keyboard.press("Escape");
+    await folded("Escape");
+    assert.equal(await screen(p), "garage", `${name}: Escape on the picker stays in the garage`);
+    assert.ok(await $(p, `root.activeElement === root.querySelector(${JSON.stringify(KEY)})`), `${name}: after Escape the focus is on the key`);
+    await open();
+    await press(".dh-gbody .shop-heading, .dh-gbody .shop-sub");
+    await folded("a press outside");
+    await open();
     await press("[data-backdrop=sunset]");
     await until(p, "JSON.parse(localStorage.getItem('holeshot:profile') || '{}').settings?.backdrop === 'sunset'", `${name}: the pick is saved`);
     await press("[data-gtab=showroom]");
     await until(p, "root.querySelector('.shop-cat') && root.querySelector('.dh-preview')?.dataset.scene === 'sunset'", `${name}: the showroom preview wears the pick`);
     await press("[data-gtab=garage]");
-    await until(p, "!!root.querySelector('[data-backdrop=auto]')", `${name}: back to the garage`);
+    await until(p, `!!root.querySelector(${JSON.stringify(KEY)})`, `${name}: back to the garage`);
+    await open();
     await press("[data-backdrop=auto]");
     await until(p, "game.profile.settings.backdrop === 'auto'", `${name}: backdrop auto again`);
-    ok("the turntable's backdrop (Auto · Track · Sunset, saved)");
+    ok("the turntable's backdrop: folded to a round key, opens, a pick applies and folds, Escape and a press outside fold it (Auto · Track · Sunset, saved)");
 
     // ---- My Bikes: select, sell (confirm, trade value), unlock a bay ----
     // (My Bikes is the rail over the turntable: every bay's keys are on screen.)

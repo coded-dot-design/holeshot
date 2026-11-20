@@ -352,7 +352,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     note = "";
     // (Into the garage from elsewhere, LET'S RIDE takes the focus: its one main action.)
     // (Within the garage, the focus stays on the key that was pressed, redrawn: or the open menu's first row.)
-    const again = s === "garage" && was === "garage" ? (gui.menu ? cards.querySelector<HTMLElement>(".shop-menu-i, .shop-sheet .shop-x") : refocus ? cards.querySelector<HTMLElement>(refocus) : null) : null;
+    const again = s === "garage" && was === "garage" ? (gui.menu ? cards.querySelector<HTMLElement>(".shop-menu-i, .shop-sheet .shop-x, .shop-chippick [aria-pressed=true]") : refocus ? cards.querySelector<HTMLElement>(refocus) : null) : null;
     refocus = "";
     const tab = s === "ride" && was === "ride" ? cards.querySelector<HTMLElement>(".dh-rtabs [aria-pressed=true]") : null;
     const first = tab ?? again ?? (s === "garage" && was !== "garage" ? cards.querySelector<HTMLElement>(".dh-letsride") : null) ?? cards.querySelector<HTMLElement>(".dh-go, [aria-pressed=true], button, input");
@@ -464,13 +464,19 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   cards.addEventListener("focusin", (e) => { if (touched) return; const v = pvOf(e.target as Element); byFocus = !!v; peek(v, true); }, sig);
   cards.addEventListener("focusout", (e) => !cards.contains(e.relatedTarget as Node) && peek(null), sig);
   cards.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && screen === "garage" && gui.menu) return e.stopPropagation(), (gui.menu = ""), show("garage");
+    if (e.key === "Escape" && screen === "garage" && gui.menu) return e.stopPropagation(), gui.menu === "backdrop" && (refocus = '[data-gmenu="backdrop"]'), (gui.menu = ""), show("garage");
     if (e.key !== "Escape" || screen !== "garage" || !gui.trial) return;
     gui.trial = gui.peek = null;
     say("Preview cancelled");
     show("garage");
   }, sig);
 
+  // (A press outside the open backdrop picker folds it: a key's own press already did, in garageClick.)
+  document.addEventListener("click", (ev) => {
+    if (screen !== "garage" || gui.menu !== "backdrop" || ev.composedPath().some((n) => n instanceof Element && n.classList.contains("shop-chippick"))) return;
+    gui.menu = "";
+    show("garage");
+  }, sig);
   // ---- input on the cards ----
   cards.addEventListener("click", (ev) => {
     const t = (ev.target as HTMLElement).closest<HTMLElement>("button");
@@ -487,6 +493,8 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     if (d.rtab) return (rideTab = d.rtab as RideTab), show("ride");
     if (d.rider !== undefined && screen !== "garage") return garageClick(profile, gui, t, cards), show("garage");
     refocus = [...t.attributes].filter((a) => a.name.startsWith("data-") && a.name !== "data-sure").map((a) => `[${a.name}="${CSS.escape(a.value)}"]`).join("");
+    // (A backdrop pick folds the picker back to its round key, and the focus goes back to that key.)
+    if (d.backdrop) refocus = '[data-gmenu="backdrop"]';
     const g = screen === "garage" ? garageClick(profile, gui, t, cards) : null;
     if (g) return g.buy ? did(g.buy[0], g.buy[1]) : (g.profile && ((profile = g.profile), keep()), show("garage"));
     if (t.classList.contains("dh-risk-go") && pending) return (sure = true), startEvent(pending[0], pending[1]);

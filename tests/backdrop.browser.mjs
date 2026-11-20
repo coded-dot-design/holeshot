@@ -107,8 +107,9 @@ try {
     console.log(`  ${name} garage: tyres at ${JSON.stringify(T.pts)} inside the disc (${T.E.cx.toFixed(0)}, ${T.E.cy.toFixed(0)}, ${T.E.a.toFixed(0)} × ${T.E.b.toFixed(0)})`);
     const s0 = await size();
     for (const pick of ["track", "sunset", "auto"]) {
+      await press("[data-gmenu=backdrop]");
       await press(`[data-backdrop=${pick}]`);
-      await until(q, `root.querySelector('[data-backdrop=${pick}]')?.getAttribute('aria-pressed') === 'true'`, `${name}: pick ${pick}`);
+      await until(q, `game.profile.settings.backdrop === '${pick}' && !root.querySelector('[data-backdrop]')`, `${name}: pick ${pick}`);
       assert.deepEqual(await size(), s0, `${name}: the frame keeps its size on ${pick}`);
     }
     await press(".dh-theme");

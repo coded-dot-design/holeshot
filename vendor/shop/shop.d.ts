@@ -128,6 +128,18 @@ export declare const turntable: (inner: string, key?: string, label?: string, ar
 export declare const chip: (label: string, value: string, attrs: string) => string;
 /** A small pick over a frame's corner (the turntable's backdrop: Auto · Track · Sunset): `chipSeg("Backdrop", [["auto", "Auto"], …], "auto", "backdrop")` (the keys carry `data-backdrop="auto"`…). Each key is a 44 px hit area round a small pill; `label` names the group for screen readers; `cls` places it (`shop-chipseg-top`: the top-left corner). */
 export declare const chipSeg: (label: string, items: readonly (readonly [string, string])[], on: string, key: string, cls?: string) => string;
+/** A chipSeg that folds to one round key (the turntable's backdrop, closed by default): a ring with a
+ *  filled dot showing the pick (`items` take an optional third field, a CSS colour or gradient for the
+ *  dot; none: --shop-go). `chipPick("Backdrop", [["auto", "Auto"], ["track", "Track", "#7fc6fb"]], "auto", "backdrop", { open, attrs: 'data-gmenu="backdrop"', cls: "shop-chipseg-top" })`.
+ *  The key carries `attrs` (the game toggles `open` on it), `aria-expanded` and "Backdrop: Auto"; open,
+ *  the chipSeg's keys follow it (eased out of the key; none under reduced motion). Absolutely placed
+ *  over its frame: opening or closing never moves or resizes the frame. Escape, a click outside and
+ *  where the focus goes are the game's (it owns `open`). */
+export declare const chipPick: (label: string, items: readonly (readonly [string, string, string?])[], on: string, key: string, o: {
+    open?: boolean;
+    attrs: string;
+    cls?: string;
+}) => string;
 /** The main call to action: `cta("LET'S RIDE", 'class-extra', "Race · Endless · Free ride · Track day")`; `cls` adds the screen's hook class. */
 export declare const cta: (label: string, cls?: string, sub?: string, attrs?: string) => string;
 /** Stars: `stars(2)` → ★★☆☆ (of 4, with its words for screen readers). */

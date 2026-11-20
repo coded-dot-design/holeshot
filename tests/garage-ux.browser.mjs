@@ -215,7 +215,7 @@ try {
       assert.ok(same(S, S0), `${w}: ${what}: the pace tiles stay put (${S0} → ${S})`);
     };
     const hover = async (sel) => { if (touch) await $(p, `root.querySelector(${JSON.stringify(sel)}).focus()`); else { await $(p, `root.querySelector(${JSON.stringify(sel)}).scrollIntoView({ block: 'center' })`); await p.locator(sel).first().hover(); } };
-    for (const b of ["track", "sunset", "auto"]) await click(p, `[data-backdrop=${b}]`), await check(`backdrop ${b}`);
+    for (const b of ["track", "sunset", "auto"]) await click(p, "[data-gmenu=backdrop]"), await until(p, "!!root.querySelector('[data-backdrop]')", "backdrop picker open"), await check("backdrop picker open"), await click(p, `[data-backdrop=${b}]`), await until(p, "!root.querySelector('[data-backdrop]')", "backdrop picker folded"), await check(`backdrop ${b}`);
     await click(p, "[data-turn='1']"), await until(p, "game.profile.ride === 1", "bike 2"), await check("‹ › bike switch");
     await click(p, "[data-turn='1']"), await until(p, "game.profile.ride === 0", "bike 1"), await check("‹ › back");
     for (const s of ["tune", "up", "log", "cond"]) await click(p, `[data-gsub=${s}]`), await check(`Parts & Mods › ${s}`);
