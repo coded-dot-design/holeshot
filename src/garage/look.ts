@@ -4,16 +4,12 @@
 // bars, cracked plastics dull the colour), and the rider's kit. Used by every scene (ModeCtx.look)
 // and the garage's preview (with a try-on applied first).
 import type { RigHelmet } from "../bike/rig.ts";
+import { mix } from "../colour.ts";
 import { HELMETS, paint as paintOf, PLASTICS, PLATES, swatch, visor as visorOf } from "../data/looks.ts";
 import type { ModeCtx } from "../modes/mode.ts";
 import { riding, type Profile } from "../model/profile.ts";
 import { tune } from "../model/tune.ts";
 
-/** Mix `hex` toward `to` by t (0..1). */
-export function mix(hex: string, to: string, t: number) {
-  const a = parseInt(hex.slice(1), 16), b = parseInt(to.slice(1), 16), c = (s: number) => Math.round(((a >> s) & 255) * (1 - t) + ((b >> s) & 255) * t);
-  return "#" + ((1 << 24) | (c(16) << 16) | (c(8) << 8) | c(0)).toString(16).slice(1);
-}
 
 /** The helmet's paint, its stripe (the jersey pattern's colour), the visor tint and the shape, from the kit. */
 export function helmetOf(k: Profile["kit"]) {

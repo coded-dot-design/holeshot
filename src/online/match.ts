@@ -35,7 +35,7 @@ import { makeMap, RIDE_MAPS, type RideMap } from "../modes/freeride/maps.ts";
 import { meter, type Meter } from "../modes/meter.ts";
 import { tune, type Tuned } from "../model/tune.ts";
 import { onGround, roadPower } from "../model/families.ts";
-import { difficulty, rivals as seriesRivals } from "../model/series.ts";
+import { difficulty, rivals as seriesRivals, seedMix } from "../model/series.ts";
 import { TIERS } from "../data/series.ts";
 import type { Profile } from "../model/profile.ts";
 
@@ -48,14 +48,8 @@ export const SCORE_CAP = 150;
 /** The Free Ride jam maps, in the host's order: the race loop, then the open maps. */
 export const JAM_MAPS = [{ id: MOTO_TRACK.id, name: "NEON LOOP" }, ...RIDE_MAPS.map((d) => ({ id: d.id, name: d.name }))];
 
-const mix = (a: number, b: number) => {
-  let h = Math.imul((a ^ 0x9e3779b9) >>> 0, 0x85ebca6b) ^ Math.imul(b + 1, 0xc2b2ae35);
-  h ^= h >>> 13;
-  h = Math.imul(h, 0x27d4eb2f);
-  return (h ^ (h >>> 16)) >>> 0;
-};
 /** Ride n's seed in a room. */
-export const rideSeed = (room: number, round: number) => mix(room >>> 0, 7000 + round);
+export const rideSeed = (room: number, round: number) => seedMix(room >>> 0, 7000 + round);
 const TRACKS = new Map<string, Track>(), MAPS = new Map<number, Track | RideMap>();
 /** A race's track: generated from the ride's seed at the tier's difficulty (validated, kept once made),
  *  at the MX venue (../modes/race/venue.ts: online races ride MX; SX is solo for now; the jam keeps

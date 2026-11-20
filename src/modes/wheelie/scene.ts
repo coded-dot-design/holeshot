@@ -30,7 +30,7 @@ import {
 } from "./rules.ts";
 import { openRun, E_TOWN, E_BIOME, E_BIG, NNB, NSPK, S_TOWNS } from "./roam.ts";
 import { field, MASH, M_CITY } from "../mashup/field.ts";
-import { biomePal } from "../desert/look.ts";
+import { biomePal, mix } from "../desert/look.ts";
 import { B_DESERT, B_FOREST, B_QUARRY, B_PARK } from "../desert/world.ts";
 import {
   openWindow, CITY_SEED, IS, RC, RB_R, RB_HW, FAR_WIN, FAR_CELL, FAR_STEP, KICK_L, KICK_W, NITEM, I_PROP,
@@ -1771,12 +1771,4 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null, mash = false
 
     },
   };
-}
-
-/** a → b by t, as "#rrggbb" (theme changes only). */
-function mix(a: string, b: string, t: number) {
-  const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16);
-  let o = 0;
-  for (let s = 16; s >= 0; s -= 8) o |= Math.round(((A >> s) & 255) + (((B >> s) & 255) - ((A >> s) & 255)) * t) << s;
-  return "#" + o.toString(16).padStart(6, "0");
 }

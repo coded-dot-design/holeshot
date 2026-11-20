@@ -10,6 +10,7 @@
 // rider leaves the bike and tumbles where bike.ts throws them. Cosmetic: builtin maths is fine here.
 import type { Diorama, DioramaObject } from "@fzlt/core/diorama";
 import type { Bike } from "./bike.ts";
+import { mix } from "../colour.ts";
 import { bikeLook, body, dirt, extras, INK, type BodyKind, type BodyKit, type ShownUpgrade } from "./bodies.ts";
 export type { ShownUpgrade };
 
@@ -93,10 +94,6 @@ const RELEASE = 0.25;
 const THIGH = 0.4, SHIN = 0.42, UPPER = 0.29, FORE = 0.29, TORSO = 0.46;
 
 /** `a` toward `b` by t (`#rrggbb`). */
-const mix = (a: string, b: string, t: number) => {
-  const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16), c = (sh: number) => Math.round(((x >> sh) & 255) * (1 - t) + ((y >> sh) & 255) * t);
-  return "#" + ((1 << 24) | (c(16) << 16) | (c(8) << 8) | c(0)).toString(16).slice(1);
-};
 
 /** The ink edge's width round a gas bike's main shapes (./bodies.ts INK is its colour). */
 const INK_W = 0.013;

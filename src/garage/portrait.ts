@@ -4,7 +4,8 @@
 // glint) in the kit's shape (../bike/rig.ts RigHelmet). An SVG string, no images; the same shapes the
 // 3D rig draws, so the chip, the garage and the turntable agree.
 import { bandOf, strapOf, type RigHelmet } from "../bike/rig.ts";
-import { helmetOf, mix } from "./look.ts";
+import { mix } from "../colour.ts";
+import { helmetOf } from "./look.ts";
 
 import type { Profile } from "../model/profile.ts";
 

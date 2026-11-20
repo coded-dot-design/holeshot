@@ -17,6 +17,7 @@
 //   electric's motor swap), cylinder fins (a gas bike's big bore kit), a charger and its intake (a
 //   street bike's turbo). Original shapes, no badges. Cosmetic: builtin maths is fine here.
 import type { DioramaObject } from "@fzlt/core/diorama";
+import { mix } from "../colour.ts";
 import type { RigColors } from "./rig.ts";
 
 /** The bodies this file builds. */
@@ -182,10 +183,6 @@ export function dirt(kind: "2t" | "4t", k: BodyKit, L: BikeLook): Built {
   return { fender, plates: [-0.36, -0.1], tail: [-1.0, 0.18] };
 }
 /** `a` toward `b` by t (`#rrggbb`). */
-const mix = (a: string, b: string, t: number) => {
-  const p = parseInt(a.slice(1), 16), q = parseInt(b.slice(1), 16), c = (sh: number) => Math.round(((p >> sh) & 255) * (1 - t) + ((q >> sh) & 255) * t);
-  return "#" + ((1 << 24) | (c(16) << 16) | (c(8) << 8) | c(0)).toString(16).slice(1);
-};
 
 const PI = Math.PI;
 const LAMP = "#fff3c4";
