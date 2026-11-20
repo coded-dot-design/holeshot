@@ -25,7 +25,7 @@ import { serve, launchOptions } from "./serve.mjs";
 const DIST = process.env.DIST || "/dist", REPORT = !!process.env.REPORT, TOL = 1.5, TOL2 = 1.6, ONLY = process.env.ONLY || "";
 /** The modes with a closed line: [name, mode, options]. */
 const TRACKS = [
-  ["mx", "race", {}],
+  ["mx", "race", {}], ["sx", "race", { venue: "sx" }],
   ["meridian", "trackday", { map: "td-meridian" }], ["knotworks", "trackday", { map: "td-knotworks" }], ["bottlecap", "trackday", { map: "td-bottlecap" }],
 ];
 const full = `<!doctype html><html lang="en" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Holeshot</title></head><body style="margin:0"><div id="game" style="position:fixed;inset:0"></div><script type="module">import { createHoleshot } from "${DIST}/holeshot.mjs"; window.game = createHoleshot({ host: document.getElementById("game"), seed: 5, sound: false }); game.setup({ starter: "sparkhound" });</script></body></html>`;
