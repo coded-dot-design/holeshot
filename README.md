@@ -4,10 +4,10 @@
 wheelie it through town, and keep it alive in the garage with what you win. Tyres, rebuilds, mods,
 paint and a rider kit. Neon at night, pastel by day.
 
-By [David Cooley](https://fizlet.com/people/david-cooley/) (game creator) · built on [Fizlet](https://github.com/coded-dot-design/fizlet) · MIT
+By [David Cooley](https://fizlet.com/people/david-cooley/) (game creator) · built on [Fizlet](https://github.com/fizlet/fzlt) · all rights reserved
 
-- **Play:** https://holeshot.domvirus.com/play/
-- **About:** https://holeshot.domvirus.com/
+- **Play:** https://holeshot.fzlt.games/play/
+- **About:** https://holeshot.fzlt.games/
 
 Holeshot grew out of three pieces in Fizlet's Daily (Moto Track, Big Air and Wheelie City), which
 shared one bike. Now they share one garage.
@@ -201,7 +201,7 @@ createHoleshot();                            // a layer over the whole page; Esc
 **Online play** needs a fizlet-rooms server (the same one Dune Hop uses): the play page passes
 `ROOMS_URL` (a repo variable, built in as `PUBLIC_ROOMS_URL`; default
 `wss://fizlet-rooms.fizlet.workers.dev`), and `?rooms=wss://…` on the page overrides it. The server
-must list the site's origin (https://holeshot.domvirus.com) in its `ALLOWED_ORIGINS`. An invite code
+must list the site's origin (https://holeshot.fzlt.games) in its `ALLOWED_ORIGINS`. An invite code
 gets you in. `createHoleshot({ rooms })` takes the URL when you mount the game yourself.
 
 ## Testing
@@ -240,9 +240,10 @@ How the pieces fit (the mode interface, the bike and `tune()`, the economy file,
 mode): [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). CHROMIUM_PATH points the tests at a Chromium of
 your own.
 
-Custom domain: `pages.yml` builds with `SITE_URL=https://holeshot.domvirus.com` and `SITE_BASE=/`
+Custom domain: `pages.yml` builds with `SITE_URL=https://holeshot.fzlt.games` and `SITE_BASE=/`
 (repo variables override) and writes the `CNAME` from it.
 
 ## Licence
 
-MIT © Chris Cooley / coded.design
+Copyright (c) Chris Cooley. All rights reserved ([LICENSE](LICENSE)). Versions published before this
+change were MIT and stay MIT for anyone who has a copy; the Fizlet engine (`@fzlt/core`) is MIT.

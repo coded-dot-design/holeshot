@@ -22,7 +22,7 @@ const kit = await css(require.resolve("@fzlt/core/ui/board-ui.css"));
 const common = {
   define: { __KIT_CSS__: JSON.stringify(kit), __GAME_CSS__: JSON.stringify(game), __NAMES__: JSON.stringify(names), __VERSION__: JSON.stringify(version) },
   bundle: true, minify: true, target: "es2022", legalComments: "none", logLevel: "warning",
-  banner: { js: `/* Holeshot ${version} · MIT © Chris Cooley · built on Fizlet ${core} */` },
+  banner: { js: `/* Holeshot ${version} · © Chris Cooley, all rights reserved · built on Fizlet ${core} */` },
 };
 await build({ ...common, entryPoints: ["src/index.ts"], format: "esm", outfile: `${out}/holeshot.mjs` });
 await build({ ...common, entryPoints: ["src/index.ts"], format: "iife", globalName: "holeshot", outfile: `${out}/holeshot.js` });

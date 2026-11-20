@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **New home, new licence.** The game moves to the private repo `fizlet/holeshot` and the address
+  `https://holeshot.fzlt.games` (the site's `SITE_URL` default and canonical; `SITE_BASE` defaults to `/`).
+  From this version the game is all rights reserved (`LICENSE`, `"license": "UNLICENSED"`).
+  Earlier versions were published under the MIT License and stay MIT for anyone who has a copy.
+  The Fizlet engine (`@fzlt/core`, now `fizlet/fzlt`) stays MIT.
+
 ## 0.11.0 — 2026-11-20
 
 - **The helmet, final pass: the goggles across the face, big, and a real strap.** The goggle sat high, half under the peak (its frame and lens were placed half their height up from where they were meant to be, and the head rode pitched face-down), so head-on it read as a small box on the crown over a dark slab. Now, as the portrait and the box art draw it: crown, peak above, the goggle across the eye port at eye height, chin bar below, on all six shapes. The frame is about 60 % of the head's width and the lens fills 80 % of it (head-on the lens is 13–15 % of the shell's box; it was 0.7–7.8 %); side-on the goggle's side shows (a frame and lens plate each side, clipped inside the shell, gone past 100° from the face). The strap is a thin ring round the head at goggle height in its own colour (dark, or the band darkened on a dark shell), never a cap over the crown in the peak's colour; the portrait's strap matches. The head is carried level, looking ahead, so at the garage turntable the street dome's visor (and every goggle) shows from head-on to side-on instead of vanishing at side-on. tests/helmet: head-on lens centroid 35–75 % down the helmet and at least 12 % of its box; at the garage's own turntable camera on four shipped bikes, lens px at every yaw to 90° and none past 100°; no strap px in the top 30 % of the helmet. On main 86d4308 these fail (head-on lens 0.7–7.8 %, centroid 0.33; side-on goggle 0 px; strap in the top 30 % from behind). Size +534 B gzip (holeshot.js 260,041 → 260,575, measured on main fa0cef9); budget unchanged (261,000).

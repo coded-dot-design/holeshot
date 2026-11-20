@@ -7,9 +7,9 @@ export default defineConfig({
   srcDir: root + "site/src",
   publicDir: root + "site/public",
   outDir: root + "artifacts/pages",
-  // Custom domain: SITE_URL=https://holeshot.domvirus.com and SITE_BASE=/ (pages.yml defaults).
-  site: process.env.SITE_URL || "https://coded-dot-design.github.io",
-  base: process.env.SITE_BASE || "/holeshot",
+  // Custom domain: SITE_URL=https://holeshot.fzlt.games and SITE_BASE=/ (pages.yml defaults).
+  site: process.env.SITE_URL || "https://holeshot.fzlt.games",
+  base: process.env.SITE_BASE || "/",
   trailingSlash: "always",
   output: "static",
   devToolbar: { enabled: false },

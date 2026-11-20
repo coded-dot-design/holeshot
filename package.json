@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Holeshot: one dirt bike, one garage, every kind of riding, on a tabletop. Built on Fizlet, by David Cooley.",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "author": "David Cooley (https://fizlet.com/people/david-cooley/)",
   "scripts": {
     "typecheck": "tsc --noEmit",
