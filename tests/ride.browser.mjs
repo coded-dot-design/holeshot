@@ -98,7 +98,7 @@ try {
     const was = await p.evaluate(() => document.documentElement.dataset.theme);
     await press(".dh-ride .dh-theme");
     await until(p, (w) => document.documentElement.dataset.theme !== w && game.getSnapshot().screen === "ride", was, `${name}: the theme flips`);
-    assert.deepEqual(await $(p, "[root.querySelector('.dh-theme').textContent.trim(), root.activeElement === root.querySelector('.dh-theme')]"), [was === "dark" ? "☀Day" : "☾Night", true], `${name}: Day / Night`);
+    assert.deepEqual(await $(p, "[root.querySelector('.dh-theme').textContent.trim(), !!root.querySelector('.dh-theme svg'), root.activeElement === root.querySelector('.dh-theme')]"), [was === "dark" ? "Day" : "Night", true, true], `${name}: Day / Night`);
     // The rider (a wide screen's header): to the rider's gear in the garage.
     if (!touch) {
       await press(".dh-ride .dh-who");
