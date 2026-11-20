@@ -59,7 +59,7 @@ try {
     await until(A, (sr) => /Waiting for/.test(eval(sr).querySelector(".ol-wait-say").textContent), sr, "A waits in its room");
     await A.bringToFront();
     await click(A, ".ol-share");
-    await until(A, (sr) => eval(sr).querySelector(".ol-share").textContent === "LINK COPIED", sr, "the link is copied");
+    await until(A, (sr) => eval(sr).querySelector(".ol-share").textContent === "Link copied", sr, "the link is copied");
     const link = (await A.evaluate(() => navigator.clipboard.readText())).replace(/^https?:\/\/[^/]+\//, `${site.url}/`);
     const B = await open(link, { width: 390, height: 844 }, true, "B", B0);
     for (const p of [A, B]) await until(p, (m) => game.getSnapshot().online?.phase === "ride" && game.getSnapshot().mode === m, R.mode, `${R.name}: both ride it`);

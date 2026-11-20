@@ -17,7 +17,7 @@ rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
 const css = async (file) => (await transform(readFileSync(file, "utf8"), { loader: "css", minify: true })).code.trim();
 // The game's CSS: the shell's, the garage's, the series', then each mode scene's (and the map picker).
-const game = (await Promise.all(["src/game.css", "vendor/shop/shop.css", "src/garage/garage.css", "src/ride.css", "src/garage/showroom.css", "src/series.css", "src/modes/race/scene.css", "src/modes/bigair/scene.css", "src/modes/wheelie/scene.css", "src/online/online.css", "src/modes/stunts.css"].map(css))).join("");
+const game = (await Promise.all(["src/game.css", "vendor/shop/shop.css", "src/garage/garage.css", "src/ride.css", "src/pages.css", "src/garage/showroom.css", "src/series.css", "src/modes/race/scene.css", "src/modes/bigair/scene.css", "src/modes/wheelie/scene.css", "src/online/online.css", "src/modes/stunts.css"].map(css))).join("");
 const kit = await css(require.resolve("@fzlt/core/ui/board-ui.css"));
 const common = {
   define: { __KIT_CSS__: JSON.stringify(kit), __GAME_CSS__: JSON.stringify(game), __NAMES__: JSON.stringify(names), __VERSION__: JSON.stringify(version) },

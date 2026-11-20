@@ -1,8 +1,7 @@
-/* The SERIES screen (src/series-ui.ts): the tiers, the standings table, the next round's map. Board
-   UI tokens and the shell's neon pair (--hot, --cy); phone first (one column under 640 px). */
-.ds-cols{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;align-items:start}
-.ds-next{display:grid;gap:6px}
-.ds-map{border:2px solid var(--rim);border-radius:12px;overflow:hidden;background:var(--raised)}
+/* The SERIES page (src/series-ui.ts): the tiers, the standings table, the next round's map. Layout
+   over the shop's tokens (the map keeps the shell's neon pair, --hot and --cy); one column under 640 px. */
+.ds-cols{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px;align-items:start}
+.ds-map{border:1.5px solid var(--shop-line);border-radius:8px;overflow:hidden;background:var(--shop-tile)}
 .tp{display:block;width:100%;height:auto}
 .tp-table{fill:color-mix(in srgb,var(--cy) 8%,var(--raised))}
 .tp-edge{fill:none;stroke:color-mix(in srgb,var(--hot) 30%,var(--raised));stroke-width:3.6;stroke-linejoin:round}
@@ -14,18 +13,24 @@
 .tp-f3 circle,.tp-f5 circle,.tp-f6 circle{fill:#9d7bff}
 .tp-f7 circle{fill:var(--lime)}
 .tp-f text{font:900 1.05px ui-rounded,system-ui,sans-serif;fill:#0a0918;text-anchor:middle}
-.ds-table{width:100%;border-collapse:separate;border-spacing:0 4px;font-variant-numeric:tabular-nums}
-.ds-table caption{text-align:left;font-size:13px;letter-spacing:.12em;color:var(--muted);padding:0 0 4px}
-.ds-table thead th{font-size:11px;letter-spacing:.1em;color:var(--muted);text-align:left;padding:0 6px}
-.ds-table td,.ds-table tbody th{padding:6px;background:var(--raised);border-block:2px solid var(--rim);text-align:left;font-weight:800}
-.ds-table td:first-child{border-left:2px solid var(--rim);border-radius:8px 0 0 8px;width:2.2em;text-align:center}
-.ds-table td:last-child{border-right:2px solid var(--rim);border-radius:0 8px 8px 0;text-align:right;font-size:17px}
-.ds-table tbody th b{display:block;font-size:14px}
-.ds-table tbody th small{display:block;font-size:11px;color:var(--muted);font-weight:700}
-.ds-res{color:var(--muted);letter-spacing:.08em;font-size:12px;white-space:nowrap}
-.ds-table .ds-me td,.ds-table .ds-me th{background:color-mix(in srgb,var(--cy) 22%,var(--raised))}
-.ds-tier[data-locked]{opacity:.6}
-.ds-tier .dh-mod small:first-child{color:var(--hot);letter-spacing:.08em}
-.ds-after{margin-top:-4px}
+.shop .ds-table{border-collapse:collapse;font-size:16px;font-variant-numeric:tabular-nums}
+.shop .ds-table caption{text-align:left;padding:0 0 10px}
+.shop .ds-table thead th{padding:0 8px 10px;text-align:left}
+.shop .ds-table tbody th{font:inherit;font-weight:700;text-transform:none;letter-spacing:0;color:var(--shop-ink)}
+.shop .ds-table :is(th,td):not(:first-child):not(:last-child){text-align:left}
+.shop .ds-table td,.shop .ds-table tbody th{padding:10px 8px;border-bottom:1.5px solid var(--shop-line);text-align:left;font-weight:700;color:var(--shop-ink)}
+.shop .ds-table td:first-child{width:2.4em;text-align:center;color:var(--shop-mute)}
+.shop .ds-table td:last-child{text-align:right;font-size:18px;font-weight:800}
+.shop .ds-table thead th:last-child{text-align:right}
+.shop .ds-table tbody th b{display:block;font-size:16px;font-weight:800}
+.shop .ds-table tbody th small{display:block;font-weight:500;font-size:13px;color:var(--shop-mute)}
+.shop .ds-res{color:var(--shop-mute);font:500 13px var(--shop-mono);white-space:nowrap}
+.shop .ds-table .ds-me :is(td,th){background:var(--shop-soft);color:var(--shop-soft-ink)}
+.shop .ds-table .ds-me th small{color:inherit}
+.ds-tiers .shop-row[data-locked]{opacity:.65}
+.ds-tiers .shop-row{padding:14px 22px}
+.ds-tiers .shop-row-e .shop-btn{min-width:9em}
+.ds-keys .shop-btn{min-width:11em;min-height:52px;font-size:19px}
+.dh-over .ds-after{display:grid}
 @container (max-width:640px){.ds-cols{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:640px){.ds-cols{grid-template-columns:minmax(0,1fr)}}

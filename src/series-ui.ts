@@ -1,8 +1,9 @@
 // The SERIES screen and a series round, for the shell (./game.ts): the tier pick (open, locked, best
 // place, prizes), the championship under way (standings, the next round's track from above, RIDE
 // ROUND / RETIRE), the standings on the result card after a round, and starting a round: a generated
-// track (./model/series.ts) in the race scene with the tier's rivals. Strings in, strings out, plus
-// one start function; the shell owns the profile and the clicks (`data-series-*`).
+// track (./model/series.ts) in the race scene with the tier's rivals. A page in the garage's design
+// language (./menu-ui.ts page, the shop's pieces; layout in ./series.css). Strings in, strings out,
+// plus one start function; the shell owns the profile and the clicks (`data-series-*`).
 import { model as modelOf } from "./data/roster.ts";
 import { POINTS, TIERS, UNLOCK_TOP, tier } from "./data/series.ts";
 import type { ModeCtx, ModeRun } from "./modes/mode.ts";
@@ -13,9 +14,9 @@ import { riding, type Profile } from "./model/profile.ts";
 import { bestOf, difficulty, rivals, roundSeed, roundTrack, standings, unlocked, type SeriesRun } from "./model/series.ts";
 import type { Venue } from "./modes/race/venue.ts";
 import type { ModeResult } from "./model/economy.ts";
-
-const num = (n: number) => Math.round(n).toLocaleString("en-US");
-const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+import { btn, card, esc, heading, num, row, title } from "../vendor/shop/shop.js";
+import { page } from "./menu-ui.ts";
+import { words } from "./garage/adapters.ts";
 const ORD = ["1ST", "2ND", "3RD", "4TH"];
 const KIND = ["", "DOUBLE", "WHOOPS", "TRIPLE", "TABLETOP", "STEP-UP", "STEP-DOWN", "FINISH JUMP"];
 
@@ -31,7 +32,7 @@ function table(p: Profile, run: SeriesRun, caption: string) {
     const w = who[s.rider]!, res = run.results.map((x) => (x[s.rider]! < 0 ? "–" : String(x[s.rider]! + 1))).join(" ");
     return `<tr${w.me ? ` class="ds-me"` : ""}><td>${i + 1}</td><th scope="row"><b>#${w.number} ${esc(w.name)}</b><small>${esc(w.bike)}</small></th><td class="ds-res">${res || "·"}</td><td class="ds-pts">${s.points}</td></tr>`;
   }).join("");
-  return `<table class="ds-table"><caption>${caption}</caption><thead><tr><th scope="col">POS</th><th scope="col">RIDER</th><th scope="col">ROUNDS</th><th scope="col">PTS</th></tr></thead><tbody>${rows}</tbody></table>`;
+  return `<table class="shop-table ds-table"><caption class="shop-eyebrow">${caption}</caption><thead><tr><th scope="col">POS</th><th scope="col">RIDER</th><th scope="col">ROUNDS</th><th scope="col">PTS</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 /** The next round: its track from above and what is on it. */
 function nextRound(run: SeriesRun) {
@@ -40,23 +41,24 @@ function nextRound(run: SeriesRun) {
   const turns = plan.plan.filter((v) => typeof v !== "number") as { turn: number }[];
   const rights = turns.filter((x) => x.turn < 0).length, pins = turns.filter((x) => Math.abs(x.turn) > 1.4).length;
   const level = d < 0.34 ? "FLOWING" : d < 0.67 ? "TECHNICAL" : "BRUTAL";
-  return `<section class="ds-next"><b class="dh-h2">ROUND ${run.round + 1} OF ${T.rounds} · ${esc(t.name)}</b><div class="ds-map">${trackSvg(t, { label: `Round ${run.round + 1}, ${t.name}` })}</div><p class="dh-sub">${level} · lap ${Math.round(t.LAP)} · ${turns.length} turns${rights ? ` (${rights} right)` : ""}${pins ? ` · ${pins} tight` : ""}</p><p class="dh-sub">${kinds}</p></section>`;
+  return card(`${heading(`Round ${run.round + 1} of ${T.rounds}`, t.name)}<div class="ds-map">${trackSvg(t, { label: `Round ${run.round + 1}, ${t.name}` })}</div><p class="shop-sub">${level} · lap ${Math.round(t.LAP)} · ${turns.length} turns${rights ? ` (${rights} right)` : ""}${pins ? ` · ${pins} tight` : ""}</p><p class="shop-eyebrow">${kinds}</p>`, "ds-next");
 }
 
-/** The SERIES screen. */
-export function seriesCard(p: Profile, head: string, tabs: string, note: string, venue: Venue = "mx") {
-  const S = p.series, run = S.run;
+/** The SERIES page (`head`: the shell's header with ← Let's Ride). */
+export function seriesCard(p: Profile, head: string, note: string, venue: Venue = "mx") {
+  const S = p.series, run = S.run, name = venue === "sx" ? "SX Stadium Series" : "MX Race Series", say = `<p class="shop-sub dh-note" role="status">${esc(note)}</p>`;
   if (run) {
     const T = tier(run.tier);
-    return `<div class="dh-card ds" data-screen="series">${head}${tabs}<b class="dh-h">${T.name}</b><p class="dh-sub">Round ${run.round + 1} of ${T.rounds} · a win pays ◈ ${num(T.prize[0]!)} · champion ◈ ${num(T.bonus[0]!)}. Points ${POINTS.join(" · ")}.</p><div class="ds-cols">${nextRound(run)}<section>${table(p, run, "STANDINGS")}</section></div><p class="dh-row"><button type="button" class="bui-key dh-go" data-series-go>RIDE ROUND ${run.round + 1}</button><button type="button" class="bui-key" data-series-retire>RETIRE</button></p><p class="dh-sub dh-note" role="status">${esc(note)}</p></div>`;
+    const keys = `<p class="dh-row ds-keys">${btn(`Ride round ${run.round + 1}`, "data-series-go", false, "shop-btn-go dh-go")}${btn("Retire", "data-series-retire")}</p>`;
+    return page("series", "ds", head, name, `<p class="shop-sub dh-lede">${esc(words(T.name))}: round ${run.round + 1} of ${T.rounds}. A win pays ◈ ${num(T.prize[0]!)}, the champion ◈ ${num(T.bonus[0]!)}. Points ${POINTS.join(" · ")}.</p><div class="ds-cols">${nextRound(run)}${card(table(p, run, "Standings"), "ds-stand")}</div>${keys}${say}`, title({ eyebrow: `${T.rounds} rounds`, name: words(T.name), small: true }));
   }
   const tiers = TIERS.map((T) => {
     const open = unlocked(S, T.id, venue), best = bestOf(S, venue)[T.id], after = T.after ? tier(T.after).name : "";
-    const status = best === 0 ? "CHAMPION" : best !== undefined ? `BEST ${ORD[best]}` : open ? "OPEN" : `LOCKED · TOP ${UNLOCK_TOP} IN ${after}`;
-    return `<li class="ds-tier"${open ? "" : " data-locked"}><span class="dh-mod"><small>${T.rounds} ROUNDS · ${status}</small><b>${T.name}</b><small>${esc(T.blurb)}</small><small>Win ◈ ${num(T.prize[0]!)} a round · champion ◈ ${num(T.bonus[0]!)}</small></span><button type="button" class="bui-key dh-buy" data-series-enter="${T.id}" ${open ? "" : "disabled"}>${open ? "ENTER" : "LOCKED"}</button></li>`;
+    const status = best === 0 ? "Champion" : best !== undefined ? `Best ${ORD[best]}` : open ? "Open" : `Locked · top ${UNLOCK_TOP} in ${after}`;
+    return row({ eyebrow: `${T.rounds} rounds · ${status}`, title: esc(words(T.name)), sub: `${esc(T.blurb)}<br>Win ◈ ${num(T.prize[0]!)} a round · champion ◈ ${num(T.bonus[0]!)}`, end: btn(open ? "Enter" : "Locked", `data-series-enter="${T.id}"${open ? "" : " disabled"}`, false, open ? "shop-btn-go" : ""), attrs: open ? "" : "data-locked" });
   }).join("");
-  const last = S.last ? `<section>${table(p, S.last, `LAST: ${tier(S.last.tier).name} · FINAL`)}</section>` : "";
-  return `<div class="dh-card ds" data-screen="series">${head}${tabs}<b class="dh-h">${venue === "sx" ? "SX STADIUM SERIES" : "MX RACE SERIES"}</b><p class="dh-sub">A championship of rounds on your ${esc(modelOf(riding(p).model).name)}. Every round is a new track, built for the race and ridden before you get it. Points after each round; prize money every round and a bonus for the championship.${S.titles ? ` Titles: ${S.titles}.` : ""}</p><ul class="dh-list ds-tiers">${tiers}</ul>${last}<p class="dh-sub dh-note" role="status">${esc(note)}</p></div>`;
+  const last = S.last ? card(table(p, S.last, `Last: ${tier(S.last.tier).name} · final`), "ds-last") : "";
+  return page("series", "ds", head, name, `<p class="shop-sub dh-lede">A championship of rounds on your ${esc(words(modelOf(riding(p).model).name))}. Every round is a new track, built for the race and ridden before you get it. Points after each round; prize money every round and a bonus for the championship.${S.titles ? ` Titles: ${S.titles}.` : ""}</p>${heading("Choose a tier")}<ul class="shop-rows ds-tiers">${tiers}</ul>${last}${say}`);
 }
 
 /** The standings block on the result card after a round (or the final table). */
@@ -70,7 +72,7 @@ export function seriesResult(p: Profile, r: ModeResult) {
   return `<section class="ds-after">${table(p, run, head)}</section>`;
 }
 /** The result card's keys after a round. */
-export const seriesKeys = (p: Profile) => `<button type="button" class="bui-key dh-go" data-go="series">${p.series.run ? `ROUND ${p.series.run.round + 1}` : "SERIES"}</button><button type="button" class="bui-key" data-go="garage">GARAGE</button>`;
+export const seriesKeys = (p: Profile) => btn(p.series.run ? `Round ${p.series.run.round + 1}` : "Series", 'data-go="series"', false, "shop-btn-go dh-go") + btn("Garage", 'data-go="garage"');
 
 /** Start the championship's next round on the player's bike. */
 export function startRound(ctx: ModeCtx, p: Profile): ModeRun {

@@ -147,7 +147,11 @@ import { readdirSync, readFileSync } from "node:fs";
 // four limbs, the hands kept in reach of the grips, the right hand's release blend in the double hand
 // drag), on main da81ebb: +667 B measured (holeshot.js 243,218 → 243,885; holeshot.mjs 243,008 →
 // 243,649). Budget 243,500 → 244,500 (about 0.6 KB of room).
-const BUDGET = 244_500;
+// Unreleased, every menu screen in the shop's design: holeshot.js 244,029 → 245,404 B gzip (+1,375 B
+// measured on main 9645327; holeshot.mjs 243,792 → 245,191): the settings, controls, series and room pages
+// and the cards over a ride on the shop's pieces (src/menu-ui.ts, src/pages.css), less the old cards'
+// CSS. Budget 244,500 → 246,500 (about 1.1 KB of room).
+const BUDGET = 246_500;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

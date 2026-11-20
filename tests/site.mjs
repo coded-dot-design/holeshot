@@ -130,7 +130,7 @@ try {
       await until(p, () => !!document.querySelector("#game [data-fizlet-host]").shadowRoot.querySelector(".dh-ctl"), null, `${at}: the controls card`);
       const ctl = await p.evaluate(() => { const c = document.querySelector("#game [data-fizlet-host]").shadowRoot.querySelector(".dh-ctl"); return { caps: [...c.querySelectorAll("kbd")].map((k) => k.textContent), text: c.textContent, sideways: c.scrollWidth > c.clientWidth + 1 }; });
       assert.deepEqual(ctl.caps, m.capText.split(" "), `${at}: the controls card's key caps match the landing's`);
-      assert.ok(/GAMEPAD/.test(ctl.text) && /RT or A/.test(ctl.text) && /PHONE/.test(ctl.text) && /Flick the stick/.test(ctl.text) && !ctl.sideways, `${at}: the controls card: keyboard, gamepad, phone, no sideways scroll`);
+      assert.ok(/Gamepad/.test(ctl.text) && /RT or A/.test(ctl.text) && /Phone/.test(ctl.text) && /Flick the stick/.test(ctl.text) && !ctl.sideways, `${at}: the controls card: keyboard, gamepad, phone, no sideways scroll`);
       if (SHOTS) await p.waitForTimeout(300), await p.screenshot({ path: `${SHOTS}/play-controls-${w}-${theme}.png` });
       await p.keyboard.press("Escape");
       await until(p, () => game.getSnapshot().screen === "settings", null, `${at}: Escape steps back to settings`);

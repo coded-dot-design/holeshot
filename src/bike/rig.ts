@@ -305,10 +305,11 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
     part([0.3, 0.02, 0.31], [-0.4, -0.02, 0], G2, { layer: BODY + 0.2, emissive: true });
   }
   if (C.cracks && C.cracks > 0.3) part([0.3, 0.015, 0.43], [0.26, -0.04, 0], "#0b0a14", { rot: [0, 0, 0.9], layer: BODY + 0.2 });
-  if (C.num) {
+  if (C.num !== undefined) {
     // Side plates with the rider's number, one per side, in seven-segment bars; each side hangs from a
     // side group (it drops under the bodywork and the wheels on the far side), and reads the right way round.
-    const n = Math.max(1, Math.min(99, C.num | 0)), ds = n > 9 ? [(n / 10) | 0, n % 10] : [n], ink = C.sideInk ?? C.ink;
+    // Number 0 is a blank plate (a showroom bike: no rider's number on it yet).
+    const n = Math.max(0, Math.min(99, C.num | 0)), ds = n > 9 ? [(n / 10) | 0, n % 10] : n ? [n] : [], ink = C.sideInk ?? C.ink;
     const W = 0.075, H = 0.12, T = 0.018;
     for (let side = -1; side <= 1; side += 2) {
       const gid = id + ":np" + side;

@@ -2,11 +2,13 @@
 // INVITE CODE, HOST or JOIN; the host's pick: what to ride, the tier, the map, the ground or the
 // circuit, 2 / 3 / 4 players;
 // JOIN's room number; the lobby's ticket, seats, SEND LINK and START NOW; the "lining up" while the
-// hellos travel; a card for a room that's gone) and the online result (your payout and wear with the
-// online bonus, and the standings of everyone in the room). Board UI keys, 44 px or more.
+// hellos travel; a card for a room that's gone) and the online result's standings. The shop's keys and
+// cards (../shop/), 44 px or more; the layout is ./online.css.
 import { TIERS } from "../data/series.ts";
 import { ONLINE } from "../data/economy.ts";
 import { esc, num } from "../html.ts";
+import { btn, heading } from "../../vendor/shop/shop.js";
+import { words } from "../garage/adapters.ts";
 import { JAM_MAPS, type Ride, type SeatResult } from "./match.ts";
 import { K_RACE, K_JAM, K_AIR, K_ENDLESS, K_ENDCITY, K_TRACKDAY } from "../net.ts";
 import { TRACK_DAY } from "../modes/race/circuits.ts";
@@ -18,42 +20,42 @@ import { dist, type Units } from "../model/units.ts";
 // Each kind speaks to what the group is for (owner, 2026-11-19): a race is a challenge, an endless
 // ride is a ride out, a jam is a jam; `title` heads the room card, `head` the ride's cards and chip.
 export const KINDS = [
-  { k: K_RACE, name: "RACE", title: "CHALLENGE YOUR FRIENDS", head: "CHALLENGE", blurb: "A new generated track; AI rivals fill the empty places." },
-  { k: K_JAM, name: "FREE RIDE JAM", title: "JAM WITH YOUR FRIENDS", head: "JAM", blurb: "Three minutes on one map: the most trick points wins." },
-  { k: K_AIR, name: "BIG AIR", title: "BIG AIR SHOWDOWN", head: "SHOWDOWN", blurb: "A minute each in the arena; the judges' total wins." },
-  { k: K_ENDLESS, name: "ENDLESS", title: "RIDE OUT", head: "RIDE OUT", blurb: "Roam one endless ground together: the same world on every screen. G regroups to the host; END banks your ride." },
-  { k: K_ENDCITY, name: "ENDLESS WHEELIE CITY", title: "RIDE OUT", head: "RIDE OUT", blurb: "The open world together: every rider's own neon patrol, roads that never end. G regroups to the host; END banks your ride." },
-  { k: K_TRACKDAY, name: "TRACK DAY", title: "TRACK DAY", head: "TRACK DAY", blurb: "Three laps of a road circuit; street-bike rivals fill the empty places. Best laps count." },
+  { k: K_RACE, name: "RACE", title: "Challenge your friends", head: "CHALLENGE", blurb: "A new generated track; AI rivals fill the empty places." },
+  { k: K_JAM, name: "FREE RIDE JAM", title: "Jam with your friends", head: "JAM", blurb: "Three minutes on one map: the most trick points wins." },
+  { k: K_AIR, name: "BIG AIR", title: "Big Air showdown", head: "SHOWDOWN", blurb: "A minute each in the arena; the judges' total wins." },
+  { k: K_ENDLESS, name: "ENDLESS", title: "Ride out", head: "RIDE OUT", blurb: "Roam one endless ground together: the same world on every screen. G regroups to the host; END banks your ride." },
+  { k: K_ENDCITY, name: "ENDLESS WHEELIE CITY", title: "Ride out", head: "RIDE OUT", blurb: "The open world together: every rider's own neon patrol, roads that never end. G regroups to the host; END banks your ride." },
+  { k: K_TRACKDAY, name: "TRACK DAY", title: "Track Day", head: "TRACK DAY", blurb: "Three laps of a road circuit; street-bike rivals fill the empty places. Best laps count." },
 ];
 /** A kind's entry (the room card's blurb, the pick's name). */
 export const kindOf = (k: number) => KINDS.find((x) => x.k === k) ?? KINDS[0]!;
 const ORD = ["1ST", "2ND", "3RD", "4TH"];
 
-/** The room card (one element, kept: its fields keep what was typed). */
+/** The room card (one element, kept: its fields keep what was typed): a page in the garage's design
+ *  language (the shop's pieces; the shell puts its header in `.ol-head`). */
 export function roomCard() {
-  const seg = (attr: string, list: { v: number; t: string }[]) => list.map((x, i) => `<button type="button" class="bui-key" data-${attr}="${x.v}" aria-pressed="${i === 0}">${x.t}</button>`).join("");
-  return `<b class="dh-h ol-room-h">${roomTitle(KINDS[0]!.k)}</b><p class="dh-sub ol-room-sub">UP TO FOUR RIDERS · EACH ON THEIR OWN GARAGE BIKE · ONLINE PAYS ×${ONLINE.bonus}</p>
-    <form class="ol-pick" data-for="pick" novalidate><label class="dh-field">YOUR NAME<input name="who" autocomplete="nickname" autocapitalize="characters" spellcheck="false" maxlength="8" placeholder="RIDER" /></label><label class="dh-field">INVITE CODE<input name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="64" placeholder="XXXX-XXXX-XXXX" /></label>
-      <p class="ol-hostjoin"><button type="submit" class="bui-key dh-go ol-host" value="host"><b>HOST</b><small>Open a room, pick the ride, send the link</small></button><button type="submit" class="bui-key ol-joink" value="join"><b>JOIN</b><small>Type the room number from the host</small></button></p>
-      <p class="ol-say" role="alert"></p><p class="dh-row"><button type="button" class="bui-key ol-back">BACK</button></p></form>
-    <div data-for="host" hidden><b class="dh-h2">WHAT TO RIDE</b><p class="ol-seg ol-kinds" role="group" aria-label="Ride">${seg("olkind", KINDS.map((x) => ({ v: x.k, t: x.name })))}</p><p class="dh-sub ol-kind-sub">${KINDS[0]!.blurb}</p>
-      <div class="ol-tiers"><b class="dh-h2">TIER</b><p class="ol-seg" role="group" aria-label="Tier">${seg("oltier", TIERS.map((t, i) => ({ v: i, t: t.name })))}</p></div>
-      <div class="ol-maps" hidden><b class="dh-h2">MAP</b><p class="ol-seg ol-mapseg" role="group" aria-label="Map">${seg("olmap", JAM_MAPS.map((m, i) => ({ v: i, t: m.name })))}</p></div>
-      <div class="ol-circuits" hidden><b class="dh-h2">CIRCUIT</b><p class="ol-seg ol-mapseg" role="group" aria-label="Circuit">${seg("olcircuit", TRACK_DAY.map((t, i) => ({ v: i, t: t.name })))}</p></div>
-      <div class="ol-biomes" hidden><b class="dh-h2">GROUND</b><p class="ol-seg ol-mapseg" role="group" aria-label="Ground">${seg("olbiome", BIOMES.map((b, i) => ({ v: i, t: b.name.replace(/^THE /, "") })))}</p></div>
-      <b class="dh-h2">HOW MANY RIDERS?</b><p class="ol-sizes" role="group" aria-label="Riders"><button type="button" class="bui-key" data-olsize="2">2</button><button type="button" class="bui-key" data-olsize="3">3</button><button type="button" class="bui-key dh-go" data-olsize="4">4</button></p><p class="dh-sub">It starts when everyone's in, or when you press START NOW.</p><p class="dh-row"><button type="button" class="bui-key ol-topick">BACK</button></p></div>
-    <form data-for="join" hidden novalidate><b class="dh-big">WHICH ROOM?</b><p class="ol-rooms"><button type="button" class="bui-key" data-olroom="-1" aria-label="Previous room">−</button><output name="roomShow" aria-live="polite">0</output><button type="button" class="bui-key" data-olroom="1" aria-label="Next room">+</button></p>
-      <p class="dh-sub">The room number is on the host's screen (it's in their link too).</p><p class="dh-row"><button type="submit" class="bui-key dh-go ol-join">JOIN ROOM</button><button type="button" class="bui-key ol-topick">BACK</button></p><p class="ol-say" role="alert"></p></form>
-    <div data-for="wait" hidden><p class="ol-ticket"><span><small>ROOM</small><b class="ol-t-room">0</b></span><span><small>CODE</small><b class="ol-t-code"></b></span></p><p class="dh-sub ol-t-ride"></p><ol class="ol-seats" aria-label="Seats"></ol><p class="dh-big ol-wait-say" aria-live="polite">Waiting for riders.</p>
-      <p class="dh-row"><button type="button" class="bui-key dh-go ol-share">SEND LINK</button><button type="button" class="bui-key ol-gonow" hidden>START NOW</button><button type="button" class="bui-key ol-cancel">CANCEL</button></p><p class="dh-sub">Send the link: it has the room and the code, so it drops them straight in.</p></div>
-    <div data-for="hello" hidden><b class="dh-big">LINING UP</b><p class="dh-sub ol-hello-say" aria-live="polite">Swapping bikes: every screen rides every rider's own garage bike.</p></div>
-    <div data-for="gone" hidden><p class="dh-big ol-gone-say"></p><p class="dh-row"><button type="button" class="bui-key dh-go ol-again">TRY AGAIN</button><button type="button" class="bui-key ol-back">MENU</button></p></div>`;
+  const seg = (attr: string, list: { v: number; t: string }[]) => list.map((x, i) => btn(words(x.t), `data-${attr}="${x.v}" aria-pressed="${i === 0}"`)).join("");
+  const pick = (cls: string, title: string, attr: string, list: { v: number; t: string }[], hidden = true) => `<div class="${cls}"${hidden ? " hidden" : ""}><h3 class="shop-eyebrow">${title}</h3><p class="ol-seg ol-mapseg" role="group" aria-label="${title}">${seg(attr, list)}</p></div>`;
+  const back = (cls: string, t = "Back") => btn(t, "", false, cls);
+  return `<div class="ol-head"></div><div class="dh-pwrap"><div class="dh-ptitle"><h1 class="shop-h1 ol-room-h">${roomTitle(KINDS[0]!.k)}</h1><small class="shop-eyebrow ol-room-sub">Up to four riders · each on their own garage bike · online pays ×${ONLINE.bonus}</small></div>
+    <form class="shop-card ol-pick" data-for="pick" novalidate>${heading("Who's riding", "", 2)}<div class="ol-fields"><label class="dh-field"><span class="shop-eyebrow">Your name</span><input name="who" autocomplete="nickname" autocapitalize="characters" spellcheck="false" maxlength="8" placeholder="RIDER" /></label><label class="dh-field"><span class="shop-eyebrow">Invite code</span><input name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="64" placeholder="XXXX-XXXX-XXXX" /></label></div>
+      <p class="ol-hostjoin"><button type="submit" class="shop-btn shop-btn-go dh-go ol-host" value="host"><b>Host</b><small>Open a room, pick the ride, send the link</small></button><button type="submit" class="shop-btn ol-joink" value="join"><b>Join</b><small>Type the room number from the host</small></button></p>
+      <p class="ol-say" role="alert"></p></form>
+    <div class="shop-card" data-for="host" hidden>${heading("What to ride", "", 2)}<p class="ol-seg ol-kinds" role="group" aria-label="Ride">${seg("olkind", KINDS.map((x) => ({ v: x.k, t: x.name })))}</p><p class="shop-sub ol-kind-sub">${KINDS[0]!.blurb}</p>
+      ${pick("ol-tiers", "Tier", "oltier", TIERS.map((t, i) => ({ v: i, t: t.name })), false)}${pick("ol-maps", "Map", "olmap", JAM_MAPS.map((m, i) => ({ v: i, t: m.name })))}${pick("ol-circuits", "Circuit", "olcircuit", TRACK_DAY.map((t, i) => ({ v: i, t: t.name })))}${pick("ol-biomes", "Ground", "olbiome", BIOMES.map((b, i) => ({ v: i, t: b.name.replace(/^THE /, "") })))}
+      <h3 class="shop-eyebrow">How many riders?</h3><p class="ol-sizes" role="group" aria-label="Riders">${btn("2", 'data-olsize="2"')}${btn("3", 'data-olsize="3"')}${btn("4", 'data-olsize="4"', false, "shop-btn-go dh-go")}</p><p class="shop-sub">It starts when everyone's in, or when you press Start now.</p><p class="dh-row">${back("ol-topick")}</p></div>
+    <form class="shop-card" data-for="join" hidden novalidate>${heading("Which room?", "", 2)}<p class="ol-rooms">${btn("−", 'data-olroom="-1" aria-label="Previous room"')}<output name="roomShow" aria-live="polite">0</output>${btn("+", 'data-olroom="1" aria-label="Next room"')}</p>
+      <p class="shop-sub">The room number is on the host's screen (it's in their link too).</p><p class="dh-row"><button type="submit" class="shop-btn shop-btn-go dh-go ol-join">Join room</button>${back("ol-topick")}</p><p class="ol-say" role="alert"></p></form>
+    <div class="shop-card" data-for="wait" hidden><p class="ol-ticket"><span><small class="shop-eyebrow">Room</small><b class="ol-t-room">0</b></span><span><small class="shop-eyebrow">Code</small><b class="ol-t-code"></b></span></p><p class="shop-sub ol-t-ride"></p><ol class="ol-seats" aria-label="Seats"></ol><p class="shop-h3 ol-wait-say" aria-live="polite">Waiting for riders.</p>
+      <p class="dh-row">${btn("Send link", "", false, "shop-btn-go dh-go ol-share")}<button type="button" class="shop-btn ol-gonow" hidden>Start now</button>${back("ol-cancel", "Cancel")}</p><p class="shop-sub">Send the link: it has the room and the code, so it drops them straight in.</p></div>
+    <div class="shop-card" data-for="hello" hidden><h2 class="shop-h2">Lining up</h2><p class="shop-sub ol-hello-say" aria-live="polite">Swapping bikes: every screen rides every rider's own garage bike.</p></div>
+    <div class="shop-card" data-for="gone" hidden><p class="shop-h3 ol-gone-say"></p><p class="dh-row">${btn("Try again", "", false, "shop-btn-go dh-go ol-again")}${back("ol-back", "Let's Ride")}</p></div></div>`;
 }
 
 /** The room card's header for a kind: what the group is for, and that it's online. */
-export const roomTitle = (kind: number) => `${kindOf(kind).title} · ONLINE`;
+export const roomTitle = (kind: number) => `${kindOf(kind).title} online`;
 /** The room card's header for a rider joining a friend's room (their pick comes with the hellos). */
-export const JOIN_TITLE = "JOIN YOUR FRIENDS · ONLINE";
+export const JOIN_TITLE = "Join your friends online";
 /** The ride's cards' header (pause, result): the use, the pick, online ("RIDE OUT · ENDLESS · THE DESERT · ONLINE"). */
 export const rideTitle = (kind: number, sub: number) => `${kindOf(kind).head} · ${pickName(kind, sub)} · ONLINE`;
 

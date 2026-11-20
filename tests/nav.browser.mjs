@@ -116,11 +116,11 @@ try {
         await press(".dh-letsride");
         await press("[data-rtab=race]");
         await press("[data-go=series][data-venue=mx]");
-        await until(p, "game.getSnapshot().screen === 'series' && /SERIES · MX/.test(root.querySelector('.dh-title').textContent)", `${at}: SERIES · MX`);
+        await until(p, "game.getSnapshot().screen === 'series' && /^MX Race Series$/.test(root.querySelector('.dh-title').textContent)", `${at}: SERIES · MX`);
         await press(".ds .dh-back");
         await until(p, "game.getSnapshot().screen === 'ride'", `${at}: ← LET'S RIDE`);
         await press("[data-go=series][data-venue=sx]");
-        await until(p, "game.getSnapshot().screen === 'series' && /SERIES · SX/.test(root.querySelector('.dh-title').textContent) && /SX STADIUM SERIES/.test(root.querySelector('.ds > b.dh-h').textContent)", `${at}: SERIES · SX`);
+        await until(p, "game.getSnapshot().screen === 'series' && /^SX Stadium Series$/.test(root.querySelector('.ds .dh-title').textContent)", `${at}: SERIES · SX`);
         await press(".ds [data-series-enter]:not(:disabled)");
         await until(p, "game.profile.series.run && game.profile.series.run.venue === 'sx'", `${at}: entered at SX`);
         await press(".ds [data-series-retire]");

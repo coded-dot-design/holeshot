@@ -41,9 +41,9 @@ try {
     assert.equal(await chip(p, name), "0.00 MI", `${name}: Imperial by default`);
     await p.goto(server.url + "/");
     await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${name}: reload`);
-    assert.equal(await settings(p, name), "UNITS MI · MPH");
+    assert.equal(await settings(p, name), "Mi · mph");
     await click(p, ".dh-units");
-    assert.equal(await $(p, "root.querySelector('.dh-units').textContent.trim()"), "UNITS KM · KM/H", `${name}: switched`);
+    assert.equal(await $(p, "root.querySelector('.dh-units').textContent.trim()"), "Km · km/h", `${name}: switched`);
     assert.equal(await units(p), "metric", `${name}: saved`);
     await p.goto(server.url + "/");
     await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${name}: reload`);
@@ -51,9 +51,9 @@ try {
     // ?money=inf: the switch shows, nothing is saved.
     await p.goto(server.url + "/?money=inf");
     await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${name}: test credits`);
-    assert.equal(await settings(p, name), "UNITS KM · KM/H");
+    assert.equal(await settings(p, name), "Km · km/h");
     await click(p, ".dh-units");
-    assert.equal(await $(p, "root.querySelector('.dh-units').textContent.trim()"), "UNITS MI · MPH");
+    assert.equal(await $(p, "root.querySelector('.dh-units').textContent.trim()"), "Mi · mph");
     assert.equal(await units(p), "metric", `${name}: test credits: not saved`);
     assert.deepEqual(errs, [], `${name}: no page errors`);
     await ctx.close();

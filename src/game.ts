@@ -16,13 +16,13 @@ import { CLASSES, STARTERS, makerOf, model as modelOf } from "./data/roster.ts";
 import { MOTOR_NAME, PARTS, PART_NAME } from "./data/economy.ts";
 import { PAINTS, SWATCHES } from "./data/looks.ts";
 import { tierFor, useNames } from "./data/names.ts";
-import { KEYS, PAD, TOUCH, TOUCH_LINE } from "./data/controls.ts";
 import { touchLog } from "./debug/touchlog.ts";
 import { lapClock, mode as modeOf, trackDayBest } from "./modes/index.ts";
 import type { ModeCtx, ModeId, ModeRun, RunStats } from "./modes/mode.ts";
 import { venueOf, type Venue } from "./modes/race/venue.ts";
 import { paintMaps } from "./modes/freeride/picker.ts";
 import { rideCard as rideScreen, type RideTab } from "./ride-ui.ts";
+import { controlsPage, page, settingsPage } from "./menu-ui.ts";
 import { APPICON, WORDMARK } from "./logo.ts";
 import { exportCode, importCode, load, local, newBike, ready, riding, save, setup, fresh, type Profile, type Store, type RiderKit } from "./model/profile.ts";
 import { testCredits, topUp } from "./model/testcredits.ts";
@@ -33,7 +33,7 @@ import type { Buy } from "./model/garage.ts";
 import { after, ride as garageRide } from "./model/upkeep.ts";
 import { portraitOf } from "./garage/portrait.ts";
 import { bayInfo, garageCard as garageView, garageClick, garageUI, pvName, pvOf, riskCard, shown, type Pv } from "./garage/view.ts";
-import { cta as shopCta, tabs as shopTabs } from "../vendor/shop/shop.js";
+import { btn, card, cta as shopCta, heading, meter as shopMeter, tabs as shopTabs } from "../vendor/shop/shop.js";
 import { lookOf } from "./garage/look.ts";
 import { mountShowroom as mountSr, showroomState } from "./garage/showroom.ts";
 import { rigKit } from "./garage/snap.ts";
@@ -76,6 +76,8 @@ export interface HoleshotOptions {
 
 /** The screens. The garage is home ("menu" is its old name: `show("menu")` still lands there). */
 type Screen = "setup" | "garage" | "ride" | "series" | "settings" | "controls" | "event" | "result" | "online";
+/** The full pages under the garage's header (its Day / Night key redraws them). */
+const PAGES: Screen[] = ["ride", "series", "settings", "controls"];
 
 export function createHoleshot(o: HoleshotOptions = {}) {
   const dropIn = !o.host, store = o.store ?? local;
@@ -96,7 +98,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   root.append(stage);
   const paintTheme = () => ((root.dataset.theme = pageTheme()), stage.toggleAttribute("data-day", pageTheme() === "light"));
   paintTheme();
-  const mo = new MutationObserver(() => ((ownTheme = null), paintTheme(), preview(), screen === "ride" && reTheme()));
+  const mo = new MutationObserver(() => ((ownTheme = null), paintTheme(), preview(), PAGES.includes(screen) ? reTheme() : screen === "online" && roomHead()));
   mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   engine.signal.addEventListener("abort", () => (mo.disconnect(), run?.destroy()), { once: true });
 
@@ -211,17 +213,14 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   engine.signal.addEventListener("abort", () => pro.disconnect(), { once: true });
 
   // ---- rendering the cards ----
-  /** The header: HOLESHOT on the garage (home), else ← back and the screen's name; then the credits,
-   *  the name, ⚙ settings and the theme key. Sticky, so the way back stays in reach. */
-  const head = (back?: [Screen, string, string]) => `<header class="dh-top${back ? " dh-sticky" : ""}">${APPICON}${back ? `<button type="button" class="bui-key dh-back" data-go="${back[0]}">← ${back[1]}</button><b class="dh-h dh-title">${back[2]}</b>` : WORDMARK}${inf ? `<span class="dh-chip dh-cr" title="Test credits: nothing is saved">◈ ∞</span><span class="dh-chip dh-test" title="?credits=inf: nothing is saved, online is off">TEST CREDITS ∞</span>` : `<span class="dh-chip dh-cr" title="Credits">◈ ${num(profile.credits)}</span>`}${profile.name ? `<span class="dh-chip dh-who">${portraitOf(profile.kit)}${esc(profile.name)}</span>` : ""}${screen === "settings" || screen === "controls" ? "" : `<button type="button" class="bui-key dh-icon dh-cog" data-go="settings" aria-label="Settings">${ICON.cog}</button>`}${o.onTheme ? `<button type="button" class="bui-key dh-icon dh-theme" aria-label="Light or dark">${ICON.theme}</button>` : ""}</header>`;
   /** The garage's one main action. */
   const letsRide = shopCta("LET'S RIDE", "dh-letsride", "RACE · ENDLESS · FREE RIDE · TRACK DAY", 'data-go="ride"');
   /** The garage's header: the logo with the version and the byline, the Garage / Showroom tabs, the
    *  credits, the rider (to the rider's gear), ⚙ settings (the CONTROLS / HOW TO card lives there)
    *  and the Day / Night key. */
-  const garageHead = (mid?: string) => {
+  const garageHead = (mid?: string, cog = true, rider = true) => {
     const day = pageTheme() === "light";
-    return `<header class="dh-top dh-ghead${mid ? " dh-rhead" : ""}"><span class="dh-brand">${APPICON}<span class="dh-brand-t">${WORDMARK}<small class="shop-eyebrow"><span>V${__VERSION__}</span><i aria-hidden="true">·</i>BY DAVID COOLEY</small></span></span>${mid ?? shopTabs([["garage", "Garage"], ["showroom", "Showroom"]], gui.tab === "showroom" ? "showroom" : "garage", "gtab", "Garage or showroom", true)}<span class="dh-hkeys">${inf ? `<span class="dh-chip dh-cr" title="Test credits: nothing is saved">◈ ∞</span><span class="dh-chip dh-test" title="?credits=inf: nothing is saved, online is off">TEST CREDITS ∞</span>` : `<span class="dh-chip dh-cr" title="Credits">◈ ${num(profile.credits)}</span>`}<button type="button" class="shop-btn dh-who" data-rider aria-label="Rider gear">${portraitOf(profile.kit)}<span>${esc(profile.name ? profile.name.charAt(0) + profile.name.slice(1).toLowerCase() : "Rider")}</span></button><button type="button" class="shop-btn dh-icon dh-cog" data-go="settings" aria-label="Settings">${ICON.cog}</button><button type="button" class="shop-btn dh-theme" aria-label="Day or night"><i aria-hidden="true">${day ? "☀" : "☾"}</i><span>${day ? "Day" : "Night"}</span></button></span></header>`;
+    return `<header class="dh-top dh-ghead${mid ? " dh-rhead" : ""}"><span class="dh-brand">${APPICON}<span class="dh-brand-t">${WORDMARK}<small class="shop-eyebrow"><span>V${__VERSION__}</span><i aria-hidden="true">·</i>BY DAVID COOLEY</small></span></span>${mid ?? shopTabs([["garage", "Garage"], ["showroom", "Showroom"]], gui.tab === "showroom" ? "showroom" : "garage", "gtab", "Garage or showroom", true)}<span class="dh-hkeys">${inf ? `<span class="dh-chip dh-cr" title="Test credits: nothing is saved">◈ ∞</span><span class="dh-chip dh-test" title="?credits=inf: nothing is saved, online is off">TEST CREDITS ∞</span>` : `<span class="dh-chip dh-cr" title="Credits">◈ ${num(profile.credits)}</span>`}${rider ? `<button type="button" class="shop-btn dh-who" data-rider aria-label="Rider gear">${portraitOf(profile.kit)}<span>${esc(profile.name ? profile.name.charAt(0) + profile.name.slice(1).toLowerCase() : "Rider")}</span></button>` : ""}${cog ? `<button type="button" class="shop-btn dh-icon dh-cog" data-go="settings" aria-label="Settings">${ICON.cog}</button>` : ""}<button type="button" class="shop-btn dh-theme" aria-label="Day or night"><i aria-hidden="true">${day ? "☀" : "☾"}</i><span>${day ? "Day" : "Night"}</span></button></span></header>`;
   };
   const bikeLine = () => {
     const b = riding(profile), m = modelOf(b.model);
@@ -255,10 +254,10 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     turntable: (h: HTMLElement, id: string) => { gui.trial = ["bike", id]; h.append(pv); pvKey = ""; requestAnimationFrame(preview); },
   };
   const mountShowroom = (host: HTMLElement) => void mountSr(host, srApi, srState);
-  /** LET'S RIDE follows the theme (its Day / Night key, the map thumbnails), the focus kept on the key. */
+  /** LET'S RIDE and the pages follow the theme (its Day / Night key, the map thumbnails), the focus kept on the key. */
   const reTheme = () => {
     const k = (cards.getRootNode() as Document | ShadowRoot).activeElement?.classList.contains("dh-theme");
-    show("ride");
+    show(screen);
     if (k) cards.querySelector<HTMLElement>(".dh-theme")?.focus({ preventScroll: true });
   };
   /** LET'S RIDE: the garage's header with ← Garage, the tab shown (kept while the shell lives). */
@@ -269,40 +268,46 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   };
   /** The series shown: the championship under way's venue, else the one picked on LET'S RIDE. */
   const seriesAt = (): Venue => (profile.series.run ? venueOf(profile.series.run.venue) : seriesVenue);
-  const seriesCard = () => seriesScreen(profile, head(["ride", "LET'S RIDE", `SERIES · ${seriesAt().toUpperCase()}`]), "", note, seriesAt());
+  const seriesCard = () => seriesScreen(profile, backHead("ride", "Let's Ride"), note, seriesAt());
   /** A mode's name for the cards (a series round is a race on the series' track). */
   /** The profile key of a ride's best distance: the biome (ENDLESS), "city" (Endless Wheelie City). */
   const farKey = (id: ModeId, map?: string) => (id === "endcity" ? "city" : id === "desert" ? map ?? "desert" : id);
   const km = (u: number) => dist(u, profile.settings.units);
   const modeName = (id: ModeId) => (id === "series" ? seriesName(profile) : modeOf(id).name);
-  function settingsCard() {
-    return `<div class="dh-card dh-set" data-screen="settings">${head([setFrom, setFrom === "ride" ? "LET'S RIDE" : setFrom === "series" ? "SERIES" : "GARAGE", "SETTINGS"])}<p class="dh-row"><button type="button" class="bui-key dh-sound" aria-pressed="${profile.settings.sound}">SOUND ${profile.settings.sound ? "ON" : "OFF"}</button><button type="button" class="bui-key dh-units" aria-label="Units: ${profile.settings.units === "metric" ? "metric, km and km/h" : "imperial, miles and mph"}">UNITS ${profile.settings.units === "metric" ? "KM · KM/H" : "MI · MPH"}</button><button type="button" class="bui-key dh-ctl-go" data-go="controls">CONTROLS · HOW TO</button></p>
-      <b class="dh-h2">MOVE YOUR PROFILE</b><p class="dh-sub">Your garage lives on this device. Copy the code to carry it to another one; nothing leaves the device unless you do.</p>${inf ? `<p class="dh-sub dh-warn">Test credits are on: nothing here is saved, and the code is your saved profile, as it was.</p>` : ""}
-      <label class="dh-field">EXPORT CODE<textarea class="dh-code" readonly rows="3">${code()}</textarea></label><p class="dh-row"><button type="button" class="bui-key dh-copy">COPY CODE</button></p>
-      <label class="dh-field">IMPORT A CODE<textarea class="dh-codein" rows="3" spellcheck="false" placeholder="DH1-…"></textarea></label><p class="dh-row"><button type="button" class="bui-key dh-import">LOAD IT</button><button type="button" class="bui-key dh-reset">START OVER</button></p><p class="dh-sub dh-note" role="status">${esc(note)}</p></div>`;
-  }
-  /** CONTROLS · HOW TO (from settings): the game's real bindings, the same facts as the landing's
-   *  Controls section (./data/controls.ts). One card, so it moves with the menus as they change. */
-  function controlsCard() {
-    const caps = (ks: string[]) => ks.map((k) => (k === "+" ? "<i>+</i>" : `<kbd>${esc(k)}</kbd>`)).join("");
-    const keys = KEYS.map((g) => `<b class="dh-h3">${g.group}</b><ul class="dh-list">${g.rows.map(([ks, what, nb]) => `<li><span class="dh-caps">${caps(ks)}</span><span><b>${what}</b>${nb ? ` <small>${esc(nb)}</small>` : ""}</span></li>`).join("")}</ul>`).join("");
-    const two = (rows: [string, string][]) => `<ul class="dh-list">${rows.map(([k, v]) => `<li><span><b>${esc(k)}</b> <small>${esc(v)}</small></span></li>`).join("")}</ul>`;
-    return `<div class="dh-card dh-ctl" data-screen="controls">${head(["settings", "SETTINGS", "CONTROLS"])}<p class="dh-sub">Your bike rides every event: LET'S RIDE from the garage. Every mode pays credits; spend them on tyres, rebuilds, mods and paint.</p><div class="dh-cols"><section><b class="dh-h2">KEYBOARD</b>${keys}</section><section><b class="dh-h2">GAMEPAD</b>${two(PAD)}<b class="dh-h2">PHONE</b><p class="dh-sub">${TOUCH_LINE}</p>${two(TOUCH)}</section></div></div>`;
-  }
+  /** A page's header: the garage's, with ← back to where it came from (no ⚙ on the settings' own pages). */
+  const backHead = (to: Screen, label: string) => garageHead(`<button type="button" class="shop-btn dh-back" data-go="${to}">← ${label}</button>`, screen !== "settings" && screen !== "controls");
+  const settingsCard = () => settingsPage(backHead(setFrom, setFrom === "ride" ? "Let's Ride" : setFrom === "series" ? "Series" : "Garage"), { metric: profile.settings.units === "metric", sound: profile.settings.sound, code: code(), inf, note });
+  const controlsCard = () => controlsPage(backHead("settings", "Settings"));
   /** Rides with no finish line end when you say so, and pay for what you rode (the pause card's END & BANK). */
   const banks = () => runMode === "freeride" || runMode === "desert" || runMode === "endcity" || runMode === "mashup";
+  /** A card over the ride (pause, the result), in the shop's design: an eyebrow, the title, a line, the body. */
+  const over = (cls: string, screen: string, label: string, eyebrow: string, h: string, sub: string, body: string) =>
+    `<div class="dh-card dh-over ${cls} shop" data-screen="${screen}" role="dialog" aria-label="${label}"><div class="dh-ohead"><small class="shop-eyebrow">${eyebrow}</small><h2 class="shop-h2 dh-h">${h}</h2><p class="shop-sub dh-sub">${sub}</p></div>${body}</div>`;
+  /** The pause card's keys: RESUME, END & BANK (rides that bank), LEAVE. */
+  const pauseKeys = (bank: boolean, leave: string) => `<p class="dh-row">${btn("Resume", "", false, "shop-btn-go dh-go dh-resume")}${bank ? btn("End & bank", 'aria-label="End the ride and bank it (E)"', false, "dh-bank") : ""}${btn(leave, "", false, "dh-leave")}</p>`;
   function pauseCard() {
     // Online, the endless rides together bank too: END &amp; BANK rides this screen's END bit.
     const roamBank = N.on && (N.pick.kind === K_ENDLESS || N.pick.kind === K_ENDCITY);
-    if (N.on) return `<div class="dh-card dh-pause" data-screen="pause" role="dialog" aria-label="Paused"><b class="dh-h">${rideTitle(N.pick.kind, N.pick.sub)}</b><p class="dh-sub">The ride goes on for everyone (your bike rolls to a stop). ${roamBank ? "END &amp; BANK banks your ride (the room's result comes when everyone has); leaving" : "Leaving"} the room now pays nothing; the wear so far still counts.</p><p class="dh-row"><button type="button" class="bui-key dh-go dh-resume">RESUME</button>${roamBank ? `<button type="button" class="bui-key dh-bank" aria-label="End the ride and bank it (E)">END &amp; BANK</button>` : ""}<button type="button" class="bui-key dh-leave">LEAVE ROOM</button></p></div>`;
-    return `<div class="dh-card dh-pause" data-screen="pause" role="dialog" aria-label="Paused"><b class="dh-h">PAUSED</b><p class="dh-sub">${modeName(runMode)} on your ${bikeLine()}. ${banks() ? "END &amp; BANK pays for what you rode; leaving pays nothing" : "Leaving now pays nothing"}; the wear so far still counts.</p><p class="dh-row"><button type="button" class="bui-key dh-go dh-resume">RESUME</button>${banks() ? `<button type="button" class="bui-key dh-bank" aria-label="End the ride and bank it (E)">END &amp; BANK</button>` : ""}<button type="button" class="bui-key dh-leave">LEAVE</button></p></div>`;
+    if (N.on) return over("dh-pause", "pause", "Paused", "Paused · online", rideTitle(N.pick.kind, N.pick.sub), `The ride goes on for everyone (your bike rolls to a stop). ${roamBank ? "End &amp; bank banks your ride (the room's result comes when everyone has); leaving" : "Leaving"} the room now pays nothing; the wear so far still counts.`, pauseKeys(roamBank, "Leave room"));
+    return over("dh-pause", "pause", "Paused", "Paused", esc(words(modeName(runMode))), `On your ${esc(words(bikeLine()))}. ${banks() ? "End &amp; bank pays for what you rode; leaving pays nothing" : "Leaving now pays nothing"}; the wear so far still counts.`, pauseKeys(banks(), "Leave"));
   }
+  /** PAYOUT and WEAR, side by side: the credits line by line, each part's condition and what this ride took
+   *  (nothing worn reads 0%, neutral). */
+  const payWear = (r: ModeResult, b: ReturnType<typeof riding>, m: ReturnType<typeof modelOf>) => {
+    const lines = r.lines.map(([k, v]) => `<li${v < 0 ? " data-loss" : ""}><span>${esc(k)}</span><b>${v < 0 ? "−" : "+"}${num(Math.abs(v))}</b></li>`).join("") || `<li><span>No payout</span><b>0</b></li>`;
+    const wear = PARTS.map((k) => {
+      const w = Math.round(r.wear[k] * 1000) / 10;
+      return `<li><span>${esc(words(k === "motor" ? MOTOR_NAME[m.cls] : PART_NAME[k]))}</span>${shopMeter(b.parts[k], b.parts[k] < 0.35 ? "low" : "")}<b>${Math.round(b.parts[k] * 100)}%</b><small${w > 0 ? " data-d" : ""}>${w > 0 ? `−${w.toFixed(1)}%` : "0%"}</small></li>`;
+    }).join("");
+    return `<div class="dh-ocols">${card(`${heading("Payout", "", 3)}<ul class="dh-pay">${lines}<li class="dh-total"><span>Total</span><b>◈ ${num(r.credits)}</b></li></ul>`)}${card(`${heading("Wear", "This ride", 3)}<ul class="dh-wear">${wear}</ul>`)}</div>`;
+  };
+  const pitRow = () => (pitReady(profile) ? `<p class="dh-row">${btn("Pit crew: free basic fix", "", false, "dh-pit")}</p>` : "");
   function resultCard() {
     const r = result!, b = riding(profile), m = modelOf(b.model);
     if (N.on && N.res) return netResultCard(r, b, m);
-    const lines = r.lines.map(([k, v]) => `<li${v < 0 ? " data-loss" : ""}><span>${k}</span><b>${v < 0 ? "−" : "+"}${num(Math.abs(v))}</b></li>`).join("") || `<li><span>NO PAYOUT</span><b>0</b></li>`;
-    const wear = PARTS.map((k) => `<li>${bar(b.parts[k], k === "motor" ? MOTOR_NAME[m.cls] : PART_NAME[k])}<small>−${(r.wear[k] * 100).toFixed(1)}%</small></li>`).join("");
-    return `<div class="dh-card dh-result" data-screen="result" role="dialog" aria-label="Result"><b class="dh-h">${r.stats.finished ? (r.stats.series ? `ROUND ${r.stats.series.round + 1}` : modeOf(r.stats.mode).name) + " · DONE" : "LEFT EARLY"}</b><p class="dh-sub">${esc(r.stats.summary ?? "")}</p><div class="dh-cols"><section><b class="dh-h2">PAYOUT</b><ul class="dh-pay">${lines}<li class="dh-total"><span>TOTAL</span><b>◈ ${num(r.credits)}</b></li></ul></section><section><b class="dh-h2">WEAR</b><ul class="dh-list dh-wear">${wear}</ul></section></div>${seriesResult(profile, r)}${pitReady(profile) ? `<p class="dh-row"><button type="button" class="bui-key dh-pit">PIT CREW: FREE BASIC FIX</button></p>` : ""}<p class="dh-row">${r.stats.mode === "series" ? seriesKeys(profile) : `<button type="button" class="bui-key dh-go" data-go="garage">GARAGE</button><button type="button" class="bui-key dh-again">RIDE AGAIN</button>`}<button type="button" class="bui-key" data-go="ride">LET'S RIDE</button></p></div>`;
+    const name = r.stats.series ? `Round ${r.stats.series.round + 1}` : words(modeOf(r.stats.mode).name);
+    const keys = `<p class="dh-row">${r.stats.mode === "series" ? seriesKeys(profile) : btn("Garage", 'data-go="garage"', false, "shop-btn-go dh-go") + btn("Ride again", "", false, "dh-again")}${btn("Let's Ride", 'data-go="ride"')}</p>`;
+    return over("dh-result", "result", "Result", r.stats.finished ? "Result" : "Left early", r.stats.finished ? `${esc(name)} · done` : esc(name), esc(r.stats.summary ?? ""), payWear(r, b, m) + seriesResult(profile, r) + pitRow() + keys);
   }
 
   function show(to: Screen | "menu") {
@@ -314,6 +319,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       stage.toggleAttribute("data-menu", true);
       cards.textContent = "";
       cards.append(roomC);
+      roomHead();
       cards.hidden = false;
       engine.wake();
       return;
@@ -465,7 +471,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     if (d.go) return show(d.go as Screen);
     // LET'S RIDE: a tab redraws the page (the focus stays on it); Rider opens the rider's gear in the garage.
     if (d.rtab) return (rideTab = d.rtab as RideTab), show("ride");
-    if (d.rider !== undefined && screen === "ride") return garageClick(profile, gui, t, cards), show("garage");
+    if (d.rider !== undefined && screen !== "garage") return garageClick(profile, gui, t, cards), show("garage");
     refocus = [...t.attributes].filter((a) => a.name.startsWith("data-") && a.name !== "data-sure").map((a) => `[${a.name}="${CSS.escape(a.value)}"]`).join("");
     const g = screen === "garage" ? garageClick(profile, gui, t, cards) : null;
     if (g) return g.buy ? did(g.buy[0], g.buy[1]) : (g.profile && ((profile = g.profile), keep()), show("garage"));
@@ -482,7 +488,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     }
     if (d.seriesGo !== undefined) return startEvent("series", { venue: seriesAt() });
     if (d.seriesRetire !== undefined) {
-      if (t.dataset.sure === undefined) return (t.dataset.sure = ""), (t.textContent = "SURE? TAP AGAIN");
+      if (t.dataset.sure === undefined) return (t.dataset.sure = ""), (t.textContent = "Sure? Tap again");
       return (profile = retireSeries(profile)), keep(), show("series");
     }
     if (t.classList.contains("dh-resume")) return setPaused(false);
@@ -505,7 +511,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
       return show(ready(profile) ? "garage" : "setup");
     }
     if (t.classList.contains("dh-reset")) {
-      if (t.dataset.sure === undefined) return (t.dataset.sure = ""), (t.textContent = "SURE? TAP AGAIN");
+      if (t.dataset.sure === undefined) return (t.dataset.sure = ""), (t.textContent = "Sure? Tap again");
       profile = fresh();
       keep();
       return show("setup");
@@ -529,7 +535,8 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   const ROOMS_URL = qs.get("rooms") ?? o.rooms ?? "", ROOM_N = 16;
   const COLORS = ["#22e6ff", "#ff4fa8", "#b6ff3b", "#ff8a3d"];
   const roomC = document.createElement("div");
-  roomC.className = "dh-card ol-room";
+  roomC.className = "dh-card dh-pg ol-room shop";
+  roomC.dataset.screen = "online";
   roomC.setAttribute("role", "dialog");
   roomC.setAttribute("aria-label", "Online");
   roomC.innerHTML = roomCard();
@@ -596,9 +603,13 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     roomStep("pick");
     if (kind !== undefined) roomC.querySelector<HTMLElement>(`[data-olkind="${kind}"]`)?.click();
     if (!field("who").value) field("who").value = cleanName(profile.name);
-    $r(".ol-share").textContent = "SEND LINK";
+    $r(".ol-share").textContent = "Send link";
     roomSay(ROOMS_URL ? "" : "Online play needs a room server: this build has none set.");
     if (linkJoin && ROOMS_URL) (linkJoin = false), void pickGo("link");
+  }
+  /** The room page's header: ← Let's Ride (out of the room), the credits, the Day / Night key. */
+  function roomHead() {
+    $r(".ol-head").innerHTML = garageHead(`<button type="button" class="shop-btn dh-back ol-back">← Let's Ride</button>`, false, false);
   }
   /** Is the code on the list? {ok, players} (the seats a room may have), "slow", or null (no server). */
   async function checkCode(code: string) {
@@ -672,14 +683,14 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     const url = `${location.origin}${location.pathname}?mode=online&room=${N.room}${qs.get("rooms") ? `&rooms=${encodeURIComponent(ROOMS_URL)}` : ""}${N.code ? `&code=${encodeURIComponent(N.code)}` : ""}`, k = $r(".ol-share");
     try {
       if (navigator.share) await navigator.share({ title: "HOLESHOT · online", text: `Ride me in HOLESHOT: room ${N.room}.`, url });
-      else await navigator.clipboard.writeText(url), (k.textContent = "LINK COPIED");
+      else await navigator.clipboard.writeText(url), (k.textContent = "Link copied");
     } catch (e) {
       if ((e as Error)?.name === "AbortError") return;
       try {
         await navigator.clipboard.writeText(url);
-        k.textContent = "LINK COPIED";
+        k.textContent = "Link copied";
       } catch {
-        k.textContent = "COPY FAILED";
+        k.textContent = "Copy failed";
       }
     }
   }
@@ -688,7 +699,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     $r(".ol-t-code").textContent = N.code;
     $r(".ol-t-ride").textContent = host ? pickName(N.pick.kind, N.pick.sub) : "";
     if (!host) $r(".ol-room-h").textContent = JOIN_TITLE;
-    $r(".ol-room-sub").textContent = "CONNECTING";
+    $r(".ol-room-sub").textContent = "Connecting";
     $r(".ol-wait-say").textContent = host ? "Opening a room…" : `Joining room ${N.room}…`;
     $r(".ol-gonow").hidden = true;
     $r(".ol-seats").innerHTML = "";
@@ -708,7 +719,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
             N.go = seat === 0 ? go : null;
             const size = seat === 0 ? Math.min(n, wantN) : n, left = Math.max(0, size - seated);
             $r(".ol-seats").innerHTML = seatsHTML(seat, seated, size, myName, COLORS);
-            $r(".ol-room-sub").textContent = `ROOM ${N.room} · ${seated} OF ${size} IN`;
+            $r(".ol-room-sub").textContent = `Room ${N.room} · ${seated} of ${size} in`;
             $r(".ol-wait-say").textContent = seat === 0 ? (left ? `Waiting for ${left} more…` : "Starting…") : "You're in. The host starts the ride.";
             $r(".ol-gonow").hidden = !(seat === 0 && seated > 1 && left > 0);
           },
@@ -830,7 +841,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
     if (N.mine || !N.ride?.score) return;
     N.mine = st;
     N.final = N.ride.kind === K_AIR ? Math.round((st.judges ?? 0) * 10) : Math.round(st.score ?? 0);
-    cards.innerHTML = `<div class="dh-card dh-result" role="status"><b class="dh-h">${N.ride.kind === K_AIR ? `JUDGES ${(N.final / 10).toFixed(1)}` : `${N.final.toLocaleString("en-US")} PTS`}</b><p class="dh-sub">Waiting for the others to finish their run…</p></div>`;
+    cards.innerHTML = `<div class="dh-card dh-over dh-result shop" role="status"><div class="dh-ohead"><small class="shop-eyebrow">Your run</small><h2 class="shop-h2 dh-h">${N.ride.kind === K_AIR ? `Judges ${(N.final / 10).toFixed(1)}` : `${N.final.toLocaleString("en-US")} pts`}</h2><p class="shop-sub dh-sub">Waiting for the others to finish their run…</p></div></div>`;
     cards.hidden = false;
   }
   /** The ride is over (the same final frame on every screen): this rider's own payout and wear. */
@@ -868,17 +879,16 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   }
   function netResultCard(r: NonNullable<typeof result>, b: ReturnType<typeof riding>, m: ReturnType<typeof modelOf>) {
     const ride = N.ride!, names = ride.riders.map((x, p) => (p === N.seat ? `${x.name} (YOU)` : x.name));
-    const lines = r.lines.map(([k, v]) => `<li${v < 0 ? " data-loss" : ""}><span>${esc(k)}</span><b>${v < 0 ? "−" : "+"}${num(Math.abs(v))}</b></li>`).join("") || `<li><span>NO PAYOUT</span><b>0</b></li>`;
-    const wear = PARTS.map((k) => `<li>${bar(b.parts[k], k === "motor" ? MOTOR_NAME[m.cls] : PART_NAME[k])}<small>−${(r.wear[k] * 100).toFixed(1)}%</small></li>`).join("");
     const others = ((1 << N.players) - 1) & ~(1 << N.seat), alone = (N.m!.link.left & others) === others;
-    return `<div class="dh-card dh-result ol-result" data-screen="result" role="dialog" aria-label="Result"><b class="dh-h">${rideTitle(ride.kind, ride.sub)}</b><p class="dh-sub">${esc(r.stats.summary ?? "")}</p>${standingsHTML(ride, N.res!, N.seat, names, profile.settings.units)}<div class="dh-cols"><section><b class="dh-h2">PAYOUT</b><ul class="dh-pay">${lines}<li class="dh-total"><span>TOTAL</span><b>◈ ${num(r.credits)}</b></li></ul></section><section><b class="dh-h2">WEAR</b><ul class="dh-list dh-wear">${wear}</ul></section></div>${pitReady(profile) ? `<p class="dh-row"><button type="button" class="bui-key dh-pit">PIT CREW: FREE BASIC FIX</button></p>` : ""}<p class="dh-row">${alone ? "" : `<button type="button" class="bui-key dh-go ol-ready" aria-pressed="${N.m!.ready}">${N.m!.ready ? "WAITING…" : "RIDE AGAIN"}</button>`}<button type="button" class="bui-key dh-leave">LEAVE ROOM</button></p><p class="dh-sub ol-ready-say" aria-live="polite">${alone ? "Everyone else left the room." : ""}</p></div>`;
+    const keys = `<p class="dh-row">${alone ? "" : `<button type="button" class="shop-btn shop-btn-go dh-go ol-ready" aria-pressed="${N.m!.ready}">${N.m!.ready ? "Waiting…" : "Ride again"}</button>`}${btn("Leave room", "", false, "dh-leave")}</p><p class="shop-sub ol-ready-say" aria-live="polite">${alone ? "Everyone else left the room." : ""}</p>`;
+    return over("dh-result ol-result", "result", "Result", "Result · online", rideTitle(ride.kind, ride.sub), esc(r.stats.summary ?? ""), card(standingsHTML(ride, N.res!, N.seat, names, profile.settings.units), "dh-ostand") + payWear(r, b, m) + pitRow() + keys);
   }
   cards.addEventListener("click", (ev) => {
     const t = (ev.target as HTMLElement).closest<HTMLElement>(".ol-ready");
     if (!t || !N.m) return;
     N.m.ready = !N.m.ready;
     t.setAttribute("aria-pressed", "" + N.m.ready);
-    t.textContent = N.m.ready ? "WAITING…" : "RIDE AGAIN";
+    t.textContent = N.m.ready ? "Waiting…" : "Ride again";
     N.readySeen = -1;
   }, sig);
   /** Leave the room mid-ride or after it: no pay for a ride left, its wear still counts. */
@@ -978,7 +988,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
         if (key !== N.readySeen) {
           N.readySeen = key;
           const el = cards.querySelector(".ol-ready-say");
-          if (el && (L2.left & others) !== others) el.textContent = N.m.ready ? `Ready. The next ride starts when everyone is (${popcount(rb)} of ${N.players}).` : "RIDE AGAIN: a new ride for the whole room when everyone presses it.";
+          if (el && (L2.left & others) !== others) el.textContent = N.m.ready ? `Ready. The next ride starts when everyone is (${popcount(rb)} of ${N.players}).` : "Ride again: a new ride for the whole room when everyone presses it.";
         }
       }
     },

@@ -34,14 +34,14 @@ try {
     await click(p, "[data-go=series][data-venue=mx]");
     let s = await snap(p);
     assert.equal(s.screen, "series", `${name}: SERIES`);
-    const tiers = await q(p, `(root) => { const r = (e) => e.getBoundingClientRect(); const ks = [...root.querySelectorAll(".dh-card button")]; return { n: root.querySelectorAll("[data-series-enter]").length, open: [...root.querySelectorAll("[data-series-enter]")].map((b) => !b.disabled), big: ks.every((k) => Math.min(r(k).width, r(k).height) >= 44), sideways: root.querySelector(".dh-cards").scrollWidth > innerWidth + 1 }; }`);
+    const tiers = await q(p, `(root) => { const r = (e) => e.getBoundingClientRect(); const ks = [...root.querySelectorAll(".dh-card button")].filter((k) => k.getClientRects().length); return { n: root.querySelectorAll("[data-series-enter]").length, open: [...root.querySelectorAll("[data-series-enter]")].map((b) => !b.disabled), big: ks.every((k) => Math.min(r(k).width, r(k).height) >= 44), sideways: root.querySelector(".dh-cards").scrollWidth > innerWidth + 1 }; }`);
     assert.deepEqual(tiers, { n: 3, open: [true, false, false], big: true, sideways: false }, `${name}: three tiers, the rookie cup open, keys ≥ 44 px, no sideways scroll`);
     await shot(p, `${name}-tiers-dark`);
     await click(p, "[data-series-enter=rookie]");
     s = await snap(p);
     assert.deepEqual([s.series.tier, s.series.round, s.series.points], ["rookie", 0, [0, 0, 0, 0]], `${name}: the championship starts`);
     const map1 = await q(p, `(root) => ({ d: root.querySelector(".ds-map .tp-line").getAttribute("d"), rows: root.querySelectorAll(".ds-table tbody tr").length, me: root.querySelector(".ds-me").textContent, sideways: root.querySelector(".dh-cards").scrollWidth > innerWidth + 1, go: root.querySelector("[data-series-go]").textContent })`);
-    assert.ok(map1.d.length > 200 && map1.rows === 4 && /KIP/.test(map1.me) && !map1.sideways && map1.go === "RIDE ROUND 1", `${name}: the map, the table, RIDE ROUND 1 (${JSON.stringify({ ...map1, d: map1.d.length })})`);
+    assert.ok(map1.d.length > 200 && map1.rows === 4 && /KIP/.test(map1.me) && !map1.sideways && map1.go === "Ride round 1", `${name}: the map, the table, RIDE ROUND 1 (${JSON.stringify({ ...map1, d: map1.d.length })})`);
     await shot(p, `${name}-round1-dark`);
     // ---- round 1: by hand, then the autopilot ----
     await click(p, "[data-series-go]");
@@ -70,7 +70,7 @@ try {
     assert.equal(s.series.round, 1);
     assert.equal(s.series.points.reduce((a, b) => a + b, 0), 25 + 18 + 15 + 12, `${name}: all four scored (${JSON.stringify(s.series.points)} ${JSON.stringify(s.series)})`);
     const after = await q(p, `(root) => ({ rows: root.querySelectorAll(".ds-after tbody tr").length, cap: root.querySelector(".ds-after caption").textContent, next: root.querySelector(".dh-result [data-go=series]").textContent })`);
-    assert.deepEqual(after, { rows: 4, cap: "AFTER ROUND 1 OF 4", next: "ROUND 2" }, `${name}: the table after round 1`);
+    assert.deepEqual(after, { rows: 4, cap: "AFTER ROUND 1 OF 4", next: "Round 2" }, `${name}: the table after round 1`);
     await shot(p, `${name}-result-dark`);
     // ---- round 2: a new track; leaving it ----
     await click(p, ".dh-result [data-go=series]");

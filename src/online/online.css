@@ -1,36 +1,37 @@
-/* Online: the room card (big HOST / JOIN keys, the host's pick, the ticket read across a table, the
-   seats two by two), the connection chip over the ride, the live score board of a score run, and the
-   standings on the result. Phone first: every key 44 px or more, nothing scrolls sideways. */
-.dh .ol-room{width:min(100%,620px);justify-items:center;text-align:center}
-.dh .ol-room form,.dh .ol-room [data-for]{display:grid;gap:10px;justify-items:center;width:100%}
-.dh .ol-room .dh-field{width:min(100%,22em);text-align:left}
+/* Online: the room page (big HOST / JOIN keys, the host's pick, the ticket read across a table, the
+   seats two by two; a page in the garage's design, ../pages.css, over the shop's tokens), the connection
+   chip over the ride, the live score board of a score run, and the standings on the result. Phone
+   first: every key 44 px or more, nothing scrolls sideways. */
+.dh .ol-room form,.dh .ol-room [data-for]{width:100%;max-width:880px;box-sizing:border-box}
+.dh .ol-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .dh .ol-room .dh-field input{text-transform:uppercase;letter-spacing:.06em}
-.dh .ol-say{min-height:1.2em;color:var(--hot)}
-.dh .ol-hostjoin{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin:0}
-.dh .ol-hostjoin .bui-key{display:grid;gap:.3em;align-content:center;min-height:104px;padding:.7em .6em;white-space:normal}
-.dh .ol-hostjoin b{font-size:1.9em;letter-spacing:.06em;line-height:1}
-.dh .ol-hostjoin small{font-size:.72em;letter-spacing:.06em;line-height:1.3;font-weight:700;opacity:.85}
-.dh .ol-seg{display:flex;flex-wrap:wrap;gap:8px;width:100%;margin:0;justify-content:center}
-.dh .ol-seg .bui-key{flex:1 1 8em;min-width:0;padding:0 .6em;font-size:14px}
-.dh .ol-seg .bui-key[aria-pressed=true]{background:var(--k-sys);color:var(--rim)}
-.dh .ol-sizes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;margin:0}
-.dh .ol-sizes .bui-key{min-height:84px;font-size:2.2em;font-variant-numeric:tabular-nums}
-.dh .ol-rooms{display:flex;gap:14px;justify-content:center;align-items:center;margin:0}
-.dh .ol-rooms .bui-key{min-width:64px;min-height:64px;padding:0;font-size:1.6em}
-.dh .ol-rooms output{min-width:2em;font-size:2.6em;font-variant-numeric:tabular-nums}
-.dh .ol-ticket{display:grid;grid-template-columns:auto 1fr;gap:10px;width:100%;margin:0}
-.dh .ol-ticket span{display:grid;gap:.15em;padding:.45em .7em;background:var(--raised);border:2px solid var(--rim);border-radius:10px;text-align:left;min-width:0}
-.dh .ol-ticket small{font-size:.75em;letter-spacing:.1em;color:var(--muted);font-weight:700}
-.dh .ol-ticket b{font-size:max(1.5em,20px);letter-spacing:.05em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;line-height:1.1}
-.dh .ol-ticket .ol-t-room{font-size:max(2.3em,38px);text-align:center}
-.dh .ol-seats{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;margin:0;padding:0;list-style:none}
-.dh .ol-seats li{display:grid;grid-template-columns:1.1em 1fr;grid-template-rows:auto auto;column-gap:.55em;align-items:center;padding:.5em .7em;border:2px dashed var(--rim);border-radius:10px;color:var(--muted);text-align:left;min-width:0}
-.dh .ol-seats li i{grid-row:1/3;width:1.1em;height:1.1em;border-radius:4px;border:2px solid var(--rim);opacity:.45}
-.dh .ol-seats li b{font-size:1.1em;letter-spacing:.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dh .ol-seats li small{font-size:.75em;letter-spacing:.08em;font-weight:700}
-.dh .ol-seats li.ol-me,.dh .ol-seats li.ol-in{border-style:solid;color:var(--ink);background:var(--raised)}
-.dh .ol-seats li.ol-me{background:var(--k-sys);color:var(--rim)}
+.dh .ol-say{min-height:1.2em;margin:0;color:var(--shop-price);font-weight:700}
+.dh .ol-say:empty{display:none}
+.dh .ol-hostjoin{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:0}
+.dh .ol-hostjoin .shop-btn{display:grid;gap:.35em;align-content:center;justify-content:start;justify-items:start;min-height:104px;padding:14px 20px;white-space:normal;text-align:left}
+.dh .ol-hostjoin b{font-size:30px;line-height:1}
+.dh .ol-hostjoin small{font-weight:600;font-size:15px;line-height:1.3;opacity:.85}
+.dh .ol-seg{display:flex;flex-wrap:wrap;gap:10px;margin:0}
+.dh .ol-seg .shop-btn{flex:1 1 11em;min-width:0;padding:0 .8em}
+.dh .ol-room [data-for=host]>div{display:grid;gap:10px}
+.dh .ol-sizes{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0}
+.dh .ol-sizes .shop-btn{min-height:76px;font-size:32px;font-variant-numeric:tabular-nums}
+.dh .ol-rooms{display:flex;gap:18px;justify-content:center;align-items:center;margin:0}
+.dh .ol-rooms .shop-btn{min-width:64px;min-height:64px;padding:0;font-size:28px}
+.dh .ol-rooms output{min-width:2em;text-align:center;font-size:56px;font-weight:800;font-variant-numeric:tabular-nums}
+.dh .ol-ticket{display:grid;grid-template-columns:auto 1fr;gap:12px;margin:0}
+.dh .ol-ticket span{display:grid;gap:.2em;padding:12px 16px;background:var(--shop-tile);border-radius:8px;min-width:0}
+.dh .ol-ticket b{font-size:max(1.5em,22px);letter-spacing:.05em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;line-height:1.1}
+.dh .ol-ticket .ol-t-room{font-size:max(2.3em,40px);text-align:center}
+.dh .ol-seats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0;padding:0;list-style:none}
+.dh .ol-seats li{display:grid;grid-template-columns:1.1em 1fr;grid-template-rows:auto auto;column-gap:.6em;align-items:center;padding:10px 14px;border:1.5px dashed var(--shop-line2);border-radius:8px;color:var(--shop-mute);text-align:left;min-width:0}
+.dh .ol-seats li i{grid-row:1/3;width:1.1em;height:1.1em;border-radius:4px;opacity:.45}
+.dh .ol-seats li b{font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dh .ol-seats li small{font:500 12px var(--shop-mono);letter-spacing:.08em}
+.dh .ol-seats li.ol-me,.dh .ol-seats li.ol-in{border-style:solid;color:var(--shop-ink);background:var(--shop-panel)}
+.dh .ol-seats li.ol-me{background:var(--shop-soft);border-color:var(--shop-soft-ink);color:var(--shop-soft-ink)}
 .dh .ol-seats li.ol-me i,.dh .ol-seats li.ol-in i{opacity:1}
+@media (max-width:620px){.dh .ol-fields{grid-template-columns:minmax(0,1fr)}.dh .ol-hostjoin{gap:10px}.dh .ol-hostjoin .shop-btn{padding:12px 14px}.dh .ol-hostjoin b{font-size:24px}.dh .ol-hostjoin small{font-size:13px}}
 .dh .ol-chip{position:absolute;left:50%;bottom:12px;translate:-50% 0;z-index:4;display:flex;align-items:center;gap:.5em;margin:0;padding:.35em .75em;background:var(--surface);color:var(--ink);border:2px solid var(--rim);border-radius:20px;box-shadow:calc(3px * var(--bui-sx)) calc(3px * var(--bui-sy)) 0 var(--bui-shadow);font-size:12px;letter-spacing:.05em;white-space:nowrap;max-width:calc(100% - 24px);overflow:hidden;pointer-events:none}
 .dh .ol-chip i{width:.7em;height:.7em;border-radius:50%;background:var(--k-go)}
 .dh .ol-chip[data-conn=wait] i{background:#ffd166}

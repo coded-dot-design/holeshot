@@ -72,7 +72,7 @@ try {
     await until(p, (sr) => /Waiting for/.test(eval(sr).querySelector(".ol-wait-say").textContent), sr, `${name} waits in its room`);
     await p.bringToFront();
     await click(p, ".ol-share");
-    await until(p, (sr) => eval(sr).querySelector(".ol-share").textContent === "LINK COPIED", sr, "the link is copied");
+    await until(p, (sr) => eval(sr).querySelector(".ol-share").textContent === "Link copied", sr, "the link is copied");
     return { room: Number(await text(p, ".ol-t-room")), link: (await p.evaluate(() => navigator.clipboard.readText())).replace(/^https?:\/\/[^/]+\//, `${site.url}/`) };
   };
   const A = await open("/", { width: 1440, height: 900 }, false, "A", garages[0], true);

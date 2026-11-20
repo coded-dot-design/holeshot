@@ -1,17 +1,17 @@
 /* LET'S RIDE (./ride-ui.ts): layout only, over the shop's pieces and tokens (../vendor/shop/shop.css; the game
    re-points them in ./garage/garage.css). A full-bleed page under the garage's sticky header (with
    ← Garage in place of its tabs): the title row, the tabs, the tab's list, WITH FRIENDS, the controls. */
-.dh-cards:has(>.dh-ride){display:block;padding:var(--dh-top,0px) 0 0}
-.dh .dh-ride{display:flex;flex-direction:column;width:100%;min-height:100%;gap:0;padding:0;border:0;border-radius:0;box-shadow:none;background:var(--shop-bg);color:var(--shop-ink);font-weight:800}
-.dh .dh-ride .dh-brand .dh-logo{height:32px;margin:0}
+.dh-cards:has(>.dh-pg){display:block;padding:var(--dh-top,0px) 0 0}
+.dh .dh-pg{display:flex;flex-direction:column;width:100%;min-height:100%;gap:0;padding:0;border:0;border-radius:0;box-shadow:none;background:var(--shop-bg);color:var(--shop-ink);font-weight:800}
+.dh .dh-pg .dh-brand .dh-logo{height:32px;margin:0}
 .dh-rhead{grid-template-columns:auto minmax(0,1fr) auto}
 .dh .dh-rhead .dh-back{justify-self:start;align-self:center;margin:0 0 14px 40px;padding:0 24px;font-size:17px;letter-spacing:0}
-.dh-rwrap{flex:1;display:flex;flex-direction:column;gap:20px;box-sizing:border-box;width:100%;max-width:1600px;margin:0 auto;padding:28px 36px 24px}
-.dh-rtitle{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 24px}
-.dh-rtitle .shop-h1{font-size:52px}
-.dh-rtitle .shop-title{justify-items:end;text-align:right}
-.dh-rtitle .shop-title .shop-name{order:-1}
-.dh-rtitle .shop-title .shop-eyebrow{font-size:13px}
+.dh-pwrap{flex:1;display:flex;flex-direction:column;gap:20px;box-sizing:border-box;width:100%;max-width:1600px;margin:0 auto;padding:28px 36px 24px}
+.dh-ptitle{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 24px}
+.dh-ptitle .shop-h1{font-size:52px}
+.dh-ptitle .shop-title{justify-items:end;text-align:right}
+.dh-ptitle .shop-title .shop-name{order:-1}
+.dh-ptitle .shop-title .shop-eyebrow{font-size:13px}
 .dh-rtabs{margin-bottom:12px}
 .shop .dh-rtabs .shop-seg-k:not([aria-pressed=true]){color:var(--shop-mute)}
 .dh-rbody .shop-h2{font-size:36px;font-weight:800}
@@ -35,20 +35,20 @@
 .dh-keys .shop-foot>b{font-size:16px;color:var(--shop-mute)}
 .dh-keys .shop-foot>span{flex-wrap:wrap;gap:6px 26px;font:500 14px/1.4 var(--shop-mono);color:var(--shop-mute)}
 .dh-keys kbd{font:inherit;color:var(--shop-ink);margin-right:.7em;padding:0;border:0;background:none;box-shadow:none}
-.dh-ride .dh-note{margin:0}
-@media (max-width:1100px){.dh-rwrap{padding-inline:20px}.dh .dh-rhead .dh-back{margin-left:16px}}
+.dh-pg .dh-note{margin:0}
+@media (max-width:1100px){.dh-pwrap{padding-inline:20px}.dh .dh-rhead .dh-back{margin-left:16px}}
 /* Phone: ← Garage under the header's top line, the tabs two by two, every list one column, the
    race keys and Play online full width under their words, the controls a compact strip. */
 @media (max-width:820px){
 .dh .dh-rhead .dh-back{grid-column:1/-1;grid-row:2;margin:0 0 8px;min-height:44px;font-size:15px;padding:0 16px}
 .dh-rhead{grid-template-columns:minmax(0,1fr) auto}
-.dh .dh-ride .dh-brand .dh-logo{width:100%;max-width:114px;height:auto}
-.dh-rwrap{gap:14px;padding:16px 16px 20px}
-.dh-rtitle{flex-direction:column;align-items:start}
-.dh-rtitle .shop-h1{font-size:34px}
-.dh-rtitle .shop-title{justify-items:start;text-align:left}
-.dh-rtitle .shop-title .shop-name{font-size:20px}
-.dh-rtitle .shop-title .shop-eyebrow{font-size:11px}
+.dh .dh-pg .dh-brand .dh-logo{width:100%;max-width:114px;height:auto}
+.dh-pwrap{gap:14px;padding:16px 16px 20px}
+.dh-ptitle{flex-direction:column;align-items:start}
+.dh-ptitle .shop-h1{font-size:34px}
+.dh-ptitle .shop-title{justify-items:start;text-align:left}
+.dh-ptitle .shop-title .shop-name{font-size:20px}
+.dh-ptitle .shop-title .shop-eyebrow{font-size:11px}
 .dh-rtabs{margin-bottom:4px}
 .dh-rtabs .shop-seg{grid-auto-flow:row;grid-template-columns:repeat(2,minmax(0,1fr))}
 .shop .dh-rtabs .shop-seg-k{min-height:48px;font-size:17px}

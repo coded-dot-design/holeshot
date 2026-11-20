@@ -37,10 +37,10 @@ const open = async (path, vp, touch, g, errs) => {
 };
 // Each tab: [tab, its destinations: [selector, mode, map (or null), venue (or null)]], its online kind and the room's title.
 const TABS = [
-  ["race", [["[data-mode=race][data-venue=mx]", "race", null, "mx"], ["[data-mode=race][data-venue=sx]", "race", null, "sx"]], 0, "CHALLENGE YOUR FRIENDS · ONLINE"],
-  ["endless", [["[data-endless=desert]", "desert", "desert"], ["[data-endless=quarry]", "desert", "quarry"], ["[data-endless=forest]", "desert", "forest"], ["[data-endless=night-park]", "desert", "night-park"], ["[data-mode=endcity]", "endcity"], ["[data-mode=mashup]", "mashup"]], 4, "RIDE OUT · ONLINE"],
-  ["free", [["[data-map=neon-park]", "freeride", "moto-track-mx"], ["[data-map=dune-sea]", "freeride", "dune-sea"], ["[data-map=quarry]", "freeride", "quarry"], ["[data-map=forest]", "freeride", "forest"], ["[data-map=night-park]", "freeride", "night-park"], ["[data-map=sx-floor]", "freeride", "sx-neon-dome"], ["[data-map=sx-volt-floor]", "freeride", "sx-volt-arena"], ["[data-mode=bigair]", "bigair"]], 1, "JAM WITH YOUR FRIENDS · ONLINE"],
-  ["day", [["[data-circuit=td-meridian]", "trackday", "td-meridian"], ["[data-circuit=td-knotworks]", "trackday", "td-knotworks"], ["[data-circuit=td-bottlecap]", "trackday", "td-bottlecap"]], 6, "TRACK DAY · ONLINE"],
+  ["race", [["[data-mode=race][data-venue=mx]", "race", null, "mx"], ["[data-mode=race][data-venue=sx]", "race", null, "sx"]], 0, "Challenge your friends online"],
+  ["endless", [["[data-endless=desert]", "desert", "desert"], ["[data-endless=quarry]", "desert", "quarry"], ["[data-endless=forest]", "desert", "forest"], ["[data-endless=night-park]", "desert", "night-park"], ["[data-mode=endcity]", "endcity"], ["[data-mode=mashup]", "mashup"]], 4, "Ride out online"],
+  ["free", [["[data-map=neon-park]", "freeride", "moto-track-mx"], ["[data-map=dune-sea]", "freeride", "dune-sea"], ["[data-map=quarry]", "freeride", "quarry"], ["[data-map=forest]", "freeride", "forest"], ["[data-map=night-park]", "freeride", "night-park"], ["[data-map=sx-floor]", "freeride", "sx-neon-dome"], ["[data-map=sx-volt-floor]", "freeride", "sx-volt-arena"], ["[data-mode=bigair]", "bigair"]], 1, "Jam with your friends online"],
+  ["day", [["[data-circuit=td-meridian]", "trackday", "td-meridian"], ["[data-circuit=td-knotworks]", "trackday", "td-knotworks"], ["[data-circuit=td-bottlecap]", "trackday", "td-bottlecap"]], 6, "Track Day online"],
 ];
 try {
   for (const [name, theme, vp, touch] of [["1440", "dark", { width: 1440, height: 900 }, false], ["390", "light", { width: 390, height: 844 }, true]]) {
@@ -69,7 +69,7 @@ try {
       await until(p, (k) => game.getSnapshot().screen === "online" && document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(`.ol-room [data-olkind='${k}']`)?.getAttribute("aria-pressed") === "true", kind, `${name}: ${tab}: the room card on kind ${kind}`);
       const room = await $(p, "({ h: root.querySelector('.ol-room-h').textContent, circuits: !root.querySelector('.ol-circuits').hidden })");
       assert.deepEqual(room, { h: title, circuits: kind === 6 }, `${name}: ${tab}: ${title}`);
-      await press(".ol-room .ol-pick .ol-back");
+      await press(".ol-room .ol-head .ol-back");
       await until(p, () => game.getSnapshot().screen === "ride", null, `${name}: BACK from the room card`);
     }
     // ---- every other action the old LET'S RIDE had (owner: nothing dropped) ----
@@ -77,7 +77,7 @@ try {
     for (const v of ["mx", "sx"]) {
       await press("[data-rtab=race]");
       await press(`[data-go=series][data-venue=${v}]`);
-      await until(p, (v) => game.getSnapshot().screen === "series" && new RegExp(`SERIES · ${v.toUpperCase()}`).test(document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".dh-title").textContent), v, `${name}: SERIES · ${v}`);
+      await until(p, (v) => game.getSnapshot().screen === "series" && new RegExp(`^${v.toUpperCase()} `).test(document.querySelector("[data-fizlet-host]").shadowRoot.querySelector(".dh-title").textContent), v, `${name}: SERIES · ${v}`);
       assert.ok(await $(p, "root.querySelectorAll('.ds [data-series-enter]').length > 0"), `${name}: the series' tier picks`);
       await press(".ds .dh-back");
       await until(p, () => game.getSnapshot().screen === "ride" && document.querySelector("[data-fizlet-host]").shadowRoot.querySelector("[data-rtab=race]").getAttribute("aria-pressed") === "true", null, `${name}: ← LET'S RIDE`);
@@ -91,7 +91,7 @@ try {
     // ⚙ settings and back to LET'S RIDE (on the tab left).
     await press(".dh-ride .dh-cog");
     await until(p, () => game.getSnapshot().screen === "settings", null, `${name}: ⚙`);
-    assert.match(await $(p, "root.querySelector('.dh-set .dh-back').textContent"), /LET'S RIDE/, `${name}: settings come back to LET'S RIDE`);
+    assert.match(await $(p, "root.querySelector('.dh-set .dh-back').textContent"), /Let's Ride/, `${name}: settings come back to LET'S RIDE`);
     await press(".dh-set .dh-back");
     await until(p, () => game.getSnapshot().screen === "ride" && document.querySelector("[data-fizlet-host]").shadowRoot.querySelector("[data-rtab=free]").getAttribute("aria-pressed") === "true", null, `${name}: back on LET'S RIDE`);
     // Day / Night: the page follows, the key keeps the focus.
@@ -146,7 +146,7 @@ try {
   assert.match(await $(A, "root.querySelector('.ol-t-ride').textContent"), /^TRACK DAY · KNOTWORKS$/, "the lobby says the pick");
   await A.bringToFront();
   await $(A, "root.querySelector('.ol-share').click()");
-  await until(A, (s) => eval(s).querySelector(".ol-share").textContent === "LINK COPIED", sr, "the link is copied");
+  await until(A, (s) => eval(s).querySelector(".ol-share").textContent === "Link copied", sr, "the link is copied");
   const link = (await A.evaluate(() => navigator.clipboard.readText())).replace(/^https?:\/\/[^/]+\//, `${site.url}/`);
   const B = await open(link, { width: 390, height: 844 }, true, garage(2, "BO"), errs);
   for (const p of [A, B]) await until(p, () => { const s = game.getSnapshot(); return s.online?.phase === "ride" && s.mode === "trackday" && s.run?.map === "td-knotworks"; }, null, "both on KNOTWORKS", 90000);

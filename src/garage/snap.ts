@@ -23,8 +23,9 @@ let cv: HTMLCanvasElement | null = null, dio: ReturnType<typeof diorama> | null 
 /** Draw time of every still so far (ms), for the measure. */
 export const snapCost = { n: 0, ms: 0, bytes: 0 };
 
-/** Model `id` new, side on, as a WebP data URL (PNG where the browser has no WebP encoder) of `w` × `h` CSS px (at 2× density). `p` gives the
- *  rider's number (the side plates). Kept: the same model, theme and size draw once. */
+/** Model `id` new, side on, as a WebP data URL (PNG where the browser has no WebP encoder) of `w` × `h` CSS px (at 2× density): the
+ *  catalogue's still, so the side plates are the model's own, blank (no rider's number on a bike for
+ *  sale). Kept: the same model, theme and size draw once. */
 export function snap(id: string, p: Profile, night: boolean, w = 384, h = 216): string {
   const m = model(id), key = `${m.id}|${night ? 1 : 0}|${w}x${h}`, hit = kept.get(key);
   if (hit) return hit;
@@ -33,7 +34,7 @@ export function snap(id: string, p: Profile, night: boolean, w = 384, h = 216): 
   dio ??= diorama(cv, { light: [-0.4, 1, 0.6], ambient: 0.6, maxDpr: 2 });
   dio.resize(w, h, 2);
   dio.clear();
-  const nb = newBike(m.id, "snap", "f-" + m.maker, p.bikes[p.ride]?.look.number ?? 7), P = { ...p, bikes: [nb], ride: 0 }, t = tune(nb), L = lookOf(P);
+  const nb = newBike(m.id, "snap", "f-" + m.maker, 0), P = { ...p, bikes: [nb], ride: 0 }, t = tune(nb), L = lookOf(P);
   const g = rig(dio, "snap", { ...rigKit(night), ...L.look } as RigColors, t.rig, L.helmet, t.model.id), b = makeBike(FLAT, t.power, t.shape);
   b.reset(0, 0, 0);
   g.pose(b, 0);

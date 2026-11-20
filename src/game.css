@@ -75,27 +75,16 @@
    the garage the header sticks to the top of the scrolling cards, so the way back stays in reach. */
 .dh .dh-icon{min-width:44px;min-height:44px;padding:0;display:inline-grid;place-items:center}
 .dh .dh-back{flex:none;white-space:nowrap;padding:0 14px;font-size:14px;letter-spacing:.04em}
-.dh-title{font-size:20px;margin-right:auto}
-.dh-sticky{position:sticky;top:-16px;z-index:4;margin:-16px -18px 0;padding:12px 18px 10px;background:var(--surface);border-bottom:2.5px solid var(--rim);border-radius:12px 12px 0 0}
 /* LET'S RIDE: the garage's one main action, a Board UI sticker key that calls ("press me"). */
 .dh .dh-letsride{width:100%;height:auto;min-height:64px;gap:4px;margin-top:6px;padding:10px 12px}
 .dh .dh-letsride b{font:900 24px/1 ui-rounded,system-ui,sans-serif;letter-spacing:.08em}
 .dh .dh-letsride small{font:800 10px/1.2 ui-monospace,monospace;letter-spacing:.12em;color:inherit;white-space:normal}
 .dh-garage{overflow-x:clip}
-.dh-pay{list-style:none;margin:0;padding:0;display:grid;gap:6px}
-.dh-pay li{display:flex;justify-content:space-between;gap:10px;font-variant-numeric:tabular-nums}
-.dh-pay .dh-total{border-top:2px solid var(--rim);padding-top:6px;font-size:18px}
-.dh-wear>li small{color:var(--hot);font-variant-numeric:tabular-nums}
-.dh-pause,.dh-result{width:min(100%,620px)}
 .dh-note:empty{display:none}
 @media (max-width:620px){
 .dh-cards{padding:calc(10px + var(--dh-top,0px)) 8px 24px}
 .dh-card{padding:12px 12px 14px;gap:10px}
 .dh-cols,.dh-picks{grid-template-columns:1fr}
-.dh-sticky{top:-10px;margin:-12px -12px 0;padding:10px 12px 8px}
-.dh-title{font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dh-sticky{flex-wrap:nowrap;gap:6px}
-.dh-sticky>.dh-chip{display:none}
 .dh-top>.dh-who{display:none}
 .dh .dh-back{padding:0 10px;font-size:13px}
 .dh-logo{height:22px}
@@ -140,13 +129,5 @@
 /* A card over the ride (pause, the result): the touch controls go (stick, rocker, bubbles), so they
    never cover its keys. */
 .dh:has(>.dh-cards:not([hidden])) .bui-pad{visibility:hidden}
-/* CONTROLS · HOW TO (from settings): one card; key caps in the Board UI kbd chip, sized to read. */
-.dh-ctl section{display:grid;gap:6px;align-content:start}
-.dh-ctl .dh-list>li{grid-template-columns:minmax(0,1fr);align-items:center}
-.dh-ctl .dh-list>li:has(.dh-caps){grid-template-columns:9.5em minmax(0,1fr)}
-.dh-ctl small{color:var(--muted);font-weight:700}
-.dh-caps{display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center}
-.dh-caps kbd{margin:0;opacity:1;display:inline-grid;place-items:center;min-width:28px;height:28px;padding:0 6px;box-sizing:border-box;border:2px solid var(--rim);border-radius:7px;background:var(--raised);color:var(--ink);font:800 12px ui-monospace,monospace}
-.dh-caps i{font-style:normal;color:var(--muted)}
 .dh-appicon{display:block;flex:none;width:44px;height:44px}
 @media (max-width:620px){.dh-appicon{width:36px;height:36px}}

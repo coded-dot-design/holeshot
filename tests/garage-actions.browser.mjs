@@ -73,6 +73,31 @@ try {
     ok("⚙ settings: units, sound, export / import code, reset, CONTROLS · HOW TO");
     await press(".dh-back");
     await until(p, "game.getSnapshot().screen === 'garage'", `${name}: back to the garage`);
+    // The settings page's rows (the shop's design): CONTROLS · HOW TO as a row, the test credits row, START
+    // OVER asking first; the Rider key on a page opens the rider's gear in the garage.
+    await press("[data-go=settings]");
+    await until(p, "game.getSnapshot().screen === 'settings'", `${name}: ⚙ settings again`);
+    assert.ok(await has(p, ".dh-set .dh-ctl-go[data-go=controls]"), `${name}: CONTROLS · HOW TO is a row`);
+    assert.match(await $(p, "root.querySelector('.dh-set').textContent"), /Test credits.*credits=inf.*Off/s, `${name}: the test credits row`);
+    await press(".dh-reset");
+    assert.equal(await $(p, "root.querySelector('.dh-reset').textContent"), "Sure? Tap again", `${name}: start over asks first`);
+    if (name === "desktop") {
+      await press(".dh-set [data-rider]");
+      await until(p, "game.getSnapshot().screen === 'garage' && root.querySelector('[data-look=rider]')?.getAttribute('aria-pressed') === 'true'", `${name}: Rider from the settings`);
+      await press("[data-gtab=bike]");
+    } else await press(".dh-back"), await until(p, "game.getSnapshot().screen === 'garage'", `${name}: back to the garage`);
+    ok("settings rows: CONTROLS · HOW TO, test credits, start over asks first; Rider from a page");
+    // A ride left at once: the result's wear column reads 0%, neutral (never a pink −0.0%).
+    await p.evaluate(() => game.start("race"));
+    await until(p, "game.getSnapshot().screen === 'event' || !!root.querySelector('.dh-risk')", `${name}: a race`);
+    if (await has(p, ".dh-risk")) await press(".dh-risk-go");
+    await until(p, "game.getSnapshot().screen === 'event'", `${name}: racing`);
+    await p.evaluate(() => game.leave());
+    await until(p, "game.getSnapshot().screen === 'result'", `${name}: the result`);
+    assert.deepEqual(await $(p, "[...root.querySelectorAll('.dh-wear small')].map((e) => [e.textContent, e.hasAttribute('data-d')])"), Array(5).fill(["0%", false]), `${name}: nothing wore: 0%, neutral`);
+    await press(".dh-result [data-go=garage]");
+    await until(p, "game.getSnapshot().screen === 'garage'", `${name}: the result's Garage key`);
+    ok("result: nothing worn reads 0%, neutral; its Garage key");
 
     // ---- LET'S RIDE and the online entry ----
     await press(".dh-letsride");

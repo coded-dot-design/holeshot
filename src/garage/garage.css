@@ -23,7 +23,6 @@
 .dh-pace-s>div{white-space:nowrap;padding:2px 6px;border-width:1.5px}
 .dh-pace-s dt{font-size:9px}
 .dh-pace-s dd{font-size:12px}
-.dh-pay li[data-loss]{color:var(--hot)}
 .dh-risk{width:min(100%,560px)}
 .dh-maker{display:inline-block;width:14px;height:14px;margin-right:6px;vertical-align:-1px;border:2px solid var(--rim);border-radius:4px;background:linear-gradient(135deg,var(--a) 55%,var(--b) 0)}
 .dh-clh{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin:14px 0 6px;padding-bottom:4px;border-bottom:2px solid color-mix(in srgb,var(--rim) 35%,transparent);font-size:14px;color:var(--ink)}
