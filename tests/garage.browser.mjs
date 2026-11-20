@@ -79,8 +79,8 @@ try {
     await shot(p, `${name}-2-garage-warnings`);
     // ---- My Bikes: the bay rail over the turntable (part of the garage, no popover): yours rides next, the empty bays add a bike, the expansion at the end ----
     const bays = await $(p, "[...root.querySelectorAll('.dh-bikep .shop-rail .shop-bay')].map((r) => r.textContent)");
-    assert.ok(bays.length === 4 && /^Bay 1.*#23.*Rides next/.test(bays[0]) && bays.slice(1, 3).every((b) => /Bay \d\+ Add bike$/.test(b)), `${name}: three bays, yours rides next (${bays})`);
-    assert.match(bays[3], /Garage expansion.*Bay 4 of 6.*Unlock/s, `${name}: the expansion, last on the rail`);
+    assert.ok(bays.length === 3 && /^Bay 1.*#23.*Rides next/.test(bays[0]) && /\+ Add bike2 empty bays$/.test(bays[1]), `${name}: yours rides next; the two empty bays are one + Add bike tile (${bays})`);
+    assert.match(bays[2], /Garage expansion.*Bay 4 of 6.*Unlock/s, `${name}: the expansion, last on the rail`);
     assert.equal(await $(p, "!!root.querySelector('.dh-bikep .shop-rail .shop-bay[data-on] .shop-bay-art')"), true, `${name}: the selected bay marked, with its picture`);
     assert.equal(await $(p, "root.querySelector('.shop-sheet')"), null, `${name}: no My Bikes popover`);
     await shot(p, `${name}-2b-my-bikes`);

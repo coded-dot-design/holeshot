@@ -290,7 +290,7 @@ try {
   // turntable fills the bike panel's height) on every tab, and so are the showroom and LET'S RIDE ----
   for (const [w, h] of [[1440, 900], [1920, 1080], [2560, 1440]]) {
     const ctx = await browser.newContext({ viewport: { width: w, height: h } });
-    await ctx.addInitScript((s) => localStorage.setItem("holeshot:profile", s), JSON.stringify(SAVE));
+    await ctx.addInitScript((s) => { if (!sessionStorage.getItem("seeded")) localStorage.setItem("holeshot:profile", s), sessionStorage.setItem("seeded", "1"); }, JSON.stringify(SAVE));
     const p = await ctx.newPage();
     await p.goto(server.url + "/");
     await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${w}: loads`);
@@ -303,6 +303,18 @@ try {
       assert.equal(F.sideways, false, `${w}: ${what}: no sideways scroll`);
       if (w === 1440) assert.ok(F.pageScroll <= 0 && F.docScroll <= 0, `${w}×${h}: ${what}: the page does not scroll (${JSON.stringify(F)})`);
     }
+    // The bay rail never scrolls sideways (it wraps), with one, two or three bikes.
+    for (const n of [1, 2, 3]) {
+      await p.evaluate(`${root}.querySelector('[data-gtab=garage]')?.click()`);
+      const R = await p.evaluate(async ([s, n]) => { localStorage.setItem("holeshot:profile", s); return n; }, [JSON.stringify({ ...SAVE, slots: 3, bikes: [bike("b1", "buzzline"), bike("b2", "anvil", { look: { paint: "pinkout", number: 8 } }), bike("b3", "glidewire", { look: { paint: "acid", number: 44 } })].slice(0, n) }), n]);
+      await p.reload();
+      await until(p, `window.game && game.getSnapshot().screen === 'garage' && game.profile.bikes.length === ${R}`, `${w}: ${n} bikes`);
+      const S = await $(p, "(() => { const l = root.querySelector('.shop-rail-l'), k = root.querySelector('.dh-bikep'); return { sw: l.scrollWidth, cw: l.clientWidth, right: Math.max(...[...l.querySelectorAll('.shop-bay')].map((e) => e.getBoundingClientRect().right)), edge: l.getBoundingClientRect().right + 0.5, bays: l.querySelectorAll('.shop-bay').length }; })()");
+      assert.ok(S.sw <= S.cw && S.right <= S.edge, `${w}: ${n} bike${n > 1 ? "s" : ""}: the bay rail fits (${JSON.stringify(S)})`);
+    }
+    await p.evaluate((s) => localStorage.setItem("holeshot:profile", s), JSON.stringify(SAVE));
+    await p.reload();
+    await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${w}: back to the saved profile`);
     if (w === 1440) {
       await p.evaluate(`${root}.querySelector('[data-gtab=garage]').click()`);
       await until(p, `!!${root}.querySelector('.dh-bikep .shop-turn')`, "back to the garage");
@@ -312,6 +324,7 @@ try {
       await until(p, "game.getSnapshot().screen === 'ride'", `${w}: LET'S RIDE`);
       const F = await fit();
       assert.ok(F.pageScroll <= 0 && F.docScroll <= 0 && !F.sideways && F.span <= 1440, `${w}: LET'S RIDE fits the screen (${JSON.stringify(F)})`);
+      done.push("the bay rail fits without sideways scroll with 1, 2 and 3 bikes (1440, 1920, 2560)");
       done.push("one screen at 1440 × 900 (garage, every tab, showroom, LET'S RIDE: no page scroll); content ≤ 1440 px centred at 1440, 1920 and 2560, no sideways scroll");
     }
     await ctx.close();

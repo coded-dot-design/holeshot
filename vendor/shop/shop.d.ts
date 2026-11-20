@@ -320,9 +320,9 @@ export interface RailBay {
     attrs?: string;
     add?: string;
 }
-/** MY BIKES as a rail: the bays side by side (the selected one marked; an empty bay is an "+ Add" tile;
- *  the expansion, locked, at the end), part of the screen, not a popover. Scrolls sideways when it
- *  has more bays than room. */
+/** MY BIKES as a rail: the bikes side by side (the selected one marked), then one side column with a
+ *  single "+ Add bike" tile for every empty bay (its count) over the expansion's key, locked. Part of
+ *  the screen, not a popover; it wraps onto a second row rather than scroll sideways. */
 export declare function bayRail(o: {
     title: string;
     line: string;

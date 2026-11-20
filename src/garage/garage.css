@@ -64,11 +64,11 @@
 .dh-theme .shop-i{color:var(--shop-bar)}
 /* The rider's portrait on a key: a light disc behind it and its ink outline thickened at this size, so
    any helmet colour (black on the night key, white on the day key) reads. */
-.dh-disc{display:inline-grid;place-items:center;width:30px;height:30px;flex:none;border-radius:50%;background:#ece8f7;box-shadow:0 0 0 1.5px var(--shop-line2)}
+.dh-disc{display:inline-grid;place-items:center;width:30px;height:30px;flex:none;border-radius:50%;background:#d6d0ec;box-shadow:0 0 0 1.5px var(--shop-line2)}
 .dh-disc .dh-helm{inline-size:24px;block-size:20px}
 .dh-disc .dh-helm [stroke="#0b0a14"],.shop-tile-art .dh-helm [stroke="#0b0a14"]{stroke-width:9}
-.shop-tile-art .dh-helm{border-radius:50%;background:radial-gradient(closest-side,#ece8f7 0 92%,transparent 96%)}
-.dh-face .dh-helm{background:radial-gradient(closest-side,#ece8f7 0 88%,transparent 92%),linear-gradient(180deg,color-mix(in srgb,var(--cy) 22%,var(--raised)),var(--raised))}
+.shop-tile-art:has(>.dh-helm){box-sizing:border-box;padding:6px;border-radius:8px;background:#d6d0ec;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,#17152b 18%,transparent)}
+.dh-face .dh-helm{background:radial-gradient(closest-side,#d6d0ec 0 88%,transparent 92%),linear-gradient(180deg,color-mix(in srgb,var(--cy) 22%,var(--raised)),var(--raised))}
 /* Two columns: the bike panel (sticky where the screen is tall enough) and the tabs. */
 @media (min-height:700px){.dh-bikep{position:sticky;top:110px}}
 .dh-gwrap{display:grid;grid-template-columns:minmax(0,480px) minmax(0,1fr);gap:30px;padding:30px 36px 40px;align-items:start}
