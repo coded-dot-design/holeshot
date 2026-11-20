@@ -3,11 +3,9 @@
 // the kit (the shell's paint, the stripe on the peak, the goggle's band and the visor tint with its
 // glint) in the kit's shape (../bike/rig.ts RigHelmet). An SVG string, no images; the same shapes the
 // 3D rig draws, so the chip, the garage and the turntable agree.
-import { bandOf, type RigHelmet } from "../bike/rig.ts";
+import { bandOf, strapOf, type RigHelmet } from "../bike/rig.ts";
 import { helmetOf, mix } from "./look.ts";
 
-/** The strap going back from the goggle: the band toward the shell, as the 3D helmet draws it. */
-const strapOf = (c: { helmet: string }, band: string) => mix(band, c.helmet, 0.4);
 import type { Profile } from "../model/profile.ts";
 
 const INK = "#0b0a14";
@@ -35,7 +33,7 @@ export function helmetSVG(c: { helmet: string; stripe: string; visor: string }, 
   const face = dome
     // The street dome's big visor in its rim, a stripe over the crown.
     ? `<path d="M-30-38Q-10-50 20-46" fill="none" stroke="${c.stripe}" stroke-width="7" stroke-linecap="round"/><path d="M0-28Q30-36 54-22L57 8Q30 14 2 8Z" fill="${c.visor}" stroke="${band}" stroke-width="6" stroke-linejoin="round"/><path d="M0-28Q30-36 54-22L57 8Q30 14 2 8Z" fill="none" ${o}/>`
-    : `<path d="M-45-20H14V-4H-46Z" fill="${strapOf(c, band)}" ${o}/><rect x="8" y="-23" width="46" height="32" rx="7" fill="${band}" ${o}/><rect x="13" y="-18" width="36" height="22" rx="5" fill="${c.visor}"/>`;
+    : `<path d="M-46-10H14V3H-46Z" fill="${strapOf(c.helmet, band)}" ${o}/><rect x="8" y="-23" width="46" height="32" rx="7" fill="${band}" ${o}/><rect x="13" y="-18" width="36" height="22" rx="5" fill="${c.visor}"/>`;
   // The open face: the face under the goggle, in the shell's opening.
   const skin = open ? `<path d="M24 4H44Q52 18 44 30Q38 38 24 38Q16 20 24 4Z" fill="#2a2233" ${o}/>` : "";
   const peak = PEAK[shape];

@@ -183,6 +183,9 @@ import { readdirSync, readFileSync } from "node:fs";
 // The backdrop picker folded to a round key (vendor/shop 3b40c27's chipPick: its markup and CSS, the
 // picker's open state, Escape and the press outside), on main 86d4308: +498 B measured (holeshot.js
 // 259,543 → 260,041; holeshot.mjs 259,283 → 259,778). Budget 260,000 → 261,000.
+// The helmet's final pass (the goggle across the eye port and big, its side plates, the strap a thin
+// ring round the head at goggle height, the head carried level) on main fa0cef9: +534 B measured
+// (holeshot.js 260,041 → 260,575; holeshot.mjs 259,778 → 260,369). Budget unchanged (261,000).
 const BUDGET = 261_000;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
