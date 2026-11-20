@@ -152,15 +152,15 @@ try {
         await p.evaluate((s) => localStorage.setItem("holeshot:profile", JSON.stringify({ ...s, credits: 3000 })), s0);
         await p.goto(server.url + "/");
         await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${at}: reload`);
-        // (The spots are My Bikes' garage expansion: the sheet opens from My Bikes.)
-        const bays = async () => { if (!(await $(p, "!!root.querySelector('.shop-sheet')"))) await press("[data-bays]"); };
+        // (The spots are My Bikes' garage expansion: the last tile on the bay rail.)
+        const bays = async () => {};
         await bays();
-        assert.match(await $(p, "root.querySelector('.shop-expand').textContent"), /Garage expansion.*Bay 4 of 6.*Unlock.*2,500/, `${at}: the expansion, the 4th bay, its price`);
+        assert.match(await $(p, "root.querySelector('.shop-bay-lock').textContent"), /Garage expansion.*Bay 4 of 6.*Unlock.*2,500/, `${at}: the expansion, the 4th bay, its price`);
         await press("[data-spot]");
         await until(p, "game.profile.slots === 4", `${at}: the 4th spot`);
         assert.deepEqual([(await saved(p)).slots, (await saved(p)).credits], [4, 500], `${at}: paid and saved`);
         await bays();
-        assert.match(await $(p, "root.querySelector('.shop-expand').textContent"), /Bay 5 of 6.*5,000/, `${at}: the 5th costs more`);
+        assert.match(await $(p, "root.querySelector('.shop-bay-lock').textContent"), /Bay 5 of 6.*5,000/, `${at}: the 5th costs more`);
 
         // ---- test credits: spots to six, bikes to six, then the 7th is refused; nothing saved ----
         const real = JSON.stringify(await saved(p));

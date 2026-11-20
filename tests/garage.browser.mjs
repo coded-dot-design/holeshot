@@ -75,19 +75,15 @@ try {
     assert.equal(await $(p, "root.querySelector('[data-part=chain] .dh-tag').dataset.state"), "risk");
     assert.equal(await $(p, "root.querySelector('[data-part=tyres] .dh-tag').dataset.state"), "worn");
     const L0 = await layout(p);
-    assert.deepEqual(L0, { small: [], sideways: false }, `${name}: garage keys ≥ 44 px, no sideways scroll`);
+    assert.deepEqual(L0, { small: [], sideways: false }, `${name}: garage keys ≥ 44 px, no sideways scroll (${JSON.stringify(L0)})`);
     await shot(p, `${name}-2-garage-warnings`);
-    // ---- My Bikes: the bays sheet (a popover at 1440, a bottom sheet at 390), the expansion, Escape closes it ----
-    await click(p, "[data-bays]");
-    await until(p, "!!root.querySelector('.shop-sheet')", `${name}: My Bikes opens`);
-    const bays = await $(p, "[...root.querySelectorAll('.shop-sheet .shop-row')].map((r) => r.textContent)");
-    assert.ok(bays.length === 3 && /^BAY 1.*#23.*Rides next$/.test(bays[0]) && bays.slice(1).every((b) => /Empty bay\+ Add bike$/.test(b)), `${name}: three bays, yours rides next (${bays})`);
-    assert.match(await $(p, "root.querySelector('.shop-expand').textContent"), /Garage expansion.*Bay 4 of 6.*Unlock/s, `${name}: the expansion`);
-    if (touch) assert.equal(await $(p, "getComputedStyle(root.querySelector('.shop-sheet')).position"), "fixed", `${name}: a bottom sheet`);
+    // ---- My Bikes: the bay rail over the turntable (part of the garage, no popover): yours rides next, the empty bays add a bike, the expansion at the end ----
+    const bays = await $(p, "[...root.querySelectorAll('.dh-bikep .shop-rail .shop-bay')].map((r) => r.textContent)");
+    assert.ok(bays.length === 4 && /^Bay 1.*#23.*Rides next/.test(bays[0]) && bays.slice(1, 3).every((b) => /Bay \d\+ Add bike$/.test(b)), `${name}: three bays, yours rides next (${bays})`);
+    assert.match(bays[3], /Garage expansion.*Bay 4 of 6.*Unlock/s, `${name}: the expansion, last on the rail`);
+    assert.equal(await $(p, "!!root.querySelector('.dh-bikep .shop-rail .shop-bay[data-on] .shop-bay-art')"), true, `${name}: the selected bay marked, with its picture`);
+    assert.equal(await $(p, "root.querySelector('.shop-sheet')"), null, `${name}: no My Bikes popover`);
     await shot(p, `${name}-2b-my-bikes`);
-    await $(p, "root.querySelector('.shop-sheet .shop-x').focus()");
-    await p.keyboard.press("Escape");
-    await until(p, "!root.querySelector('.shop-sheet') && game.getSnapshot().screen === 'garage'", `${name}: Escape closes My Bikes`);
     // ---- service, tyres, damage, a tune choice, a mod ----
     // ---- PACE: measured 0–30 / 0–60 mph and the top (as shown, mph by default); the gearing moves it ----
     const pace = () => $(p, "[...root.querySelectorAll('.dh-pace-bay .shop-stat dd')].map((d) => d.textContent)");
@@ -151,7 +147,6 @@ try {
     await shot(p, `${name}-6-dressed`);
     // ---- the showroom (tests/showroom.browser.mjs has the rest): locked tiers, buy, a trade-in ----
     await click(p, "[data-gtab=showroom]");
-    while (await $(p, "!!root.querySelector('[data-shop-more]')")) await click(p, "[data-shop-more]");
     assert.equal(await $(p, "root.querySelectorAll('.shop-cat-item .shop-stats-s').length"), 19, `${name}: every showroom bike shows its pace (all nineteen, the street bikes too)`);
     const tiers = await $(p, "[...root.querySelectorAll('.shop-cat-item .shop-stars')].map((s) => +s.getAttribute('aria-label').match(/Tier (\\d)/)[1])");
     assert.equal(tiers.filter((t) => t >= 3).length, 10, `${name}: ten bikes at tiers 3 and 4 (eight dirt bikes, two street)`);
@@ -167,7 +162,6 @@ try {
     // a trade-in of bay 1 (the old one) for a cheap e-bike: bay 1 takes it
     c = q.credits;
     await click(p, "[data-shop-pick=glidewire]");
-    await click(p, "[data-shop-open=slot]");
     await click(p, "[data-shop-set=slot][data-v='0']");
     await click(p, "[data-shop-buy=glidewire]");
     q = await prof(p);

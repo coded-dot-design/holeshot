@@ -154,7 +154,11 @@ import { readdirSync, readFileSync } from "node:fs";
 // The helmet's goggle and the street dome's visor (a low rounded goggle in the eye port, a strap cut
 // from the shell's outline, the visor clipped to the shell), on main e22df27: +298 B measured
 // (holeshot.js 245,404 → 245,702; holeshot.mjs 245,191 → 245,488). Budget unchanged (about 0.8 KB of room).
-const BUDGET = 246_500;
+// R47 (the garage UX pass: the shop's icon set, stages, wear and upgrade tiles, the bay rail and the
+// showroom's bay picker from vendor/shop/ d567a7d; the garage fits the viewport, ≤ 1440 px, bay
+// pictures from the rig), on main c6bb162: +4,190 B measured (holeshot.js 245,702 → 249,892;
+// holeshot.mjs 245,488 → 249,587), about 1.2 KB of it the icon table. Budget 246,500 → 250,500.
+const BUDGET = 250_500;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;

@@ -14,7 +14,7 @@ import { atRisk, failChance, partState } from "../model/upkeep.ts";
 import { cosmeticPrice, fits, fixPrice, modPrice, partPrice, setupPrice, spotPrice, tradeValue, type Slot } from "../model/garage.ts";
 import { helmetSVG } from "./portrait.ts";
 import { helmetOf } from "./look.ts";
-import type { Bay, Item, Slot as LkSlot, Upgrade, Wear } from "../../vendor/shop/shop.js";
+import type { Item, RailBay, Slot as LkSlot, Upgrade, Wear } from "../../vendor/shop/shop.js";
 import { btn, esc, pill, price, swatch } from "../../vendor/shop/shop.js";
 
 /** "CHAIN & SPROCKETS" → "Chain & sprockets" (the design's sentence case). */
@@ -27,6 +27,12 @@ export const isE = (b: BikeSave) => CLASSES[modelOf(b.model).cls].motor === "bat
 export const partName = (b: BikeSave, k: PartId) => (k === "motor" ? MOTOR_NAME[modelOf(b.model).cls] : PART_NAME[k]);
 export const modName = (b: BikeSave, k: ModId) => (k === "power" && isE(b) ? MODS[k].e : MODS[k].name);
 const STATE_TAG: Record<string, string> = { worn: "WORN", risk: "MAY FAIL", failed: "FAILED" };
+/** Each thing's icon (the shop's set, ../../vendor/shop/ icon): parts, crash damage, tune, mods, slots. */
+export const partIcon = (b: BikeSave, k: PartId) => (k === "motor" ? (isE(b) ? "battery" : "piston") : ({ tyres: "tyre", chain: "chain", susp: "shock", brakes: "disc" } as Record<string, string>)[k]!);
+export const DMG_ICON: Record<DamageId, string> = { bars: "bars", plastics: "plastics" };
+export const SETUP_ICON: Record<string, string> = { gearing: "sprocket", spring: "shock", map: "map" };
+export const MOD_ICON: Record<string, string> = { power: "exhaust", brakes: "disc", weight: "feather", travel: "travel", cells: "battery", wbar: "wheelie", swap: "trade", bore: "bore", boost: "turbo" };
+export const SLOT_ICON: Record<string, string> = { paint: "paint", plastics: "plastics", graphics: "graphics", plate: "plate", number: "number", helmet: "helmet", helmetPaint: "paint", visor: "visor", jersey: "jersey", pattern: "pattern", pants: "pants", boots: "boots", gloves: "gloves", outfit: "jersey" };
 
 /** PACE as stat tiles' words: [label, value] in the design's case ("0–30 MPH", "0.88 s", "TOP SPEED", "66 mph"). */
 export const pace = (t: Pick<Tuned, "power" | "shape">, u: Units): [string, string][] => paceRow(t, u).map(([k, v]) => [k === "TOP" ? "TOP SPEED" : k, v === "NEVER" ? "—" : v.toLowerCase()]);
@@ -37,17 +43,17 @@ export function wearRows(b: BikeSave, tyreKey: string): Wear[] {
     const v = b.parts[k], st = partState(b, k), pr = partPrice(b, k), need = v < SERVICE_BELOW || st === "failed";
     const label = k === "tyres" ? "New set" : k === "motor" ? (isE(b) ? "New cells" : "Rebuild") : "Service";
     const tag = st !== "ok" ? `<small class="dh-tag" data-state="${st}">${STATE_TAG[st]}${st === "risk" ? " " + Math.round(failChance(b, k) * 100) + "%" : ""}</small>` : "";
-    return { label: cap(partName(b, k)), sub: k === "tyres" ? tyreKey : undefined, v, state: st === "ok" ? "" : st, tag, attrs: `data-part="${k}"`, key: { label, price: need ? pr : undefined, done: need ? undefined : `At ${Math.round(v * 100)}%`, attrs: `data-service="${k}"` } };
+    return { label: cap(partName(b, k)), icon: partIcon(b, k), sub: k === "tyres" ? tyreKey : undefined, v, state: st === "ok" ? "" : st, tag, attrs: `data-part="${k}"`, key: { label, price: need ? pr : undefined, done: need ? undefined : `At ${Math.round(v * 100)}%`, attrs: `data-service="${k}"` } };
   });
 }
 /** The tyre compounds as menu items (a new set of each, its price; the fitted one ticked). */
 export const tyreItems = (b: BikeSave) => (Object.keys(TYRES) as TyreId[]).map((c) => ({ label: cap(TYRES[c].name), meta: `${partPrice(b, "tyres", c)} credits`, on: c === b.tyre, attrs: `data-tyre="${c}" title="${esc(TYRES[c].blurb)}"` }));
 /** CRASH DAMAGE: only what is damaged (none → the "No crash damage" card). */
-export const damageRows = (b: BikeSave): Wear[] => (Object.keys(DAMAGE_NAME) as DamageId[]).filter((k) => b.dmg[k] > 0.005).map((k) => ({ label: cap(DAMAGE_NAME[k]), v: 1 - b.dmg[k], state: b.dmg[k] > 0.5 ? "worn" : "", key: { label: "Fix", price: fixPrice(b, k), attrs: `data-fix="${k}"` } }));
+export const damageRows = (b: BikeSave): Wear[] => (Object.keys(DAMAGE_NAME) as DamageId[]).filter((k) => b.dmg[k] > 0.005).map((k) => ({ label: cap(DAMAGE_NAME[k]), icon: DMG_ICON[k], v: 1 - b.dmg[k], state: b.dmg[k] > 0.5 ? "worn" : "", key: { label: "Fix", price: fixPrice(b, k), attrs: `data-fix="${k}"` } }));
 
 /** TUNING: each setup with its options (price, or ticked when fitted) and the fitted one's blurb. */
 export const setups = (b: BikeSave) => (Object.keys(SETUPS) as SetupId[]).filter((k) => SETUPS[k].only !== "e" || isE(b)).map((k) => ({
-  id: k, name: cap(SETUPS[k].name), blurb: SETUPS[k].opts.find((o) => o.id === b[k])?.blurb ?? "",
+  id: k, icon: SETUP_ICON[k] ?? "wrench", name: cap(SETUPS[k].name), blurb: SETUPS[k].opts.find((o) => o.id === b[k])?.blurb ?? "",
   opts: SETUPS[k].opts.map((o) => ({ label: cap(o.name), on: b[k] === o.id, price: setupPrice(b, k, o.id), attrs: `data-setup="${k}" data-id="${o.id}" title="${esc(o.blurb)}"` })),
 }));
 /** RIDE FEEL: the six feel numbers as bars (0..1). */
@@ -56,7 +62,7 @@ export const feelRows = (t: Tuned): [string, number][] => [["Pull", t.feel.pull]
 /** UPGRADES: every mod that fits, its stage in words and the next stage's price (or a tick). */
 export const upgradeItems = (b: BikeSave): Upgrade[] => (Object.keys(MODS) as ModId[]).filter((k) => fits(b, k)).map((k) => {
   const M = MODS[k], lv = b.mods[k] ?? 0, pr = modPrice(b, k);
-  return { id: k, name: cap(modName(b, k)), state: !lv ? "Available" : M.max === 1 ? "Fitted" : `Stage ${lv} fitted`, price: pr || undefined, attrs: `data-pv="mod:${k}" tabindex="0" role="button"` };
+  return { id: k, name: cap(modName(b, k)), icon: k === "power" && isE(b) ? "map" : MOD_ICON[k], stage: [lv, M.max], state: !lv ? "Available" : M.max === 1 ? "Fitted" : `Stage ${lv} fitted`, price: pr || undefined, attrs: `data-pv="mod:${k}" tabindex="0" role="button"` };
 });
 /** The next stage's key label: Fit, Stage 1 or Upgrade. */
 export const modKey = (b: BikeSave, k: ModId) => (MODS[k].max === 1 ? "Fit" : (b.mods[k] ?? 0) ? "Upgrade" : "Stage 1");
@@ -70,13 +76,13 @@ export const SLOT_NAME: Record<string, string> = { paint: "Paint scheme", plasti
 export const RIDER_SLOTS: RiderSlot[] = ["helmet", "helmetPaint", "visor", "jersey", "pattern", "pants", "boots", "gloves"];
 /** The bike slots as menu rows: name and a count line from the lists. */
 export const bikeSlots = (b: BikeSave): LkSlot[] => [
-  { id: "paint", name: SLOT_NAME.paint!, meta: `${PAINTS.length} schemes`, attrs: 'data-gslot="paint"' },
-  { id: "plastics", name: SLOT_NAME.plastics!, meta: "Factory & colors", attrs: 'data-gslot="plastics"' },
-  { id: "graphics", name: SLOT_NAME.graphics!, meta: `${GRAPHICS.length} graphics`, attrs: 'data-gslot="graphics"' },
-  { id: "plate", name: SLOT_NAME.plate!, meta: `${PLATES.length} decals`, attrs: 'data-gslot="plate"' },
-  { id: "number", name: SLOT_NAME.number!, meta: `#${b.look.number}`, attrs: 'data-gslot="number"' },
+  { id: "paint", name: SLOT_NAME.paint!, meta: `${PAINTS.length} schemes`, attrs: 'data-gslot="paint"', icon: "paint" },
+  { id: "plastics", name: SLOT_NAME.plastics!, meta: "Factory & colors", attrs: 'data-gslot="plastics"', icon: "plastics" },
+  { id: "graphics", name: SLOT_NAME.graphics!, meta: `${GRAPHICS.length} graphics`, attrs: 'data-gslot="graphics"', icon: "graphics" },
+  { id: "plate", name: SLOT_NAME.plate!, meta: `${PLATES.length} decals`, attrs: 'data-gslot="plate"', icon: "plate" },
+  { id: "number", name: SLOT_NAME.number!, meta: `#${b.look.number}`, attrs: 'data-gslot="number"', icon: "number" },
 ];
-export const riderSlots = (): LkSlot[] => RIDER_SLOTS.map((k) => ({ id: k, name: SLOT_NAME[k]!, meta: "", attrs: `data-gslot="${k}"` }));
+export const riderSlots = (): LkSlot[] => RIDER_SLOTS.map((k) => ({ id: k, name: SLOT_NAME[k]!, meta: "", attrs: `data-gslot="${k}"`, icon: SLOT_ICON[k] }));
 
 /** A cosmetic as a shop item: its art, price (0 when owned or free), worn or not. */
 const item = (p: Profile, slot: Slot, id: string, name: string, art: string, on: string): Item => {
@@ -108,16 +114,18 @@ export function outfitItems(p: Profile): Item[] {
   return OUTFITS.map((o) => item(p, "outfit", o.id, o.name, kitArt(swatchOf(o.kit.jersey ?? k.jersey).hex, swatchOf(o.kit.helmetPaint ?? k.helmetPaint).hex, swatchOf(o.kit.pants ?? k.pants).hex), on));
 }
 
-/** MY BIKES: every bay you own (your bikes, then the empty ones), and the next bay for sale. */
-export function bays(p: Profile): { bays: Bay[]; sub: string; line: string; expand: { title: string; line: string; key: { label: string; price: number; attrs: string } } | null } {
+/** MY BIKES: every bay you own (your bikes, each with its picture from `art`, then the empty ones),
+ *  and the next bay for sale. */
+export function bays(p: Profile, art: (b: BikeSave) => string = () => ""): { bays: RailBay[]; sub: string; line: string; expand: { title: string; line: string; key: { label: string; price: number; attrs: string } } | null } {
   const n = p.bikes.length, empty = p.slots - n;
-  const list: Bay[] = [];
+  const list: RailBay[] = [];
   for (let i = 0; i < p.slots; i++) {
     const b = p.bikes[i];
-    if (!b) { list.push({ label: `BAY ${i + 1}`, end: btn("+ Add bike", 'data-gtab="showroom"') }); continue; }
-    const warn = atRisk(b).length || b.fail ? " ⚠" : "";
+    if (!b) { list.push({ label: `Bay ${i + 1}`, add: 'data-gtab="showroom" aria-label="Add a bike: to the showroom"' }); continue; }
+    const warn = atRisk(b).length || b.fail ? ` <span class="dh-warn" title="A part may fail" aria-label="a part may fail">⚠</span>` : "";
     const sellKey = n > 1 ? price({ label: "Sell", price: tradeValue(b), attrs: `data-sell="${i}" aria-label="Sell for ${tradeValue(b)} credits"` }) : "";
-    list.push({ label: `BAY ${i + 1}`, name: `${words(modelOf(b.model).name)}  #${b.look.number}${warn}`, on: i === p.ride, end: (i === p.ride ? pill("Rides next", "plain") : btn("Select bike", `data-ride="${i}"`)) + sellKey });
+    const pic = art(b);
+    list.push({ label: `Bay ${i + 1}`, name: `${esc(words(modelOf(b.model).name))} #${b.look.number}${warn}`, art: pic ? `<img alt="" src="${pic}" />` : "", on: i === p.ride, keys: (i === p.ride ? pill("Rides next", "plain") : btn("Select", `data-ride="${i}" aria-label="Select bike ${i + 1}"`)) + sellKey });
   }
   const pr = spotPrice(p), pl = (k: number, w: string) => `${k} ${w}${k === 1 ? "" : "s"}`;
   return {

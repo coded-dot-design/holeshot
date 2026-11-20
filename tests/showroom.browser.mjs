@@ -1,6 +1,6 @@
 // The showroom (src/garage/showroom.ts on the shop's catalogue, vendor/shop/) in
 // Chromium, at 1440 (mouse) and 390 (touch): the filters (All types, All brands) narrow the cards
-// and "Showing n of 19" says so; More bikes pages to all nineteen; a card's picture puts that bike on
+// and "Showing n of 19" says so; every one of the nineteen shows (no More key); a pick never changes a card's size; a card's picture puts that bike on
 // the turntable (the render changes) and in the preview's title; Compare with … opens the comparison
 // (price, tier, Pull / Top / Light, 0–30, 0–60, top speed, the one-line summary) and ‹ Back returns;
 // short of credits the Buy key is disabled with "N more credits needed"; with enough, Buy puts the
@@ -50,15 +50,14 @@ async function open(viewport, touch, path, save) {
   await until(p, "window.game && game.getSnapshot().screen === 'garage'", "the saved profile loads");
   const t0 = await p.evaluate(() => performance.now());
   await click(p, "[data-gtab=showroom]");
-  await until(p, "root.querySelectorAll('.shop-cat-item').length === 4", "the showroom draws its first page");
+  await until(p, "root.querySelectorAll('.shop-cat-item').length === 19", "the showroom draws its first page");
   const first = (await p.evaluate(() => performance.now())) - t0;
-  await until(p, "root.querySelectorAll('.shop-cat-item img[src^=\"data:image/\"]').length === 4", "then its pictures");
+  await until(p, "root.querySelectorAll('.shop-cat-item img[src^=\"data:image/\"]').length === 19", "then its pictures");
   const ms = (await p.evaluate(() => performance.now())) - t0;
   return { ctx, p, errs, ms, first };
 }
-/** Pick a bike's card (More bikes until it shows). */
+/** Pick a bike's card. */
 async function pick(p, id) {
-  while (!(await $(p, "!!root.querySelector(arg)", `[data-shop-pick="${id}"]`))) await click(p, "[data-shop-more]");
   await click(p, `[data-shop-pick="${id}"]`);
 }
 
@@ -68,7 +67,7 @@ try {
     for (const [theme, path] of [["night", "/"], ["day", "/day"]]) {
       const { ctx, p, errs, ms, first } = await open(viewport, touch, path, SAVE());
       const at = `${name} ${theme}`;
-      assert.match(await showing(p), /^Showing 4 of 19 models$/, `${at}: the first page`);
+      assert.match(await showing(p), /^Showing 19 of 19 models$/, `${at}: every model on the first page`);
       assert.match(await text(p, ".shop-cat-list .shop-heading"), /Showroom\s*19 MODELS/i);
       if (theme === "night") {
         // The thumbnails: stills from the game's rig, kept (a redraw draws none again).
@@ -78,9 +77,9 @@ try {
         await until(p, "!root.querySelector('.shop-cat')", `${name}: back to the garage`);
         const t1 = await p.evaluate(() => performance.now());
         await click(p, "[data-gtab=showroom]");
-        await until(p, "root.querySelectorAll('.shop-cat-item img[src^=\"data:image/\"]').length === 4", `${name}: the showroom again`);
+        await until(p, "root.querySelectorAll('.shop-cat-item img[src^=\"data:image/\"]').length === 19", `${name}: the showroom again`);
         const again = (await p.evaluate(() => performance.now())) - t1;
-        console.log(`  ${name}: the showroom first opens in ${first.toFixed(0)} ms (the pace of all nineteen measured on the sim, then kept), its 4 stills follow, one a frame, by ${ms.toFixed(0)} ms (≈ ${((ms - first) / 4).toFixed(0)} ms a still, ${Math.round(bytes / 4 / 1024)} KB each as a data URL); opened again ${again.toFixed(0)} ms`);
+        console.log(`  ${name}: the showroom first opens in ${first.toFixed(0)} ms (the pace of all nineteen measured on the sim, then kept), all nineteen stills follow, one a frame, by ${ms.toFixed(0)} ms (≈ ${((ms - first) / 19).toFixed(0)} ms a still, ${Math.round(bytes / 19 / 1024)} KB each as a data URL); opened again ${again.toFixed(0)} ms`);
       }
       // filter by type, then by brand, then back to all
       await click(p, "[data-shop-open=type]");
@@ -89,7 +88,7 @@ try {
       if (theme === "day" && name === "desktop") await shot(p, `${name}-${theme}-filter-open`);
       await click(p, "[data-shop-set=type][data-v='4-STROKE']");
       await until(p, "!root.querySelector('.shop-menu')", `${at}: the menu closes`);
-      assert.equal(await showing(p), "Showing 4 of 4 models", `${at}: four 4-strokes`);
+      assert.equal(await showing(p), "Showing 4 of 19 models", `${at}: four 4-strokes`);
       assert.match(await text(p, "[data-shop-open=type]"), /4-STROKE/);
       assert.ok((await $(p, "[...root.querySelectorAll('.shop-cat-item .shop-eyebrow')].map((e) => e.textContent)")).every((t) => /4-STROKE/.test(t)), `${at}: only 4-strokes`);
       // (the brand of the one LIMEJET 4-stroke, by the names tier shown)
@@ -97,16 +96,13 @@ try {
       await click(p, "[data-shop-open=brand]");
       await click(p, `[data-shop-set=brand][data-v="${lime}"]`);
       await until(p, "root.querySelectorAll('.shop-cat-item').length === 1", `${at}: one ${lime} 4-stroke`);
-      assert.equal(await showing(p), "Showing 1 of 1 models");
+      assert.equal(await showing(p), "Showing 1 of 19 models");
       await click(p, "[data-shop-open=type]"); await click(p, "[data-shop-set=type][data-v='']");
       await click(p, "[data-shop-open=brand]"); await click(p, "[data-shop-set=brand][data-v='']");
-      assert.equal(await showing(p), "Showing 4 of 19 models", `${at}: all again`);
-      // page: More bikes until all nineteen
-      for (const n of [8, 12, 16, 19]) {
-        await click(p, "[data-shop-more]");
-        assert.equal(await showing(p), `Showing ${n} of 19 models`, `${at}: More bikes → ${n}`);
-      }
-      assert.equal(await $(p, "!!root.querySelector('[data-shop-more]')"), false, `${at}: no More once all show`);
+      // every one of the nineteen shows (no More key): the filters narrow the list
+      assert.equal(await showing(p), "Showing 19 of 19 models", `${at}: all again`);
+      assert.equal(await $(p, "root.querySelectorAll('.shop-cat-item').length"), 19, `${at}: nineteen cards`);
+      assert.equal(await $(p, "!!root.querySelector('[data-shop-more]')"), false, `${at}: no More key`);
       assert.deepEqual(await layout(p), { small: [], sideways: false }, `${at}: keys ≥ 44 px, no sideways scroll`);
       // preview: a card's picture puts it on the turntable
       await until(p, "root.querySelector('.shop-cat-stage .dh-preview')?.width > 50", `${at}: the turntable draws in the preview`);
@@ -117,7 +113,15 @@ try {
       assert.ok((await text(p, ".shop-cat-pv .shop-title")).startsWith("SHOWROOM PREVIEW") && (await text(p, ".shop-cat-pv .shop-title")).endsWith(A), `${at}: the preview says which`);
       await until(p, `(() => { const c = root.querySelector('.dh-preview'); return c.width > 50; })()`, `${at}: still drawn`);
       await p.waitForFunction(`((root, a) => { const c = root.querySelector('.dh-preview'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let h = 0; for (let i = 0; i < d.length; i += 64) h = (h * 31 + d[i] + d[i + 1] * 3 + d[i + 2] * 7) >>> 0; return h !== a; })(${root}, ${i0})`, null, { timeout: 5000, polling: 50 }).catch(() => assert.fail(`${at}: the turntable shows the picked bike`));
-      assert.match(await text(p, "[data-shop-id=forgeback] [data-shop-on]"), /✓ On turntable/);
+      assert.match(await text(p, "[data-shop-id=forgeback] [data-shop-on]"), /On turntable/);
+      // a pick never changes a card's size (the grid holds), and the picked card's ring is the Buy key's colour
+      const sizes = () => $(p, "[...root.querySelectorAll('.shop-cat-item')].slice(0, 6).map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })");
+      const s0 = await sizes();
+      await pick(p, "bare-knuckle");
+      await p.waitForTimeout(300);
+      assert.deepEqual(await sizes(), s0, `${at}: a pick keeps every card's size`);
+      assert.equal(await $(p, "getComputedStyle(root.querySelector('.shop-cat-item[data-on] > .shop-card')).borderTopColor"), await $(p, "getComputedStyle(root.querySelector('.dh-hkeys .dh-cr')).backgroundColor"), `${at}: the picked ring is the mint go colour (Buy, LET'S RIDE, the credits)`);
+      await pick(p, "forgeback");
       assert.match(await text(p, "[data-shop-id=bare-knuckle] [data-shop-cmp]"), new RegExp(`Compare with ${A}`));
       // compare with your bike: deltas coloured better (up) or worse (down)
       assert.equal(await $(p, "root.querySelectorAll('.shop-cat-cmp .shop-stat em[data-d]').length"), 3, `${at}: three deltas`);
@@ -152,10 +156,13 @@ try {
     {
       const { ctx, p, errs } = await open(viewport, touch, "/", SAVE({ credits: 20000, bikes: [bike("b1", "buzzline"), bike("b2", "glidewire", 12)] }));
       await pick(p, "forgeback");
-      assert.match(await text(p, ".shop-cat-dest"), /Bay 3 · Empty/, `${name}: the first empty bay`);
+      // the bay picker: a tile per bay, the first empty one picked; the full ones marked "trade in" with their bike's picture
+      const tiles = () => $(p, "[...root.querySelectorAll('.shop-cat-bays [data-shop-set=slot]')].map((b) => [b.dataset.v, b.getAttribute('aria-checked'), b.textContent, !!b.querySelector('img')])");
+      const T0 = await tiles();
+      assert.equal(T0.length, 3, `${name}: bays 1, 2 (trade-ins) and 3 (empty)`);
+      assert.deepEqual(T0.map((t) => t[1]), ["false", "false", "true"], `${name}: the first empty bay picked`);
+      assert.ok(/Bay 1.*Trade in/i.test(T0[0][2]) && T0[0][3] && /Bay 3\s*Empty/.test(T0[2][2]), `${name}: trade-ins marked, the empty bay says so (${T0.map((t) => t[2])})`);
       if (name === "desktop") await shot(p, `${name}-night-bay3`);
-      await click(p, "[data-shop-open=slot]");
-      assert.equal(await $(p, "root.querySelectorAll('[data-shop-set=slot]').length"), 3, `${name}: bays 1, 2 (trade-ins) and 3 (empty)`);
       await click(p, "[data-shop-set=slot][data-v='2']");
       assert.equal(await $(p, "root.querySelector('[data-shop-buy=forgeback]').disabled"), false, `${name}: Buy on when affordable`);
       await click(p, "[data-shop-buy=forgeback]");
@@ -166,8 +173,8 @@ try {
       assert.equal(P.credits, 20000 - 4200, `${name}: paid its price`);
       // a trade-in into bay 1: the RIPPER 125 goes, the new bike takes bay 1
       await pick(p, "bare-knuckle");
-      await click(p, "[data-shop-open=slot]");
       await click(p, "[data-shop-set=slot][data-v='0']");
+      assert.equal(await $(p, "root.querySelector('[data-shop-set=slot][data-v=\"0\"]').getAttribute('aria-checked')"), "true", `${name}: bay 1 picked`);
       assert.match(await text(p, "[data-shop-buy=bare-knuckle]"), /Trade in/);
       const before = P.credits;
       await click(p, "[data-shop-buy=bare-knuckle]");
@@ -180,7 +187,7 @@ try {
       await ctx.close();
     }
   }
-  console.log("Holeshot showroom: filters, More bikes to all nineteen, preview on the turntable, compare (rows and the one line), the disabled buy with credits needed, buy into the empty bay and a trade-in into bay 1; 1440 and 390, day and night.");
+  console.log("Holeshot showroom: filters, all nineteen shown, preview on the turntable, compare (rows and the one line), the disabled buy with credits needed, the bay picker (tiles, trade-ins marked), buy into the empty bay and a trade-in into bay 1; 1440 and 390, day and night.");
 } finally {
   await browser.close();
   await server.close();

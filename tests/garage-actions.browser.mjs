@@ -117,11 +117,11 @@ try {
     ok("the turntable's backdrop (Auto · Track · Sunset, saved)");
 
     // ---- My Bikes: select, sell (confirm, trade value), unlock a bay ----
-    await press("[data-bays]");
-    await until(p, "!!root.querySelector('.shop-sheet')", `${name}: My Bikes`);
+    // (My Bikes is the rail over the turntable: every bay's keys are on screen.)
+    assert.equal(await $(p, "root.querySelectorAll('.dh-bikep .shop-rail .shop-bay').length"), 4, `${name}: the bay rail (two bikes, an empty bay, the expansion)`);
     await press("[data-ride='1']");
     await until(p, "game.profile.ride === 1", `${name}: Select bike`);
-    await press("[data-bays]");
+    assert.equal(await $(p, "root.querySelector('.shop-rail .shop-bay[data-on] [data-sell]').dataset.sell"), "1", `${name}: the selected bay is marked`);
     const c0 = (await prof(p)).credits;
     const sellText = await $(p, "root.querySelector(\"[data-sell='0']\").textContent");
     const value = +sellText.replace(/[^\d]/g, "");
@@ -133,14 +133,17 @@ try {
     assert.equal((await prof(p)).credits, c0 + value, `${name}: paid its trade value (${value})`);
     ok("sell a bike (My Bikes, confirm, trade value)");
     ok("select the bike that rides (My Bikes › Select bike)");
-    if (!(await has(p, ".shop-sheet"))) await press("[data-bays]");
     await press("[data-spot]");
     await until(p, "game.profile.slots === 4", `${name}: a bay unlocked`);
     ok("buy a garage bay (My Bikes › Garage expansion › Unlock)");
-    await p.keyboard.press("Escape");
+    // An empty bay's + Add bike goes to the showroom.
+    await press(".shop-rail .shop-bay-add");
+    await until(p, "!!root.querySelector('.shop-cat')", `${name}: + Add bike opens the showroom`);
+    await press("[data-gtab=garage]");
+    await until(p, "!!root.querySelector('[data-gsub]')", `${name}: back to the garage`);
+    ok("+ Add bike (an empty bay on the rail → Showroom)");
 
     // ---- PARTS & MODS ----
-    if (await has(p, ".shop-sheet")) await press("[data-bays]");
     await press("[data-gmenu=tyre]");
     await until(p, "root.querySelectorAll('.shop-menu [data-tyre]').length === 3", `${name}: tyre compound menu`);
     await p.keyboard.press("Escape");
@@ -176,7 +179,7 @@ try {
     }
     ok("every upgrade that fits, from its preview (Upgrades)");
     await press("[data-gsub=log]");
-    await until(p, "root.querySelectorAll('.dh-log tbody tr').length >= 8", `${name}: the service log`);
+    await until(p, "root.querySelectorAll('.dh-log .shop-row').length >= 8 && root.querySelectorAll('.dh-log .shop-row .shop-badge svg').length >= 8", `${name}: the service log`);
     ok("the service log (Service log)");
 
     // ---- PAINT & KIT ----
@@ -267,6 +270,37 @@ try {
     await p.locator(".dh-pit").click();
     await until(p, "!game.profile.bikes[0].fail", "pit: the crew fixed it");
     done.push("pit crew free fix (bike panel, under LET'S RIDE)");
+    await ctx.close();
+  }
+  // ---- width and height: the content never wider than 1440 px and no sideways scroll at 1440, 1920
+  // and 2560 wide; at 1440 × 900 the garage is one screen (the page itself never scrolls, the
+  // turntable fills the bike panel's height) on every tab, and so are the showroom and LET'S RIDE ----
+  for (const [w, h] of [[1440, 900], [1920, 1080], [2560, 1440]]) {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h } });
+    await ctx.addInitScript((s) => localStorage.setItem("holeshot:profile", s), JSON.stringify(SAVE));
+    const p = await ctx.newPage();
+    await p.goto(server.url + "/");
+    await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${w}: loads`);
+    const fit = () => $(p, `(() => { const c = root.querySelector('.dh-cards'), d = document.scrollingElement, sel = '.dh-ghead > *, .dh-gwrap > *, .dh-rwrap'; const xs = [...root.querySelectorAll(sel)].filter((e) => e.getClientRects().length).map((e) => e.getBoundingClientRect()); const L = Math.min(...xs.map((r) => r.left)), R = Math.max(...xs.map((r) => r.right)); return { span: Math.round(R - L), centre: Math.round((L + R) / 2), sideways: c.scrollWidth > c.clientWidth + 1 || d.scrollWidth > innerWidth + 1, pageScroll: c.scrollHeight - c.clientHeight, docScroll: d.scrollHeight - innerHeight }; })()`);
+    for (const [what, sel] of [["garage", "[data-gtab=bike]"], ["condition", "[data-gsub=cond]"], ["tuning", "[data-gsub=tune]"], ["upgrades", "[data-gsub=up]"], ["service log", "[data-gsub=log]"], ["paint & kit", "[data-gtab=look]"], ["showroom", "[data-gtab=showroom]"]]) {
+      await p.evaluate(`${root}.querySelector(${JSON.stringify(sel)})?.click()`);
+      await p.waitForTimeout(150);
+      const F = await fit();
+      assert.ok(F.span <= 1440 && Math.abs(F.centre - w / 2) <= 6, `${w}: ${what}: the content ≤ 1440 px, centred (${JSON.stringify(F)})`);
+      assert.equal(F.sideways, false, `${w}: ${what}: no sideways scroll`);
+      if (w === 1440) assert.ok(F.pageScroll <= 0 && F.docScroll <= 0, `${w}×${h}: ${what}: the page does not scroll (${JSON.stringify(F)})`);
+    }
+    if (w === 1440) {
+      await p.evaluate(`${root}.querySelector('[data-gtab=garage]').click()`);
+      await until(p, `!!${root}.querySelector('.dh-bikep .shop-turn')`, "back to the garage");
+      const T = await $(p, "(() => { const k = root.querySelector('.dh-bikep').getBoundingClientRect(), t = root.querySelector('.dh-bikep .shop-turn').getBoundingClientRect(), c = root.querySelector('.dh-bikep .shop-cta-w').getBoundingClientRect(); return { panel: k.bottom, cta: c.bottom, turn: t.height, H: innerHeight }; })()");
+      assert.ok(T.panel <= T.H && T.cta <= T.panel && T.turn >= 200, `${w}: the bike panel fits the screen and the turntable takes its height (${JSON.stringify(T)})`);
+      await p.evaluate(`${root}.querySelector('[data-go=ride]').click()`);
+      await until(p, "game.getSnapshot().screen === 'ride'", `${w}: LET'S RIDE`);
+      const F = await fit();
+      assert.ok(F.pageScroll <= 0 && F.docScroll <= 0 && !F.sideways && F.span <= 1440, `${w}: LET'S RIDE fits the screen (${JSON.stringify(F)})`);
+      done.push("one screen at 1440 × 900 (garage, every tab, showroom, LET'S RIDE: no page scroll); content ≤ 1440 px centred at 1440, 1920 and 2560, no sideways scroll");
+    }
     await ctx.close();
   }
   console.log(`Holeshot garage actions, every one reached and done (1440 and 390):\n  - ${done.join("\n  - ")}`);

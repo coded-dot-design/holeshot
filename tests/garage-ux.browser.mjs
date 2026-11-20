@@ -51,11 +51,11 @@ try {
     const ink0 = await ink(p);
     // ---- the showroom (mounted into the garage's Showroom tab); at 1440 the bike panel stays in view while the list scrolls ----
     await click(p, "[data-gtab=showroom]");
-    while (await $(p, "!!root.querySelector('[data-shop-more]')")) await click(p, "[data-shop-more]");
     await until(p, "root.querySelectorAll('.dh-showroom .shop-cat-item').length === 19", `${name}: the showroom lists all nineteen bikes`);
-    const dock = () => $(p, "(() => { const d = root.querySelector('.shop-cat-pv').getBoundingClientRect(), v = root.querySelector('.dh-preview').getBoundingClientRect(); return { top: d.top, bottom: d.bottom, pv: [v.top, v.bottom, v.height], scroll: root.querySelector('.dh-cards').scrollTop, H: innerHeight }; })()");
-    await $(p, "root.querySelector('.dh-cards').scrollTop = 1e6");
-    await until(p, "root.querySelector('.dh-cards').scrollTop > 400", `${name}: the list scrolls`);
+    const dock = () => $(p, "(() => { const d = root.querySelector('.shop-cat-pv').getBoundingClientRect(), v = root.querySelector('.dh-preview').getBoundingClientRect(); return { top: d.top, bottom: d.bottom, pv: [v.top, v.bottom, v.height], scroll: (() => { const l = root.querySelector('.dh-showroom .shop-cat-list'); return l && getComputedStyle(l).overflowY === 'auto' ? l : root.querySelector('.dh-cards'); })().scrollTop, H: innerHeight }; })()");
+    // (The list scrolls: inside its own panel on a desktop, the page on a phone.)
+    await $(p, "(() => { const l = root.querySelector('.dh-showroom .shop-cat-list'); return l && getComputedStyle(l).overflowY === 'auto' ? l : root.querySelector('.dh-cards'); })().scrollTop = 1e6");
+    await until(p, "(() => { const l = root.querySelector('.dh-showroom .shop-cat-list'); return l && getComputedStyle(l).overflowY === 'auto' ? l : root.querySelector('.dh-cards'); })().scrollTop > 400", `${name}: the list scrolls`);
     const D = await dock();
     if (name === "desktop") {
       assert.ok(D.pv[0] >= 0 && D.pv[1] <= D.H && D.pv[2] >= 100, `${name}: the preview's turntable stays in view (${D.pv})`);

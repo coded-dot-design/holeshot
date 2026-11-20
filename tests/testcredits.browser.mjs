@@ -1,5 +1,5 @@
 // Test credits in Chromium (the built dist/holeshot.mjs), at 1440 and 390: from a saved profile,
-// ?credits=inf shows ◈ ∞ and the TEST CREDITS ∞ chip; the showroom sells every bike (tier 3-4 too)
+// ?credits=inf shows ◈ ∞ with a TEST badge on the credits chip; the showroom sells every bike (tier 3-4 too)
 // and each one is bought in turn, every mod on it maxed, a ride banked, and the credits never move;
 // ONLINE is off; the export code is the saved profile's; ?money=inf does the same; and the saved
 // profile is byte for byte what it was. Then the same device without the param: the real credits,
@@ -43,12 +43,11 @@ try {
       await until(p, "window.game && game.getSnapshot().screen === 'garage'", `${name} ${q}: loads`);
       assert.equal((await snap(p)).testCredits, true);
       assert.equal((await snap(p)).credits, MAX);
-      assert.equal(await $(p, "root.querySelector('.dh-cr').textContent.trim()"), "◈ ∞", `${name} ${q}: ∞ credits`);
-      assert.equal(await $(p, "root.querySelector('.dh-test').textContent.trim()"), "TEST CREDITS ∞", `${name} ${q}: the chip`);
+      assert.equal(await $(p, "root.querySelector('.dh-cr .dh-crn').textContent.trim()"), "◈ ∞", `${name} ${q}: ∞ credits`);
+      assert.equal(await $(p, "root.querySelector('.dh-cr .dh-test').textContent.trim()"), "TEST", `${name} ${q}: the TEST badge on the credits chip`);
       // The showroom: every bike for sale, each bought in turn (a full garage trades in), every mod maxed.
       await until(p, "game.getSnapshot().screen === 'garage'", `${name}: garage`);
       await click(p, "[data-gtab=showroom]");
-      while (await $(p, "!!root.querySelector('[data-shop-more]')")) await click(p, "[data-shop-more]");
       const ids = await $(p, "[...root.querySelectorAll('[data-shop-pick]')].map((b) => b.dataset.shopPick)");
       assert.equal(ids.length, 19, `${name}: every model listed`);
       for (const id of ids) {
@@ -58,7 +57,7 @@ try {
         const s = await snap(p);
         assert.equal(s.bike.model, id, `${name}: bought ${id}`);
         assert.equal(s.credits, MAX, `${name}: buying ${id} cost nothing`);
-        assert.equal(await $(p, "root.querySelector('.dh-cr').textContent.trim()"), "◈ ∞");
+        assert.equal(await $(p, "(root.querySelector('.dh-cr .dh-crn') ?? root.querySelector('.dh-cr')).textContent.trim()"), "◈ ∞");
       }
       await click(p, "[data-gtab=garage]");
       for (let i = 0; i < 12; i++) {
@@ -95,13 +94,12 @@ try {
     assert.equal(s0.bikes, 1);
     assert.equal(s0.bike.model, "sparkhound");
     assert.equal(await $(p, "root.querySelector('.dh-test')"), null, `${name}: no chip`);
-    assert.equal(await $(p, "root.querySelector('.dh-cr').textContent.trim()"), "◈ 6,000");
+    assert.equal(await $(p, "(root.querySelector('.dh-cr .dh-crn') ?? root.querySelector('.dh-cr')).textContent.trim()"), "◈ 6,000");
     assert.equal(await p.evaluate(() => game.exportCode()), realCode);
     await click(p, "[data-go=ride]");
     assert.equal(await $(p, "root.querySelector('.ol-open').disabled"), false, `${name}: ONLINE on`);
     await click(p, "[data-go=garage]");
     await click(p, "[data-gtab=showroom]");
-    while (!(await $(p, "!!root.querySelector('[data-shop-pick=nectar-burn]')"))) await click(p, "[data-shop-more]");
     await click(p, "[data-shop-pick=nectar-burn]");
     assert.match(await $(p, "root.querySelector('.shop-cat-cmp .shop-need').textContent"), /Opens after/, `${name}: tier 3-4 locked again`);
     assert.equal(await $(p, "root.querySelector('[data-shop-buy=nectar-burn]').disabled"), true);

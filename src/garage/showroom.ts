@@ -60,7 +60,7 @@ export function mountShowroom(host: HTMLElement, api: ShowroomApi, st: Catalogue
   const slots = (): CatalogueSlot[] => {
     const p = P(), B = baysOf(p), first = B.find((b) => !b.bike);
     // Bikes fill the bays in order: the first empty bay, then each bike's bay (a trade-in).
-    return B.filter((b) => b.bike || b === first).map((b) => ({ index: b.index, label: `Bay ${b.index + 1}`, ...(b.bike ? { holds: `${modelOf(b.bike.model).name} #${b.bike.look.number}`, credit: tradeValue(b.bike) } : {}) }));
+    return B.filter((b) => b.bike || b === first).map((b) => ({ index: b.index, label: `Bay ${b.index + 1}`, ...(b.bike ? { holds: `${modelOf(b.bike.model).name} #${b.bike.look.number}`, credit: tradeValue(b.bike), art: snap(b.bike.model, p, api.night(), 128, 72, b.bike) } : {}) }));
   };
   const view = mountCatalogue(host, {
     items: () => MODELS.map((m) => itemOf(m, P(), api.night())),
@@ -75,7 +75,6 @@ export function mountShowroom(host: HTMLElement, api: ShowroomApi, st: Catalogue
     },
     buy: (it, s) => { const r = api.buy(it.id, s.index); return r.ok ? null : r.why; },
     preview: (h, it) => api.turntable(h, it.id),
-    page: 4,
     say: api.say,
   }, st);
   const off = api.onChange?.(view.update);

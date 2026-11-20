@@ -1,26 +1,26 @@
 {
   "note": "Generated copy. Do not edit: change it at the source, then sync it again.",
   "source": "fizlet-factory",
-  "commit": "e74dcea9fbb379130981d012ec7ed6212833b3f3",
-  "date": "2026-11-19",
+  "commit": "d567a7de62d92f9dc223460fddb482e57ba2135d",
+  "date": "2026-11-20",
   "files": [
     {
       "path": "shop.js",
-      "bytes": 18324,
-      "gzip": 6662,
-      "sha256": "7c9fa7cb318da417f6f6c3b48c3927c89f4931605e0cd888082d03fcd1f40561"
+      "bytes": 23933,
+      "gzip": 8797,
+      "sha256": "2630c00874e746339585c825227c77df34afc3edca7ecdcca5410c62d8f6bd19"
     },
     {
       "path": "shop.d.ts",
-      "bytes": 17272,
-      "gzip": 5535,
-      "sha256": "10100614964479824796371326fbcbbbcc14c38402eb65bc8d0111566b9a1a17"
+      "bytes": 20159,
+      "gzip": 6254,
+      "sha256": "4e051635680b3da8f4e18faed34f9bb4165358a2c7393e0291661e5ed539b745"
     },
     {
       "path": "shop.css",
-      "bytes": 20301,
-      "gzip": 4317,
-      "sha256": "d88a3704f8154549277fddd24c949bd400412271b6f6f7a7d84692ed46cc7935"
+      "bytes": 27341,
+      "gzip": 5404,
+      "sha256": "157bc450b1a7a6f29ef4aadc89941f066d3a58f9e162e97c887bbe4f444699e8"
     },
     {
       "path": "check.mjs",

@@ -18,8 +18,8 @@ import { atRisk, failChance, failName, warnings } from "../model/upkeep.ts";
 import { DIRT_LINE } from "../model/families.ts";
 import { BACKDROPS, nextBackdrop } from "./backdrop.ts";
 import { buySpot, cosmeticPrice, choose, dress, fits, modPrice, repair, sell, service, setChoice, tryOn, unlocked, upgrade, type Buy, type Slot } from "../model/garage.ts";
-import { baysSheet, btn, card, chip, chips, condition, cta, drop, feel, heading, itemGrid, menu, pill, price, seg, stat, stats, table, tabs, title, turntable, upgrades as upgradeList } from "../../vendor/shop/shop.js";
-import { RIDER_SLOTS, SLOT_NAME, bays, bikeItems, bikeSlots, cap, damageRows, feelRows, isE, modKey, modName, modStage, outfitItems, pace, partName, riderItems, riderSlots, setups, tyreItems, upgradeItems, wearRows, words, type BikeSlot, type RiderSlot } from "./adapters.ts";
+import { badge, bayRail, btn, card, chip, chips, drop, feel, heading, icon, itemGrid, menu, pill, price, row, seg, stat, stats, tabs, title, turntable, upgradeGrid, wearGrid } from "../../vendor/shop/shop.js";
+import { DMG_ICON, MOD_ICON, RIDER_SLOTS, SETUP_ICON, SLOT_ICON, SLOT_NAME, bays, bikeItems, bikeSlots, cap, damageRows, feelRows, isE, modKey, modName, modStage, outfitItems, pace, partIcon, partName, riderItems, riderSlots, setups, tyreItems, upgradeItems, wearRows, words, type BikeSlot, type RiderSlot } from "./adapters.ts";
 
 /** What the turntable can preview: a cosmetic (its slot), a mod's next level, or a showroom bike. */
 export type Pv = [Slot | "mod" | "bike" | "own", string];
@@ -34,7 +34,7 @@ export interface GarageUI {
   /** The scheme grid's page, and "owned only". */
   page: number;
   owned: boolean;
-  /** The open popover: My Bikes (bays), the tyre compounds, the paint/kit menu. */
+  /** The open popover: the tyre compounds, the paint/kit menu ("bays" is kept for old callers: My Bikes is a rail now). */
   menu: "" | "bays" | "tyre" | "slot";
   /** Pinned preview (tapped): shown on the turntable with BUY / CANCEL until bought or put back. */
   trial: Pv | null;
@@ -69,6 +69,15 @@ const isLook = (v: Pv | null): v is [Slot, string] => !!v && v[0] !== "mod" && v
 /** The preview an element in the lists stands for (`data-pv="kind:id"`), or null. */
 export const pvOf = (el: Element | null): Pv | null => { const a = (el?.closest("[data-pv]") as HTMLElement | null)?.dataset.pv?.split(":"); return a && a.length === 2 ? (a as Pv) : null; };
 
+/** A service-log entry's icon (the part, mod, setting or damage it was about). */
+export function logIcon(b: BikeSave, what: string) {
+  const [k, a] = what.split(":");
+  if (k === "svc") return partIcon(b, a as PartId);
+  if (k === "mod") return MOD_ICON[a!] ?? "wrench";
+  if (k === "setup") return SETUP_ICON[a!] ?? "wrench";
+  if (k === "fix") return DMG_ICON[a as DamageId] ?? "wrench";
+  return k === "fail" ? "warn" : k === "new" ? "cart" : "wrench";
+}
 /** A service-log entry in words. */
 export function logLine(b: BikeSave, what: string) {
   const [k, a, c] = what.split(":");
@@ -87,12 +96,13 @@ function condTab(p: Profile, b: BikeSave, ui: GarageUI) {
   const open = ui.menu === "tyre";
   const tyre = `<span class="shop-pop">${drop(`${cap(TYRES[b.tyre].name)} compound`, 'data-gmenu="tyre"', open, "shop-drop-text")}${open ? menu({ title: "Tyre compound", label: "Tyre compound", items: tyreItems(b) }) : ""}</span>`;
   const dmg = damageRows(b);
-  return `${banner}${heading("Bike condition")}${card(condition(wearRows(b, tyre), p.credits, ["Component", "Condition"]), "dh-cond")}${heading("Crash damage", "", 3)}${dmg.length ? condition(dmg, p.credits, undefined, true) : card("No crash damage", "shop-soft")}`;
+  // Condition and crash damage side by side where there is room (./garage.css .dh-two).
+  return `${banner}<div class="dh-two"><section class="dh-sec" aria-label="Bike condition">${heading("Bike condition")}${wearGrid(wearRows(b, tyre), p.credits, "Bike condition")}</section><section class="dh-sec dh-side" aria-label="Crash damage">${heading("Crash damage", "", 3)}${dmg.length ? wearGrid(dmg, p.credits, "Crash damage") : card(`${icon("check")} No crash damage`, "shop-soft dh-okcard")}</section></div>`;
 }
 function tuneTab(p: Profile, b: BikeSave) {
   const t = tune(b);
-  const rows = setups(b).map((s) => card(`<b class="shop-h4">${s.name}</b><div class="shop-opts">${s.opts.map((o) => (o.on ? btn(`${o.label} ✓`, o.attrs, true) : price({ label: o.label, price: o.price || undefined, credits: p.credits, attrs: o.attrs }))).join("")}</div><p class="shop-blurb">${esc(s.blurb)}</p>`)).join("");
-  return `${heading("Tuning")}${rows}${heading("Ride feel", "", 3)}${card(feel(feelRows(t), 2), "dh-feelc")}`;
+  const rows = setups(b).map((s) => card(`<div class="dh-cardh">${badge(s.icon)}<b class="shop-h4">${s.name}</b></div><div class="shop-opts">${s.opts.map((o) => (o.on ? btn(o.label, o.attrs, true, "", "check") : price({ label: o.label, price: o.price || undefined, credits: p.credits, attrs: o.attrs }))).join("")}</div><p class="shop-blurb">${esc(s.blurb)}</p>`, "dh-setc")).join("");
+  return `${heading("Tuning")}<div class="dh-cards2">${rows}</div>${heading("Ride feel", "", 3)}${card(feel(feelRows(t), 2), "dh-feelc")}`;
 }
 function upTab(p: Profile, b: BikeSave, ui: GarageUI) {
   const v = ui.trial && ui.trial[0] === "mod" ? (ui.trial[1] as ModId) : null, u = unitsOf(p);
@@ -103,11 +113,11 @@ function upTab(p: Profile, b: BikeSave, ui: GarageUI) {
     const a = pace(tune(b), u), z = pace(tune(nb), u);
     preview = { name: modStage(b, v), blurb: MODS[v].blurb, stats: a.map(([l, x], i) => [l, x, z[i]![1]] as [string, string, string]), key: { label: modKey(b, v), price: modPrice(b, v), attrs: `data-mod="${v}"` } };
   }
-  return `${heading("Upgrades")}${upgradeList({ items: upgradeItems(b), on: v ?? undefined, preview, credits: p.credits })}${preview ? "" : `<p class="shop-sub">Point at an upgrade to see it on the bike; tap it to preview the numbers and buy.</p>`}`;
+  return `${heading("Upgrades", "◆ fitted · ◇ to come")}${preview ? "" : `<p class="shop-sub">Point at an upgrade to see it on the bike; tap it to preview the numbers and buy.</p>`}${upgradeGrid({ items: upgradeItems(b), on: v ?? undefined, preview, credits: p.credits })}`;
 }
 function logTab(b: BikeSave) {
-  const rows = b.log.slice(0, 8).map(([e, w, c]) => [String(e), esc(cap(logLine(b, w))), c ? num(c) : ""]);
-  return `${heading("Service log", rows.length ? `${rows.length} ${rows.length === 1 ? "entry" : "entries"} shown` : "")}${rows.length ? card(table(["Event", "Work completed", "Credits"], rows, "Service log"), "dh-log") : card(`<p class="shop-sub">Nothing yet. Every service, mod and fix lands here.</p>`, "dh-log")}`;
+  const rows = b.log.slice(0, 8).map(([e, w, c]) => row({ art: badge(logIcon(b, w)), eyebrow: `Event ${e}`, title: esc(cap(logLine(b, w))), end: c ? `${num(c)} <small>credits</small>` : "" }));
+  return `${heading("Service log", rows.length ? `${rows.length} ${rows.length === 1 ? "entry" : "entries"} shown` : "")}${rows.length ? `<ul class="shop-rows dh-log" aria-label="Service log">${rows.join("")}</ul>` : card(`<p class="shop-sub">Nothing yet. Every service, mod and fix lands here.</p>`, "dh-log")}`;
 }
 
 // ---- PAINT & KIT ----
@@ -115,17 +125,17 @@ function lookTab(p: Profile, b: BikeSave, ui: GarageUI) {
   const s = shown(p, { ...ui, peek: null }), tr = isLook(ui.trial) ? ui.trial : null, cr = p.credits;
   const trying = (list: { id: string }[], slot: string) => (tr && tr[0] === slot ? (list.find((x) => x.id === tr[1]) as ReturnType<typeof bikeItems>[number] | undefined) ?? null : null);
   const common = { page: ui.page, pageAttrs: (n: number) => `data-page="${n}"`, credits: cr, cancelAttrs: "data-untry", buyAttrs: "data-buytrial", ownedOnly: { on: ui.owned, attrs: "data-owned" }, menuAttrs: 'data-gmenu="slot"', open: ui.menu === "slot" };
-  const sub = tabs([["bike", "Bike"], ["rider", "Rider gear"], ["outfit", "Outfits"]], ui.look, "look", "Paint and kit");
+  const sub = tabs([["bike", "Bike", "paint"], ["rider", "Rider gear", "helmet"], ["outfit", "Outfits", "jersey"]], ui.look, "look", "Paint and kit");
   if (ui.look === "bike") {
     const slots = bikeSlots(b);
-    if (ui.slot === "number") return `${sub}${heading("Bike paint", `${PAINTS.length} schemes`)}<div class="shop-toolbar"><span class="shop-pop">${drop(SLOT_NAME.number!, common.menuAttrs, common.open)}${common.open ? menu({ label: "Bike paint", items: slots.map((x) => ({ label: x.name, meta: x.meta, on: x.id === "number", attrs: x.attrs })) }) : ""}</span><small class="shop-sub">Plastics, graphics, plate &amp; number</small></div>${card(`<b class="shop-h4">Race number</b><div class="shop-opts"><input class="dh-numin" type="number" min="1" max="99" value="${b.look.number}" aria-label="Plate number" />${price({ label: "Set", price: cosmeticPrice(p, "number", ""), credits: cr, attrs: "data-number" })}</div>`)}`;
+    if (ui.slot === "number") return `${sub}${heading("Bike paint", `${PAINTS.length} schemes`)}<div class="shop-toolbar"><span class="shop-pop">${drop(SLOT_NAME.number!, common.menuAttrs, common.open, "", "number")}${common.open ? menu({ label: "Bike paint", items: slots.map((x) => ({ label: x.name, meta: x.meta, on: x.id === "number", attrs: x.attrs, icon: x.icon })) }) : ""}</span><small class="shop-sub">Plastics, graphics, plate &amp; number</small></div>${card(`<b class="shop-h4">Race number</b><div class="shop-opts"><input class="dh-numin" type="number" min="1" max="99" value="${b.look.number}" aria-label="Plate number" />${price({ label: "Set", price: cosmeticPrice(p, "number", ""), credits: cr, attrs: "data-number" })}</div>`)}`;
     const items = bikeItems(p, ui.slot), name = SLOT_NAME[ui.slot]!;
     return sub + itemGrid({ ...common, title: "Bike paint", count: `${ui.slot === "paint" ? PAINTS.length + " schemes" : items.length + " " + name.toLowerCase()}`, slots, slot: ui.slot, note: "Plastics, graphics, plate & number", items, per: 12, cols: 4, pageWord: ui.slot === "paint" ? "schemes" : "items", trying: trying(items, ui.slot) });
   }
   if (ui.look === "rider") {
     const items = riderItems(p, s, ui.rslot), helm = ui.rslot === "helmet";
     const grid = itemGrid({ ...common, title: "Rider gear", count: "", slots: riderSlots(), slot: ui.rslot, note: helm ? `${HELMETS.length} helmet styles` : `${items.length} ${SLOT_NAME[ui.rslot]!.toLowerCase()} colours`, items, per: helm ? 6 : 12, cols: helm ? 3 : 4, big: helm, pageWord: "items", trying: trying(items, ui.rslot) });
-    return `${sub}${grid}${heading("Customize rider", "", 3)}${chips(RIDER_SLOTS.filter((k) => k !== "helmet").map((k) => btn(SLOT_NAME[k]!, `data-gslot="${k}"`, k === ui.rslot)), "Customize rider")}`;
+    return `${sub}${grid}${heading("Customize rider", "", 3)}${chips(RIDER_SLOTS.filter((k) => k !== "helmet").map((k) => btn(SLOT_NAME[k]!, `data-gslot="${k}"`, k === ui.rslot, "", SLOT_ICON[k])), "Customize rider")}`;
   }
   const items = outfitItems(p);
   return `${sub}${itemGrid({ ...common, title: "Outfits", count: `${OUTFITS.length} presets`, ownedOnly: undefined, slots: undefined, items, per: 6, cols: 3, big: true, pageWord: "outfits", trying: trying(items, "outfit") })}${tr && tr[0] === "outfit" ? "" : `<p class="shop-sub shop-rule">Select an outfit to preview it on your rider.</p>`}`;
@@ -164,12 +174,13 @@ export function bayInfo(p: Profile, ui: GarageUI) {
 /** The garage card: the header (the shell's), the bike panel on the left (My Bikes, the turntable,
  *  the bike shown and its pace, LET'S RIDE) and PARTS & MODS / PAINT & KIT on the right; the
  *  SHOWROOM tab leaves an empty `.dh-showroom` host for the shell to mount into. */
-export function garageCard(p: Profile, ui: GarageUI, head: string, go: string, note: string, extra = "") {
-  const b = riding(p), B = bays(p);
-  const sheet = ui.menu === "bays" ? baysSheet({ title: "My Bikes", sub: B.sub, bays: B.bays, expand: B.expand, credits: p.credits, close: "data-bays", empty: "Empty bay" }) : "";
-  const left = `<aside class="shop-card dh-bikep"><div class="shop-toolbar dh-bikebar"><span class="shop-pop dh-bays">${drop("My Bikes", "data-bays", ui.menu === "bays")}${sheet}</span><small class="shop-sub">${esc(B.line)}</small></div>${turntable("<canvas-slot></canvas-slot>", "data-turn", "bike", p.bikes.length > 1, chip("Backdrop", BACKDROPS.find((x) => x.id === (p.settings.backdrop ?? "auto"))!.name, 'data-backdrop aria-label="Backdrop: change"'))}<div class="dh-pvinfo">${bayInfo(p, ui)}</div>${go}${extra}</aside>`;
+export function garageCard(p: Profile, ui: GarageUI, head: string, go: string, note: string, extra = "", art?: (b: BikeSave) => string) {
+  const b = riding(p), B = bays(p, art);
+  // MY BIKES is part of the garage: a rail of bays over the turntable (the shop's bayRail).
+  const rail = bayRail({ title: "My Bikes", line: B.line, bays: B.bays, add: "+ Add bike", expand: B.expand, credits: p.credits });
+  const left = `<aside class="shop-card dh-bikep">${rail}${turntable("<canvas-slot></canvas-slot>", "data-turn", "bike", p.bikes.length > 1, chip("Backdrop", BACKDROPS.find((x) => x.id === (p.settings.backdrop ?? "auto"))!.name, 'data-backdrop aria-label="Backdrop: change"'))}<div class="dh-pvinfo">${bayInfo(p, ui)}</div>${go}${extra}</aside>`;
   const right = ui.tab === "showroom" ? `<div class="dh-showroom"></div>`
-    : `${seg([["bike", "Parts & Mods"], ["look", "Paint & Kit"]], ui.tab, "gtab", "Garage")}${ui.tab === "bike" ? tabs([["cond", "Condition"], ["tune", "Tuning"], ["up", "Upgrades"], ["log", "Service log"]], ui.sub, "gsub", "Parts and mods") + (ui.sub === "cond" ? condTab(p, b, ui) : ui.sub === "tune" ? tuneTab(p, b) : ui.sub === "up" ? upTab(p, b, ui) : logTab(b)) : lookTab(p, b, ui)}`;
+    : `${seg([["bike", "Parts & Mods", "wrench"], ["look", "Paint & Kit", "paint"]], ui.tab, "gtab", "Garage")}${ui.tab === "bike" ? tabs([["cond", "Condition", "tyre"], ["tune", "Tuning", "sprocket"], ["up", "Upgrades", "exhaust"], ["log", "Service log", "log"]], ui.sub, "gsub", "Parts and mods") + (ui.sub === "cond" ? condTab(p, b, ui) : ui.sub === "tune" ? tuneTab(p, b) : ui.sub === "up" ? upTab(p, b, ui) : logTab(b)) : lookTab(p, b, ui)}`;
   return `<div class="dh-card dh-garage shop" data-screen="garage" data-tab="${ui.tab}">${head}<div class="dh-gwrap">${left}<div class="dh-gbody">${right}<p class="shop-sub dh-note" role="status">${esc(note)}</p></div></div></div>`;
 }
 
@@ -209,7 +220,7 @@ export function garageClick(p: Profile, ui: GarageUI, t: HTMLElement, root: Pare
   if (d.sell) {
     // Sell asks once: the key turns into its confirmation, then a second tap sells (the sheet stays open).
     ui.menu = was;
-    if (d.sure === undefined) return (d.sure = ""), (t.firstChild!.textContent = "Sure? Sell for"), null;
+    if (d.sure === undefined) return (d.sure = ""), t.querySelector("svg")?.remove(), (t.firstChild!.textContent = "Sure? Sell for"), null;
     return { buy: [sell(p, +d.sell), "Sold"] };
   }
   ui.menu = was;

@@ -8,7 +8,7 @@ import { diorama } from "@fzlt/core/diorama";
 import { bike as makeBike } from "../bike/bike.ts";
 import { rig, type RigColors } from "../bike/rig.ts";
 import { model } from "../data/roster.ts";
-import { newBike, type Profile } from "../model/profile.ts";
+import { newBike, type BikeSave, type Profile } from "../model/profile.ts";
 import { tune } from "../model/tune.ts";
 import { lookOf } from "./look.ts";
 
@@ -25,16 +25,17 @@ export const snapCost = { n: 0, ms: 0, bytes: 0 };
 
 /** Model `id` new, side on, as a WebP data URL (PNG where the browser has no WebP encoder) of `w` × `h` CSS px (at 2× density): the
  *  catalogue's still, so the side plates are the model's own, blank (no rider's number on a bike for
- *  sale). Kept: the same model, theme and size draw once. */
-export function snap(id: string, p: Profile, night: boolean, w = 384, h = 216): string {
-  const m = model(id), key = `${m.id}|${night ? 1 : 0}|${w}x${h}`, hit = kept.get(key);
+ *  sale); or `own`, a bike in the garage in its own paint and number (the bay rail's and the bay
+ *  picker's pictures). Kept: the same model, theme, size (and look) draw once. */
+export function snap(id: string, p: Profile, night: boolean, w = 384, h = 216, own?: BikeSave): string {
+  const m = model(id), key = `${m.id}|${night ? 1 : 0}|${w}x${h}${own ? "|" + JSON.stringify(own.look) : ""}`, hit = kept.get(key);
   if (hit) return hit;
   const t0 = performance.now();
   cv ??= document.createElement("canvas");
   dio ??= diorama(cv, { light: [-0.4, 1, 0.6], ambient: 0.6, maxDpr: 2 });
   dio.resize(w, h, 2);
   dio.clear();
-  const nb = newBike(m.id, "snap", "f-" + m.maker, 0), P = { ...p, bikes: [nb], ride: 0 }, t = tune(nb), L = lookOf(P);
+  const nb = own ?? newBike(m.id, "snap", "f-" + m.maker, 0), P = { ...p, bikes: [nb], ride: 0 }, t = tune(nb), L = lookOf(P);
   const g = rig(dio, "snap", { ...rigKit(night), ...L.look } as RigColors, t.rig, L.helmet, t.model.id), b = makeBike(FLAT, t.power, t.shape);
   b.reset(0, 0, 0);
   g.pose(b, 0);

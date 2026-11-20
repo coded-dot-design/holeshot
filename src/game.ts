@@ -33,10 +33,10 @@ import type { Buy } from "./model/garage.ts";
 import { after, ride as garageRide } from "./model/upkeep.ts";
 import { portraitOf } from "./garage/portrait.ts";
 import { bayInfo, garageCard as garageView, garageClick, garageUI, pvName, pvOf, riskCard, shown, type Pv } from "./garage/view.ts";
-import { btn, card, cta as shopCta, heading, meter as shopMeter, tabs as shopTabs } from "../vendor/shop/shop.js";
+import { btn, card, cta as shopCta, heading, icon as shopIcon, meter as shopMeter, tabs as shopTabs } from "../vendor/shop/shop.js";
 import { lookOf } from "./garage/look.ts";
 import { mountShowroom as mountSr, showroomState } from "./garage/showroom.ts";
-import { rigKit } from "./garage/snap.ts";
+import { rigKit, snap } from "./garage/snap.ts";
 import { addBackdrop, sceneOf, skyOf } from "./garage/backdrop.ts";
 import { buyInto } from "./model/garage.ts";
 import { words } from "./garage/adapters.ts";
@@ -220,7 +220,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
    *  and the Day / Night key. */
   const garageHead = (mid?: string, cog = true, rider = true) => {
     const day = pageTheme() === "light";
-    return `<header class="dh-top dh-ghead${mid ? " dh-rhead" : ""}"><span class="dh-brand">${APPICON}<span class="dh-brand-t">${WORDMARK}<small class="shop-eyebrow"><span>V${__VERSION__}</span><i aria-hidden="true">·</i>BY DAVID COOLEY</small></span></span>${mid ?? shopTabs([["garage", "Garage"], ["showroom", "Showroom"]], gui.tab === "showroom" ? "showroom" : "garage", "gtab", "Garage or showroom", true)}<span class="dh-hkeys">${inf ? `<span class="dh-chip dh-cr" title="Test credits: nothing is saved">◈ ∞</span><span class="dh-chip dh-test" title="?credits=inf: nothing is saved, online is off">TEST CREDITS ∞</span>` : `<span class="dh-chip dh-cr" title="Credits">◈ ${num(profile.credits)}</span>`}${rider ? `<button type="button" class="shop-btn dh-who" data-rider aria-label="Rider gear">${portraitOf(profile.kit)}<span>${esc(profile.name ? profile.name.charAt(0) + profile.name.slice(1).toLowerCase() : "Rider")}</span></button>` : ""}${cog ? `<button type="button" class="shop-btn dh-icon dh-cog" data-go="settings" aria-label="Settings">${ICON.cog}</button>` : ""}<button type="button" class="shop-btn dh-theme" aria-label="Day or night"><i aria-hidden="true">${day ? "☀" : "☾"}</i><span>${day ? "Day" : "Night"}</span></button></span></header>`;
+    return `<header class="dh-top dh-ghead${mid ? " dh-rhead" : ""}"><span class="dh-brand">${APPICON}<span class="dh-brand-t">${WORDMARK}<small class="shop-eyebrow"><span>V${__VERSION__}</span><i aria-hidden="true">·</i>BY DAVID COOLEY</small></span></span>${mid ?? shopTabs([["garage", "Garage"], ["showroom", "Showroom"]], gui.tab === "showroom" ? "showroom" : "garage", "gtab", "Garage or showroom", true)}<span class="dh-hkeys">${inf ? `<span class="shop-btn dh-cr" title="Test credits: nothing is saved, online is off"><span class="dh-crn">◈ ∞</span><small class="dh-test" aria-label="Test credits">TEST</small></span>` : `<span class="shop-btn dh-cr" title="Credits"><span class="dh-crn">◈ ${num(profile.credits)}</span></span>`}${rider ? `<button type="button" class="shop-btn dh-who" data-rider aria-label="Rider gear"><span class="dh-disc">${portraitOf(profile.kit)}</span><span>${esc(profile.name ? profile.name.charAt(0) + profile.name.slice(1).toLowerCase() : "Rider")}</span></button>` : ""}${cog ? `<button type="button" class="shop-btn dh-icon dh-cog" data-go="settings" aria-label="Settings">${shopIcon("cog")}</button>` : ""}<button type="button" class="shop-btn dh-theme" aria-label="Day or night">${shopIcon(day ? "sun" : "moon")}<span>${day ? "Day" : "Night"}</span></button></span></header>`;
   };
   const bikeLine = () => {
     const b = riding(profile), m = modelOf(b.model);
@@ -244,7 +244,7 @@ export function createHoleshot(o: HoleshotOptions = {}) {
   }
   const pitKey = () => (pitReady(profile) ? `<p class="dh-row"><button type="button" class="bui-key dh-pit">PIT CREW: FREE BASIC FIX</button></p>` : "");
   // (The lockup, "by David Cooley", sits above LET'S RIDE where the dock has room: ./garage/garage.css.)
-  const garageCard = () => garageView(profile, gui, garageHead(), letsRide, note, pitKey());
+  const garageCard = () => garageView(profile, gui, garageHead(), letsRide, note, pitKey(), (b) => snap(b.model, profile, pageTheme() === "dark", 120, 76, b));
   /** THE SHOWROOM SEAM: the Showroom tab mounts the showroom (./garage/showroom.ts on the shop's
    *  catalogue) into its host; the turntable moves into its preview. */
   const srState = showroomState();

@@ -64,7 +64,6 @@ try {
       if (MEDIA) await p.waitForTimeout(150), await p.screenshot({ path: `${MEDIA}/${vname}-${tier}-paint.png` });
       await click(p, "[data-gtab=showroom]");
       await until(p, "!!root.querySelector('.shop-cat')", `${at}: the showroom`);
-      while (await $(p, "!!root.querySelector('[data-shop-more]')")) await click(p, "[data-shop-more]");
       // (a card names its maker in the eyebrow; its picture's label says both)
       const all = (await text(p, ".dh-garage")) + (await $(p, "[...root.querySelectorAll('[data-shop-pick]')].map((b) => b.getAttribute('aria-label')).join(' ')"));
       for (const w of want) assert.ok(all.includes(w), `${at}: shows ${w}`);

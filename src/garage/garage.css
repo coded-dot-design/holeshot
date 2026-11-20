@@ -52,23 +52,29 @@
 .dh-brand .shop-eyebrow{display:flex;gap:.9em;font-size:11px}.dh-brand i{font-style:normal}
 .dh-ghead .shop-tabs-big{align-self:end}
 .dh-hkeys{display:flex;justify-content:end;align-items:center;gap:12px;padding-bottom:14px}
-.dh .dh-ghead .dh-cr{min-height:44px;padding:0 26px;border:0;border-radius:6px;background:var(--shop-go);color:var(--shop-go-ink);font-size:20px}
-.dh .dh-ghead .dh-test{min-height:44px;border-radius:6px}
-.dh-ghead .dh-who .dh-helm{inline-size:1.6em;block-size:1.2em}
-.dh-ghead .dh-cog{min-width:48px;padding:0}.dh-ghead .dh-cog svg{width:22px;height:22px}
-.dh-ghead .dh-theme{min-width:9em;justify-content:start;gap:.8em;padding:0 22px;font-weight:700}
-.dh-ghead .dh-theme i{font-style:normal;color:var(--shop-bar)}
-/* A bay's keys stack (Select bike or RIDES NEXT over Sell), so the name keeps the row's width. */
-.dh-bays .shop-row-e{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+/* The header's keys: one set from the shop's key (.shop-btn): one height, padding, type, border and
+   base; widths fit their words; equal gaps. The credits are the same key in the go colour (not a
+   control), test credits a small TEST badge on it. */
+.dh-hkeys{gap:10px}
+.shop .dh-hkeys>.shop-btn{min-width:44px;min-height:44px;padding:0 16px;gap:.5em;font-size:17px;font-weight:800}
+.shop .dh-hkeys>.dh-cr{cursor:default;background:var(--shop-go);border-color:var(--shop-go);color:var(--shop-go-ink);box-shadow:0 var(--py) 0 var(--edge);--edge:color-mix(in srgb,var(--shop-go) 50%,#07060f);font-variant-numeric:tabular-nums}
+.dh-cr .dh-test{padding:2px 5px;border-radius:4px;background:var(--shop-go-ink);color:var(--shop-go);font:800 10px/1.2 var(--shop-mono);letter-spacing:.08em}
+.shop .dh-hkeys>.dh-icon{padding:0;width:44px}
+.dh-hkeys .shop-i{width:20px;height:20px}
+.dh-theme .shop-i{color:var(--shop-bar)}
+/* The rider's portrait on a key: a light disc behind it and its ink outline thickened at this size, so
+   any helmet colour (black on the night key, white on the day key) reads. */
+.dh-disc{display:inline-grid;place-items:center;width:30px;height:30px;flex:none;border-radius:50%;background:#ece8f7;box-shadow:0 0 0 1.5px var(--shop-line2)}
+.dh-disc .dh-helm{inline-size:24px;block-size:20px}
+.dh-disc .dh-helm [stroke="#0b0a14"],.shop-tile-art .dh-helm [stroke="#0b0a14"]{stroke-width:9}
+.shop-tile-art .dh-helm{border-radius:50%;background:radial-gradient(closest-side,#ece8f7 0 92%,transparent 96%)}
+.dh-face .dh-helm{background:radial-gradient(closest-side,#ece8f7 0 88%,transparent 92%),linear-gradient(180deg,color-mix(in srgb,var(--cy) 22%,var(--raised)),var(--raised))}
 /* Two columns: the bike panel (sticky where the screen is tall enough) and the tabs. */
 @media (min-height:700px){.dh-bikep{position:sticky;top:110px}}
 .dh-gwrap{display:grid;grid-template-columns:minmax(0,480px) minmax(0,1fr);gap:30px;padding:30px 36px 40px;align-items:start}
 .dh-bikep{display:grid;gap:16px;padding:14px 0 18px;border-radius:14px}
 .dh-bikep>*{margin-inline:16px}
 .dh-bikep>.shop-turn{margin-inline:0}
-.dh-bikebar{justify-content:space-between}
-.dh-bikebar .shop-drop{min-width:9.5em}
-@media (min-width:621px){.dh-bays>.shop-sheet{position:absolute;z-index:20;top:calc(100% + 14px);left:-2px;width:min(440px,calc(100vw - 32px))}}
 .dh-bikep .shop-turn .dh-preview{display:block;width:100%;aspect-ratio:16/11;border:0;border-radius:0;background:var(--shop-tile)}
 .dh-pvinfo{display:grid;gap:14px;min-width:0}
 .dh-bayline{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--shop-mute)}
@@ -89,8 +95,8 @@
 /* Tablets: the header's keys go to icons (Rider's helmet, ☀ / ☾) so the tabs keep their line, and the
    condition rows narrow; under 960 px they stack as on phones (name and %, the bar, the key). */
 @media (max-width:1100px){.dh-gwrap{grid-template-columns:minmax(0,400px) minmax(0,1fr);gap:20px;padding-inline:20px}.dh-ghead{grid-template-columns:auto minmax(0,1fr) auto;padding-inline:20px}.dh-brand .shop-eyebrow{white-space:nowrap}.dh .dh-ghead .shop-tabs-big{flex-wrap:nowrap;gap:0 32px}
-.dh .dh-ghead .dh-cr{padding:0 16px}.dh-ghead .dh-who>span{display:none}
-.dh-ghead .dh-theme{min-width:48px;justify-content:center;padding:0}.dh-ghead .dh-theme span{display:none}
+.dh-ghead .dh-who>span:last-child,.dh-ghead .dh-theme>span{display:none}
+.shop .dh-hkeys>:is(.dh-who,.dh-theme){padding:0 10px}
 .shop .shop-barrow,.shop .shop-colhead{grid-template-columns:minmax(7em,1fr) minmax(48px,1fr) 3.2em minmax(7.5em,auto);gap:6px 12px}}
 @media (max-width:960px){.shop .shop-colhead{display:none}.shop .shop-barrow{grid-template-columns:minmax(0,1fr) auto}.shop .shop-barrow .shop-meter{grid-column:1/-1;grid-row:2}.shop .shop-barrow .shop-barrow-a{grid-column:1/-1}}
 /* Phone: the header compacts (logo, credits, Day / Night; the tabs under it), the sections stack and
@@ -105,14 +111,12 @@
 .dh-bikep .shop-cta-sub{font-size:10px;letter-spacing:.02em}.shop .shop-stat dt{font-size:10px;letter-spacing:.04em}
 .dh-hkeys{gap:8px}
 .dh-ghead .dh-who{display:none}
-.dh .dh-ghead .dh-cr{padding:0 14px;font-size:16px}
-.dh-ghead .dh-theme{min-width:44px;justify-content:center;padding:0}.dh-ghead .dh-theme span{display:none}
+.dh-hkeys{gap:6px}.shop .dh-hkeys>.shop-btn{padding:0 10px;font-size:16px}
 .dh-brand,.dh-brand-t{min-width:0}.dh-brand{gap:8px}
 .dh .dh-ghead .dh-brand .dh-logo{width:100%;max-width:114px;height:auto}
 .dh-ghead .dh-cog{min-width:44px}
 .dh-gwrap{grid-template-columns:minmax(0,1fr);gap:16px;padding:12px 12px 28px}
 .dh-bikep{position:static;padding:10px 0 14px;gap:12px}
-.dh-bikebar{flex-wrap:nowrap}.dh-bikebar .shop-drop{min-width:0;padding:0 16px}.dh-bikebar>.shop-sub{font-size:13px;text-align:right}
 .shop .shop-h4{font-size:19px}
 .dh-bikep>*{margin-inline:12px}
 .dh-bikep .shop-cta-w{margin-top:4px}
@@ -144,10 +148,64 @@
 /* Part tags (WORN, MAY FAIL, FAILED): one ink on one fill, WCAG AA in both themes (ink on pink 5.9:1
    by night, white on deep pink 5.8:1 by day; ink on amber 10:1, ink on pale amber 12:1). The risk
    tag pulses a ring, never its opacity, so the words keep their contrast. */
-.shop .shop-barrow-l .dh-tag,.dh-tag{--tag:#ffb23d;--tag-ink:#17152b;background:var(--tag);color:var(--tag-ink);border-color:var(--tag-ink);font-size:11px;font-weight:800}
-.shop .shop-barrow-l .dh-tag:is([data-state=risk],[data-state=failed]),.dh-tag:is([data-state=risk],[data-state=failed]){--tag:#ff4fa8}
-.dh[data-day] .dh-tag,.dh[data-day] .shop .shop-barrow-l .dh-tag{--tag:#ffd38c}
-.dh[data-day] .dh-tag:is([data-state=risk],[data-state=failed]),.dh[data-day] .shop .shop-barrow-l .dh-tag:is([data-state=risk],[data-state=failed]){--tag:#c2186a;--tag-ink:#fff;border-color:#17152b}
+.dh small.dh-tag,.dh .shop small.dh-tag{--tag:#ffb23d;--tag-ink:#17152b;background:var(--tag);color:var(--tag-ink);border-color:var(--tag-ink);font-size:11px;font-weight:800}
+.dh small.dh-tag:is([data-state=risk],[data-state=failed]),.dh .shop small.dh-tag:is([data-state=risk],[data-state=failed]){--tag:#ff4fa8}
+.dh[data-day] small.dh-tag,.dh[data-day] .shop small.dh-tag{--tag:#ffd38c}
+.dh[data-day] small.dh-tag:is([data-state=risk],[data-state=failed]),.dh[data-day] .shop small.dh-tag:is([data-state=risk],[data-state=failed]){--tag:#c2186a;--tag-ink:#fff;border-color:#17152b}
 .dh-tag[data-state=risk]{animation:dh-ring 1.2s steps(2,jump-none) infinite}
 @keyframes dh-ring{50%{box-shadow:0 0 0 3px color-mix(in srgb,var(--tag) 45%,transparent)}}
 @media (prefers-reduced-motion:reduce){.dh-tag[data-state=risk]{animation:none}}
+/* Fit the viewport (owner, 2026-11-20): on a desktop-sized window the garage, the showroom and LET'S
+   RIDE are exactly one screen tall (100dvh under the header); the page never scrolls, a panel scrolls
+   inside itself only when it must. The bike panel is a column: the bay rail, the turntable taking
+   every pixel left, the bike's name and pace, LET'S RIDE. Phones (and very short windows) stack and
+   scroll as before. */
+@media (min-width:821px) and (min-height:560px){
+.dh-cards:has(>.dh-garage),.dh-cards:has(>.dh-ride){box-sizing:border-box;height:100%;overflow:hidden}
+.dh .dh-garage{display:grid;grid-template-rows:auto minmax(0,1fr);height:100%;min-height:0}
+.dh .dh-ride{height:100%;min-height:0}
+.dh-ride .dh-rwrap{min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.dh .dh-gwrap{min-height:0;align-items:stretch;padding-block:20px}
+.dh .dh-bikep{position:static;display:flex;flex-direction:column;gap:12px;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.dh-bikep>.shop-turn{flex:1 1 0;min-height:160px;overflow:hidden}
+.dh-bikep .shop-cta-w{margin-top:0}
+.dh-pvinfo{gap:10px}
+.dh .dh-gbody{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:2px 6px 16px 2px;margin:-2px -6px 0 -2px;gap:18px}
+}
+@media (min-width:1280px){.dh .dh-gwrap{grid-template-columns:minmax(0,540px) minmax(0,1fr)}}
+.dh-bikep>.shop-rail{margin-inline:16px}
+@media (max-width:820px){.dh-bikep>.shop-rail{order:9;margin-inline:12px}}
+.shop .dh-bikep .shop-bay-k .shop-btn{min-height:44px}
+.dh-bikep .shop-bay-t .dh-warn{color:var(--shop-price)}
+/* PARTS & MODS as cards (Paint & Kit's grid is the model): condition beside crash damage where there
+   is room, the tuning cards two up, the service log as rows with their icons. */
+.dh-two{display:grid;gap:18px;align-items:start}
+.dh-sec{display:grid;gap:12px;min-width:0}
+.dh-sec .shop-heading{margin-top:4px}
+@media (min-width:1200px){.dh-two{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}.dh-two .shop-wts{grid-template-columns:repeat(2,minmax(0,1fr))}.dh-side .shop-wts{grid-template-columns:minmax(0,1fr)}.dh-side .shop-wt-a .shop-btn{min-width:0;width:100%}}
+.dh-okcard{display:flex;align-items:center;gap:10px}
+.dh-gbody .shop-wt-t .shop-drop-text{margin:-8px 0 -10px;justify-content:start}
+.dh-cards2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:12px}
+.dh-setc{display:grid;align-content:start;gap:4px}
+.dh-cardh{display:flex;align-items:center;gap:12px}
+.dh-cardh .shop-h4{margin:0}
+.dh-setc .shop-opts{grid-auto-flow:row;grid-template-columns:repeat(auto-fit,minmax(7em,1fr))}
+.dh-feelc{max-width:820px}
+.dh .dh-log{padding:0}
+.dh-log .shop-row{grid-template-columns:auto minmax(0,1fr) auto;max-width:820px}
+.dh-log .shop-row-t b{font-size:17px}
+.dh-log .shop-row-e{color:var(--shop-ink);font-variant-numeric:tabular-nums}
+.dh-log .shop-row-e small{font:500 11px var(--shop-mono);color:var(--shop-mute);text-transform:uppercase;letter-spacing:.06em}
+.dh-gbody .shop-sub,.dh-gbody .shop-blurb{max-width:68ch}
+.shop .dh-gbody .shop-preview{max-width:820px}
+/* The showroom's preview panel fits the screen: the stage takes what its title, numbers, bays and Buy leave. */
+@media (min-width:900px) and (min-height:560px){
+.dh-garage[data-tab=showroom] .dh-gbody{overflow:hidden;padding:0;margin:0;grid-template-rows:minmax(0,1fr) auto}
+.dh-showroom{min-height:0;height:100%}
+.dh-showroom>.shop-cat{height:100%;grid-template-rows:minmax(0,1fr)}
+.dh-showroom .shop-cat-pv,.dh-showroom .shop-cat-list{max-height:100%;overflow-y:auto;overscroll-behavior:contain}
+.dh-showroom .shop-cat-list{align-content:start;padding:2px 6px 16px 2px}
+.dh-showroom .shop-cat-pv{display:flex;flex-direction:column}
+.dh-showroom .shop-cat-pv>*{flex:none}
+.dh-showroom .shop-cat-pv>.shop-cat-stage{flex:1 1 0;aspect-ratio:auto;min-height:180px}
+}

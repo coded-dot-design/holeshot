@@ -8,9 +8,9 @@ export declare const card: (body: string, cls?: string, attrs?: string) => strin
 /** A section heading with an optional right-hand meta: `heading("Bike condition")`, `heading("Bike paint", "22 schemes")`. */
 export declare const heading: (title: string, meta?: string, level?: number) => string;
 /** The big two-way toggle: `seg([["bike","Parts & Mods"],["look","Paint & Kit"]], ui.tab, "gtab", "Garage")`. */
-export declare const seg: (items: readonly (readonly [string, string])[], on: string, key: string, label: string) => string;
+export declare const seg: (items: readonly (readonly [string, string, string?])[], on: string, key: string, label: string) => string;
 /** Underline tabs: `tabs([["parts","Condition"],…], ui.sub, "gsub", "Parts and mods")`; `big` for the header's Garage/Showroom. */
-export declare const tabs: (items: readonly (readonly [string, string])[], on: string, key: string, label: string, big?: boolean) => string;
+export declare const tabs: (items: readonly (readonly [string, string, string?])[], on: string, key: string, label: string, big?: boolean) => string;
 /** A stat tile: `stat("0–30 mph", "0.88 s")`; with a change `stat("Top speed", "64 mph", { text: "−2 mph", good: false })`, or a before → after `stat(l, "0.88 s", null, "0.86 s")`. */
 export declare const stat: (label: string, value: string, delta?: {
     text: string;
@@ -43,9 +43,10 @@ export declare const price: (o: {
     done?: string;
     go?: boolean;
     wide?: boolean;
+    icon?: string;
 }) => string;
 /** A plain key (Cancel, + Add bike, Select bike, Compare bikes): `btn("Cancel", "data-untry")`; `on` marks the chosen one. */
-export declare const btn: (label: string, attrs?: string, on?: boolean, cls?: string) => string;
+export declare const btn: (label: string, attrs?: string, on?: boolean, cls?: string, ico?: string) => string;
 /** The "N more credits needed" line under a price key: `need(1500, 714)` (empty when you have enough). */
 export declare const need: (pr: number, credits: number) => string;
 /** A popover menu (tyre compound, paint menu, filters): `menu({ title: "Tyre compound", items: [{ label: "Soft", meta: "145 credits", on, attrs }] })`. */
@@ -56,12 +57,13 @@ export declare const menu: (o: {
         meta?: string;
         on?: boolean;
         attrs?: string;
+        icon?: string;
     }[];
     label: string;
     cls?: string;
 }) => string;
 /** A dropdown/filter key that opens a menu: `drop("Paint scheme", 'data-gmenu="paint"', open)` (tinted while open); `"shop-drop-text"` for the in-line text kind ("Hard compound ▾"). */
-export declare const drop: (label: string, attrs: string, open?: boolean, cls?: string) => string;
+export declare const drop: (label: string, attrs: string, open?: boolean, cls?: string, ico?: string) => string;
 /** A check toggle ("Owned only"): `check("Owned only", on, "data-owned")`. */
 export declare const check: (label: string, on: boolean, attrs: string) => string;
 /** A sheet: a popover on desktop, a bottom sheet with a grabber on phones: `sheet({ title: "My Bikes", sub, body, close: "data-bays" })`. */
@@ -132,6 +134,27 @@ export declare const stars: (n: number, of?: number) => string;
 export declare const pill: (t: string, kind?: string, cls?: string) => string;
 /** A bar along the bottom of a panel (the pinned preview: "Previewing Gridline" · Cancel · Buy): `footbar("Previewing Gridline", keys)`. */
 export declare const footbar: (text: string, keys: string, attrs?: string) => string;
+/** The icon names (tests, a game's own check). */
+export declare const ICONS: string[];
+/** A line icon beside a label: `icon("tyre")` (aria-hidden; the label says it). */
+export declare const icon: (name: string, cls?: string) => string;
+/** An icon on a small tinted square (a part, an upgrade, a log line): `badge("chain")`. */
+export declare const badge: (name: string) => string;
+/** Stages as diamonds, filled vs empty (◆◆◇): `stages(2, 3)`; `next` outlines the stage a preview
+ *  would fit; every stage fitted reads as maxed (data-max). Its words are for screen readers. */
+export declare const stages: (n: number, of: number, next?: boolean, word?: string) => string;
+/** A wear tile (a part as a card: icon, name, its tag, the bar at a fixed width, the %, the key on the
+ *  right): `wearTile({ label: "Tyres", icon: "tyre", v: 0.9, action: price(…) })`. */
+export declare const wearTile: (o: {
+    label: string;
+    icon?: string;
+    sub?: string;
+    v: number;
+    state?: string;
+    tag?: string;
+    action?: string;
+    attrs?: string;
+}) => string;
 /** Words the flows use; a game overrides any of them (its language, its tone). */
 export interface ShopCopy {
     credits: string;
@@ -158,6 +181,7 @@ export interface Slot {
     name: string;
     meta: string;
     attrs: string;
+    icon?: string;
 }
 /** SLOTS → ITEM GRID (paged) → PREVIEW → BUY / CANCEL. `page` is 0-based; `trying` the item on the stage
  *  (pinned, not yet owned); `open` shows the slot menu; `big` uses the art tiles (helmets, outfits). */
@@ -190,6 +214,7 @@ export declare function itemGrid(o: {
 /** A thing that wears and gets serviced (a part, a track, armour): its condition 0..1 and its key. */
 export interface Wear {
     label: string;
+    icon?: string;
     sub?: string;
     v: number;
     state?: string;
@@ -211,24 +236,28 @@ export interface Upgrade {
     state: string;
     price?: number;
     attrs: string;
+    icon?: string;
+    stage?: [number, number];
 }
 /** UPGRADES: the list, and the one under preview with its stats before → after. */
 export declare function upgrades(o: {
     items: Upgrade[];
     on?: string;
-    preview?: {
-        name: string;
-        blurb: string;
-        stats: [string, string, string][];
-        key: {
-            label: string;
-            price: number;
-            attrs: string;
-        };
-    } | null;
+    preview?: UpgradePreview | null;
     credits: number;
     copy?: ShopCopy;
 }): string;
+/** An upgrade under preview: its stats before → after and its key. */
+export interface UpgradePreview {
+    name: string;
+    blurb: string;
+    stats: [string, string, string][];
+    key: {
+        label: string;
+        price: number;
+        attrs: string;
+    };
+}
 /** One bay (garage spot, hangar, wardrobe slot): what's in it and its key. */
 export interface Bay {
     label: string;
@@ -265,6 +294,48 @@ export declare function compare(o: {
         better?: 1 | -1 | 0;
     }[];
     label: string;
+}): string;
+/** CONDITION as cards: a tile per part (icon, name, tag, the bar at a fixed width, the %, the key on
+ *  the right), in a grid that takes two columns where it has the room. */
+export declare const wearGrid: (rows: Wear[], credits: number, label: string) => string;
+/** UPGRADES as tiles: each mod a card (icon, name, its stages as diamonds with the next one outlined,
+ *  its state, the next stage's price or MAXED), the one under preview marked; the preview below. */
+export declare function upgradeGrid(o: {
+    items: Upgrade[];
+    on?: string;
+    preview?: UpgradePreview | null;
+    credits: number;
+    maxed?: string;
+    copy?: ShopCopy;
+}): string;
+/** One bay on the rail: a bike (its picture, name, keys) or an empty bay (its add key's attrs). */
+export interface RailBay {
+    label: string;
+    name?: string;
+    art?: string;
+    on?: boolean;
+    keys?: string;
+    attrs?: string;
+    add?: string;
+}
+/** MY BIKES as a rail: the bays side by side (the selected one marked; an empty bay is an "+ Add" tile;
+ *  the expansion, locked, at the end), part of the screen, not a popover. Scrolls sideways when it
+ *  has more bays than room. */
+export declare function bayRail(o: {
+    title: string;
+    line: string;
+    bays: RailBay[];
+    add: string;
+    expand?: {
+        title: string;
+        line: string;
+        key: {
+            label: string;
+            price: number;
+            attrs: string;
+        };
+    } | null;
+    credits: number;
 }): string;
 /** A number the screen shows: its label, how to write it, and which way is better (for deltas). */
 export interface StatDef {
@@ -311,6 +382,7 @@ export interface CatalogueSlot {
     label: string;
     holds?: string;
     credit?: number;
+    art?: string;
 }
 /** What buying `item` into `slot` takes: the cost, and why not (locked, the slot can't take it). */
 export interface CatalogueOffer {
@@ -336,8 +408,8 @@ export interface CatalogueConfig {
     buy(item: CatalogueItem, slot: CatalogueSlot): string | null;
     /** Show `item` in the preview: the game mounts its preview into `host`. */
     preview(host: HTMLElement, item: CatalogueItem): void;
-    /** Cards per page ("More ↓" adds a page). */
-    page: number;
+    /** (Unused: every item the filters let through shows; kept so a game's config still fits.) */
+    page?: number;
     /** The words (a game's voice; defaults are the shop's). */
     text?: Partial<typeof TEXT>;
     /** Told when something is announced (a screen reader line). */
