@@ -33,7 +33,7 @@ jobs:
       - run: npm run test:browser
       # Online on phone links (the stand-in room server's latency shim): the rollback bars.
       - run: npm run test:net
-      # The site (landing, /play/), built for holeshot.fzlt.games; pages.yml deploys it.
+      # The site (landing, /play/), built for holeshot.fzlt.games; cloudflare.yml deploys it.
       - run: npm run site:build
       - run: npm run test:site
   # A release: when main's package.json version has no tag yet (it was just bumped), tag that commit

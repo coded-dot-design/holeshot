@@ -240,8 +240,9 @@ How the pieces fit (the mode interface, the bike and `tune()`, the economy file,
 mode): [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). CHROMIUM_PATH points the tests at a Chromium of
 your own.
 
-Custom domain: `pages.yml` builds with `SITE_URL=https://holeshot.fzlt.games` and `SITE_BASE=/`
-(repo variables override) and writes the `CNAME` from it.
+Hosting: Cloudflare Pages on `holeshot.fzlt.games` (`.github/workflows/cloudflare.yml`: a PR deploys a preview, `main`
+deploys staging on `holeshot-staging.fzlt.games` with `PUBLIC_DEPLOY_TARGET=staging`, noindex, and promoting a green
+`main` SHA deploys production; each build sets `SITE_URL` and `SITE_BASE=/`, no `CNAME` file).
 
 ## Licence
 
