@@ -6,7 +6,9 @@
 // the dome's rim, the peak, the open face) in a magenta one. With the eye within 60° of the face,
 // the lens shows (≥ 40 green px); more than 100° round from it, no green at all, and no magenta
 // inside the shell's outline (eroded 2 px for its edge): a face part may stand out past the shell's
-// edge, never show through it. MEDIA=<dir> saves a 24-yaw sheet of the head per pitch.
+// edge, never show through it. Then a yaw sweep at the game's own cameras (the garage turntable and the
+// race's chase cam): past 100° from the face no lens and no goggle frame or visor rim; the street
+// dome's visor shows side-on (80–90°); the strap stays inside the shell's silhouette. MEDIA=<dir> saves a 24-yaw sheet of the head per pitch.
 import assert from "node:assert/strict";
 import { mkdirSync } from "node:fs";
 import { build } from "esbuild";
@@ -15,13 +17,15 @@ import { serve, launchOptions } from "./serve.mjs";
 
 const entry = `
 import { diorama } from "@fzlt/core/diorama";
-import { rig, T_HANDSTAND } from "./src/bike/rig.ts";
+import { rig, T_HANDSTAND, bandOf } from "./src/bike/rig.ts";
 import { bike, TWO_STROKE } from "./src/bike/bike.ts";
 const cv = document.getElementById("cv"), d = diorama(cv, { light: [-0.4, 1, 0.6], ambient: 0.55, maxDpr: 1 });
 const W = 360, H = 360;
 d.resize(W, H, 1);
 const C = { plastic: "#2f6fd8", plastic2: "#d8d8e0", seat: "#202028", frame: "#3a3a4c", tyre: "#15151c", rim: "#b8bccc", metal: "#c9cde6", pipe: "#7e86a8", plate: "#e8e8ee", ink: "#101018",
   jersey: "#2fb4d8", pants: "#e8e8ee", helmet: "#f0f0f4", stripe: "#d84f2f", visor: "#5a1f9e", boots: "#f4f4f8", gloves: "#202028", glow: "#d0d0d8", side: "#e8e8ee", num: 7 };
+const mix = (a, b, t) => { const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16), c = (sh) => Math.round(((x >> sh) & 255) * (1 - t) + ((y >> sh) & 255) * t); return "#" + ((1 << 24) | (c(16) << 16) | (c(8) << 8) | c(0)).toString(16).slice(1); };
+const BAND = bandOf(C.helmet, C.stripe), STRAP = mix(BAND, C.helmet, 0.4);
 const flat = { sample(_x, _z, out) { out[0] = 0; out[1] = 0; out[2] = 1; out[3] = 0; return 0; } };
 const rigs = {};
 const under = (ob, id) => { for (let p = ob; p; p = p.parent) if (p.id === id) return true; return false; };
@@ -81,6 +85,46 @@ window.measure = (helmet, name, yaw, pitch) => {
   }
   return { facing, green, through };
 };
+// The yaw sweep at the game's own cameras: the garage turntable (close: the bike's preview, src/game.ts)
+// and the race's chase cam (src/modes/race/scene.ts chaseO), the head seen round 360°. Every helmet
+// part by its colour: the lens (the visor tint, the glint) green, the goggle frame and the dome's rim
+// (the band) magenta, the strap blue. Returns the eye's angle from the face (degrees, 0 straight
+// ahead, 180 straight behind), the lens, frame and strap px, and the strap px outside the shell's
+// silhouette grown by 2 px.
+const CAMS = { garage: { pitch: 0.16, dist: 3, lift: 0.96 }, race: { pitch: 0.36, dist: 9.5, lift: 0.9 } };
+const S2 = [0, 0, 0], Q2 = [0, 0, 0];
+const dilate = (m) => { const o = new Uint8Array(m.length); for (let y = 2; y < H - 2; y++) for (let x = 2; x < W - 2; x++) { let on = 0; for (let dy = -2; dy <= 2 && !on; dy++) for (let dx = -2; dx <= 2; dx++) if (m[(y + dy) * W + x + dx]) { on = 1; break; } o[y * W + x] = on; } return o; };
+window.sweep = (helmet, cam, yaw) => {
+  if (now !== helmet) R = setup(helmet), (now = helmet);
+  pose("standing");
+  const c = CAMS[cam];
+  d.draw();
+  // The game's framing (the bike's centre, the rider's height), the picture shifted to the head so a far cam still judges it.
+  Object.assign(d.cam, { yaw, pitch: c.pitch, dist: c.dist, tx: 0, ty: c.lift, tz: 0, ox: 0, oy: 0, fov: 0.55 });
+  d.draw();
+  const M = R.head.M, hp = [0, 0, 0], ctr = [0, 0, 0];
+  d.project(M[9], M[10], M[11], hp); d.project(0, c.lift, 0, ctr);
+  d.cam.ox = ctr[0] - hp[0]; d.cam.oy = ctr[1] - hp[1];
+  d.draw();
+  d.project(M[9] + M[0] * 0.3, M[10] + M[3] * 0.3, M[11] + M[6] * 0.3, P); d.project(M[9] - M[0] * 0.3, M[10] - M[3] * 0.3, M[11] - M[6] * 0.3, Q);
+  d.project(M[9] + M[2] * 0.3, M[10] + M[5] * 0.3, M[11] + M[8] * 0.3, S2); d.project(M[9] - M[2] * 0.3, M[10] - M[5] * 0.3, M[11] - M[8] * 0.3, Q2);
+  const ang = (Math.atan2(Math.abs(Q2[2] - S2[2]), Q[2] - P[2]) * 180) / Math.PI;
+  const sm = grab((p) => R.shell.includes(p)), shell = new Uint8Array(W * H);
+  for (let i = 0; i < W * H; i++) shell[i] = sm[i * 4 + 3] > 200 ? 1 : 0;
+  const grown = dilate(shell);
+  const kind = (p) => (!under(p, "b:h") ? null : p.color === C.visor || (p.emissive && under(p, "b:hf")) ? "#00ff00" : p.color === BAND && p.layer < 7.3 && (under(p, "b:hf") || /:hv[LR]$/.test(p.parent?.id ?? "")) ? "#ff00ff" : p.color === STRAP ? "#0000ff" : null);
+  const full = grab(() => true, kind);
+  let lens = 0, frame = 0, strap = 0, out = 0;
+  for (let i = 0; i < W * H; i++) {
+    const r = full[i * 4], gg = full[i * 4 + 1], b = full[i * 4 + 2];
+    // (The probes' own pure colours, so the bike's blue or the jersey never count.)
+    if (gg > 150 && r < 60 && b < 60) lens++;
+    else if (r > 150 && b > 150 && gg < 60) frame++;
+    else if (b > 150 && r < 60 && gg < 60) (strap++, !grown[i] && out++);
+  }
+  return { ang, lens, frame, strap, out };
+};
+window.sweepShot = (helmet, cam, yaw) => (window.sweep(helmet, cam, yaw), grab(() => true, () => null), cv.toDataURL("image/png"));
 window.shot = (helmet, name, yaw, pitch) => {
   if (now !== helmet) R = setup(helmet), (now = helmet);
   pose(name); view(yaw, pitch);
@@ -120,6 +164,22 @@ try {
       if (m.through) bad.push(`${tag}: facing away (${m.facing.toFixed(2)}), ${m.through} face px through the shell`);
     }
   }
+  // The yaw sweep at the garage turntable and the race cam, every 5°: past 100° from the face no lens
+  // and no goggle frame or visor rim at all; the dome's visor shows side-on (80–90°); the strap stays
+  // inside the shell's silhouette grown by 2 px (3 px of edge antialiasing allowed).
+  let swept = 0, side = Infinity, strapOut = 0;
+  for (const h of HELMETS) for (const cam of ["garage", "race"]) for (let i = 0; i < 72; i++) {
+    const m = await p.evaluate(([h, c, y]) => window.sweep(h, c, y), [h, cam, (i * Math.PI) / 36]);
+    const tag = `${h} ${cam} cam, ${m.ang.toFixed(0)}° from the face`;
+    swept++;
+    strapOut = Math.max(strapOut, m.out);
+    if (m.ang > 100 && (m.lens || m.frame)) bad.push(`${tag}: from behind ${m.lens} lens px, ${m.frame} frame px show`);
+    if (h === "dome" && m.ang >= 80 && m.ang <= 90) {
+      side = Math.min(side, m.lens);
+      if (m.lens < 40) bad.push(`${tag}: side-on the visor shows only ${m.lens} px`);
+    }
+    if (m.out > 3) bad.push(`${tag}: ${m.out} strap px outside the shell's silhouette`);
+  }
   if (MEDIA) {
     const sheet = await browser.newPage({ viewport: { width: 1440, height: 960 } });
     // Every pose at four yaws (the head and what is round it: torso, arms, bike), one row a pose.
@@ -139,6 +199,7 @@ try {
   assert.deepEqual(errs, [], "no page errors");
   assert.ok(front >= 100 && back >= 300, `enough cases judged (${front} facing, ${back} away)`);
   assert.deepEqual(bad, [], `the helmet's face, front and back:\n${bad.join("\n")}`);
+  console.log(`Helmet sweep: ${swept} views (${HELMETS.length} shapes × garage and race cams × 72 yaws): nothing of the goggle or visor past 100° from the face; the dome's visor side-on at least ${side} px; the strap at most ${strapOut} px outside the shell.`);
   console.log(`Helmet: ${HELMETS.length} shapes × ${POSES.length} poses × 24 yaws × 3 pitches: facing the eye (${front} cases) the lens shows (at least ${least} px); facing away (${back} cases) no lens and no face part through the shell.`);
 } finally {
   await browser.close();

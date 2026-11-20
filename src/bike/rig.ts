@@ -105,6 +105,32 @@ function grow(P: number[][], e: number) {
   });
 }
 
+/** Polygon `P` cut to the convex polygon `Cv` (Sutherland–Hodgman; build time only). */
+function clip(P: number[][], Cv: number[][]) {
+  const s = area(Cv) > 0 ? 1 : -1;
+  let out = P;
+  for (let i = 0; i < Cv.length && out.length; i++) {
+    const a = Cv[i]!, b = Cv[(i + 1) % Cv.length]!, inp = out;
+    const side = (p: number[]) => s * ((b[0]! - a[0]!) * (p[1]! - a[1]!) - (b[1]! - a[1]!) * (p[0]! - a[0]!));
+    out = [];
+    for (let j = 0; j < inp.length; j++) {
+      const p = inp[j]!, q = inp[(j + 1) % inp.length]!, sp = side(p), sq = side(q);
+      if (sp >= 0) out.push(p);
+      if (sp >= 0 !== sq >= 0) { const t = sp / (sp - sq); out.push([p[0]! + (q[0]! - p[0]!) * t, p[1]! + (q[1]! - p[1]!) * t]); }
+    }
+  }
+  return out;
+}
+/** A rounded rectangle `h` by `w` about its centre (three points a corner), a prism outline. */
+function rounded(h: number, w: number) {
+  const r = Math.min(h, w) * 0.3, P: number[][] = [];
+  for (let c = 0; c < 4; c++) for (let i = 0; i < 3; i++) {
+    const a = (c + i / 2) * (PI / 2), sx = c === 0 || c === 3 ? 1 : -1, sy = c < 2 ? 1 : -1;
+    P.push([sx * (h / 2 - r) + r * Math.cos(a), sy * (w / 2 - r) + r * Math.sin(a)]);
+  }
+  return P;
+}
+
 /** Bones and the solved joints, reused (no allocation per pose). */
 const J = new Float64Array(4);
 /** Two-bone solve from (ax, ay) to (bx, by), bones l1 then l2, bending to `bend` (+1: the middle joint
@@ -164,6 +190,8 @@ const SHELL = [[-30, 38], [-41, 29], [-46, 10], [-46, -10], [-41, -28], [-28, -4
 const CHIN = [[34, -3], [46, 2], [74, 24], [58, 46], [10, 42], [16, 18]];
 const DOME = [[-30, 40], [-42, 30], [-48, 8], [-46, -22], [-30, -42], [0, -50], [26, -44], [44, -30], [54, -8], [58, 18], [50, 36], [30, 43]];
 const OPEN = [[-30, 38], [-41, 29], [-46, 10], [-46, -10], [-41, -28], [-28, -40], [-8, -46], [14, -46], [29, -41], [39, -30], [44, -14], [44, -2], [24, 4], [18, 20], [22, 38]];
+/** The goggle's band (portrait y, top and bottom): the frame's height and the strap's. */
+const GOG_Y = [-19, -1] as const;
 const VISOR = [[2, -28], [30, -36], [45, -26], [53, -8], [55, 8], [30, 13], [2, 8]];
 const PEAK: Partial<Record<RigHelmet, number[][]>> = {
   peak: [[-10, -44], [40, -54], [78, -62], [76, -40], [34, -26]],
@@ -382,37 +410,47 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
   slabs(dome ? DOME : open ? OPEN : SHELL, ...SH, C.helmet, 7, [id + ":h"]);
   d.add({ id: hf, shape: "group", size: [0.2, 0, 0.2], pos: [END, 0, 0], on: id + ":h", behind: 1, pick: false });
   const k = (pts: number[][], s: number) => pts.map(([x, y]) => [x! * s, y! * s]);
+  const shellP = dome ? DOME : open ? OPEN : SHELL;
   if (dome) {
     // A street full-face: the big visor in its rim, wrapping round the front of the shell, a flush chin.
-    // The lens inside the shell's own slabs (never past its outline), the rim standing proud of it.
-    slabs(k(VISOR, 1.06), 0.1, 0.055, 0.86, 0, 1, band, 7, [id + ":h"]);
-    slabs(k(VISOR, 0.98), ...SH, C.visor, 7.3, [hf]);
+    // The rim and the lens hang from the face (under the shell from behind) and stay inside the shell's
+    // outline (clipped to it), so from behind none of the visor shows past the shell's edge.
+    slabs(clip(k(VISOR, 1.06), k(DOME, 0.98)), 0.1, 0.055, 0.86, 0, 1, band, 7.2, [hf]);
+    slabs(clip(k(VISOR, 0.98), k(DOME, 0.97)), ...SH, C.visor, 7.3, [hf]);
     // Its side, as the portrait shows it: the rim and the lens as thin plates on the side slabs' outer
-    // face, each on a group off its side and in it one off the front turned 12° to that side (`behind`
-    // on both: under the shell once the eye is round the other side or over 102° from the face), so
-    // side-on the visor's dark shape sits on the front of the shell even with the face turned just away.
+    // face, each on the near side's group (as the strap is: it never swaps with the face, so side-on
+    // the visor stays) and in it one off the front turned 10° to that side (`behind` on both: under the
+    // shell once the eye is round the other side or over 100° from the face). Each plate is clipped to
+    // the shell's outline where it sits (the side slab's taper there), so dropped it is hidden.
     for (const sd of [-1, 1]) {
       const gid = id + (sd < 0 ? ":hvL" : ":hvR");
       d.add({ id: gid + "s", shape: "group", size: [0.2, 0, 0.2], pos: [0, 0, sd * END], on: id + ":h", behind: 1, pick: false });
-      d.add({ id: gid, shape: "group", size: [0.2, 0, 0.2], pos: [END, 0, sd * 0.21 * END], on: gid + "s", behind: 1, pick: false });
+      d.add({ id: gid, shape: "group", size: [0.2, 0, 0.2], pos: [END, 0, sd * 0.176 * END], on: gid + "s", behind: 1, pick: false });
       for (const [sc, z, c, l] of [[0.96, 0.105, band, 7.05], [0.9, 0.107, C.visor, 7.06]] as const)
         part([0, 0.004 * HS, 0], [O[0]! * HS, O[1]! * HS, sd * (z + 0.004) * HS], c, { on: gid, shape: "prism", layer: l, rot: [sd > 0 ? -PI / 2 : PI / 2, 0, 0],
-          outline: VISOR.map(([x, y]) => [x! * PK * sc * HS, (sd > 0 ? -y! : y!) * PK * sc * HS]) });
+          outline: clip(k(VISOR, sc), k(DOME, 0.76)).map(([x, y]) => [x! * PK * HS, (sd > 0 ? -y! : y!) * PK * HS]) });
     }
   } else {
-    // The strap: the shell's band round from the back to the goggle, a little bigger than the shell; its
-    // middle slab on the head, each side's slabs on a group off that side and a little back (`behind`:
-    // under the shell once the eye is round the other side, still shown from straight behind).
-    const S = k([[-47, -21], [45, -21], [47, -3], [-47, -3]], 1.04);
+    // The goggle, as the portrait and the box art draw it: a low, rounded frame set in the eye port (its
+    // front just inside the shell's face, so it never stands out past the shell's outline), the lens
+    // filling most of it a hair proud, and the strap a thin band hugging the shell's curve from the
+    // frame's sides round the back: the shell's own outline cut to the band (GOG_Y, portrait y),
+    // 1.5 % proud of it, as slabs that taper with the shell's. The strap's middle slab is on the head,
+    // each side's on a group off that side and a little back (`behind`: under the shell once the eye is
+    // round the other side, still shown from straight behind).
+    const S = k(clip(shellP, [[-60, GOG_Y[0]], [16, GOG_Y[0]], [16, GOG_Y[1]], [-60, GOG_Y[1]]]), 1.015);
     slabs(S, SH[0], 0, 1, 0, 1, strap, 7.1, [id + ":h"]);
     slabs(S, ...SH, strap, 7.1, [-1, 1].map((sd) => {
       const gid = id + (sd < 0 ? ":hsL" : ":hsR");
       d.add({ id: gid, shape: "group", size: [0.2, 0, 0.2], pos: [-0.7 * END, 0, sd * END], on: id + ":h", behind: 1, pick: false });
       return gid;
     }), O, 2);
-    // The goggle: a thick frame proud of the shell, the lens proud of the frame.
-    hp([0.15, 0.105, 0.17], [O[0]! + 31 * PK, O[1]! + 7 * PK - 0.0525, 0], band, { ...fo, layer: 7.2 });
-    hp([0.02, 0.072, 0.13], [O[0]! + 55 * PK, O[1]! + 7 * PK - 0.036, 0], C.visor, { ...fo, layer: 7.3, mask: 4 });
+    // Frame and lens: rounded rectangles across the face, extruded back from the front (x), on the face.
+    const gh = (GOG_Y[1] - GOG_Y[0]) * PK, gy = O[1]! - ((GOG_Y[0] + GOG_Y[1]) / 2) * PK, fx = O[0]! + 37 * PK;
+    const goggle = (x0: number, len: number, h: number, w: number, color: string, layer: number) =>
+      part([0, len * HS, 0], [x0 * HS, (gy + h / 2) * HS, 0], color, { ...fo, shape: "prism", layer, rot: [0, 0, -PI / 2], outline: rounded(h * HS, w * HS) });
+    goggle(fx - 0.094, 0.092, gh, 0.13, band, 7.2);
+    goggle(fx - 0.004, 0.006, gh * 0.84, 0.112, C.visor, 7.3);
   }
   hp([0.008, 0.018, 0.045], [dome ? 0.22 : 0.21, dome ? 0.12 : 0.137, 0.04], mix(C.visor, "#ffffff", 0.72), { ...fo, layer: 7.4, emissive: true, mask: 4 });
   if (open) slabs([[24, 4], [44, 4], [50, 18], [44, 30], [24, 38], [19, 20]], 0.12, 0.02, 0.9, 0, 1, "#2a2233", 7.2, [hf]);
