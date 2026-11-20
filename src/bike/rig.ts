@@ -81,6 +81,8 @@ const END_DROP = 1.5, FAR_DROP = 5;
 const FACE_DROP = 0.1;
 /** The level and side groups' offset (only its direction counts; the parts make up for it). */
 const END = 1e-3;
+/** The right hand's release blend at the double hand drag (seconds from the bar to the road). */
+const RELEASE = 0.25;
 const THIGH = 0.4, SHIN = 0.42, UPPER = 0.29, FORE = 0.29, TORSO = 0.46;
 
 /** `a` toward `b` by t (`#rrggbb`). */
@@ -115,6 +117,44 @@ function ik(ax: number, ay: number, bx: number, by: number, l1: number, l2: numb
   const base = Math.atan2(dy, dx), c = Math.max(-1, Math.min(1, (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d))), a1 = base + bend * Math.acos(c);
   const mx = ax + Math.cos(a1) * l1, my = ay + Math.sin(a1) * l1;
   J[0] = a1; J[1] = Math.atan2(ay + dy - my, ax + dx - mx); J[2] = mx; J[3] = my;
+}
+/** The 3D limb solve: K = [middle joint x, y, z, end x, y, z]; L = the two bones' frames as diorama
+ *  rotations ([x, y, z] for the first bone, then the second). */
+const K = new Float64Array(6), L = new Float64Array(6);
+/** Two-bone solve in 3D from A (ax, ay, az) toward B (bx, by, bz), bones l1 then l2, in the plane through
+ *  A and B nearest to normal (nx, ny, nz), the middle joint bending to `bend` (+1: toward n × (B − A), as
+ *  `ik`'s with n = +z). The middle joint is exactly l1 from A and the end exactly l2 from it (out of
+ *  reach, B is pulled in along the line), so the first bone ends where the second begins: one joint. Each
+ *  bone's frame: x along it, z the limb plane's normal, y = z × x (with n = +z, `ik`'s angles about z). */
+function ik3(ax: number, ay: number, az: number, bx: number, by: number, bz: number, l1: number, l2: number, nx: number, ny: number, nz: number, bend: number) {
+  let dx = bx - ax, dy = by - ay, dz = bz - az, d = Math.hypot(dx, dy, dz);
+  if (d < 1e-4) (dx = 0), (dy = -1e-4), (dz = 0), (d = 1e-4);
+  const ux = dx / d, uy = dy / d, uz = dz / d;
+  d = Math.min(d, l1 + l2 - 1e-4);
+  // The plane's normal: n made square to the line (a fallback when n lies along it).
+  const nu = nx * ux + ny * uy + nz * uz;
+  let px = nx - nu * ux, py = ny - nu * uy, pz = nz - nu * uz, pl = Math.hypot(px, py, pz);
+  if (pl < 1e-6) (px = -uy), (py = ux), (pz = 0), (pl = Math.hypot(px, py) || 1), pl < 1e-6 && ((px = 0), (py = 0), (pz = 1), (pl = 1));
+  px /= pl; py /= pl; pz /= pl;
+  // Toward the bend: w = bend · (p × u).
+  const wx = bend * (py * uz - pz * uy), wy = bend * (pz * ux - px * uz), wz = bend * (px * uy - py * ux);
+  const c = Math.max(-1, Math.min(1, (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d))), sn = Math.sqrt(1 - c * c);
+  const mx = ax + l1 * (c * ux + sn * wx), my = ay + l1 * (c * uy + sn * wy), mz = az + l1 * (c * uz + sn * wz);
+  const ex = ax + d * ux, ey = ay + d * uy, ez = az + d * uz;
+  K[0] = mx; K[1] = my; K[2] = mz; K[3] = ex; K[4] = ey; K[5] = ez;
+  frame(mx - ax, my - ay, mz - az, px, py, pz, 0);
+  frame(ex - mx, ey - my, ez - mz, px, py, pz, 3);
+}
+/** L[o..o+2] = the rotation (diorama order: y, then x, then z) whose x axis runs along (x, y, z) and
+ *  whose z axis is the unit normal (px, py, pz), square to it. */
+function frame(x: number, y: number, z: number, px: number, py: number, pz: number, o: number) {
+  const l = Math.hypot(x, y, z) || 1;
+  x /= l; y /= l; z /= l;
+  // y axis = z × x (only its y component is needed: R11).
+  const yy = pz * x - px * z;
+  L[o] = Math.asin(Math.max(-1, Math.min(1, -py)));
+  L[o + 1] = Math.atan2(px, pz);
+  L[o + 2] = Math.atan2(y, yy);
 }
 
 /** The helmet's side profiles, the portrait's (../garage/portrait.ts) in its units ([x, y], y down,
@@ -394,8 +434,8 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
     const sh = bone(k + "sh", SHIN, 0.14, 0, C.boots, k + "sd");
     part([0.22, 0.09, 0.15], [SHIN - 0.02, -0.08, 0], C.boots, { on: k + "sh" });
     shin.push(sh);
-    upper.push(bone(k + "ua", UPPER, 0.11, z * 0.3, C.jersey, k + "sd"));
-    const fa = bone(k + "fa", FORE, 0.1, z * 0.5, C.jersey, k + "sd");
+    upper.push(bone(k + "ua", UPPER, 0.11, 0, C.jersey, k + "sd"));
+    const fa = bone(k + "fa", FORE, 0.1, 0, C.jersey, k + "sd");
     part([0.09, 0.1, 0.1], [FORE, -0.05, 0], C.gloves, { on: k + "fa" });
     fore.push(fa);
   }
@@ -409,9 +449,20 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
   /** The trick channels the limbs read now (T on the bike, zeros thrown or walking). */
   let E = Z;
   let thrown = false;
+  /** The right hand's drag now (its release blend: eased toward T[9] × the drag over about RELEASE s,
+   *  so it eases off the bar when the double hand drag starts and back onto it after). */
+  const RH = new Float64Array(1);
+  /** Each hand's target off the drag and its drag blend ([x, y, drag] left, then right). */
+  const HT = new Float64Array(6);
+  /** A limb bone at (x, y, z) in its side group, turned by the solve's frame (L at `o`): the only place a
+   *  limb part is placed, so each joint is the one point both bones share. */
+  const seg = (g: DioramaObject, x: number, y: number, z: number, o: number) => {
+    g.pos[0] = x; g.pos[1] = y; g.pos[2] = z;
+    g.rot[0] = L[o]!; g.rot[1] = L[o + 1]!; g.rot[2] = L[o + 2]!;
+  };
 
   /** Pose everything from bike `b` (call each frame before draw). `stand` 0..1: sitting to the attack position. */
-  function pose(b: Bike, stand = 0.7) {
+  function pose(b: Bike, stand = 0.7, dt = 1 / 60) {
     root.pos.set(b.pos);
     root.rot.set(b.rot);
     const R = b.radius, rx = b.rear, fx = b.front, dy = -b.drop;
@@ -427,6 +478,7 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
     slider.pos[0] = fx; slider.pos[1] = fy; slider.rot[2] = fa + PI;
     fender!.pos[1] = fy + R + 0.02;
     void R;
+    if (b.crashed || b.walking) RH[0] = 0;
     if (b.crashed) {
       if (!thrown) (thrown = true), d.on(rider, null);
       rider.pos.set(b.rider);
@@ -448,6 +500,8 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
     }
     // The hand drag: the road is "down" in the bike's frame (x forward, y up, pitched by rel).
     DG[0] = T[8]!; DG[1] = -Math.sin(b.pitch); DG[2] = -Math.cos(b.pitch);
+    const rt = T[8]! * T[9]!, rk = Math.min(1, dt / RELEASE);
+    RH[0] = rt > RH[0]! ? Math.min(rt, RH[0]! + rk) : Math.max(rt, RH[0]! - rk);
     E = T;
     limbs(b.lean, stand, T[0]!, T[1]!, T[2]!, T[3]! + 0.5 * T[8]!, T[6]!, T[7]!, false, T[4]!);
     E = Z;
@@ -458,10 +512,33 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
     // The hip: over the pegs standing, on the seat sitting; back with the weight, up off the seat in a trick.
     // The freestyle set (zeros unless a mode writes them): a handstand puts the hips over the bike.
     const grab = E[T_GRAB]!, nac = E[T_NAC]!, can = E[T_CAN]!, heels = E[T_HEELS]!, hs = E[T_HANDSTAND]!;
-    const hx = SEAT[0]! + 0.08 * stand - 0.14 * lean - 0.25 * back + 0.1 * tuck + 0.18 * hs + 0.12 * heels, hy = SEAT[1]! + 0.06 + 0.2 * stand + 0.22 * up + 0.12 * back - 0.06 * tuck + 0.72 * hs;
+    let hx = SEAT[0]! + 0.08 * stand - 0.14 * lean - 0.25 * back + 0.1 * tuck + 0.18 * hs + 0.12 * heels;
+    const hy = SEAT[1]! + 0.06 + 0.2 * stand + 0.22 * up + 0.12 * back - 0.06 * tuck + 0.72 * hs;
     // The torso leans forward over the bars (less with the weight back; flat out over the back in a
     // plank; upright or lying back with the body's pitch; head down over the seat in a handstand).
     const tilt0 = 0.75 - 0.35 * lean + 0.25 * stand - 0.6 * back + 0.35 * tuck + E[T_BODY]!, tilt = tilt0 + (PI - 0.25 - tilt0) * hs, ta = PI / 2 - tilt;
+    const rh = RH[0]!, reach = UPPER + FORE;
+    // Each hand's target off the drag (x, y): its grip; hands off, up and out; the right hand back on
+    // the seat (a seat grab; in a handstand, the seat's middle); in a handstand the other hand stays on
+    // its grip. With it how far each hand is in the drag (the left with the drag, the right with its own
+    // release blend, `RH`), and how firmly it holds its grip (off the drag, hands on, not grabbing).
+    let shift = 0;
+    for (let s = 0; s < 2; s++) {
+      let gx = GRIP[0]! - hands * (0.55 + 0.25 * arms), gy = GRIP[1]! + hands * (0.65 - 0.3 * arms) + (loose ? 0.3 : 0);
+      if (s === 1 && grab) (gx += (-0.42 + 0.22 * hs - gx) * grab), (gy += (0.17 - gy) * grab);
+      if (s === 0 && hs) (gx += (GRIP[0]! - gx) * hs), (gy += (GRIP[1]! - gy) * hs);
+      const dr = s === 0 ? DG[0]! : rh * rh * (3 - 2 * rh);
+      HT[s * 3] = gx; HT[s * 3 + 1] = gy; HT[s * 3 + 2] = dr;
+      // A hand on its grip keeps the body within reach of it: the shoulder slides along the bike
+      // (hip and torso with it) by as little as puts the grip in reach (weight back in a wheelie, the
+      // body back in a hand drag).
+      const hold = loose ? 0 : (1 - dr) * (1 - hands) * (s === 1 ? 1 - grab : 1);
+      if (!hold) continue;
+      const qx = gx - (hx + Math.cos(ta) * (TORSO - 0.05)), qy = gy - (hy + Math.sin(ta) * (TORSO - 0.05)), r = reach * 0.99;
+      const room = Math.sqrt(Math.max(0, r * r - qy * qy)), need = Math.abs(qx) > room ? (qx - Math.sign(qx) * room) * hold : 0;
+      if (Math.abs(need) > Math.abs(shift)) shift = need;
+    }
+    hx += shift;
     torso.pos[0] = hx; torso.pos[1] = hy; torso.rot[2] = ta;
     const sx = hx + Math.cos(ta) * (TORSO - 0.05), sy = hy + Math.sin(ta) * (TORSO - 0.05);
     head.pos[0] = hx + Math.cos(ta) * (TORSO + 0.06); head.pos[1] = hy + Math.sin(ta) * (TORSO + 0.06) - 0.02; head.rot[2] = ta - PI / 2 + 0.15 + Math.min(0.55, Math.max(0, PI / 2 - ta) * 0.6);
@@ -481,36 +558,32 @@ export function rig(d: Diorama, id: string, C: RigColors, kind: RigKind = "2t", 
       if (s === 1 && nac) (px += (-0.8 - px) * nac), (py += (0.45 - py) * nac);
       if (s === 1 && can) (px += (0.42 - px) * can), (py += (0.3 - py) * can);
       if (hs) (px += (hx - 0.12 - px) * hs), (py += (hy + 0.8 - py) * hs);
-      ik(hx, hy, px, py, THIGH, SHIN, 1);
       let lz = side * (0.15 + spread * 0.55 + (loose ? 0.15 : 0));
       if (over) lz += (-0.34 - lz) * over;
       if (heels) lz += (side * 0.06 - lz) * heels;
-      // (z from the side group at side × 0.15.)
-      thigh[s]!.pos[0] = hx; thigh[s]!.pos[1] = hy; thigh[s]!.pos[2] = (lz - side * 0.15) * 0.5; thigh[s]!.rot[2] = J[0]!;
-      shin[s]!.pos[0] = J[2]!; shin[s]!.pos[1] = J[3]!; shin[s]!.pos[2] = lz - side * 0.15; shin[s]!.rot[2] = J[1]!;
-      thigh[s]!.rot[0] = -side * spread * 0.9;
-      shin[s]!.rot[0] = -side * spread * 0.9;
-      // Arms: shoulder to grip (elbow out and down); hands off, they go up and out.
-      let gx = GRIP[0]! - hands * (0.55 + 0.25 * arms), gy = GRIP[1]! + hands * (0.65 - 0.3 * arms) + (loose ? 0.3 : 0);
-      // The right hand back on the seat (a seat grab; in a handstand, the seat's middle).
-      if (s === 1 && grab) (gx += (-0.42 + 0.22 * hs - gx) * grab), (gy += (0.17 - gy) * grab);
-      // In a handstand the other hand stays on its grip.
-      if (s === 0 && hs) (gx += (GRIP[0]! - gx) * hs), (gy += (GRIP[1]! - gy) * hs);
-      // The hand drag: the left hand reaches down to the road (straight-armed, out from the bike).
-      const dr = s === 0 ? DG[0]! : DG[0]! * T[9]!, reach = (UPPER + FORE) * 0.98;
-      ik(sx, sy, gx + (sx + DG[1]! * reach - gx) * dr, gy + (sy + DG[2]! * reach - gy) * dr, UPPER, FORE, -1);
-      // Arms spread (hands off): the upper arm swings out sideways (turned about y) and the forearm
-      // starts at its elbow, so the two stay joined however wide they go.
-      const sp = arms * hands * 1.3, ca = Math.cos(sp), sa = Math.sin(sp);
-      const az = side * (0.2 + (loose ? 0.2 : 0) + dr * 0.35);
-      // Spread wide, the arm straightens and lifts a little above the shoulder.
-      const st = sp / 1.3, a0 = J[0]! + (1.25 - J[0]!) * st, a1 = J[1]! + (1.25 - J[1]!) * st;
-      upper[s]!.pos[0] = sx; upper[s]!.pos[1] = sy; upper[s]!.pos[2] = side * 0.04; upper[s]!.rot[2] = a0;
-      upper[s]!.rot[1] = -side * sp;
-      fore[s]!.pos[0] = sp ? sx + UPPER * ca * Math.cos(a0) : J[2]!; fore[s]!.pos[1] = sp ? sy + UPPER * ca * Math.sin(a0) : J[3]!;
-      fore[s]!.pos[2] = az - side * 0.15 + side * UPPER * sa; fore[s]!.rot[2] = a1;
-      fore[s]!.rot[1] = -side * sp;
-      upper[s]!.rot[0] = fore[s]!.rot[0] = 0;
+      // The foot's target in 3D (z from the side group at side × 0.15; the hip at its origin): the leg
+      // spread swings it out about the hip (roll ro), the trick offsets move it across; then one solve
+      // places the knee, so the thigh ends exactly where the shin begins.
+      const ro = -side * spread * 0.9, cr = Math.cos(ro), sr = Math.sin(ro), fy = py - hy;
+      ik3(hx, hy, 0, px, hy + fy * cr, fy * sr + lz - side * 0.15, THIGH, SHIN, 0, -sr, cr, 1);
+      seg(thigh[s]!, hx, hy, 0, 0);
+      seg(shin[s]!, K[0]!, K[1]!, K[2]!, 3);
+      // Arms: shoulder to grip (elbow out and down). The hand's target in 3D (z from the side group;
+      // the shoulder at side × 0.04, the grip at side × 0.05). The hand drag: the hand reaches down to
+      // the road and out from the bike, straight-armed.
+      const gx = HT[s * 3]!, gy = HT[s * 3 + 1]!, dr = HT[s * 3 + 2]!, sz = side * 0.04;
+      const ox = DG[1]!, oy = DG[2]!, oz = side * 0.55, ol = (reach * 0.98) / Math.hypot(ox, oy, oz);
+      const tx = gx + (sx + ox * ol - gx) * dr, ty = gy + (sy + oy * ol - gy) * dr, tz = side * (0.05 + (loose ? 0.2 : 0)) + (sz + oz * ol - side * 0.05) * dr;
+      // Arms spread (hands off): spread wide, the arm straightens and lifts a little above the shoulder
+      // (its angles toward 1.25), and the whole arm swings out sideways about the shoulder (turned about
+      // y): the hand goes there and its plane turns with it.
+      const sp = arms * hands * 1.3, ca = Math.cos(sp), sa = Math.sin(sp), st = sp / 1.3;
+      ik(sx, sy, tx, ty, UPPER, FORE, -1);
+      const a0 = J[0]! + (1.25 - J[0]!) * st, a1 = J[1]! + (1.25 - J[1]!) * st;
+      const hx2 = UPPER * Math.cos(a0) + FORE * Math.cos(a1), hy2 = UPPER * Math.sin(a0) + FORE * Math.sin(a1);
+      ik3(sx, sy, sz, sx + hx2 * ca, sy + hy2, tz + side * hx2 * sa, UPPER, FORE, -side * sa, 0, ca, -1);
+      seg(upper[s]!, sx, sy, sz, 0);
+      seg(fore[s]!, K[0]!, K[1]!, K[2]!, 3);
     }
   }
   /** New colours (a theme change). */

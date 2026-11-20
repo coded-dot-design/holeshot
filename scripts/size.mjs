@@ -143,7 +143,11 @@ import { readdirSync, readFileSync } from "node:fs";
 // The shop from vendor/shop/ (synced from the factory, e74dcea; src/shop/ deleted), on main c4287c5:
 // +100 B measured (holeshot.js 243,114 → 243,214; holeshot.mjs 242,908 → 243,008), the vendored copy
 // arrives minified and is minified again with the game. Budget unchanged (about 0.3 KB of room).
-const BUDGET = 243_500;
+// R45 (the rider's joints: one shared 3D joint per elbow and knee, a two-bone solve in 3D for all
+// four limbs, the hands kept in reach of the grips, the right hand's release blend in the double hand
+// drag), on main da81ebb: +667 B measured (holeshot.js 243,218 → 243,885; holeshot.mjs 243,008 →
+// 243,649). Budget 243,500 → 244,500 (about 0.6 KB of room).
+const BUDGET = 244_500;
 let failed = false;
 for (const file of readdirSync("dist").filter((f) => /\.m?js$/.test(f)).sort().map((f) => `dist/${f}`)) {
   const gz = gzipSync(readFileSync(file)).length, ok = gz <= BUDGET;
