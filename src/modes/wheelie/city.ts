@@ -40,7 +40,6 @@ export const CROSS = W.cross, SPRINK = W.sprink, NSP = SPRINK.length / 4;
 /** The dog's yard on THE BLOCK (world): x0, x1, z where it trots, and its fence [x0, z0, x1, z1]. */
 export const DOG = [7.8 + CX[0]!, 10.2 + CX[0]!, 5.0 + CZ[0]!];
 const FENCE_L = [7.4, 3.6, 10.6, 5.6];
-export const FENCE = [FENCE_L[0]! + CX[0]!, FENCE_L[1]! + CZ[0]!, FENCE_L[2]! + CX[0]!, FENCE_L[3]! + CZ[0]!];
 /** Neighbours: house index, door x, door z, face, zone [x0, z0, x1, z1] (world). */
 export const NEIGH: number[] = [];
 for (const h of W.home) {

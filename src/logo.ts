@@ -1,6 +1,6 @@
-// The HOLESHOT logo (the final art, paths only, no fonts): the L1 wordmark for the header and the
-// lockup with "by David Cooley" for the garage. Both draw the same letter strokes several times (the
-// drop, the pink offset, the outline, the lime face, the shine): one path string, reused.
+// The HOLESHOT logo (the final art, paths only, no fonts): the L1 wordmark for the header. It draws
+// the same letter strokes several times (the drop, the pink offset, the outline, the lime face, the
+// shine): one path string, reused.
 const D = "M24 22L24 88M68 22L68 88M24 55L68 55M95 22L139 22L139 88L95 88L95 22M166 22L166 88L210 88M281 22L237 22L237 88L281 88M237 55L272.2 55M352 22L308 22L308 55L352 55L352 88L308 88M379 22L379 88M423 22L423 88M379 55L423 55M450 22L494 22L494 88L450 88L450 22M521 22L565 22M543 22L543 88";
 const svg = (vb: string, cls: string, body: string) => `<svg class="${cls}" viewBox="${vb}" style="aspect-ratio:${vb.split(" ").slice(2).join("/")}" role="img" aria-label="HOLESHOT" focusable="false">${body}</svg>`;
 const MARK = `<g transform="translate(0 13)"><g transform="skewX(-11) translate(23.9 0)"><path d="${D}" fill="none" stroke="#0b0a14" stroke-width="32" stroke-linecap="square" stroke-linejoin="bevel"/></g></g><g transform="translate(0 9)"><g transform="skewX(-11) translate(23.9 0)"><path d="${D}" fill="none" stroke="#ff4fa8" stroke-width="22" stroke-linecap="square" stroke-linejoin="bevel"/></g></g><g transform="translate(0 0)"><g transform="skewX(-11) translate(23.9 0)"><path d="${D}" fill="none" stroke="#0b0a14" stroke-width="32" stroke-linecap="square" stroke-linejoin="bevel"/><path d="${D}" fill="none" stroke="#b6f23a" stroke-width="20" stroke-linecap="square" stroke-linejoin="bevel"/></g></g><g transform="translate(0 -4)"><g transform="skewX(-11) translate(23.9 0)"><path d="${D}" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="square" stroke-linejoin="bevel" opacity="0.5"/></g></g>`;
