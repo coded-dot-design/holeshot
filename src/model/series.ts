@@ -92,7 +92,8 @@ export function retire(p: Profile): Profile {
   return { ...p, series: { ...p.series, run: null } };
 }
 
-const mix = (a: number, b: number) => {
+/** Two integers hashed to one unsigned 32-bit seed (a championship's rounds and rivals, a room's rides). */
+export const seedMix = (a: number, b: number) => {
   let h = Math.imul((a ^ 0x9e3779b9) >>> 0, 0x85ebca6b) ^ Math.imul(b + 1, 0xc2b2ae35);
   h ^= h >>> 13;
   h = Math.imul(h, 0x27d4eb2f);
@@ -104,7 +105,7 @@ export const difficulty = (run: Pick<SeriesRun, "tier">, round: number) => {
   return T.diff[0] + (T.diff[1] - T.diff[0]) * u;
 };
 /** A round's seed (the race's and the track's). */
-export const roundSeed = (run: Pick<SeriesRun, "seed">, round: number) => mix(run.seed, round);
+export const roundSeed = (run: Pick<SeriesRun, "seed">, round: number) => seedMix(run.seed, round);
 
 const TRACKS = new Map<string, TrackPlan>();
 /** A round's track (MX: generated, validated, made MX-sized; SX: the SX tracks in turn, from the
@@ -126,8 +127,8 @@ export function rivals(run: Pick<SeriesRun, "tier" | "seed">, cls: ClassId, avoi
   const T = tier(run.tier), names = [...RIVAL_NAMES], out: { name: string; number: number; bike: Tuned }[] = [], used = new Set([avoid]);
   const same = MODELS.filter((m) => m.cls === cls).sort((a, b) => a.tier - b.tier);
   for (let k = 0; k < 3; k++) {
-    const name = names.splice(mix(run.seed, 100 + k) % names.length, 1)[0]!;
-    let number = 2 + (mix(run.seed, 200 + k) % 98);
+    const name = names.splice(seedMix(run.seed, 100 + k) % names.length, 1)[0]!;
+    let number = 2 + (seedMix(run.seed, 200 + k) % 98);
     while (used.has(number)) number = (number % 99) + 1;
     used.add(number);
     const m = same[Math.min(same.length, T.rivals.tiers[k]!) - 1]!, b = newBike(m.id, "r" + k);

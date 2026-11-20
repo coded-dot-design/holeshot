@@ -50,7 +50,7 @@ const SLOTS = 9, CACTI = 4, ROCKS = 4;
 
 export function desertView(d: Diorama, W: World) {
   const bi = W.biome;
-  const P3 = new Float64Array(3), F = new Float64Array(4), SL = new Float64Array(SLOTS * 3);
+  const F = new Float64Array(4), SL = new Float64Array(SLOTS * 3);
   const cacti: DioramaObject[] = [], rocks: DioramaObject[] = [], camps: DioramaObject[] = [], beams: DioramaObject[] = [];
   const objs: DioramaObject[] = [];
   let ci0 = NaN, cj0 = NaN;
@@ -281,7 +281,7 @@ export function desertView(d: Diorama, W: World) {
 export type DesertView = ReturnType<typeof desertView>;
 
 /** a → b by t, as "#rrggbb" (theme changes only). */
-function mix(a: string, b: string, t: number) {
+export function mix(a: string, b: string, t: number) {
   const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16);
   let o = 0;
   for (let s = 16; s >= 0; s -= 8) o |= Math.round(((A >> s) & 255) + (((B >> s) & 255) - ((A >> s) & 255)) * t) << s;

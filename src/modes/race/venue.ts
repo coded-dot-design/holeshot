@@ -68,9 +68,3 @@ export const SX_TRACKS: TrackPlan[] = [
   },
 ];
 
-/** A plan on a venue: MX scales an outdoor plan up (./course.ts MOTO_TRACK, a generated track); SX
- *  plans are their own (an outdoor plan asked for on SX is the SX track `sxIndex` picks). */
-export function onVenue(p: TrackPlan, v: Venue, sxIndex = 0): TrackPlan {
-  if (v === "sx") return p.venue === "sx" ? p : SX_TRACKS[((sxIndex % SX_TRACKS.length) + SX_TRACKS.length) % SX_TRACKS.length]!;
-  return p.venue === "sx" ? p : mxPlan(p);
-}

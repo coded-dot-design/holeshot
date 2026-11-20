@@ -50,7 +50,7 @@ ROUND[I_TREE] = 0.3; ROUND[I_PINE] = 0.3; ROUND[I_ROCK] = 0.5; ROUND[I_HAY] = 0.
 const PH = 0, CLOCK = 1, RIDE = 2, CT = 3, GRUMPS = 4, SPLASH = 5, BARKS = 6, HOPAIR = 8, WHY = 9, WALL = 10, SPCLK = 11, TOWN = 12, TI = 13, TJ = 14, STUCK = 20, UNSTUCK = 21;
 /** The autopilot: its road (i, j, dir), which way along it, junctions passed, and the town count. */
 const AI = 22, AJ = 23, AD = 24, AS = 25, AN = 26, TOWNS = 27;
-export const S_TOWN = TOWN, S_UNSTUCK = UNSTUCK, S_TOWNS = TOWNS, S_AN = AN;
+export const S_UNSTUCK = UNSTUCK, S_TOWNS = TOWNS, S_AN = AN;
 
 /** A session in the open world. Inputs each step: gas, brake, lean (−1 back .. 1 forward), steer, hop. */
 export function openRun(specs: RideSpec[] = RIDES, seed = 1, citySeed = CITY_SEED, mix: Mix | null = null) {

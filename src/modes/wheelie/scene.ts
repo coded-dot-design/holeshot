@@ -30,7 +30,7 @@ import {
 } from "./rules.ts";
 import { openRun, E_TOWN, E_BIOME, E_BIG, NNB, NSPK, S_TOWNS } from "./roam.ts";
 import { field, MASH, M_CITY } from "../mashup/field.ts";
-import { biomePal } from "../desert/look.ts";
+import { biomePal, mix } from "../desert/look.ts";
 import { B_DESERT, B_FOREST, B_QUARRY, B_PARK } from "../desert/world.ts";
 import {
   openWindow, CITY_SEED, IS, RC, RB_R, RB_HW, FAR_WIN, FAR_CELL, FAR_STEP, KICK_L, KICK_W, NITEM, I_PROP,
@@ -43,7 +43,7 @@ import { dist } from "../../model/units.ts";
 import { modeStage, CMD_END, CMD_REGROUP, CMD_HOP, CMD_COMBO, type NetView, type NetRun } from "../race/scene.ts";
 import { font as tagFont, tag, marker } from "../../online/tags.ts";
 import { E_REGROUP } from "./jam.ts";
-import type { ModeCtx, ModeRun } from "../mode.ts";
+import type { ModeCtx } from "../mode.ts";
 import { LOOP, ENDO, CASE, BAIL } from "../../bike/bike.ts";
 import { rig, type Rig } from "../../bike/rig.ts";
 import { DRAG_NAME, FENDER } from "../stunts.ts";
@@ -1685,7 +1685,7 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null, mash = false
           const o = OBJ[i]!, r = i * 9, m = o.M, k = OI[r + 7]!;
           if (!ON_[i] || o.alpha < 0.05 || k === I_SILO) continue;
           if (!dio.project(m[9]!, m[10]!, m[11]!, PJ) || PJ[2]! < 2) continue;
-          const y0 = PJ[1]!, x0 = PJ[0]!, z0 = PJ[2]!;
+          const y0 = PJ[1]!, x0 = PJ[0]!;
           if (x0 < 0 || x0 > dio.width || y0 < 0 || y0 > dio.height) continue;
           const h = o.size[1]!;
           if (!dio.project(m[9]! + m[1]! * h, m[10]! + m[4]! * h, m[11]! + m[7]! * h, PJ)) continue;
@@ -1771,12 +1771,4 @@ export function mountCity(ctx: ModeCtx, net: NetView | null = null, mash = false
 
     },
   };
-}
-
-/** a → b by t, as "#rrggbb" (theme changes only). */
-function mix(a: string, b: string, t: number) {
-  const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16);
-  let o = 0;
-  for (let s = 16; s >= 0; s -= 8) o |= Math.round(((A >> s) & 255) + (((B >> s) & 255) - ((A >> s) & 255)) * t) << s;
-  return "#" + o.toString(16).padStart(6, "0");
 }

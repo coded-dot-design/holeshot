@@ -36,8 +36,6 @@ export const FREE_SX: { id: string; name: string; blurb: string; plan: TrackPlan
   { id: "sx-floor", name: "STADIUM FLOOR", blurb: "The NEON DOME's floor to yourself under the lights: the rhythm doubles, whoops, the tight triple, hairpins.", plan: SX_TRACKS[0]! },
   { id: "sx-volt-floor", name: "VOLT FLOOR", blurb: "The VOLT ARENA to yourself: the tabletop, whoops, the kink and the tight triple.", plan: SX_TRACKS[1]! },
 ];
-/** Free Ride's maps by venue (MX: the loop and the four open maps; SX: the stadium floors). */
-export const venueMaps = (venue?: Venue) => (venueOf(venue) === "sx" ? FREE_SX : FREE_MAPS);
 const freeMap = (id?: string, venue?: Venue) => {
   if (venueOf(venue) === "sx" || FREE_SX.some((m) => m.id === id)) return makeTrack((FREE_SX.find((m) => m.id === id) ?? FREE_SX[0]!).plan);
   const f = FREE_MAPS.find((m) => m.id === id) ?? FREE_MAPS[0]!;
