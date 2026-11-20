@@ -20,16 +20,11 @@
 .dh-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .dh-theme{min-width:44px;min-height:44px;padding:0;display:inline-grid;place-items:center}
 .dh-logo{display:block;flex:none;height:26px;width:auto;margin-right:auto}
-.dh-chip{display:inline-flex;align-items:center;gap:.35em;padding:.35em .65em;border:2px solid var(--rim);border-radius:8px;background:var(--raised);font-variant-numeric:tabular-nums;white-space:nowrap}
 .dh-test{border-color:var(--hot);color:var(--hot);font-size:.8em;letter-spacing:.04em}
 .dh-cr{background:var(--k-go);color:var(--rim)}
 .dh-h{font-size:24px;letter-spacing:.05em}
-.dh-h2{display:block;font-size:13px;letter-spacing:.12em;color:var(--muted);margin:6px 0 4px}
-.dh-h3{font-size:12px;letter-spacing:.1em;color:var(--muted)}
 .dh-sub{color:var(--muted);font-weight:700;font-size:14px}
 .dh-warn{color:var(--hot)}
-.dh-big{display:block;font-size:26px;letter-spacing:.03em;line-height:1.05}
-.dh-big i{font-style:normal;color:var(--hot)}
 .dh-row{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
 .dh .bui-key{min-height:44px;padding:0 16px;font:inherit;cursor:pointer}
 .dh .bui-key[aria-pressed=true]{background:var(--k-go);color:var(--rim)}
@@ -42,15 +37,6 @@
 .dh-bar i{height:12px;border:2px solid var(--rim);border-radius:5px;background:linear-gradient(90deg,var(--cy) calc(var(--v) * 100%),color-mix(in srgb,var(--rim) 12%,transparent) 0)}
 .dh-bar[data-low] i{background:linear-gradient(90deg,var(--hot) calc(var(--v) * 100%),color-mix(in srgb,var(--rim) 12%,transparent) 0)}
 .dh-bar b{text-align:right;font-variant-numeric:tabular-nums}
-.dh-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-.dh-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
-.dh-list>li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
-.dh-buy{display:grid;justify-items:center;align-content:center;gap:0;min-width:8.5em;font-size:13px}
-.dh-price{font-size:11px;letter-spacing:.04em;opacity:.85}
-.dh-price[data-short]{color:var(--hot)}
-.dh-mod{display:grid;gap:2px}
-.dh-mod small{color:var(--muted);font-weight:700;font-size:12px}
-.dh-mod i{font-style:normal;color:var(--hot);letter-spacing:.1em}
 .dh-numin,.dh-field input,.dh-field textarea{font:inherit;font-size:16px;min-height:44px;padding:6px 10px;border:2px solid var(--rim);border-radius:10px;background:var(--raised);color:var(--ink);box-sizing:border-box}
 .dh-numin{width:5em}
 .dh-field{display:grid;gap:4px;font-size:12px;letter-spacing:.08em;color:var(--muted);flex:1 1 12em}
@@ -84,7 +70,7 @@
 @media (max-width:620px){
 .dh-cards{padding:calc(10px + var(--dh-top,0px)) 8px 24px}
 .dh-card{padding:12px 12px 14px;gap:10px}
-.dh-cols,.dh-picks{grid-template-columns:1fr}
+.dh-picks{grid-template-columns:1fr}
 .dh-top>.dh-who{display:none}
 .dh .dh-back{padding:0 10px;font-size:13px}
 .dh-logo{height:22px}
