@@ -11,6 +11,8 @@ import { VERSION, REPO, FIZLET_URL, base } from '../site';
 import Wordmark from '../components/Wordmark.astro';
 const { title, description, page = 'home', app = false } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
+// Staging and PR previews (Cloudflare, PUBLIC_DEPLOY_TARGET=staging) stay out of search.
+const noindex = import.meta.env.PUBLIC_DEPLOY_TARGET === 'staging';
 ---
 <!doctype html>
 <html lang="en" class="bui" data-theme="dark">
@@ -20,6 +22,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
     <meta name="theme-color" content="#0d0b1c" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
